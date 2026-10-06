@@ -809,3 +809,14 @@ Version 4.27:
 - KTWs stehen in den Listen jetzt ganz unten: Fahrzeugübersicht (Einsatzmittel), Auswahl unter
   "Rettungsmittel bearbeiten"/Nachforderung, "Fahrzeuge bearbeiten" (Auswahlliste) und die
   Liste der nächsten freien Fahrzeuge im Notruf.
+
+Version 4.28:
+- Nachbar-Landkreis fährt nie zu R0-Einsätzen (ohne Sonderrechte) – dann wird das eigene
+  Fahrzeug vorgeschlagen, auch wenn es weiter als 20 km entfernt ist.
+- Alarmierungsfenster: Einsatzstufe manuell wählbar – R0 (ohne Sonderrechte), R1 (mit
+  Sonderrechten, ohne NEF), R1N1 (mit NEF) oder "Automatisch". Das Stichwort wird angepasst
+  (z. B. R1_Med. Notfall → R0_Med. Notfall) und der Fahrzeugvorschlag neu berechnet.
+- Notrufabfrage: neue Frage "Psy Problem?" (Ja/Nein) nach XABCDE. Steht bei "Ja" im
+  Alarmtext und ist als AAO-Bedingung "Psy Problem" wählbar.
+- Fehler behoben: Ein Fahrzeug konnte doppelt im Vorschlag stehen (z. B. NKTW als First
+  Responder und zusätzlich als NKTW).

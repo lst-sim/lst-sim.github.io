@@ -132,7 +132,7 @@ table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:10px 8px
 </head>
 <body>
 <div style="padding:6px 10px;font-size:11px;color:#94a3b8;font-weight:700;display:flex;align-items:center;gap:10px;position:sticky;top:0;z-index:10;background:var(--bg)">
- <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v4.27</span>
+ <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v4.28</span>
  <span id="syncState"></span>
  <a id="homeLink" href="#" onclick="render('leitstelle');return false" class="hidden" style="color:#64748b;text-decoration:underline;font-weight:600">🖥️ Leitstelle</a>
  <a id="monitorLink" href="#" onclick="showMonitorQR();return false" style="color:#64748b;text-decoration:underline;font-weight:600;margin-left:auto">🖥️ Monitor hinzufügen</a>
@@ -1847,7 +1847,7 @@ function dashboard(){
  // (leichte Hilfeleistung ohne Sonderrechte) danach; 3) bereits alarmierte Einsätze (Fahrzeuge
  // unterwegs/vor Ort – vom Disponenten schon bearbeitet) ganz hinten. Innerhalb jeder Stufe
  // die ältesten zuerst, die neuesten rutschen weiter nach hinten.
- const isR0=c=>!!(c.keyword&&c.keyword.includes("(R0)"));
+ const isR0=c=>!!c.rZero||rLevelOf(c)==="R0";
  const tier=c=>c.alarmTime?3:(isR0(c)?2:1);
  const ageKey=c=>c.createdAt||c.alarmTime||String(c.id);
  const sortedCalls=[...calls].sort((a,b)=>{
@@ -1945,6 +1945,7 @@ const qs=[
  ["c_circ","C – Gibt es Kreislaufprobleme, Schockzeichen oder relevante Blutungen?","xcirc"],
  ["d_disability","D – Wie ist der neurologische Zustand / das Bewusstsein?","xdisability"],
  ["e_exposure","E – Weitere Verletzungen, Erkrankungszeichen oder Umgebungseinflüsse?","textarea"],
+ ["psy","🧠 Psy Problem?","ynPsy"],
  ["danger","⚠️ Bestehen weitere Gefahren am Einsatzort?","yn"],
  ["patientName","👤 Name der betroffenen Person (falls bekannt)","text"],
  ["patientAge","🎂 Alter der betroffenen Person","count"],
@@ -2028,6 +2029,11 @@ function isBenignExposureText(t){
 // Anzahl-Antworten (eingeklemmt / lebensgefährlich bedroht). Ältere Einsätze hatten "ja"/"nein".
 function answerCount(v){const s=String(v??"").trim().toLowerCase();if(s==="ja")return 1;if(s==="nein"||s==="")return 0;const n=Number(s);return Number.isFinite(n)?n:0}
 function answerYes(v){return answerCount(v)>0}
+// Einsatzstufe im Stichwort (R0, R1, R1N1 …) erkennen / ersetzen.
+const R_LEVEL_RE=/(^|[^A-Za-z0-9])(R\d(?:N\d)?)(?![A-Za-z0-9])/;
+function rLevelOf(c){if(!c)return null;if(c.rOverride)return c.rOverride;const m=String(c.keyword||"").match(R_LEVEL_RE);return m?m[2]:(c.rZero?"R0":null)}
+function withRLevel(k,lv){k=String(k||"");if(R_LEVEL_RE.test(k))return k.replace(R_LEVEL_RE,(_,p)=>p+lv);return k?`${k} (${lv})`:lv}
+function setRLevel(lv){const c=db.currentCall;if(!c)return;c.rOverride=lv||null;evaluate();save();prepareAlarm();toast(lv?`Einsatzstufe ${lv} gesetzt`:"Einsatzstufe wieder automatisch")}
 // AAO-Anzahl "Pat." = so viele Fahrzeuge wie Patienten. Patientenzahl = größte der Angaben
 // (Betroffene, verletzt/erkrankt/gefährdet, eingeklemmt, durch Feuer bedroht), mindestens 1.
 function patientCount(a){a=a||{};return Math.max(1,Number(a.count)||0,answerCount(a.personDanger),answerCount(a.trapped),answerCount(a.firePeople))}
@@ -2158,6 +2164,9 @@ function questionHTML(q){
    <button onclick="answer('event','Vermisste Person')">🛸 Vermisste Person (Suche)</button>
    <button onclick="answer('event','Sonstiger Notfall')">❓ Sonstiger Notfall</button>
  </div>`;
+ if(type==="ynPsy") return `<label>${label}</label><div class="answer">
+   <button onclick="answer('${id}','Ja')">Ja</button>
+   <button onclick="answer('${id}','Nein')">Nein</button></div>`;
  if(type==="ynQ") return `<label>${label}</label><div class="answer">
    <button onclick="answer('${id}','Ja')">Ja</button>
    <button onclick="answer('${id}','Nein')">Nein</button>
@@ -2426,6 +2435,7 @@ function evaluate(){
    return;
  }
  let req=[], keyword="Noch unklar", sr=true;
+ c.rZero=false;
 
  // Jede Anforderung merkt sich, aus welcher AAO sie stammt (src). Passen mehrere AAOs, wird am
  // Ende nur die "höchste" (meiste Fahrzeuge; bei Gleichstand die spezifischere, später geprüfte)
@@ -2638,6 +2648,14 @@ function evaluate(){
  const ip=incidentPoint();
  // Nachbar-Landkreis: ist das eigene Fahrzeug weiter als 20 km entfernt (oder keins frei), wird
  // ein näheres freies Fahrzeug gleichen Typs aus dem Nachbar-LK vorgeschlagen.
+ // Manuell gewählte Einsatzstufe (R0 / R1 / R1N1) im Alarmierungsfenster überschreibt die
+ // automatische: R0 = ohne Sonderrechte, R1 = mit Sonderrechten ohne NEF, R1N1 = mit NEF.
+ if(c.rOverride){
+   const lv=c.rOverride;
+   if(lv==="R0"||lv==="R1")req=req.filter(r=>r.type!=="NEF");
+   if(lv==="R1N1"&&!req.some(r=>r.type==="NEF"))add("NEF",1,"Rettungsdienst");
+   keyword=withRLevel(keyword,lv); sr=lv!=="R0"; c.rZero=lv==="R0";
+ }
  const neighborFor=(type,ownKm)=>{
    if(!ip||!["RTW","NEF"].includes(type))return null;
    let best=null;
@@ -2649,12 +2667,14 @@ function evaluate(){
  };
  for(const r of req){
    let u=null;
-   if(r.exact)u=db.units.find(x=>x.id===r.exact);
+   if(r.exact&&!used.has(r.exact))u=db.units.find(x=>x.id===r.exact);
+   else if(r.exact)continue; // Fahrzeug schon eingeplant – nicht doppelt
    else {
      let arr=availableUnits(r.type,r.org).filter(x=>!used.has(x.id));
      u=arr[0]||null;
    }
-   if(!r.exact&&!r.firstResponder&&(r.org==null||r.org==="Rettungsdienst")){
+   // Nachbar-LK nie bei R0 (ohne Sonderrechte) – dann fährt das eigene Fahrzeug, auch wenn weit weg.
+   if(!c.rZero&&!r.exact&&!r.firstResponder&&(r.org==null||r.org==="Rettungsdienst")){
      const ownKm=u?geographicRank(u):null;
      if(!u||(ownKm!=null&&ownKm<999&&ownKm>20)){
        const nb=neighborFor(r.type,u&&ownKm<999?ownKm:null);
@@ -2693,6 +2713,7 @@ function buildMeldertext(c, nafoReason=""){
     if(patient) txt+=`\nPatient: ${patient}`;
     txt+=`\nXABCDE: X ${a.x_massive}; A ${a.a_airway}; B ${a.b_breath}; C ${a.c_circ}; D ${a.d_disability}; E ${a.e_exposure}`;
   }
+  if(c.answers?.psy==="Ja")txt+=`\nPsy-Problem: Ja`;
   if(String(c.answers?.freeText||"").trim())txt+=`\nNotruf-Freitext: ${c.answers.freeText}`;
   if(c.alarmFreeText)txt+=`\nAlarmierungs-Freitext: ${c.alarmFreeText}`;
   if(mittel) txt+=`\nWeitere Rettungsmittel: ${mittel}`;
@@ -2741,6 +2762,8 @@ function prepareAlarm(){
  document.getElementById("app").innerHTML=`<div class="card call">
    <div class="row between"><div><h2>🚨 Alarmierung vorbereiten</h2><div class="muted">Noch keine Alarmierung – Angaben prüfen und ergänzen.</div></div><button onclick="render('leitstelle')">Abbrechen</button></div>
    <label>Einsatzstichwort</label><div class="big">${esc(c.keyword||"—")}</div>
+   <div class="row" style="margin-top:8px;gap:6px;flex-wrap:wrap"><span class="muted">Einsatzstufe:</span>${["R0","R1","R1N1"].map(l=>`<button class="${rLevelOf(c)===l?"primary":""}" onclick="setRLevel('${l}')">${l}</button>`).join("")}<button class="${c.rOverride?"":"primary"}" onclick="setRLevel(null)">Automatisch</button></div>
+   <small class="muted">R0 = ohne Sonderrechte (kein Nachbar-LK) · R1 = mit Sonderrechten, ohne NEF · R1N1 = mit Notarzt (NEF). Wechsel setzt den Fahrzeugvorschlag neu.</small>
    <label style="margin-top:12px">Vorgeschlagene Einsatzmittel</label>
    <div class="suggest">${esc(c.suggestion||"—")}</div>
    ${(c.proposedUnitIds.length+(c.neighborProposal||[]).length)?"":`<div class="suggest" style="margin-top:8px;background:#fff1f1;border-color:#f3b4b4">⚠️ Kein Einsatzmittel verfügbar. Der Einsatz wird trotzdem alarmiert und angelegt – Fahrzeuge können über „Rettungsmittel bearbeiten“ oder später per Nachforderung ergänzt werden.</div>`}
@@ -4424,6 +4447,7 @@ const AAO_RULE_FIELDS={
  firePeople:{label:"Anzahl lebensgefährlich bedroht (Feuer)",free:true,placeholder:"z. B. >0, 2, >=3 (oder ja/nein)"},
  personDanger:{label:"Anzahl verletzt/erkrankt/gefährdet",free:true,placeholder:"z. B. >0, 2, >=3 (oder ja/nein)"},
  danger:{label:"Weitere Gefahren",values:["ja","nein","unbekannt"]},
+ psy:{label:"Psy Problem",values:["Ja","Nein"]},
  x_massive:{label:"X – kritische Blutung",values:["Nein","Ja","Unklar"]},
  a_airway:{label:"A – Atemweg",values:["Frei","Gefährdet / verlegt","Unklar"]},
  b_breath:{label:"B – Atmung",values:["Normal","Auffällig","Keine normale Atmung","Unklar"]},
