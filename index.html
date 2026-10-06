@@ -132,7 +132,7 @@ table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:10px 8px
 </head>
 <body>
 <div style="padding:6px 10px;font-size:11px;color:#94a3b8;font-weight:700;display:flex;align-items:center;gap:10px;position:sticky;top:0;z-index:10;background:var(--bg)">
- <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v4.42</span>
+ <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v4.43</span>
  <span id="syncState"></span>
  <a id="homeLink" href="#" onclick="render('leitstelle');return false" class="hidden" style="color:#64748b;text-decoration:underline;font-weight:600">🖥️ Leitstelle</a>
  <a id="monitorLink" href="#" onclick="showMonitorQR();return false" style="color:#64748b;text-decoration:underline;font-weight:600;margin-left:auto">🖥️ Monitor hinzufügen</a>
@@ -4575,6 +4575,8 @@ function mittel(){
      <div class="row">
        <button onclick="realisticMode()">🎲 Realistisch</button>
        <button onclick="openCloudSetup()">☁️ Live-Verbindung</button>
+       <button onclick="exportSetup('units')" title="Alle Fahrzeuge als Datei sichern">💾 Fahrzeuge sichern</button>
+       <button onclick="importSetupPick('units')" title="Gesicherte Fahrzeug-Datei laden">📂 Fahrzeuge laden</button>
        <button class="primary" onclick="addUnit()">＋ Rettungsmittel</button>
      </div>
    </div>
@@ -4688,6 +4690,54 @@ function vollalarmGroup(type){
  }
  return {org,location:best,units:best?all.filter(u=>u.location===best):[]};
 }
+// ─── AAOs / Fahrzeuge als Datei sichern und wieder laden ─────────────────────────────────────
+// Die Datei kann auf dem Gerät/in iCloud abgelegt, auf andere Geräte übertragen oder an Claude
+// geschickt werden, um sie fest als Standard ins Programm zu übernehmen.
+const UNIT_RUNTIME_KEYS=["status1Since","status2Due","status3Since","status4Since","status7Since","status8Due","freeSince","gpsUpdatedAt","lat","lng","phoneControlled","updatedAt"];
+function exportSetup(kind){
+ const now=new Date();
+ const data={format:"leitstelle.sim",kind,version:(document.getElementById("versionTag")?.textContent||""),scenario:currentScenarioId,exportedAt:now.toISOString()};
+ if(kind==="aao"){data.aao=JSON.parse(JSON.stringify(db.aao||[]));data.deletedAaoIds=db.deletedAaoIds||[]}
+ else{
+   data.units=(db.units||[]).filter(u=>!u.neighborLoan).map(u=>{const x=JSON.parse(JSON.stringify(u));UNIT_RUNTIME_KEYS.forEach(k=>delete x[k]);return x});
+   data.deletedUnitOptas=db.deletedUnitOptas||[];
+ }
+ const p2=n=>String(n).padStart(2,"0");
+ const name=`leitstelle-sim_${kind==="aao"?"AAO":"Fahrzeuge"}_${currentScenarioId}_${now.getFullYear()}-${p2(now.getMonth()+1)}-${p2(now.getDate())}_${p2(now.getHours())}${p2(now.getMinutes())}.json`;
+ const json=JSON.stringify(data,null,1);
+ const blob=new Blob([json],{type:"application/json"});
+ // iPad/iPhone: Teilen-Menü (In Dateien sichern, AirDrop, Mail …), sonst normaler Download
+ try{
+   const file=new File([blob],name,{type:"application/json"});
+   if(navigator.canShare&&navigator.canShare({files:[file]})){navigator.share({files:[file],title:name}).catch(()=>{});return}
+ }catch(e){}
+ const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=name;document.body.appendChild(a);a.click();
+ setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},1000);
+ toast(`${kind==="aao"?"AAOs":"Fahrzeuge"} gesichert: ${name}`);
+}
+function importSetupPick(kind){
+ const inp=document.createElement("input");inp.type="file";inp.accept=".json,application/json";
+ inp.onchange=()=>{const f=inp.files&&inp.files[0];if(!f)return;const r=new FileReader();r.onload=()=>importSetup(kind,String(r.result||""));r.readAsText(f)};
+ inp.click();
+}
+function importSetup(kind,text){
+ let d=null;try{d=JSON.parse(text)}catch(e){}
+ if(!d||d.format!=="leitstelle.sim"||d.kind!==kind){toast("Das ist keine passende Sicherungsdatei");return}
+ if(kind==="aao"){
+   if(!Array.isArray(d.aao)){toast("Datei enthält keine AAOs");return}
+   if(!confirm(`${d.aao.length} AAOs aus der Sicherung vom ${new Date(d.exportedAt).toLocaleString("de-DE")} laden? Die aktuellen AAOs werden dabei ersetzt.`))return;
+   db.aao=d.aao; db.deletedAaoIds=Array.isArray(d.deletedAaoIds)?d.deletedAaoIds:(db.deletedAaoIds||[]);
+   save(); toast("AAOs geladen"); render("aao");
+ }else{
+   if(!Array.isArray(d.units)){toast("Datei enthält keine Fahrzeuge");return}
+   if(!confirm(`${d.units.length} Fahrzeuge aus der Sicherung vom ${new Date(d.exportedAt).toLocaleString("de-DE")} laden? Die aktuelle Fahrzeugliste wird dabei ersetzt (laufende Status bleiben, wo möglich, erhalten).`))return;
+   const old=new Map((db.units||[]).map(u=>[String(u.id),u]));
+   const loans=(db.units||[]).filter(u=>u.neighborLoan);
+   db.units=[...d.units.map(u=>{const o=old.get(String(u.id));const x={...u,userEdited:true};if(o){UNIT_RUNTIME_KEYS.forEach(k=>{if(o[k]!==undefined)x[k]=o[k]});x.status=o.status}else if(!x.status)x.status="2";return x}),...loans];
+   if(Array.isArray(d.deletedUnitOptas))db.deletedUnitOptas=d.deletedUnitOptas;
+   save(); if(typeof pushAllUnitsCloud==="function")pushAllUnitsCloud(); toast("Fahrzeuge geladen"); render("mittel");
+ }
+}
 function isBuiltinAao(id){return LINKED_AAO_IDS.has(String(id))}
 function aaoEntry(id){return (db.aao||[]).find(a=>String(a.id)===String(id))||(defaults.aao||[]).find(a=>String(a.id)===String(id))||null}
 // Standard-AAO mit geänderten Bedingungen: der feste Abfragezweig alarmiert dafür nichts mehr,
@@ -4749,7 +4799,7 @@ function aaoRulesText(a){
 let aaoDraft=null;
 function aao(){
  if(aaoDraft)return aaoEditor();
- document.getElementById("app").innerHTML=`<div class="card"><div class="row between"><div><h2>🧠 AAO / Einsatzstichworte</h2><p class="muted">Die AAO steuert den Alarmvorschlag. Passen mehrere AAOs, wird nur die höchste alarmiert (die mit den meisten Fahrzeugen; bei Gleichstand die spezifischere). Rettungsdienst aus XABCDE (RD_X…RD_D) kommt immer dazu.</p></div><button class="primary" onclick="editAAO(null)">＋ AAO anlegen</button></div>
+ document.getElementById("app").innerHTML=`<div class="card"><div class="row between"><div><h2>🧠 AAO / Einsatzstichworte</h2><p class="muted">Die AAO steuert den Alarmvorschlag. Passen mehrere AAOs, wird nur die höchste alarmiert (die mit den meisten Fahrzeugen; bei Gleichstand die spezifischere). Rettungsdienst aus XABCDE (RD_X…RD_D) kommt immer dazu.</p></div><div class="row" style="gap:6px;flex-wrap:wrap;justify-content:flex-end"><button onclick="exportSetup('aao')" title="Alle AAOs als Datei sichern">💾 AAOs sichern</button><button onclick="importSetupPick('aao')" title="Gesicherte AAO-Datei laden">📂 AAOs laden</button><button class="primary" onclick="editAAO(null)">＋ AAO anlegen</button></div></div>
  <table><thead><tr><th>Stichwort</th><th>Bedingungen</th><th>Alarmierung</th><th>Mit anderen AAOs</th><th></th></tr></thead><tbody>${db.aao.map(a=>{
    const builtin=isBuiltinAao(a.id);
    return `<tr style="${a.active===false?"opacity:.5":""}"><td><b>${esc(a.name)}</b>${a.keyword?`<br><small class="muted">${esc(a.keyword)}</small>`:""}${builtin&&!a.rulesEdited?"":`<br><span class="pill">${builtin?"Bedingungen geändert":"eigene"}${a.active===false?" · inaktiv":""}</span>`}</td><td>${aaoRulesText(a)}</td><td>${(a.units||[]).map(x=>`${x.n==="pat"?`${esc(x.type)} je Patient`:`${aaoNText(x)}× ${esc(x.type)}`}${x.org?` <small class="muted">(${esc(x.org)})</small>`:""}${x.opt?` <span class="pill">optional</span>`:""}`).join(", ")||`<span class="muted">keine</span>`}</td><td><small>${aaoCombineText(a)}</small></td><td style="white-space:nowrap"><button onclick="editAAO(${JSON.stringify(a.id)})">✏️ Bearbeiten</button>${builtin?"":` <button onclick="deleteAAO(${JSON.stringify(a.id)})">Löschen</button>`}</td></tr>`;

@@ -920,3 +920,10 @@ Version 4.42:
   zum Anhaken angeboten – z. B. bei Standard-AAOs, die über den festen Abfragezweig laufen, und
   bei AAOs, die nur optionale Fahrzeuge enthalten. Jetzt werden die optionalen Fahrzeuge aller
   passenden AAOs angeboten.
+
+Version 4.43:
+- AAOs und Fahrzeuge sichern/laden: Auf der AAO-Seite "💾 AAOs sichern" / "📂 AAOs laden",
+  bei den Rettungsmitteln "💾 Fahrzeuge sichern" / "📂 Fahrzeuge laden". Sichern erzeugt eine
+  Datei (iPad: Teilen-Menü → "In Dateien sichern", AirDrop, Mail …). Laden ersetzt die aktuelle
+  Liste durch die aus der Datei (bei Fahrzeugen bleiben laufende Status erhalten). Die Datei
+  kann auch an Claude geschickt werden, um den Stand fest als Standard einzubauen.
