@@ -856,3 +856,8 @@ Version 4.33:
 Version 4.34:
 - IVENA: KTWs können jetzt zugewiesen werden (Einzelzuweisung, MANV-Sammelzuweisung,
   Fahrzeugterminal des KTW und Anmeldung durch NEF/OrgL), sobald sie in Status 4 sind.
+
+Version 4.35:
+- Die Klinikansicht "Patientenzuweisungen" (Krankenhaus wählen → Tabelle) steht jetzt nur noch
+  unter 📋 IVENA-Zuweisungen und ersetzt dort die bisherige Gesamtliste. Die IVENA-Ansicht zeigt
+  nur noch die Kapazitäts-Tabelle (mit der Spalte "📥 24h").

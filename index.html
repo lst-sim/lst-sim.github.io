@@ -132,7 +132,7 @@ table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:10px 8px
 </head>
 <body>
 <div style="padding:6px 10px;font-size:11px;color:#94a3b8;font-weight:700;display:flex;align-items:center;gap:10px;position:sticky;top:0;z-index:10;background:var(--bg)">
- <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v4.34</span>
+ <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v4.35</span>
  <span id="syncState"></span>
  <a id="homeLink" href="#" onclick="render('leitstelle');return false" class="hidden" style="color:#64748b;text-decoration:underline;font-weight:600">🖥️ Leitstelle</a>
  <a id="monitorLink" href="#" onclick="showMonitorQR();return false" style="color:#64748b;text-decoration:underline;font-weight:600;margin-left:auto">🖥️ Monitor hinzufügen</a>
@@ -5194,26 +5194,10 @@ function deleteIvenaAssignment(id,back="ivenaZuweisungen"){
 }
 const IVENA_DEL_STYLE="text-decoration:line-through;color:#94a3b8;opacity:.7";
 function ivenaZuweisungen(){
- const list=db.ivenaAssignments||[];
+ // Klinikansicht wie im echten IVENA: Krankenhaus auswählen → alle Zuweisungen dieses Hauses.
  document.getElementById("app").innerHTML=`<div class="card">
   <div class="row between"><div><h2>📋 IVENA-Zuweisungen</h2><p class="muted">Simulierte Patiententransporte: Fahrzeug(e) → Zielklinik. Rein trainingsintern, keine Verbindung zum realen IVENA.</p></div><button class="primary" onclick="openIvenaAssignment()">➕ Neue Zuweisung</button></div>
-  <div style="overflow:auto"><table><thead><tr>
-   <th>OPTA / Fahrzeug</th><th>Patient (PZC · Zusatzangaben)</th><th>Zielklinik</th><th>Fachrichtung</th><th>Eintreffzeit</th><th></th>
-  </tr></thead><tbody>
-   ${list.length?list.map(a=>{
-     const hospital=db.ivena.find(h=>String(h.id)===String(a.hospitalId));
-     const closed=hospital?ivenaActiveClosures(hospital).some(cl=>cl.fach===a.fach):false;
-     const etaTxt=a.eta?new Date(a.eta).toLocaleString("de-DE",{day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"}):"–";
-     return `<tr style="${a.deleted?IVENA_DEL_STYLE:""}">
-      <td>${a.vehicleLabels.map(l=>`<div>${esc(l)}</div>`).join("")}${a.deleted?`<small style="text-decoration:none;display:inline-block;color:#b91c1c">🗑️ gelöscht ${new Date(a.deletedAt).toLocaleTimeString("de-DE",{hour:"2-digit",minute:"2-digit"})}</small>`:""}</td>
-      <td>${ivenaPatientRow(a)}</td>
-      <td>${esc(a.hospitalName)}</td>
-      <td>${a.fach?`<span class="status ${closed?"s6":"s2"}">${esc(a.fach)}${closed?" · abgemeldet!":" · frei"}</span>`:`<span class="muted">–</span>`}</td>
-      <td>${ivenaBlue(a,"eta",etaTxt)}</td>
-      <td style="white-space:nowrap">${a.deleted?"":`<button onclick="editIvenaAssignment('${a.id}','ivenaZuweisungen')" title="Bearbeiten">✏️</button><button onclick="deleteIvenaAssignment('${a.id}')" title="Löschen">🗑️</button>`}</td>
-     </tr>`;
-   }).join(""):`<tr><td colspan="6" class="muted">Noch keine Zuweisungen.</td></tr>`}
-  </tbody></table></div>
+  ${ivenaIncomingHTML()}
  </div>`;
 }
 function openIvenaFachrichtungen(hid){
@@ -5276,8 +5260,8 @@ function ivenaMatrixHTML(rows){
 // IVENA-Klinikansicht wie im echten System: erst das Krankenhaus auswählen, dann stehen alle
 // Zuweisungen/Anmeldungen für dieses Haus (letzte 24 h) in einer Tabelle. Auswahl gilt pro Gerät.
 let ivenaHouse=(()=>{try{return localStorage.getItem("lst-ivena-house")||""}catch(e){return ""}})();
-function setIvenaHouse(v){ivenaHouse=v||"";try{localStorage.setItem("lst-ivena-house",ivenaHouse)}catch(e){};render("ivena")}
-function ivenaIncomingHTML(rows){
+function setIvenaHouse(v){ivenaHouse=v||"";try{localStorage.setItem("lst-ivena-house",ivenaHouse)}catch(e){};render("ivenaZuweisungen")}
+function ivenaIncomingHTML(){
  const now=Date.now();
  const houses=db.ivena||[];
  const active=h=>(db.ivenaAssignments||[]).filter(a=>!a.deleted&&String(a.hospitalId)===String(h.id)&&ivenaRecent(a,now)).length;
@@ -5321,11 +5305,11 @@ function ivenaIncomingHTML(rows){
        <td style="text-align:center;white-space:nowrap">${ivenaBlue(a,"pzc",(a.alter!==""&&a.alter!=null)?`${esc(a.alter)} J.`:"–")}</td>
        <td style="font-size:12px">${a.info?ivenaBlue(a,"info",esc(a.info)):"–"}</td>
        <td style="white-space:nowrap"><small>${fmt(a.createdAt)}</small>${a.edited&&Object.keys(a.edited).length?`<br><small style="color:${IVENA_EDIT_BLUE}">geändert ${fmt(a.updatedAt)}</small>`:""}${a.deleted?`<br><small style="color:#b91c1c;display:inline-block;text-decoration:none">🗑️ gelöscht ${fmt(a.deletedAt)}</small>`:""}</td>
-       <td style="white-space:nowrap">${a.deleted?"":`<button style="padding:4px 8px" onclick="editIvenaAssignment('${a.id}','ivena')" title="Bearbeiten">✏️</button><button style="padding:4px 8px" onclick="deleteIvenaAssignment('${a.id}','ivena')" title="Löschen">🗑️</button>`}</td>
+       <td style="white-space:nowrap">${a.deleted?"":`<button style="padding:4px 8px" onclick="editIvenaAssignment('${a.id}','ivenaZuweisungen')" title="Bearbeiten">✏️</button><button style="padding:4px 8px" onclick="deleteIvenaAssignment('${a.id}','ivenaZuweisungen')" title="Löschen">🗑️</button>`}</td>
       </tr>`;}).join("")}
    </tbody></table></div>`:`<p class="muted" style="margin-top:10px">Keine Patientenzuweisungen für ${esc(h.name)} in den letzten 24 h.</p>`;
  }
- return `<div style="margin-top:16px"><h3>📥 Patientenzuweisungen <small class="muted" style="font-weight:500">(Klinikansicht · letzte 24 h)</small></h3>${picker}${body}</div>`;
+ return `<div style="margin-top:6px"><h3>📥 Patientenzuweisungen <small class="muted" style="font-weight:500">(Klinikansicht · letzte 24 h)</small></h3>${picker}${body}</div>`;
 }
 function ivena(){
  const areas=[...new Set(db.ivena.map(h=>h.area||"Sonstige"))];
@@ -5345,7 +5329,6 @@ function ivena(){
    </div>
   </div>
   ${ivenaMatrixHTML(rows)}
-  ${ivenaIncomingHTML(rows)}
   <details style="margin-top:16px" ${db.ivenaControlsOpen?"open":""} ontoggle="db.ivenaControlsOpen=this.open">
   <summary style="cursor:pointer;font-weight:800">⚙️ Übungssteuerung: Status, Abmeldungen, Kliniken bearbeiten</summary>
   <div class="row" style="margin-top:12px">
