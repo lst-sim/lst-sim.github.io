@@ -844,3 +844,11 @@ Version 4.32:
   IVENA-Zuweisungen und in der IVENA-Ansicht bei "Angemeldete Patienten / Fahrzeuge".
   Dort gibt es jetzt auch einen 🗑️-Knopf. Gelöschte zählen nicht mehr als ankommende Patienten
   und werden nicht mehr als Fahrziel des Fahrzeugs verwendet.
+
+Version 4.33:
+- IVENA-Ansicht wie im echten System: Unter der Kapazitäts-Tabelle "Patientenzuweisungen
+  (Klinikansicht)" – zuerst das Krankenhaus auswählen (Anzahl der Anmeldungen steht in der
+  Auswahl), dann stehen alle Zuweisungen der letzten 24 h für dieses Haus in einer Tabelle:
+  Eintreffzeit, Rettungsmittel, PZC, Indikation, Fachbereich, je eine Spalte für S, BG, SS,
+  B, R, I, N (rot mit X = ja), Geschlecht, Alter, Info, Anmeldezeit. Gelöschte stehen
+  durchgestrichen unten. Die Auswahl merkt sich jedes Gerät selbst.
