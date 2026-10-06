@@ -132,7 +132,7 @@ table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:10px 8px
 </head>
 <body>
 <div style="padding:6px 10px;font-size:11px;color:#94a3b8;font-weight:700;display:flex;align-items:center;gap:10px;position:sticky;top:0;z-index:10;background:var(--bg)">
- <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v4.25</span>
+ <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v4.26</span>
  <span id="syncState"></span>
  <a id="homeLink" href="#" onclick="render('leitstelle');return false" class="hidden" style="color:#64748b;text-decoration:underline;font-weight:600">🖥️ Leitstelle</a>
  <a id="monitorLink" href="#" onclick="showMonitorQR();return false" style="color:#64748b;text-decoration:underline;font-weight:600;margin-left:auto">🖥️ Monitor hinzufügen</a>
@@ -2430,7 +2430,7 @@ function evaluate(){
  const add=(type,n=1,org=null)=>{
    const va=vollalarmGroup(type);
    if(va){ // Vollalarm: alle verfügbaren Fahrzeuge der Orts-/Gliederung
-     for(const u of va.units.filter(u=>["1","2","8"].includes(String(u.status))&&islandReachable(u)))req.push({type:u.type,org:u.org,src,exact:u.id});
+     for(const u of va.units.filter(VA_FREE))req.push({type:u.type,org:u.org,src,exact:u.id});
      return;
    }
    for(let i=0;i<n;i++)req.push({type,org,src});
@@ -4430,18 +4430,22 @@ const AAO_RULE_FIELDS={
  freeText:{label:"Freitext enthält",free:true,placeholder:"Stichwort(e), mehrere mit Komma = eins davon"}
 };
 const LINKED_AAO_IDS=new Set(["1","2","3","4","5","6","7","8","9","10","11","12","13","14","15","16","17","18","19","20","21"]);
-// "Vollalarm DLRG <Ort>" / "Vollalarm DRK <Ort>": alle Fahrzeuge dieser Gliederung (nach Standort).
-function vollalarmOptions(){
- const out=[];
- for(const org of ["DLRG","DRK"]){
-   const locs=[...new Set((db.units||[]).filter(u=>u.org===org&&u.location&&u.location!=="Übungsort").map(u=>u.location))].sort((a,b)=>a.localeCompare(b,"de"));
-   locs.forEach(l=>out.push(`Vollalarm ${org} ${l}`));
- }
- return out;
-}
+// "Vollalarm DLRG" / "Vollalarm DRK": alle freien Fahrzeuge der NÄCHSTEN Ortsgruppe (Standort mit
+// der kürzesten Entfernung zum Einsatzort, mit mindestens einem freien, erreichbaren Fahrzeug).
+// Ältere AAOs mit "Vollalarm DLRG <Ort>" funktionieren weiter (feste Ortsgruppe).
+function vollalarmOptions(){return ["Vollalarm DLRG","Vollalarm DRK"]}
+function VA_FREE(u){return ["1","2","8"].includes(String(u.status))&&islandReachable(u)}
 function vollalarmGroup(type){
- const m=String(type||"").match(/^Vollalarm (DLRG|DRK) (.+)$/); if(!m)return null;
- return {org:m[1],location:m[2],units:(db.units||[]).filter(u=>u.org===m[1]&&u.location===m[2])};
+ const m=String(type||"").trim().match(/^Vollalarm (DLRG|DRK)(?: (.+))?$/); if(!m)return null;
+ const org=m[1], all=(db.units||[]).filter(u=>u.org===org&&u.location&&u.location!=="Übungsort");
+ if(m[2])return {org,location:m[2],units:all.filter(u=>u.location===m[2])};
+ let best=null,bestKm=Infinity;
+ for(const loc of new Set(all.map(u=>u.location))){
+   const free=all.filter(u=>u.location===loc&&VA_FREE(u)); if(!free.length)continue;
+   const km=Math.min(...free.map(u=>{const k=geographicRank(u);return Number.isFinite(k)?k:999}));
+   if(km<bestKm){bestKm=km;best=loc}
+ }
+ return {org,location:best,units:best?all.filter(u=>u.location===best):[]};
 }
 function isBuiltinAao(id){return LINKED_AAO_IDS.has(String(id))}
 function aaoEntry(id){return (db.aao||[]).find(a=>String(a.id)===String(id))||(defaults.aao||[]).find(a=>String(a.id)===String(id))||null}

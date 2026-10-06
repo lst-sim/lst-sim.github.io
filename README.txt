@@ -798,3 +798,9 @@ Version 4.25:
   Typs wie Patienten (z. B. RTW je Patient). Patientenzahl = höchste Angabe aus "Wie viele
   Personen betroffen", "verletzt/erkrankt/gefährdet", "eingeklemmt" und "durch Feuer
   bedroht", mindestens 1.
+
+Version 4.26:
+- AAO "+ Fahrzeug": statt einer Ortsgruppe pro Eintrag gibt es nur noch "Vollalarm DLRG" und
+  "Vollalarm DRK". Alarmiert werden alle freien Fahrzeuge der Ortsgruppe, die dem Einsatzort am
+  nächsten ist (mit mindestens einem freien, erreichbaren Fahrzeug). Bereits gespeicherte
+  Einträge mit fester Ortsgruppe funktionieren weiter.
