@@ -965,3 +965,9 @@ Version 4.47:
   gefragt, welcher Stand gelten soll.
 - Buttons: "☁️ Speichern" (von Hand) und "📥 Gespeicherten Stand laden". GitHub (🔑) ist nur
   noch eine optionale zusätzliche Sicherung.
+
+Version 4.48:
+- IVENA MANV-Sammelzuweisung: je Fahrzeug kann eine eigene Zielklinik gewählt werden (unter dem
+  Fahrzeug, Standard = "wie oben"). Die Klinik oben gilt für alle ohne eigene Auswahl.
+- Fehler behoben: Bei einem ungültigen PZC wurden vorher schon die Fahrzeuge davor zugewiesen.
+  Jetzt werden erst alle PZC geprüft, dann wird zugewiesen.

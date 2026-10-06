@@ -132,7 +132,7 @@ table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:10px 8px
 </head>
 <body>
 <div style="padding:6px 10px;font-size:11px;color:#94a3b8;font-weight:700;display:flex;align-items:center;gap:10px;position:sticky;top:0;z-index:10;background:var(--bg)">
- <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v4.47</span>
+ <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v4.48</span>
  <span id="syncState"></span>
  <a id="homeLink" href="#" onclick="render('leitstelle');return false" class="hidden" style="color:#64748b;text-decoration:underline;font-weight:600">🖥️ Leitstelle</a>
  <a id="monitorLink" href="#" onclick="showMonitorQR();return false" style="color:#64748b;text-decoration:underline;font-weight:600;margin-left:auto">🖥️ Monitor hinzufügen</a>
@@ -5508,17 +5508,17 @@ function openIvenaManv(){
  uiLocked=true;
  document.getElementById("app").innerHTML=`<div class="card">
   <div class="row between"><h2>🚨 IVENA MANV – Sammelzuweisung</h2><button onclick="openIvenaAssignment()">Einzelzuweisung</button></div>
-  <p class="muted">Mehrere Fahrzeuge (Status 4) gleichzeitig derselben Klinik zuweisen. Je Fahrzeug ein Patient mit eigenem PZC (6-stellig, optional). Alle gewählten Fahrzeuge gehen auf Status 7.</p>
-  <label>Zielklinik</label>
+  <p class="muted">Mehrere Fahrzeuge (Status 4) gleichzeitig zuweisen. Je Fahrzeug ein Patient mit eigenem PZC (6-stellig, optional) und bei Bedarf eigener Zielklinik. Alle gewählten Fahrzeuge gehen auf Status 7.</p>
+  <label>Zielklinik (Standard für alle)</label>
   <select id="manvHospital">${hospitals.map(h=>`<option value="${h.id}">${esc(h.name)}${h.place?` (${esc(h.place)})`:""}</option>`).join("")}</select>
   <label style="margin-top:10px">Fahrzeuge</label>
   <div class="row" style="margin-bottom:6px"><button onclick="document.querySelectorAll('.manvChk').forEach(x=>x.checked=true)">Alle wählen</button><button onclick="document.querySelectorAll('.manvChk').forEach(x=>x.checked=false)">Keine</button></div>
   <div style="border:1px solid var(--line);border-radius:10px">
-   ${units.map(u=>`<div class="row" style="flex-wrap:nowrap;padding:8px 10px;border-bottom:1px solid var(--line)">
+   ${units.map(u=>`<div class="row" style="flex-wrap:nowrap;padding:8px 10px 4px">
      <input type="checkbox" class="manvChk" data-id="${u.id}" style="width:auto">
      <div style="flex:1;min-width:0"><b>${esc(u.opta||u.name)}</b><br><small class="muted">${esc(u.type)}${u.location?` · ${esc(u.location)}`:""}</small></div>
      <input class="manvPzc" data-id="${u.id}" inputmode="numeric" maxlength="6" placeholder="PZC" style="width:110px;flex:0 0 110px" oninput="manvPzcHint(this)">
-    </div><div class="manvHint muted" data-id="${u.id}" style="font-size:12px;padding:0 10px 6px"></div>`).join("")}
+    </div><div style="padding:0 10px 4px 38px"><select class="manvHosp" data-id="${u.id}" style="font-size:13px;padding:5px 8px" onchange="manvHospPick(this)"><option value="">↳ Zielklinik wie oben (Standard)</option>${hospitals.map(h=>`<option value="${h.id}">↳ ${esc(h.name)}${h.place?` (${esc(h.place)})`:""}</option>`).join("")}</select></div><div class="manvHint muted" data-id="${u.id}" style="font-size:12px;padding:0 10px 6px 38px;border-bottom:1px solid var(--line)"></div>`).join("")}
   </div>
   ${ivenaAnlassHTML("manv")}
   <label style="margin-top:10px">Weitere Informationen (für alle)</label>
@@ -5530,6 +5530,7 @@ function openIvenaManv(){
   </div>
  </div>`;
 }
+function manvHospPick(el){if(el.value){const c=document.querySelector(`.manvChk[data-id="${el.dataset.id}"]`);if(c)c.checked=true}}
 function manvPzcHint(el){
  el.value=el.value.replace(/\D/g,"").slice(0,6);
  const hint=document.querySelector(`.manvHint[data-id="${el.dataset.id}"]`);
@@ -5538,21 +5539,30 @@ function manvPzcHint(el){
  if(el.value)document.querySelector(`.manvChk[data-id="${el.dataset.id}"]`).checked=true;
 }
 function saveIvenaManv(){
- const hospital=db.ivena.find(h=>String(h.id)===String(document.getElementById("manvHospital")?.value));
- if(!hospital){toast("Bitte Zielklinik wählen");return}
+ const defHospital=db.ivena.find(h=>String(h.id)===String(document.getElementById("manvHospital")?.value));
+ if(!defHospital){toast("Bitte Zielklinik wählen");return}
  const eta=etaRead("manv"); if(!eta){toast("Bitte die Uhrzeit der Eintreffzeit wählen");return}
  const ids=[...document.querySelectorAll(".manvChk")].filter(x=>x.checked).map(x=>x.dataset.id);
  if(!ids.length){toast("Bitte mindestens ein Fahrzeug wählen");return}
  const info=String(document.getElementById("manvInfo")?.value||"").trim();
  const anlass=ivenaAnlassRead("manv");
  db.ivenaAssignments=db.ivenaAssignments||[];
- let n=0;
+ // Erst alle PZC prüfen, dann zuweisen (sonst wäre bei einem Fehler nur ein Teil zugewiesen)
+ for(const id of ids){
+   const u=db.units.find(x=>String(x.id)===String(id));
+   const raw=document.querySelector(`.manvPzc[data-id="${id}"]`)?.value||"";
+   const f=raw.length>=3?pzcFind(raw.slice(0,3)):null;
+   if(raw&&!(raw.length===6&&f&&f.allowed.includes(raw[5]))){toast(`PZC bei ${u?.opta||u?.name||id} unvollständig/ungültig`);return}
+ }
+ let n=0; const byHosp={};
  for(const id of ids){
    const u=db.units.find(x=>String(x.id)===String(id)); if(!u||String(u.status)!=="4")continue;
    const raw=document.querySelector(`.manvPzc[data-id="${id}"]`)?.value||"";
    const f=raw.length>=3?pzcFind(raw.slice(0,3)):null;
    const valid=raw.length===6&&f&&f.allowed.includes(raw[5]);
-   if(raw&&!valid){toast(`PZC bei ${u.opta||u.name} unvollständig/ungültig`);return}
+   const hSel=document.querySelector(`.manvHosp[data-id="${id}"]`)?.value||"";
+   const hospital=(hSel&&db.ivena.find(h=>String(h.id)===String(hSel)))||defHospital;
+   byHosp[hospital.name]=(byHosp[hospital.name]||0)+1;
    setUnitStatus(u,"7");
    const a={id:Date.now()+n,hospitalId:hospital.id,hospitalName:hospital.name,
      fach:valid?pzcFachrichtung(f.code):"",schockraum:false,geschlecht:"",alter:valid?String(Number(raw.slice(3,5))):"",na:false,
@@ -5563,7 +5573,7 @@ function saveIvenaManv(){
    n++;
  }
  save();
- toast(`${n} Fahrzeug(e) an ${hospital.name} zugewiesen – Status 7`);
+ toast(`${n} Fahrzeug(e) zugewiesen (${Object.entries(byHosp).map(([k,v])=>`${v}× ${k}`).join(", ")}) – Status 7`);
  render("ivenaZuweisungen");
 }
 function saveIvenaAssignment(){
