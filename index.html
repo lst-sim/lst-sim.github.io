@@ -132,7 +132,7 @@ table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:10px 8px
 </head>
 <body>
 <div style="padding:6px 10px;font-size:11px;color:#94a3b8;font-weight:700;display:flex;align-items:center;gap:10px;position:sticky;top:0;z-index:10;background:var(--bg)">
- <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v4.45</span>
+ <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v4.46</span>
  <span id="syncState"></span>
  <a id="homeLink" href="#" onclick="render('leitstelle');return false" class="hidden" style="color:#64748b;text-decoration:underline;font-weight:600">🖥️ Leitstelle</a>
  <a id="monitorLink" href="#" onclick="showMonitorQR();return false" style="color:#64748b;text-decoration:underline;font-weight:600;margin-left:auto">🖥️ Monitor hinzufügen</a>
@@ -3068,7 +3068,7 @@ function saveUnitDraft(){
  }else{
    db.units.push({id:Date.now(),...fields,status:duty.none?"2":(dutyActive(duty)?"2":"6"),custom:true,verified:"Eigene Angabe"});
  }
- unitDraft=null; save(); toast("Rettungsmittel gespeichert"); render("mittel");
+ unitDraft=null; save(); toast("Rettungsmittel gespeichert"); render("mittel"); ghAutoSave("units");
 }
 function deleteUnit(id){
  const u=db.units.find(x=>String(x.id)===String(id));
@@ -3079,7 +3079,7 @@ function deleteUnit(id){
    db.deletedUnitOptas=db.deletedUnitOptas||[];
    if(!db.deletedUnitOptas.includes(u.opta))db.deletedUnitOptas.push(u.opta);
  }
- save();toast("Fahrzeug entfernt");render("mittel");
+ save();toast("Fahrzeug entfernt");render("mittel");ghAutoSave("units");
 }
 function setStatus(id,s){db.units.find(x=>x.id===id).status=s;save();toast("Status geändert")}
 
@@ -4630,8 +4630,9 @@ function mittel(){
      <div class="row">
        <button onclick="realisticMode()">🎲 Realistisch</button>
        <button onclick="openCloudSetup()">☁️ Live-Verbindung</button>
-       <button onclick="exportSetup('units')" title="Alle Fahrzeuge als Datei sichern">💾 Fahrzeuge sichern</button>
-       <button onclick="importSetupPick('units')" title="Gesicherte Fahrzeug-Datei laden">📂 Fahrzeuge laden</button>
+       <button onclick="saveSetupToGitHub('units')" title="Alle Fahrzeuge dauerhaft in GitHub speichern – gilt für alle Geräte">☁️ Fahrzeuge in GitHub speichern</button>
+       <button onclick="loadSetupFromGitHub('units',true)" title="Gespeicherten GitHub-Stand laden">📥 Aus GitHub laden</button>
+       <button onclick="ghOpenSetup('units')" title="GitHub-Zugang (Token) einrichten">🔑</button>
        <button class="primary" onclick="addUnit()">＋ Rettungsmittel</button>
      </div>
    </div>
@@ -4775,23 +4776,105 @@ function importSetupPick(kind){
  inp.onchange=()=>{const f=inp.files&&inp.files[0];if(!f)return;const r=new FileReader();r.onload=()=>importSetup(kind,String(r.result||""));r.readAsText(f)};
  inp.click();
 }
-function importSetup(kind,text){
- let d=null;try{d=JSON.parse(text)}catch(e){}
- if(!d||d.format!=="leitstelle.sim"||d.kind!==kind){toast("Das ist keine passende Sicherungsdatei");return}
+function applySetupData(kind,d){
  if(kind==="aao"){
-   if(!Array.isArray(d.aao)){toast("Datei enthält keine AAOs");return}
-   if(!confirm(`${d.aao.length} AAOs aus der Sicherung vom ${new Date(d.exportedAt).toLocaleString("de-DE")} laden? Die aktuellen AAOs werden dabei ersetzt.`))return;
    db.aao=d.aao; db.deletedAaoIds=Array.isArray(d.deletedAaoIds)?d.deletedAaoIds:(db.deletedAaoIds||[]);
-   save(); toast("AAOs geladen"); render("aao");
  }else{
-   if(!Array.isArray(d.units)){toast("Datei enthält keine Fahrzeuge");return}
-   if(!confirm(`${d.units.length} Fahrzeuge aus der Sicherung vom ${new Date(d.exportedAt).toLocaleString("de-DE")} laden? Die aktuelle Fahrzeugliste wird dabei ersetzt (laufende Status bleiben, wo möglich, erhalten).`))return;
    const old=new Map((db.units||[]).map(u=>[String(u.id),u]));
    const loans=(db.units||[]).filter(u=>u.neighborLoan);
    db.units=[...d.units.map(u=>{const o=old.get(String(u.id));const x={...u,userEdited:true};if(o){UNIT_RUNTIME_KEYS.forEach(k=>{if(o[k]!==undefined)x[k]=o[k]});x.status=o.status}else if(!x.status)x.status="2";return x}),...loans];
    if(Array.isArray(d.deletedUnitOptas))db.deletedUnitOptas=d.deletedUnitOptas;
-   save(); if(typeof pushAllUnitsCloud==="function")pushAllUnitsCloud(); toast("Fahrzeuge geladen"); render("mittel");
  }
+}
+function importSetup(kind,text){
+ let d=null;try{d=JSON.parse(text)}catch(e){}
+ if(!d||d.format!=="leitstelle.sim"||d.kind!==kind){toast("Das ist keine passende Sicherungsdatei");return}
+ const list=kind==="aao"?d.aao:d.units;
+ if(!Array.isArray(list)){toast("Datei enthält keine Daten");return}
+ if(!confirm(`${list.length} ${kind==="aao"?"AAOs":"Fahrzeuge"} aus der Sicherung vom ${new Date(d.exportedAt).toLocaleString("de-DE")} laden? Die aktuelle Liste wird dabei ersetzt.`))return;
+ applySetupData(kind,d);
+ save(); if(kind==="units"&&typeof pushAllUnitsCloud==="function")pushAllUnitsCloud();
+ toast(kind==="aao"?"AAOs geladen":"Fahrzeuge geladen"); render(kind==="aao"?"aao":"mittel");
+}
+// ─── AAOs / Fahrzeuge in GitHub speichern (dauerhaft, für alle Geräte) ──────────────────────
+// Gespeichert wird als Datei data/<szenario>-aao.json bzw. -units.json im Repository der Seite.
+// Jedes Gerät lädt beim Start automatisch den neuesten GitHub-Stand. Zum Schreiben braucht es
+// einmalig pro Gerät einen GitHub-Zugangsschlüssel (Token) – der bleibt nur auf diesem Gerät.
+const GH_REPO="lst-sim/lst-sim.github.io", GH_TOKEN_KEY="lst-github-token";
+function ghToken(){try{return localStorage.getItem(GH_TOKEN_KEY)||""}catch(e){return ""}}
+function ghPath(kind){return `data/${currentScenarioId}-${kind}.json`}
+function ghSetupHTML(kind){
+ return `<div class="card" style="max-width:640px;margin:20px auto">
+  <h2>🔑 GitHub-Zugang einrichten</h2>
+  <p>Damit AAOs und Fahrzeuge in GitHub gespeichert werden können, braucht dieses Gerät einmalig einen Zugangsschlüssel (Token):</p>
+  <ol style="line-height:1.6">
+   <li>Auf <b>github.com</b> anmelden → oben rechts Profilbild → <b>Settings</b></li>
+   <li>Ganz unten links <b>Developer settings</b> → <b>Personal access tokens</b> → <b>Fine-grained tokens</b> → <b>Generate new token</b></li>
+   <li>Name z. B. „Leitstelle.sim“, Ablauf nach Wunsch. <b>Resource owner: lst-sim</b>, <b>Only select repositories</b> → <b>lst-sim.github.io</b></li>
+   <li>Bei <b>Permissions → Repository permissions → Contents</b> „<b>Read and write</b>“ wählen</li>
+   <li><b>Generate token</b> → Schlüssel kopieren und hier einfügen</li>
+  </ol>
+  <label>Token</label><input id="ghTokenInput" type="password" placeholder="github_pat_…" value="">
+  <p class="muted" style="font-size:12px">Der Schlüssel wird nur auf diesem Gerät gespeichert und nie an Monitore oder Fahrzeuge weitergegeben. Die gespeicherten AAOs/Fahrzeuge sind – wie die Seite selbst – öffentlich lesbar.</p>
+  <div class="row" style="margin-top:10px">
+   <button onclick="render('${kind==="aao"?"aao":"mittel"}')">Abbrechen</button>
+   ${ghToken()?`<button onclick="try{localStorage.removeItem(GH_TOKEN_KEY)}catch(e){};toast('Token entfernt');render('${kind==="aao"?"aao":"mittel"}')">Token entfernen</button>`:""}
+   <button class="primary" onclick="ghSaveToken('${kind}')">💾 Token speichern & hochladen</button>
+  </div></div>`;
+}
+function ghOpenSetup(kind){uiLocked=true;document.getElementById("app").innerHTML=ghSetupHTML(kind)}
+function ghSaveToken(kind){
+ const t=String(document.getElementById("ghTokenInput")?.value||"").trim();
+ if(!t){toast("Bitte Token einfügen");return}
+ try{localStorage.setItem(GH_TOKEN_KEY,t)}catch(e){toast("Token konnte nicht gespeichert werden");return}
+ uiLocked=false; render(kind==="aao"?"aao":"mittel"); saveSetupToGitHub(kind);
+}
+function b64utf8(str){const bytes=new TextEncoder().encode(str);let bin="";for(let i=0;i<bytes.length;i+=0x8000)bin+=String.fromCharCode.apply(null,bytes.subarray(i,i+0x8000));return btoa(bin)}
+function setupData(kind){
+ const data={format:"leitstelle.sim",kind,version:(document.getElementById("versionTag")?.textContent||""),scenario:currentScenarioId,exportedAt:new Date().toISOString()};
+ if(kind==="aao"){data.aao=JSON.parse(JSON.stringify(db.aao||[]));data.deletedAaoIds=db.deletedAaoIds||[]}
+ else{data.units=(db.units||[]).filter(u=>!u.neighborLoan).map(u=>{const x=JSON.parse(JSON.stringify(u));UNIT_RUNTIME_KEYS.forEach(k=>delete x[k]);delete x.status;return x});data.deletedUnitOptas=db.deletedUnitOptas||[]}
+ return data;
+}
+let ghBusy=false; const ghAutoTimers={};
+// Mit eingerichtetem Token wird jede Änderung automatisch (kurz verzögert) in GitHub gespeichert.
+function ghAutoSave(kind){if(!ghToken())return;clearTimeout(ghAutoTimers[kind]);ghAutoTimers[kind]=setTimeout(()=>saveSetupToGitHub(kind),1500)}
+async function saveSetupToGitHub(kind){
+ const token=ghToken(); if(!token){ghOpenSetup(kind);return}
+ if(ghBusy){ghAutoSave(kind);return} ghBusy=true;
+ const label=kind==="aao"?"AAOs":"Fahrzeuge";
+ toast(`${label} werden in GitHub gespeichert …`);
+ try{
+   const data=setupData(kind), path=ghPath(kind);
+   const api=`https://api.github.com/repos/${GH_REPO}/contents/${path}`;
+   const hdr={"Authorization":`Bearer ${token}`,"Accept":"application/vnd.github+json"};
+   let sha;
+   const g=await fetch(`${api}?ref=main`,{headers:hdr,cache:"no-store"});
+   if(g.status===401||g.status===403){throw new Error("Zugang abgelehnt – Token prüfen (Contents: Read and write für lst-sim.github.io)")}
+   if(g.ok)sha=(await g.json()).sha;
+   const r=await fetch(api,{method:"PUT",headers:{...hdr,"Content-Type":"application/json"},body:JSON.stringify({message:`${label} gespeichert (Leitstelle.sim, ${currentScenarioId})`,content:b64utf8(JSON.stringify(data,null,1)),branch:"main",...(sha?{sha}:{})})});
+   if(!r.ok){const t=await r.text();throw new Error(r.status===401||r.status===403||r.status===404?"Zugang abgelehnt – Token prüfen (Contents: Read and write für lst-sim.github.io)":`GitHub-Fehler ${r.status}: ${t.slice(0,120)}`)}
+   db["ghStamp_"+kind]=data.exportedAt; save();
+   toast(`✅ ${label} in GitHub gespeichert – auf anderen Geräten in ca. 1–2 Minuten verfügbar`);
+ }catch(e){alert(`${label} konnten nicht in GitHub gespeichert werden:\n${e.message||e}`)}
+ finally{ghBusy=false}
+}
+// Beim Start: neuesten GitHub-Stand laden (nur wenn neuer als der zuletzt übernommene/gespeicherte).
+async function loadSetupFromGitHub(kind,manual=false){
+ try{
+   const r=await fetch(`${ghPath(kind)}?t=${Date.now()}`,{cache:"no-store"});
+   if(!r.ok){if(manual)toast("In GitHub ist noch nichts gespeichert");return false}
+   const d=await r.json();
+   if(!d||d.format!=="leitstelle.sim"||d.kind!==kind||!Array.isArray(kind==="aao"?d.aao:d.units))return false;
+   const have=db["ghStamp_"+kind]||"";
+   if(!manual&&have&&d.exportedAt<=have)return false;
+   if(manual&&!confirm(`${kind==="aao"?"AAOs":"Fahrzeuge"} vom ${new Date(d.exportedAt).toLocaleString("de-DE")} aus GitHub laden? Die aktuelle Liste wird ersetzt.`))return false;
+   applySetupData(kind,d); db["ghStamp_"+kind]=d.exportedAt; save();
+   if(kind==="units"&&typeof pushAllUnitsCloud==="function")pushAllUnitsCloud();
+   toast(`📥 ${kind==="aao"?"AAOs":"Fahrzeuge"} aus GitHub geladen (Stand ${new Date(d.exportedAt).toLocaleString("de-DE",{day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"})})`);
+   if(!uiLocked&&["aao","mittel","leitstelle"].includes(currentPage))render(currentPage);
+   return true;
+ }catch(e){if(manual)toast("GitHub-Stand konnte nicht geladen werden");return false}
 }
 function isBuiltinAao(id){return LINKED_AAO_IDS.has(String(id))}
 function aaoEntry(id){return (db.aao||[]).find(a=>String(a.id)===String(id))||(defaults.aao||[]).find(a=>String(a.id)===String(id))||null}
@@ -4854,7 +4937,7 @@ function aaoRulesText(a){
 let aaoDraft=null;
 function aao(){
  if(aaoDraft)return aaoEditor();
- document.getElementById("app").innerHTML=`<div class="card"><div class="row between"><div><h2>🧠 AAO / Einsatzstichworte</h2><p class="muted">Die AAO steuert den Alarmvorschlag. Passen mehrere AAOs, wird nur die höchste alarmiert (die mit den meisten Fahrzeugen; bei Gleichstand die spezifischere). Rettungsdienst aus XABCDE (RD_X…RD_D) kommt immer dazu.</p></div><div class="row" style="gap:6px;flex-wrap:wrap;justify-content:flex-end"><button onclick="exportSetup('aao')" title="Alle AAOs als Datei sichern">💾 AAOs sichern</button><button onclick="importSetupPick('aao')" title="Gesicherte AAO-Datei laden">📂 AAOs laden</button><button class="primary" onclick="editAAO(null)">＋ AAO anlegen</button></div></div>
+ document.getElementById("app").innerHTML=`<div class="card"><div class="row between"><div><h2>🧠 AAO / Einsatzstichworte</h2><p class="muted">Die AAO steuert den Alarmvorschlag. Passen mehrere AAOs, wird nur die höchste alarmiert (die mit den meisten Fahrzeugen; bei Gleichstand die spezifischere). Rettungsdienst aus XABCDE (RD_X…RD_D) kommt immer dazu.</p></div><div class="row" style="gap:6px;flex-wrap:wrap;justify-content:flex-end"><button onclick="saveSetupToGitHub('aao')" title="Alle AAOs dauerhaft in GitHub speichern – gilt für alle Geräte">☁️ AAOs in GitHub speichern</button><button onclick="loadSetupFromGitHub('aao',true)" title="Gespeicherten GitHub-Stand laden">📥 Aus GitHub laden</button><button onclick="ghOpenSetup('aao')" title="GitHub-Zugang (Token) einrichten">🔑</button><button class="primary" onclick="editAAO(null)">＋ AAO anlegen</button></div></div>
  <table><thead><tr><th>Stichwort</th><th>Bedingungen</th><th>Alarmierung</th><th>Mit anderen AAOs</th><th></th></tr></thead><tbody>${db.aao.map(a=>{
    const builtin=isBuiltinAao(a.id);
    return `<tr style="${a.active===false?"opacity:.5":""}"><td><b>${esc(a.name)}</b>${a.keyword?`<br><small class="muted">${esc(a.keyword)}</small>`:""}${builtin&&!a.rulesEdited?"":`<br><span class="pill">${builtin?"Bedingungen geändert":"eigene"}${a.active===false?" · inaktiv":""}</span>`}</td><td>${aaoRulesText(a)}</td><td>${(a.units||[]).map(x=>`${x.n==="pat"?`${esc(x.type)} je Patient`:`${aaoNText(x)}× ${esc(x.type)}`}${x.org?` <small class="muted">(${esc(x.org)})</small>`:""}${x.opt?` <span class="pill">optional</span>`:""}`).join(", ")||`<span class="muted">keine</span>`}</td><td><small>${aaoCombineText(a)}</small></td><td style="white-space:nowrap"><button onclick="editAAO(${JSON.stringify(a.id)})">✏️ Bearbeiten</button>${builtin?"":` <button onclick="deleteAAO(${JSON.stringify(a.id)})">Löschen</button>`}</td></tr>`;
@@ -4945,7 +5028,7 @@ function saveAAO(){
  if(idx>=0)db.aao[idx]=entry; else db.aao.push(entry);
  aaoDraft=null;
  save();
- toast("AAO gespeichert");
+ toast("AAO gespeichert"); ghAutoSave("aao");
  render("aao");
 }
 function resetAAO(){
@@ -4957,12 +5040,12 @@ function resetAAO(){
  if(idx>=0)db.aao[idx]=copy; else db.aao.push(copy);
  aaoDraft=null;
  save();
- toast("AAO zurückgesetzt");
+ toast("AAO zurückgesetzt"); ghAutoSave("aao");
  render("aao");
 }
 function deleteAAO(id){
  if(isBuiltinAao(id)){toast("Standard-AAOs können nur bearbeitet oder zurückgesetzt werden");return}
- if(confirm("AAO wirklich löschen?")){db.aao=db.aao.filter(x=>String(x.id)!==String(id));db.deletedAaoIds=db.deletedAaoIds||[];if(!db.deletedAaoIds.includes(String(id)))db.deletedAaoIds.push(String(id));save();render("aao")}
+ if(confirm("AAO wirklich löschen?")){db.aao=db.aao.filter(x=>String(x.id)!==String(id));db.deletedAaoIds=db.deletedAaoIds||[];if(!db.deletedAaoIds.includes(String(id)))db.deletedAaoIds.push(String(id));save();render("aao");ghAutoSave("aao")}
 }
 
 
@@ -5784,6 +5867,7 @@ if(!initVehicleMode()){
    if(resetChanged)save();
  }
  render(IS_MONITOR?monitorStartPage:"leitstelle");
+ if(!IS_MONITOR){loadSetupFromGitHub("aao");loadSetupFromGitHub("units")}
  if(db.cloud?.enabled && !IS_MONITOR) startCloudPolling();
  startStateSync();
 }

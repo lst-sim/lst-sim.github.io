@@ -942,3 +942,14 @@ Version 4.45:
   mitgelieferten Fahrzeugen, beim Programmstart, bei "Realistisch" und zu Dienstbeginn
   (Dienstzeiten: Beginn → Status 2, Ende → Status 6). Bereits laufende Installationen: freie
   Fahrzeuge in Status 1 ohne Einsatz werden einmalig auf 2 gesetzt.
+
+Version 4.46:
+- AAOs und Fahrzeuge werden in GitHub gespeichert statt auf dem Gerät: Buttons
+  "☁️ AAOs in GitHub speichern" / "☁️ Fahrzeuge in GitHub speichern" und "📥 Aus GitHub laden".
+  Gespeichert wird als data/<szenario>-aao.json bzw. data/<szenario>-units.json im Repository.
+- Einmalig pro Gerät wird ein GitHub-Zugangsschlüssel (Fine-grained Token, nur
+  lst-sim.github.io, Contents: Read and write) eingegeben (🔑, mit Anleitung). Danach wird jede
+  Änderung an AAOs/Fahrzeugen automatisch in GitHub gespeichert.
+- Jedes Gerät lädt beim Start automatisch den neuesten GitHub-Stand (nur wenn neuer als der
+  zuletzt übernommene). Laufende Fahrzeugstatus bleiben dabei erhalten.
+- Datei-Sicherung (v4.43) entfällt zugunsten von GitHub.
