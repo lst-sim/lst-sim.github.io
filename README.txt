@@ -852,3 +852,7 @@ Version 4.33:
   Eintreffzeit, Rettungsmittel, PZC, Indikation, Fachbereich, je eine Spalte für S, BG, SS,
   B, R, I, N (rot mit X = ja), Geschlecht, Alter, Info, Anmeldezeit. Gelöschte stehen
   durchgestrichen unten. Die Auswahl merkt sich jedes Gerät selbst.
+
+Version 4.34:
+- IVENA: KTWs können jetzt zugewiesen werden (Einzelzuweisung, MANV-Sammelzuweisung,
+  Fahrzeugterminal des KTW und Anmeldung durch NEF/OrgL), sobald sie in Status 4 sind.

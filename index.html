@@ -132,7 +132,7 @@ table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:10px 8px
 </head>
 <body>
 <div style="padding:6px 10px;font-size:11px;color:#94a3b8;font-weight:700;display:flex;align-items:center;gap:10px;position:sticky;top:0;z-index:10;background:var(--bg)">
- <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v4.33</span>
+ <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v4.34</span>
  <span id="syncState"></span>
  <a id="homeLink" href="#" onclick="render('leitstelle');return false" class="hidden" style="color:#64748b;text-decoration:underline;font-weight:600">🖥️ Leitstelle</a>
  <a id="monitorLink" href="#" onclick="showMonitorQR();return false" style="color:#64748b;text-decoration:underline;font-weight:600;margin-left:auto">🖥️ Monitor hinzufügen</a>
@@ -4186,7 +4186,7 @@ async function renderVehicleTerminal(unitId,dburl,sid){
    if(led){led.style.background="#2ecc71";led.style.boxShadow="0 0 5px #2ecc71";led.title="LIVE"}
    const vType=unit?.type||local?.type;
    const inCallStatus4=String(unit?.status)==="4" && calls.length>0;
-   const canAssign=String(unit?.status)==="4" && ["RTW","RTH","ITH","KTH","NKTW","OrgL/LNA","NEF"].includes(vType);
+   const canAssign=String(unit?.status)==="4" && ["RTW","RTH","ITH","KTH","NKTW","KTW","OrgL/LNA","NEF"].includes(vType);
    const canOrglFeedback=vType==="OrgL/LNA" && inCallStatus4;
    if(!vehicleKeyboardOpen){
      const body=document.getElementById("vehicleBody"); if(!body)return;
@@ -4279,7 +4279,7 @@ async function openVehicleIvenaAssignment(unitId,dburl,sid,callId){
  if(!hospitals.length){toast("Keine Kliniken hinterlegt");return}
  const isAnnounceType=["OrgL/LNA","NEF"].includes(local?.type);
  const allowSelf=local?.type==="NEF";
- const transportOptions=isAnnounceType?(vehicleUnitsCache||[]).filter(u=>["RTW","RTH","ITH","KTH","NKTW"].includes(u.type)&&String(u.status)==="4"):[];
+ const transportOptions=isAnnounceType?(vehicleUnitsCache||[]).filter(u=>["RTW","RTH","ITH","KTH","NKTW","KTW"].includes(u.type)&&String(u.status)==="4"):[];
  clearInterval(vehiclePollTimer);
  let pa={};
  if(callId){
@@ -4807,7 +4807,7 @@ function randomizeIvenaClosures(){
  save();pushIvenaCloud();toast("Zufällige Abmeldungen gewürfelt");render("ivena");
 }
 function assignableTransportUnits(){
- return db.units.filter(u=>["RTW","RTH","ITH","KTH","NKTW","NEF"].includes(u.type) && String(u.status)==="4");
+ return db.units.filter(u=>["RTW","RTH","ITH","KTH","NKTW","KTW","NEF"].includes(u.type) && String(u.status)==="4");
 }
 function assignableNefUnits(){
  return db.units.filter(u=>["NEF","RTH"].includes(u.type) && String(u.status)==="4");
