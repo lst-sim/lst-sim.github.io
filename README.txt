@@ -820,3 +820,12 @@ Version 4.28:
   Alarmtext und ist als AAO-Bedingung "Psy Problem" wählbar.
 - Fehler behoben: Ein Fahrzeug konnte doppelt im Vorschlag stehen (z. B. NKTW als First
   Responder und zusätzlich als NKTW).
+
+Version 4.29:
+- AAO: Fahrzeuge können als "optional" markiert werden (Haken neben dem Fahrzeug im
+  AAO-Editor, in der Liste mit "optional" gekennzeichnet). Optionale Fahrzeuge werden nicht
+  automatisch alarmiert, sondern im Fenster "Alarmierung vorbereiten" unter "Optionale
+  Fahrzeuge (AAO)" mit dem nächsten freien Fahrzeug zum Anhaken angeboten. Nur angehakte
+  werden mit alarmiert. Ein optionaler "Vollalarm DLRG/DRK" ist ein einziger Haken für die
+  ganze nächste Ortsgruppe. Angeboten werden die optionalen Fahrzeuge der AAO(s), die
+  tatsächlich alarmiert wird/werden.

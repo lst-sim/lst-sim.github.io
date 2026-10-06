@@ -132,7 +132,7 @@ table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:10px 8px
 </head>
 <body>
 <div style="padding:6px 10px;font-size:11px;color:#94a3b8;font-weight:700;display:flex;align-items:center;gap:10px;position:sticky;top:0;z-index:10;background:var(--bg)">
- <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v4.28</span>
+ <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v4.29</span>
  <span id="syncState"></span>
  <a id="homeLink" href="#" onclick="render('leitstelle');return false" class="hidden" style="color:#64748b;text-decoration:underline;font-weight:600">🖥️ Leitstelle</a>
  <a id="monitorLink" href="#" onclick="showMonitorQR();return false" style="color:#64748b;text-decoration:underline;font-weight:600;margin-left:auto">🖥️ Monitor hinzufügen</a>
@@ -2596,10 +2596,11 @@ function evaluate(){
  // Eigene (selbst angelegte, aktive) AAOs: greifen zusätzlich, wenn alle Bedingungen passen.
  for(const ca of customAaoMatches(c)){
    src=ca.id; kwMap[ca.id]=ca.keyword||ca.name;
-   for(const x of (ca.units||[]))add(x.type,aaoN(x,a),x.org||null);
+   for(const x of (ca.units||[]))if(!x.opt)add(x.type,aaoN(x,a),x.org||null);
    src="base";
  }
  // Nur die höchste passende AAO alarmieren.
+ let activeAao=[];
  {
    const groups=new Map();
    for(const r of req){if(r.src==="r0mod")continue;const k=String(r.src);if(!groups.has(k))groups.set(k,0);groups.set(k,groups.get(k)+1)}
@@ -2640,7 +2641,10 @@ function evaluate(){
        c.aaoCombined.push((aaoEntry(k)?.name)||k);
      }
      c.aaoWinner=(aaoEntry(win)?.name)||null;
-   }else c.aaoWinner=null;
+     const matched=Object.keys(kwMap).map(String);
+     activeAao=[win,...XABCDE_AAO.filter(x=>x!==win&&groups.has(x)),...[...groups.keys()].filter(k=>k!==win&&k!=="base"&&!XABCDE_AAO.includes(k)&&aaoCombinable(win,k)),
+       ...matched.filter(k=>!groups.has(k)&&k!==win&&aaoCombinable(win,k))];
+   }else{c.aaoWinner=null;activeAao=Object.keys(kwMap).map(String)}
  }
 
 
@@ -2693,6 +2697,28 @@ function evaluate(){
  {
    const drk=maybeAddDrkSupport(selected.filter(x=>!x.missing),c);
    if(drk && !used.has(drk.id)){selected.push({...drk});used.add(drk.id)}
+ }
+ // Optionale Fahrzeuge der alarmierten AAO(s) – nächstes freies Fahrzeug je Eintrag, zum Anhaken.
+ {
+   const offer=[], seen=new Set();
+   for(const id of [...new Set(activeAao)]){
+     for(const x of aaoOptUnits(id)){
+       const va=vollalarmGroup(x.type), aaoName=(aaoEntry(id)?.name)||String(id);
+       if(va){ // Vollalarm als EIN Haken für die ganze Ortsgruppe
+         const ids=va.units.filter(VA_FREE).map(u=>u.id).filter(i=>!used.has(i)&&!seen.has(i));
+         ids.forEach(i=>seen.add(i));
+         offer.push(ids.length?{unitIds:ids,type:`Vollalarm ${va.org} ${va.location}`,aao:aaoName}:{unitId:null,type:x.type,aao:aaoName});
+         continue;
+       }
+       const pool=availableUnits(x.type,x.org||null), want=aaoN(x,a);
+       let got=0;
+       for(const u of pool){if(got>=want)break;if(used.has(u.id)||seen.has(u.id))continue;seen.add(u.id);offer.push({unitId:u.id,type:u.type,aao:aaoName});got++}
+       for(;got<want;got++)offer.push({unitId:null,type:x.type,aao:aaoName});
+     }
+   }
+   c.optionalOffer=offer;
+   const ok=new Set(offer.flatMap(o=>o.unitIds||(o.unitId!=null?[o.unitId]:[])).map(String));
+   c.optionalChecked=(c.optionalChecked||[]).filter(id=>ok.has(String(id)));
  }
  c.keyword=keyword;
  c.proposedUnitIds=selected.filter(x=>!x.missing&&!x.neighbor).map(x=>x.id);
@@ -2766,6 +2792,13 @@ function prepareAlarm(){
    <small class="muted">R0 = ohne Sonderrechte (kein Nachbar-LK) · R1 = mit Sonderrechten, ohne NEF · R1N1 = mit Notarzt (NEF). Wechsel setzt den Fahrzeugvorschlag neu.</small>
    <label style="margin-top:12px">Vorgeschlagene Einsatzmittel</label>
    <div class="suggest">${esc(c.suggestion||"—")}</div>
+   ${(c.optionalOffer||[]).length?`<label style="margin-top:12px">➕ Optionale Fahrzeuge (AAO) – bei Bedarf anhaken</label>
+   <div class="suggest" style="background:#f8fafc">${c.optionalOffer.map(o=>{
+     if(o.unitIds){const chk=o.unitIds.every(i=>(c.optionalChecked||[]).map(String).includes(String(i)));
+       return `<label style="display:flex;gap:8px;align-items:center;font-weight:500;margin:4px 0"><input type="checkbox" style="width:auto" ${chk?"checked":""} onchange="toggleOptionalUnit('${o.unitIds.join(",")}',this.checked)"> ${esc(o.type)} <small class="muted">(${o.unitIds.length} Fahrzeuge: ${esc(o.unitIds.map(i=>db.units.find(x=>x.id===i)?.type).filter(Boolean).join(", "))})</small> <small class="muted">· ${esc(o.aao)}</small></label>`}
+     const u=o.unitId!=null?db.units.find(x=>x.id===o.unitId):null;const km=u?geographicRank(u):null;
+     return u?`<label style="display:flex;gap:8px;align-items:center;font-weight:500;margin:4px 0"><input type="checkbox" style="width:auto" ${(c.optionalChecked||[]).map(String).includes(String(u.id))?"checked":""} onchange="toggleOptionalUnit('${String(u.id)}',this.checked)"> ${esc(u.opta||u.name)} – ${esc(u.type)}${km!=null&&km<999?` <small class="muted">(~${km.toFixed(1)} km)</small>`:""} <small class="muted">· ${esc(o.aao)}</small></label>`
+       :`<div class="muted" style="margin:4px 0">☐ ${esc(o.type)} – nicht verfügbar <small>· ${esc(o.aao)}</small></div>`}).join("")}</div>`:""}
    ${(c.proposedUnitIds.length+(c.neighborProposal||[]).length)?"":`<div class="suggest" style="margin-top:8px;background:#fff1f1;border-color:#f3b4b4">⚠️ Kein Einsatzmittel verfügbar. Der Einsatz wird trotzdem alarmiert und angelegt – Fahrzeuge können über „Rettungsmittel bearbeiten“ oder später per Nachforderung ergänzt werden.</div>`}
    ${xtext?`<label style="margin-top:12px">XABCDE</label><pre style="white-space:pre-wrap;background:#f8fafc;padding:10px;border-radius:10px">${esc(xtext)}</pre>`:""}
    <label style="margin-top:12px">📝 Freitext für die Alarmierung</label>
@@ -2779,10 +2812,22 @@ function prepareAlarm(){
    <p class="muted">Simulation: Es wird keine reale Alarmierung ausgelöst.</p>
  </div>`;
 }
+function toggleOptionalUnit(id,on){
+ const c=db.currentCall; if(!c)return;
+ const set=new Set((c.optionalChecked||[]).map(String));
+ for(const i of String(id).split(",")){if(on)set.add(i);else set.delete(i)}
+ c.optionalChecked=[...set]; save();
+}
 function confirmAlarm(){
  const c=db.currentCall;
  if(!c)return;
  c.alarmFreeText=document.getElementById("alarmFreeText")?.value||"";
+ // Angehakte optionale AAO-Fahrzeuge mit alarmieren (nur wenn noch frei)
+ for(const id of (c.optionalChecked||[])){
+   const u=db.units.find(x=>String(x.id)===String(id));
+   if(u&&["1","2","8"].includes(String(u.status)))appendUnitToCall(c,u,"optional");
+ }
+ c.optionalChecked=[];
  alarmProposal();
 }
 function alarmProposal(){
@@ -4480,7 +4525,10 @@ function aaoEntry(id){return (db.aao||[]).find(a=>String(a.id)===String(id))||(d
 // Standard-AAO mit geänderten Bedingungen: der feste Abfragezweig alarmiert dafür nichts mehr,
 // stattdessen greift sie wie eine eigene AAO über ihre neuen Bedingungen.
 function aaoRulesEdited(id){return !!(db.aao||[]).find(a=>String(a.id)===String(id))?.rulesEdited}
-function aaoUnits(id){if(aaoRulesEdited(id))return [];return (aaoEntry(id)?.units||[]).filter(x=>x&&String(x.type||"").trim())}
+function aaoUnits(id){if(aaoRulesEdited(id))return [];return (aaoEntry(id)?.units||[]).filter(x=>x&&String(x.type||"").trim()&&!x.opt)}
+// Optionale Fahrzeuge einer AAO: werden nicht automatisch alarmiert, sondern im Alarmierungs-
+// fenster zum Anhaken angeboten.
+function aaoOptUnits(id){return (aaoEntry(id)?.units||[]).filter(x=>x&&String(x.type||"").trim()&&x.opt)}
 function aaoKeyword(id,fallback){if(aaoRulesEdited(id))return fallback;const k=String(aaoEntry(id)?.keyword||"").trim();return k||fallback}
 // Kombination: "nein" (Standard) = nur allein, "ja" = mit allen passenden AAOs, "mit" = nur mit
 // den angehakten. Es reicht, wenn eine der beiden AAOs die Kombination erlaubt.
@@ -4536,13 +4584,13 @@ function aao(){
  document.getElementById("app").innerHTML=`<div class="card"><div class="row between"><div><h2>🧠 AAO / Einsatzstichworte</h2><p class="muted">Die AAO steuert den Alarmvorschlag. Passen mehrere AAOs, wird nur die höchste alarmiert (die mit den meisten Fahrzeugen; bei Gleichstand die spezifischere). Rettungsdienst aus XABCDE (RD_X…RD_D) kommt immer dazu.</p></div><button class="primary" onclick="editAAO(null)">＋ AAO anlegen</button></div>
  <table><thead><tr><th>Stichwort</th><th>Bedingungen</th><th>Alarmierung</th><th>Mit anderen AAOs</th><th></th></tr></thead><tbody>${db.aao.map(a=>{
    const builtin=isBuiltinAao(a.id);
-   return `<tr style="${a.active===false?"opacity:.5":""}"><td><b>${esc(a.name)}</b>${a.keyword?`<br><small class="muted">${esc(a.keyword)}</small>`:""}${builtin&&!a.rulesEdited?"":`<br><span class="pill">${builtin?"Bedingungen geändert":"eigene"}${a.active===false?" · inaktiv":""}</span>`}</td><td>${aaoRulesText(a)}</td><td>${(a.units||[]).map(x=>`${x.n==="pat"?`${esc(x.type)} je Patient`:`${aaoNText(x)}× ${esc(x.type)}`}${x.org?` <small class="muted">(${esc(x.org)})</small>`:""}`).join(", ")||`<span class="muted">keine</span>`}</td><td><small>${aaoCombineText(a)}</small></td><td style="white-space:nowrap"><button onclick="editAAO(${JSON.stringify(a.id)})">✏️ Bearbeiten</button>${builtin?"":` <button onclick="deleteAAO(${JSON.stringify(a.id)})">Löschen</button>`}</td></tr>`;
+   return `<tr style="${a.active===false?"opacity:.5":""}"><td><b>${esc(a.name)}</b>${a.keyword?`<br><small class="muted">${esc(a.keyword)}</small>`:""}${builtin&&!a.rulesEdited?"":`<br><span class="pill">${builtin?"Bedingungen geändert":"eigene"}${a.active===false?" · inaktiv":""}</span>`}</td><td>${aaoRulesText(a)}</td><td>${(a.units||[]).map(x=>`${x.n==="pat"?`${esc(x.type)} je Patient`:`${aaoNText(x)}× ${esc(x.type)}`}${x.org?` <small class="muted">(${esc(x.org)})</small>`:""}${x.opt?` <span class="pill">optional</span>`:""}`).join(", ")||`<span class="muted">keine</span>`}</td><td><small>${aaoCombineText(a)}</small></td><td style="white-space:nowrap"><button onclick="editAAO(${JSON.stringify(a.id)})">✏️ Bearbeiten</button>${builtin?"":` <button onclick="deleteAAO(${JSON.stringify(a.id)})">Löschen</button>`}</td></tr>`;
  }).join("")}</tbody></table></div>`;
 }
 function editAAO(id){
  const src=id==null?null:db.aao.find(x=>String(x.id)===String(id));
  aaoDraft=src?JSON.parse(JSON.stringify(src)):{id:null,name:"",keyword:"",rules:{event:"Medizinischer Notfall"},units:[{type:"RTW",n:1,org:"Rettungsdienst"}],active:true};
- aaoDraft.units=(aaoDraft.units||[]).map(x=>({type:x.type||"",n:x.n==="pat"?"pat":(Number(x.n)||1),org:x.org||""}));
+ aaoDraft.units=(aaoDraft.units||[]).map(x=>({type:x.type||"",n:x.n==="pat"?"pat":(Number(x.n)||1),org:x.org||"",opt:!!x.opt}));
  aaoDraft._rules=Object.entries(aaoDraft.rules||{}).map(([k,v])=>({k,v:String(v)}));
  aaoDraft.combine=aaoDraft.combine||"nein"; aaoDraft.combineWith=(aaoDraft.combineWith||[]).map(String);
  render("aao");
@@ -4562,6 +4610,7 @@ function aaoEditor(){
    <select style="width:78px;flex:0 0 78px" onchange="aaoDraft.units[${i}].n=this.value==='pat'?'pat':(Number(this.value)||1)" title="Anzahl – „Pat.“ = so viele wie Patienten">${[...new Set([1,2,3,4,5,6,7,8,9,10,Number(u.n)||1])].sort((p,q)=>p-q).map(k=>`<option value="${k}" ${u.n!=="pat"&&Number(u.n)===k?"selected":""}>${k}</option>`).join("")}<option value="pat" ${u.n==="pat"?"selected":""}>Pat.</option></select>
    <input style="flex:1" list="aaoTypeList" value="${esc(u.type)}" placeholder="Fahrzeugtyp" oninput="aaoDraft.units[${i}].type=this.value">
    <select style="flex:1" onchange="aaoDraft.units[${i}].org=this.value"><option value="">beliebige Organisation</option>${[...new Set([...orgs,u.org].filter(Boolean))].map(o=>`<option ${o===u.org?"selected":""}>${esc(o)}</option>`).join("")}</select>
+   <label title="Optional: wird nicht automatisch alarmiert, sondern bei der Alarmierung zum Anhaken angeboten" style="display:flex;gap:4px;align-items:center;font-weight:500;white-space:nowrap;margin:0"><input type="checkbox" style="width:auto" ${u.opt?"checked":""} onchange="aaoDraft.units[${i}].opt=this.checked"> optional</label>
    <button title="Fahrzeug entfernen" onclick="aaoDraft.units.splice(${i},1);render('aao')">✕</button></div>`;
  document.getElementById("app").innerHTML=`<div class="card">
   <h2>✏️ ${d.id==null?"AAO anlegen":"AAO bearbeiten"}</h2>
@@ -4605,7 +4654,7 @@ function saveAAO(){
  const d=aaoDraft; if(!d)return;
  const name=String(d.name||"").trim();
  if(!name){toast("Bitte einen Namen eingeben");return}
- const units=d.units.map(u=>({type:String(u.type||"").trim(),n:u.n==="pat"?"pat":Math.max(1,Number(u.n)||1),...(u.org?{org:u.org}:{})})).filter(u=>u.type);
+ const units=d.units.map(u=>({type:String(u.type||"").trim(),n:u.n==="pat"?"pat":Math.max(1,Number(u.n)||1),...(u.org?{org:u.org}:{}),...(u.opt?{opt:true}:{})})).filter(u=>u.type);
  const builtin=d.id!=null&&isBuiltinAao(d.id)&&!d.rulesEdited;
  let rules=d.rules||{};
  if(!builtin){
