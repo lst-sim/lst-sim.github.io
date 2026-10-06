@@ -132,7 +132,7 @@ table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:10px 8px
 </head>
 <body>
 <div style="padding:6px 10px;font-size:11px;color:#94a3b8;font-weight:700;display:flex;align-items:center;gap:10px;position:sticky;top:0;z-index:10;background:var(--bg)">
- <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v4.30</span>
+ <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v4.31</span>
  <span id="syncState"></span>
  <a id="homeLink" href="#" onclick="render('leitstelle');return false" class="hidden" style="color:#64748b;text-decoration:underline;font-weight:600">🖥️ Leitstelle</a>
  <a id="monitorLink" href="#" onclick="showMonitorQR();return false" style="color:#64748b;text-decoration:underline;font-weight:600;margin-left:auto">🖥️ Monitor hinzufügen</a>
@@ -2460,7 +2460,7 @@ function evaluate(){
  if(e==="Reanimation" || (a.b_breath==="Keine normale Atmung" && a.d_disability==="Bewusstlos")){
    keyword=kw(5,"REANIMATION R1N1");
    src=5;
-   // NKTW als First Responder – außer die AAO enthält bereits einen NKTW (dann nicht doppelt).
+   // NKTW als First Responder nur, wenn die Reanimations-AAO einen NKTW enthält.
    const reaHasNktw=aaoUnits(5).some(x=>x.type==="NKTW");
    if(reaHasNktw){
      const free=availableUnits("NKTW","Rettungsdienst");
@@ -2469,9 +2469,8 @@ function evaluate(){
        else add(x.type,aaoN(x,a),x.org||null);
      }
    }else{
+     // NKTW als First Responder nur, wenn er in der AAO hinterlegt ist.
      addAao(5);
-     const nktw=availableUnits("NKTW","Rettungsdienst")[0];
-     if(nktw) req.push({src,exact:nktw.id,type:"NKTW",org:"Rettungsdienst",firstResponder:true});
    }
  src="base";
  } else if(e==="Vermisste Person"){

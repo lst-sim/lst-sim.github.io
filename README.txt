@@ -833,3 +833,7 @@ Version 4.29:
 Version 4.30:
 - "Psy Problem?" wird nur noch gefragt, wenn auch E (XABCDE) abgefragt wurde – sonst
   "nicht erhoben" (z. B. Feuer, Technische Hilfe, Reanimation mit Abkürzung).
+
+Version 4.31:
+- NKTW als First Responder nur noch, wenn er in der Reanimations-AAO eingetragen ist (bisher
+  kam er bei Reanimation immer automatisch dazu). Weiterhin nur bis 20 km Entfernung.
