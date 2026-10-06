@@ -132,7 +132,7 @@ table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:10px 8px
 </head>
 <body>
 <div style="padding:6px 10px;font-size:11px;color:#94a3b8;font-weight:700;display:flex;align-items:center;gap:10px;position:sticky;top:0;z-index:10;background:var(--bg)">
- <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v4.26</span>
+ <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v4.27</span>
  <span id="syncState"></span>
  <a id="homeLink" href="#" onclick="render('leitstelle');return false" class="hidden" style="color:#64748b;text-decoration:underline;font-weight:600">🖥️ Leitstelle</a>
  <a id="monitorLink" href="#" onclick="showMonitorQR();return false" style="color:#64748b;text-decoration:underline;font-weight:600;margin-left:auto">🖥️ Monitor hinzufügen</a>
@@ -1198,6 +1198,8 @@ function optaAreaName(u){
 }
 function geoSortUnits(arr){
  return [...arr].sort((a,b)=>{
+   const ka=a.type==="KTW"?1:0, kb=b.type==="KTW"?1:0;
+   if(ka!==kb)return ka-kb;
    const da=Number(optaAreaDigit(a)), db=Number(optaAreaDigit(b));
    if(da!==db)return da-db;
    return String(a.name).localeCompare(String(b.name),"de",{numeric:true});
@@ -1393,10 +1395,12 @@ function realisticMode(){
 
 
 const QUICK_RESOURCE_TYPES=[
- {type:"RTW"},{type:"NEF"},{type:"NKTW"},{type:"KTW"},{type:"RTH"},{type:"ITH"},{type:"KTH"},{type:"OrgL/LNA"},{type:"HLF"},{type:"LF"},{type:"RW"},{type:"DLK"},{type:"ELW"},
+ {type:"RTW"},{type:"NEF"},{type:"NKTW"},{type:"RTH"},{type:"ITH"},{type:"KTH"},{type:"OrgL/LNA"},{type:"HLF"},{type:"LF"},{type:"RW"},{type:"DLK"},{type:"ELW"},
  {type:["RTB","MZB"],label:"Boot"},{type:"GW Wasserrettung",label:"Strömungsrettung"},{type:"GW Taucher",label:"Taucher"},
- {type:"MTW"},{type:"GW Drohne"}
+ {type:"MTW"},{type:"GW Drohne"},{type:"KTW"}
 ];
+// Krankentransportwagen in Listen immer ganz unten (stabile Sortierung, Rest bleibt wie er ist).
+function ktLast(arr){return [...arr].sort((a,b)=>(a?.type==="KTW"?1:0)-(b?.type==="KTW"?1:0))}
 
 function activateCallById(id){
  id=String(id);
@@ -1524,7 +1528,7 @@ function manageProposal(){
  if(!c){toast("Kein Einsatz ausgewählt");return}
  const proposal=c.proposal||[];
  const proposedIds=new Set((c.proposedUnitIds||[]).map(String));
- const available=nearestFirst(db.units.filter(u=>["1","2","8"].includes(String(u.status)) && !proposedIds.has(String(u.id))));
+ const available=ktLast(nearestFirst(db.units.filter(u=>["1","2","8"].includes(String(u.status)) && !proposedIds.has(String(u.id)))));
  document.getElementById("app").innerHTML=`<div class="card call">
   <div class="row between"><div><h2>🚗 Fahrzeuge vor Alarmierung bearbeiten</h2><div class="muted">Einsatz #${esc(c.id)} · ${esc(c.location||"Ort unbekannt")} – noch nicht alarmiert.</div></div><button onclick="prepareAlarm()">Zurück</button></div>
   <label style="margin-top:10px">Aktuell vorgeschlagen</label>
@@ -1965,7 +1969,7 @@ let notrufDetailsVisible=false;
 function toggleNotrufDetails(){notrufDetailsVisible=!notrufDetailsVisible;notruf();}
 function nearestAvailableUnits(limit=6){
  const avail=db.units.filter(u=>["1","2","8"].includes(String(u.status)));
- return nearestFirst(avail).slice(0,limit);
+ return ktLast(nearestFirst(avail)).slice(0,limit);
 }
 function overrideJurisdiction(){
  if(db.currentCall){db.currentCall.jurisdictionOverride=true;save()}

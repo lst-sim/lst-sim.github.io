@@ -804,3 +804,8 @@ Version 4.26:
   "Vollalarm DRK". Alarmiert werden alle freien Fahrzeuge der Ortsgruppe, die dem Einsatzort am
   nächsten ist (mit mindestens einem freien, erreichbaren Fahrzeug). Bereits gespeicherte
   Einträge mit fester Ortsgruppe funktionieren weiter.
+
+Version 4.27:
+- KTWs stehen in den Listen jetzt ganz unten: Fahrzeugübersicht (Einsatzmittel), Auswahl unter
+  "Rettungsmittel bearbeiten"/Nachforderung, "Fahrzeuge bearbeiten" (Auswahlliste) und die
+  Liste der nächsten freien Fahrzeuge im Notruf.
