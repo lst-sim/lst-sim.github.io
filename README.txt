@@ -889,3 +889,11 @@ Version 4.38:
 Version 4.39:
 - Anrufer-Terminal: Nach dem Wählen der 112 ertönt ein Freiton ("Tuten", 425 Hz, 1 s Ton /
   4 s Pause) statt des Alarmtons – so lange, bis die Leitstelle den Notruf annimmt.
+
+Version 4.40:
+- Anrufer-Terminal als normale Handy-Wähltastatur (0–9, *, #, Löschen, grüner Hörer). Die
+  Nummer muss selbst gewählt werden:
+  112 → Notruf (wie bisher), 110 → Polizei, 116 117 → Ärztlicher Bereitschaftsdienst
+  (Leitstelle sieht die Nummer in der roten Leiste, Abfrage startet mit dieser Nummer →
+  Weiterleitung), 19222 (auch mit Vorwahl) → Krankentransport-Abfrage.
+  Andere Nummern: "Kein Anschluss unter dieser Nummer."
