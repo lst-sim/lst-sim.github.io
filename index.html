@@ -132,7 +132,7 @@ table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:10px 8px
 </head>
 <body>
 <div style="padding:6px 10px;font-size:11px;color:#94a3b8;font-weight:700;display:flex;align-items:center;gap:10px;position:sticky;top:0;z-index:10;background:var(--bg)">
- <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v4.41</span>
+ <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v4.42</span>
  <span id="syncState"></span>
  <a id="homeLink" href="#" onclick="render('leitstelle');return false" class="hidden" style="color:#64748b;text-decoration:underline;font-weight:600">🖥️ Leitstelle</a>
  <a id="monitorLink" href="#" onclick="showMonitorQR();return false" style="color:#64748b;text-decoration:underline;font-weight:600;margin-left:auto">🖥️ Monitor hinzufügen</a>
@@ -2725,7 +2725,10 @@ function evaluate(){
  // Optionale Fahrzeuge der alarmierten AAO(s) – nächstes freies Fahrzeug je Eintrag, zum Anhaken.
  {
    const offer=[], seen=new Set();
-   for(const id of [...new Set(activeAao)]){
+   // Angeboten werden die optionalen Fahrzeuge ALLER passenden AAOs (auch Standard-AAOs, deren
+   // Fahrzeuge über den festen Abfragezweig kommen, und AAOs nur mit optionalen Fahrzeugen).
+   const offerIds=[...new Set([...activeAao,...Object.keys(kwMap).map(String),...customAaoMatches(c).map(x=>String(x.id))])].filter(k=>k!=="base");
+   for(const id of offerIds){
      for(const x of aaoOptUnits(id)){
        const va=vollalarmGroup(x.type), aaoName=(aaoEntry(id)?.name)||String(id);
        if(va){ // Vollalarm als EIN Haken für die ganze Ortsgruppe

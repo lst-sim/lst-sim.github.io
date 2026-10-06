@@ -914,3 +914,9 @@ Version 4.41:
   mit Gesprächszeit und rotem Auflegen-Knopf. Legt die Leitstelle auf, sieht der Anrufer
   "Anruf beendet"; legt der Anrufer auf (oder bricht beim Klingeln ab), sieht die Leitstelle
   "Anrufer hat aufgelegt".
+
+Version 4.42:
+- Fehler behoben: Optionale Fahrzeuge wurden im Fenster "Alarmierung vorbereiten" nicht immer
+  zum Anhaken angeboten – z. B. bei Standard-AAOs, die über den festen Abfragezweig laufen, und
+  bei AAOs, die nur optionale Fahrzeuge enthalten. Jetzt werden die optionalen Fahrzeuge aller
+  passenden AAOs angeboten.
