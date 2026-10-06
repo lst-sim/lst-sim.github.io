@@ -881,3 +881,7 @@ Version 4.37:
   "Anlass"; nachträgliche Änderung wird blau.
 - Spalte "Zuweisung": RD, wenn das Rettungsmittel selbst (Fahrzeugterminal) angemeldet hat,
   LST, wenn die Leitstelle angemeldet hat.
+
+Version 4.38:
+- Eingehender Notruf (Anrufer-Terminal) in der Leitstelle ohne Ton – nur noch visuell über die
+  rote Leiste (und kurze Einblendung).

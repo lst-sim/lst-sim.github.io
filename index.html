@@ -132,7 +132,7 @@ table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:10px 8px
 </head>
 <body>
 <div style="padding:6px 10px;font-size:11px;color:#94a3b8;font-weight:700;display:flex;align-items:center;gap:10px;position:sticky;top:0;z-index:10;background:var(--bg)">
- <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v4.37</span>
+ <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v4.38</span>
  <span id="syncState"></span>
  <a id="homeLink" href="#" onclick="render('leitstelle');return false" class="hidden" style="color:#64748b;text-decoration:underline;font-weight:600">🖥️ Leitstelle</a>
  <a id="monitorLink" href="#" onclick="showMonitorQR();return false" style="color:#64748b;text-decoration:underline;font-weight:600;margin-left:auto">🖥️ Monitor hinzufügen</a>
@@ -3472,7 +3472,7 @@ async function pollCloudUnits(){
  const newIds=stillRinging.filter(r=>!knownIds.has(String(r.callerId)));
  if(newIds.length){
    changed=true;
-   try{playAlarmTone();vibrateAlarm();}catch(e){}
+   // Kein Ton – eingehender Notruf wird nur visuell über die rote Leiste angezeigt.
    toast("📞 Neuer Notruf über Anrufer-Terminal eingegangen");
  }
  if(stillRinging.length!==db.pendingCallerRequests.length || newIds.length)changed=true;
