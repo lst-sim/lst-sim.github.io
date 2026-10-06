@@ -3,7 +3,7 @@
 // Offline-Toleranz. Karten (Leaflet), Adresssuche (Nominatim) und die Live-Verbindung
 // (Firebase) brauchen weiterhin eine echte Internetverbindung – die laufen bewusst NICHT
 // über den Cache, sondern immer direkt über das Netz.
-const CACHE_NAME = "dlrg-jet-shell-v3";
+const CACHE_NAME = "dlrg-jet-shell-v4";
 const APP_SHELL = ["./", "./index.html", "./manifest.json", "./icon-192.png", "./icon-512.png"];
 
 self.addEventListener("install", (e) => {
@@ -38,6 +38,8 @@ self.addEventListener("fetch", (e) => {
   // Nur eigene Dateien cachen; alles andere (CDN, Firebase, Nominatim, OSM-Kacheln)
   // geht direkt übers Netz, damit Live-Daten nie veraltet ausgeliefert werden.
   if (url.origin !== self.location.origin) return;
+  // Live-Daten (*.json außer Manifest) nie aus dem Cache.
+  if (url.pathname.endsWith(".json") && !url.pathname.endsWith("manifest.json")) return;
 
   // Seite selbst (HTML): immer zuerst aus dem Netz, damit Updates sofort ankommen;
   // nur offline aus dem Cache.

@@ -897,3 +897,20 @@ Version 4.40:
   (Leitstelle sieht die Nummer in der roten Leiste, Abfrage startet mit dieser Nummer →
   Weiterleitung), 19222 (auch mit Vorwahl) → Krankentransport-Abfrage.
   Andere Nummern: "Kein Anschluss unter dieser Nummer."
+
+Version 4.41:
+- Eigene AAOs und Fahrzeuge bleiben unangetastet: Selbst angelegte/geänderte Fahrzeuge werden
+  nicht mehr automatisch verändert (bisher wurde z. B. der Standort aus dem Funkrufnamen
+  zurückgesetzt). Wird bei einem Standardfahrzeug der Funkrufname geändert, taucht das
+  Original nicht mehr doppelt wieder auf. Gelöschte eigene AAOs bleiben gelöscht. Künftige
+  Updates ergänzen nur noch fehlende neue Standardeinträge.
+- First in – first out je Wache: Stehen mehrere gleiche Fahrzeuge auf derselben Wache frei,
+  wird das vorgeschlagen, das am längsten frei ist.
+- Telefonat-Leiste: Oben über allem läuft eine grüne Leiste mit der Gesprächsdauer, solange
+  ein Notruf/Krankentransport-Anruf nicht aufgelegt ist – mit Knopf "📵 Auflegen" (und
+  "Öffnen" für geparkte Gespräche). Aufgelegt wird mit Dauer im Verlauf vermerkt; beim
+  Abschließen des Einsatzes wird automatisch aufgelegt.
+- Anrufer-Terminal: alle Ansichten (Wählen, Klingeln, Gespräch, Ende) im selben Handy-Layout,
+  mit Gesprächszeit und rotem Auflegen-Knopf. Legt die Leitstelle auf, sieht der Anrufer
+  "Anruf beendet"; legt der Anrufer auf (oder bricht beim Klingeln ab), sieht die Leitstelle
+  "Anrufer hat aufgelegt".

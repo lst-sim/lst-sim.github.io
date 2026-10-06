@@ -132,13 +132,14 @@ table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:10px 8px
 </head>
 <body>
 <div style="padding:6px 10px;font-size:11px;color:#94a3b8;font-weight:700;display:flex;align-items:center;gap:10px;position:sticky;top:0;z-index:10;background:var(--bg)">
- <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v4.40</span>
+ <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v4.41</span>
  <span id="syncState"></span>
  <a id="homeLink" href="#" onclick="render('leitstelle');return false" class="hidden" style="color:#64748b;text-decoration:underline;font-weight:600">🖥️ Leitstelle</a>
  <a id="monitorLink" href="#" onclick="showMonitorQR();return false" style="color:#64748b;text-decoration:underline;font-weight:600;margin-left:auto">🖥️ Monitor hinzufügen</a>
  <a id="deviceSwitchLink" href="#" onclick="switchViewLink();return false" style="color:#64748b;text-decoration:underline;font-weight:600">📱⇄📲 Ansicht wechseln</a>
  <a href="#" onclick="localStorage.removeItem('dlrg-jet-scenario');location.reload();return false" style="color:#64748b;text-decoration:underline;font-weight:600">🔀 Szenario wechseln</a>
 </div>
+<div id="callTimerBar" style="position:fixed;top:0;left:0;right:0;z-index:1000"></div>
 <div id="callerRequestBanner"></div>
 <main id="app"></main><div id="toast" class="toast"></div>
 <script>
@@ -568,6 +569,10 @@ if(!Array.isArray(db.deletedUnitOptas))db.deletedUnitOptas=[];
  });
 }
 if(!Array.isArray(db.aao))db.aao=[];
+// GRUNDSATZ (ab v4.41): Selbst angelegte und selbst geänderte AAOs und Fahrzeuge werden von
+// Updates NIE mehr automatisch verändert oder zurückgesetzt. Updates dürfen nur fehlende neue
+// Standardeinträge ergänzen (nicht, wenn sie selbst gelöscht oder umbenannt wurden).
+if(!Array.isArray(db.deletedAaoIds))db.deletedAaoIds=[];
 // Einmaliger AAO-Abgleich (v3.92): bis v3.91 war die AAO-Tabelle reine Anzeige, die Disposition
 // lief fest programmiert. Ab v3.92 steuert die AAO-Tabelle die Alarmierung. Deshalb werden die
 // Standard-AAOs einmalig auf den Stand gebracht, der exakt dem bisherigen Verhalten entspricht
@@ -600,7 +605,7 @@ if(!db.aaoSyncV394){
  const existingIds=new Set(db.aao.map(a=>a.id));
  const existingNames=new Set(db.aao.map(a=>a.name));
  defaults.aao.forEach(a=>{
-   if(!existingIds.has(a.id)&&!existingNames.has(a.name))db.aao.push(JSON.parse(JSON.stringify(a)));
+   if(!existingIds.has(a.id)&&!existingNames.has(a.name)&&!db.deletedAaoIds.includes(String(a.id)))db.aao.push(JSON.parse(JSON.stringify(a)));
  });
 }
 if(!Array.isArray(db.activeCalls))db.activeCalls=[];
@@ -666,7 +671,17 @@ if(!Array.isArray(db.neighborUnits))db.neighborUnits=defaults.neighborUnits.map(
 // Keine Funktion, nur Optik – Standard: F Fri 1, K Fri 1, R Fri 1.
 if(!db.funkChannels)db.funkChannels={F:"F Fri 1",K:"K Fri 1",R:"R Fri 1"};
 const IVENA_FACHRICHTUNGEN=["Chirurgie","Innere Medizin","Pädiatrie","Gynäkologie/Geburtshilfe","Neurologie / Stroke Unit","Kardiologie / Chest Pain Unit","Intensivmedizin","Schockraum","Psychiatrie","HNO","Augenheilkunde","Urologie"];
-function save(){localStorage.setItem(KEY,JSON.stringify(db));if(typeof scheduleStateSync==="function")scheduleStateSync()}
+// First in – first out je Wache: merkt sich, seit wann ein Fahrzeug frei (Status 1/2) ist.
+// Bei gleicher Entfernung (gleiche Wache) fährt das Fahrzeug zuerst, das am längsten frei ist.
+function fifoStamp(){
+ const now=Date.now();
+ for(const u of (db.units||[])){
+   const free=["1","2"].includes(String(u.status));
+   if(free&&!u.freeSince)u.freeSince=now;
+   else if(!free&&u.freeSince)delete u.freeSince;
+ }
+}
+function save(){fifoStamp();localStorage.setItem(KEY,JSON.stringify(db));if(typeof scheduleStateSync==="function")scheduleStateSync()}
 function esc(s){return String(s??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]))}
 function toast(t){const x=document.getElementById("toast");x.textContent=t;x.style.display="block";setTimeout(()=>x.style.display="none",1800)}
 function statusName(s){return {0:"Priorisierter Sprechwunsch",1:"Frei über Funk",2:"Frei auf Wache",3:"Einsatz übernommen",4:"Am Einsatzort",5:"Sprechwunsch",6:"Nicht einsatzbereit",7:"Patient aufgenommen",8:"bed. Verfügbar"}[s]||s}
@@ -1059,7 +1074,9 @@ function useMyLocation(){
 
 
 function setUnitStatus(u,status){
+ const wasFree=["1","2"].includes(String(u.status));
  u.status=String(status);
+ if(["1","2"].includes(String(status))){if(!wasFree||!u.freeSince)u.freeSince=Date.now()}else delete u.freeSince;
  delete u.status1Since; delete u.status2Due;
  delete u.status3Since;
  delete u.status4Since;
@@ -1207,6 +1224,8 @@ function geoSortUnits(arr){
 }
 function syncLocationFromOpta(){
  db.units.forEach(u=>{
+   // Selbst angelegte oder selbst bearbeitete Fahrzeuge nie automatisch verändern.
+   if(u.custom||u.userEdited)return;
    if(["Feuerwehr","Rettungsdienst"].includes(u.org)){
      const area=OPTA_AREA_ORDER[optaAreaDigit(u)];
      if(area)u.location=area;
@@ -1342,6 +1361,9 @@ function nearestFirst(arr){
  return [...arr].sort((a,b)=>{
    const ea=estimatedEtaMinutes(a)??9999, eb=estimatedEtaMinutes(b)??9999;
    if(ea!==eb)return ea-eb;
+   // FIFO: gleiche Wache/Entfernung → wer am längsten frei ist, fährt zuerst
+   const fa=a.freeSince||Infinity, fb=b.freeSince||Infinity;
+   if(fa!==fb)return fa-fb;
    // status 1/2 preference remains, but geschätzte Eintreffzeit entscheidet zuerst
    const sa=a.status==="1"?0:a.status==="2"?1:2;
    const sb=b.status==="1"?0:b.status==="2"?1:2;
@@ -1926,7 +1948,7 @@ function newCall(pref={}){
  if(db.currentCall)parkCurrentCall();
  notrufDetailsVisible=false;
  const stamp=Date.now().toString();
- db.currentCall={id:stamp.slice(-6),location:pref.location||"",count:pref.count||"",answers:{},history:[],keyword:"",suggestion:"",createdAt:new Date().toISOString()};
+ db.currentCall={id:stamp.slice(-6),location:pref.location||"",count:pref.count||"",answers:{},history:[],keyword:"",suggestion:"",createdAt:new Date().toISOString(),phoneStart:Date.now()};
  save();render("notruf");
 }
 const qs=[
@@ -1963,7 +1985,7 @@ function newKtCall(){
  if(db.currentCall)parkCurrentCall();
  notrufDetailsVisible=false;
  const stamp=Date.now().toString();
- db.currentCall={id:stamp.slice(-6),kt:true,location:"",count:"1",answers:{},history:[],keyword:"Krankentransport",suggestion:"",createdAt:new Date().toISOString()};
+ db.currentCall={id:stamp.slice(-6),kt:true,location:"",count:"1",answers:{},history:[],keyword:"Krankentransport",suggestion:"",createdAt:new Date().toISOString(),phoneStart:Date.now()};
  save();render("notruf");
 }
 let notrufDetailsVisible=false;
@@ -2868,6 +2890,36 @@ function alarmProposal(){
  render("leitstelle");
 }
 
+// ─── Telefonat-Leiste: läuft, solange der Notruf nicht aufgelegt wurde ───────────────────────
+function phoneCalls(){return [db.currentCall,...(db.activeCalls||[])].filter(c=>c&&c.phoneStart&&!c.phoneEnd)}
+function fmtDur(ms){const t=Math.max(0,Math.floor(ms/1000)),h=Math.floor(t/3600),m=Math.floor(t%3600/60),s=t%60;const p=n=>String(n).padStart(2,"0");return h?`${h}:${p(m)}:${p(s)}`:`${p(m)}:${p(s)}`}
+function renderCallTimerBar(){
+ const el=document.getElementById("callTimerBar"); if(!el)return;
+ const list=(IS_MONITOR||isTerminalLink)?[]:phoneCalls();
+ if(!list.length){if(el.innerHTML){el.innerHTML="";document.body.style.paddingTop=""}return}
+ el.innerHTML=list.map(c=>`<div style="background:#16a34a;color:#fff;display:flex;align-items:center;gap:12px;padding:6px 12px;font-weight:700;box-shadow:0 2px 6px rgba(0,0,0,.25)">
+   <span style="font-size:20px">📞</span>
+   <span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Telefonat ${c.kt?"Krankentransport":c.callerNumber&&c.callerNumber!=="112"?esc(c.callerNumber==="116117"?"116 117":c.callerNumber):"Notruf"} #${esc(c.id)}${c.location?` · ${esc(c.location)}`:""}</span>
+   <span style="font-variant-numeric:tabular-nums;font-size:20px">${fmtDur(Date.now()-c.phoneStart)}</span>
+   ${db.currentCall&&String(db.currentCall.id)===String(c.id)?"":`<button style="padding:5px 10px" onclick="activateCallById('${esc(c.id)}');render('notruf')">Öffnen</button>`}
+   <button style="background:#dc2626;color:#fff;border:none;padding:6px 14px;font-weight:800" onclick="hangUpCall('${esc(c.id)}')">📵 Auflegen</button>
+ </div>`).join("");
+ document.body.style.paddingTop=el.offsetHeight+"px";
+}
+function hangUpCall(id,byCaller=false){
+ const c=[db.currentCall,...(db.activeCalls||[])].find(x=>x&&String(x.id)===String(id));
+ if(!c||c.phoneEnd)return;
+ c.phoneEnd=Date.now();
+ c.history=c.history||[];
+ c.history.push({q:byCaller?"📵 Anrufer hat aufgelegt":"📵 Telefonat beendet",a:`Dauer ${fmtDur(c.phoneEnd-c.phoneStart)}`});
+ save();
+ if(!byCaller&&c.callerId&&db.cloud?.enabled){
+   cloudRequest(`callRequests/${encodeURIComponent(String(c.callerId))}`,"PUT",{status:"ended",callId:c.id,time:new Date().toISOString()});
+   cloudRequest(`callerSlots/${encodeURIComponent(String(c.callerId))}`,"PUT",{id:c.callerId,callId:null,updatedAt:new Date().toISOString()});
+ }
+ renderCallTimerBar();
+ toast(byCaller?"📵 Anrufer hat aufgelegt":"📵 Aufgelegt");
+}
 function finishCall(id=null){
  const targetId=String(id ?? db.currentCall?.id ?? "");
  let c=null, source="";
@@ -2877,6 +2929,7 @@ function finishCall(id=null){
    if(i>=0){c=db.activeCalls[i];source="active";}
  }
  if(!c){toast("Einsatz nicht gefunden");return}
+ if(c.phoneStart&&!c.phoneEnd)hangUpCall(c.id);
 
  const ids=new Set([...(c.alarmedUnits||[]),...(c.proposedUnitIds||[])]);
  ids.forEach(uid=>{
@@ -2945,7 +2998,15 @@ function saveUnitDraft(){
  const fields={org:d.org,type,name,opta:String(d.opta||"").trim()||name,location:String(d.location||"").trim(),crew:String(d.crew||"").trim(),skills:String(d.skills||"").trim()};
  if(d.id!=null){
    const u=db.units.find(x=>String(x.id)===String(d.id));
-   if(u)Object.assign(u,fields);
+   if(u){
+     // Wird bei einem Standardfahrzeug der Funkrufname geändert, darf das Original beim nächsten
+     // Update nicht als "fehlend" wieder ergänzt werden.
+     if(u.opta&&u.opta!==fields.opta&&(defaults.units||[]).some(x=>x.opta===u.opta)){
+       db.deletedUnitOptas=db.deletedUnitOptas||[];
+       if(!db.deletedUnitOptas.includes(u.opta))db.deletedUnitOptas.push(u.opta);
+     }
+     Object.assign(u,fields,{userEdited:true});
+   }
  }else{
    db.units.push({id:Date.now(),...fields,status:"2",custom:true,verified:"Eigene Angabe"});
  }
@@ -3464,6 +3525,10 @@ async function pollCloudUnits(){
  const stillRinging=[];
  if(remoteCallRequests){
    for(const [callerId,r] of Object.entries(remoteCallRequests)){
+     if(r&&r.status==="hungup"&&r.callId){
+       const hc=[db.currentCall,...(db.activeCalls||[])].find(x=>x&&String(x.id)===String(r.callId));
+       if(hc&&hc.phoneStart&&!hc.phoneEnd){hangUpCall(hc.id,true);changed=true}
+     }
      if(!r||r.status!=="ringing")continue;
      stillRinging.push({callerId,lat:r.lat??null,lng:r.lng??null,time:r.time||null,number:r.number||"112"});
    }
@@ -3506,13 +3571,14 @@ async function acceptCallerRequest(callerId){
  if(db.currentCall)parkCurrentCall();
  notrufDetailsVisible=false;
  const stamp=Date.now().toString();
- const num=CALLER_NUMBERS[req?.number||"112"]?req.number||"112":"112";
+ const num=(req&&CALLER_NUMBERS[req.number])?req.number:"112";
  if(num==="19222"){
    db.currentCall={id:stamp.slice(-6),kt:true,location:"",count:"1",answers:{},history:[{q:"☎️ Anruf über",a:"🚑 19222 – Krankentransport"}],keyword:"Krankentransport",suggestion:"",createdAt:new Date().toISOString()};
  }else{
    db.currentCall={id:stamp.slice(-6),location:"",count:"",answers:{callType:num},history:[{q:"☎️ Über welche Nummer ist der Anruf eingegangen?",a:CALLER_NUMBERS[num].label}],keyword:"",suggestion:"",createdAt:new Date().toISOString()};
    if(num!=="112")try{evaluate()}catch(e){}
  }
+ db.currentCall.phoneStart=Date.now(); db.currentCall.callerId=String(callerId); db.currentCall.callerNumber=num;
  if(req&&req.lat!=null&&req.lng!=null){
    db.currentCall.callerGps={lat:req.lat,lng:req.lng};
    db.currentCall.callerGpsPending=true;
@@ -3713,11 +3779,20 @@ const CALLER_NUMBERS={
 };
 function callerNormalize(n){n=String(n||"").replace(/\D/g,"");if(/^0\d{2,5}19222$/.test(n))return "19222";return n}
 let callerDialed="";
+// Einheitlicher Handy-Rahmen für alle Anrufer-Ansichten (Wählen, Klingeln, Gespräch, Ende).
+function callerPhoneFrame(inner){
+ return `<div class="card" style="max-width:360px;min-height:640px;margin:20px auto;text-align:center;background:#111827;color:#fff;border:none;border-radius:28px;padding:22px 18px;display:flex;flex-direction:column">
+   <div style="font-size:13px;opacity:.7">📞 Anrufer-Terminal</div>
+   ${inner}
+   <p style="margin-top:auto;padding-top:14px;font-size:11px;opacity:.6">Übung: 112, 110, 116 117 oder 19222 wählen. Diese Anzeige ersetzt keine echte Rückmeldung im Notfall.</p>
+ </div>`;
+}
+const CALLER_RED_BTN=(onclick,title="Auflegen")=>`<button onclick="${onclick}" title="${title}" style="width:76px;height:76px;border-radius:50%;background:#dc2626;border:none;color:#fff;font-size:32px;padding:0;margin:0 auto">📵</button>`;
+function callerNumLabel(n){return n==="112"?"112":n==="116117"?"116 117":String(n||"")}
 function callerKeypadHTML(callerId,dburl,sid,msg){
  const keys=[["1",""],["2","ABC"],["3","DEF"],["4","GHI"],["5","JKL"],["6","MNO"],["7","PQRS"],["8","TUV"],["9","WXYZ"],["*",""],["0","+"],["#",""]];
  const args=`'${esc(String(callerId))}','${esc(dburl)}','${esc(sid)}'`;
- return `<div class="card" style="max-width:360px;margin:20px auto;text-align:center;background:#111827;color:#fff;border:none;border-radius:28px;padding:22px 18px">
-   <div style="font-size:13px;opacity:.7">📞 Anrufer-Terminal</div>
+ return callerPhoneFrame(`
    <div id="callerDisplay" style="min-height:52px;font-size:36px;font-weight:300;letter-spacing:3px;margin:12px 0 4px;word-break:break-all">${esc(callerDialed)||"&nbsp;"}</div>
    <div id="callerMsg" style="min-height:20px;font-size:14px;color:#fca5a5">${msg?esc(msg):""}</div>
    <div style="display:grid;grid-template-columns:repeat(3,76px);gap:14px 22px;justify-content:center;margin:14px 0">
@@ -3727,9 +3802,16 @@ function callerKeypadHTML(callerId,dburl,sid,msg){
     <span></span>
     <button onclick="dialNumber(${args})" title="Anrufen" style="width:76px;height:76px;border-radius:50%;background:#22c55e;border:none;color:#fff;font-size:32px;padding:0">📞</button>
     <button onclick="callerKey('del')" title="Löschen" style="width:56px;height:56px;border-radius:50%;background:transparent;border:none;color:#fff;font-size:26px;padding:0;justify-self:center">⌫</button>
-   </div>
-   <p style="margin-top:18px;font-size:11px;opacity:.6">Übung: 112, 110, 116 117 oder 19222 wählen. Diese Anzeige ersetzt keine echte Rückmeldung im Notfall.</p>
- </div>`;
+   </div>`);
+}
+// Gesprächsansicht (Klingeln / verbunden / beendet) im selben Handy-Rahmen
+function callerCallHTML(num,state,args,extra=""){
+ return callerPhoneFrame(`
+   <div style="font-size:40px;font-weight:300;letter-spacing:2px;margin:30px 0 6px">${esc(callerNumLabel(num))}</div>
+   <div id="callerCallState" style="font-size:16px;opacity:.85;min-height:22px">${state}</div>
+   <div id="callerCallTimer" style="font-size:22px;font-variant-numeric:tabular-nums;margin-top:6px;min-height:28px"></div>
+   <div id="callerCallInfo" style="margin:28px 0;min-height:120px">${extra}</div>
+   ${args?CALLER_RED_BTN(`callerHangUp(${args})`):""}`);
 }
 function callerKey(k){
  if(k==="del")callerDialed=callerDialed.slice(0,-1);else if(callerDialed.length<16)callerDialed+=k;
@@ -3751,16 +3833,18 @@ function ringbackBeep(){
 }
 function startRingback(){if(ringbackTimer)return;ringbackBeep();ringbackTimer=setInterval(ringbackBeep,5000)}
 function stopRingback(){if(ringbackTimer){clearInterval(ringbackTimer);ringbackTimer=null}}
-async function renderCallerTerminal(callerId,dburl,sid){
+let callerCallTick=null, callerCurrentNum="112", callerGen=0;
+function callerStopTick(){if(callerCallTick){clearInterval(callerCallTick);callerCallTick=null}}
+async function renderCallerTerminal(callerId,dburl,sid,msg){
  document.querySelector("nav")?.remove();
+ callerStopTick();
+ const gen=++callerGen; // nur die jeweils neueste Ansicht darf noch zeichnen
  let painted="";
+ const args=`'${esc(String(callerId))}','${esc(dburl)}','${esc(sid)}'`;
  async function refresh(){
    if(!dburl||!sid){
      if(painted!=="offline"){
-       document.getElementById("app").innerHTML=`<div class="card" style="max-width:480px;margin:30px auto;text-align:center">
-         <h2>⚠️ Keine Verbindung</h2>
-         <p class="muted">Dieser Link wurde ohne eingerichtete Live-Verbindung erzeugt.</p>
-       </div>`;
+       document.getElementById("app").innerHTML=callerPhoneFrame(`<h2 style="color:#fff;margin-top:40px">⚠️ Keine Verbindung</h2><p style="opacity:.7">Dieser Link wurde ohne eingerichtete Live-Verbindung erzeugt.</p>`);
        painted="offline";
      }
      return;
@@ -3769,29 +3853,26 @@ async function renderCallerTerminal(callerId,dburl,sid){
      vehicleFetch(dburl,sid,`callRequests/${encodeURIComponent(callerId)}`),
      vehicleFetch(dburl,sid,`callerSlots/${encodeURIComponent(callerId)}`)
    ]);
-   const linkedCallId=(req&&req.status==="accepted"&&req.callId)?String(req.callId):(slot&&slot.callId?String(slot.callId):null);
+   if(gen!==callerGen)return;
+   const linkedCallId=(req&&req.status==="accepted"&&req.callId)?String(req.callId):(!req&&slot&&slot.callId?String(slot.callId):null);
    if(linkedCallId){
      stopRingback();
      clearInterval(vehiclePollTimer);
-     renderCallerStatus(callerId,linkedCallId,dburl,sid);
+     renderCallerStatus(callerId,linkedCallId,dburl,sid,req?.number||callerCurrentNum);
      return;
    }
    if(req&&req.status==="ringing"){
      startRingback();
+     callerCurrentNum=req.number||callerCurrentNum;
      if(painted!=="ringing"){
-       document.getElementById("app").innerHTML=`<div class="card" style="max-width:480px;margin:30px auto;text-align:center">
-         <h2>📞 ${esc(req.number&&req.number!=="112"?(req.number==="116117"?"116 117":req.number):"Notruf 112")} – wird verbunden …</h2>
-         <div style="font-size:54px;margin:14px 0">🔔</div>
-         <div class="muted">Bitte warten, die Leitstelle nimmt den Anruf entgegen.</div>
-         <p class="muted" style="margin-top:24px;font-size:12px">Diese Anzeige dient nur der Übung/Ausbildung und ersetzt keine echte Rückmeldung im Notfall.</p>
-       </div>`;
+       document.getElementById("app").innerHTML=callerCallHTML(callerCurrentNum,"Wählt … Verbindung wird hergestellt",args,`<div style="font-size:54px">🔔</div>`);
        painted="ringing";
      }
      return;
    }
    stopRingback();
    if(painted!=="dial"){
-     document.getElementById("app").innerHTML=callerKeypadHTML(callerId,dburl,sid);
+     document.getElementById("app").innerHTML=callerKeypadHTML(callerId,dburl,sid,msg);
      painted="dial";
    }
  }
@@ -3811,8 +3892,10 @@ async function dialNumber(callerId,dburl,sid){
 }
 async function dial112(callerId,dburl,sid,num="112"){
  if(!dburl||!sid){toast("Keine Verbindung");return}
- callerDialed="";
+ callerDialed=""; callerCurrentNum=num;
  startRingback(); // Freiton bis zur Annahme (Tippen entsperrt den Ton auf dem Handy)
+ const args=`'${esc(String(callerId))}','${esc(dburl)}','${esc(sid)}'`;
+ document.getElementById("app").innerHTML=callerCallHTML(num,"Wählt … Verbindung wird hergestellt",args,`<div style="font-size:54px">🔔</div>`);
  let lat=null,lng=null;
  try{
    const pos=await new Promise((res,rej)=>{
@@ -3822,22 +3905,37 @@ async function dial112(callerId,dburl,sid,num="112"){
    lat=pos.coords.latitude; lng=pos.coords.longitude;
  }catch(e){}
  await vehicleFetch(dburl,sid,`callRequests/${encodeURIComponent(callerId)}`,"PUT",{status:"ringing",number:num,lat,lng,time:new Date().toISOString()});
- document.getElementById("app").innerHTML=`<div class="card" style="max-width:480px;margin:30px auto;text-align:center">
-   <h2>📞 ${esc(num==="112"?"Notruf 112":num==="116117"?"116 117":num)} – wird verbunden …</h2>
-   <div style="font-size:54px;margin:14px 0">🔔</div>
-   <div class="muted">Bitte warten, die Leitstelle nimmt den Anruf entgegen.</div>
-   <p class="muted" style="margin-top:24px;font-size:12px">Diese Anzeige dient nur der Übung/Ausbildung und ersetzt keine echte Rückmeldung im Notfall.</p>
- </div>`;
 }
-async function renderCallerStatus(callerId,callId,dburl,sid){
+// Anrufer legt selbst auf (beim Klingeln = Abbruch, im Gespräch = Leitstelle sieht "aufgelegt")
+async function callerHangUp(callerId,dburl,sid){
+ stopRingback(); callerStopTick(); clearInterval(vehiclePollTimer); callerGen++;
+ const req=await vehicleFetch(dburl,sid,`callRequests/${encodeURIComponent(callerId)}`);
+ if(req&&req.status==="accepted"&&req.callId){
+   await vehicleFetch(dburl,sid,`callRequests/${encodeURIComponent(callerId)}`,"PUT",{status:"hungup",callId:req.callId,time:new Date().toISOString()});
+   await vehicleFetch(dburl,sid,`callerSlots/${encodeURIComponent(callerId)}`,"PUT",{id:callerId,callId:null,updatedAt:new Date().toISOString()});
+ }else{
+   await vehicleFetch(dburl,sid,`callRequests/${encodeURIComponent(callerId)}`,"DELETE");
+ }
+ callerShowEnded(callerId,dburl,sid);
+}
+function callerShowEnded(callerId,dburl,sid,dur){
+ stopRingback(); callerStopTick(); clearInterval(vehiclePollTimer);
+ const gen=++callerGen;
+ document.getElementById("app").innerHTML=callerCallHTML(callerCurrentNum,"Anruf beendet",null,dur?`<div style="opacity:.8">Dauer ${esc(dur)}</div>`:"");
+ setTimeout(()=>{if(gen===callerGen)renderCallerTerminal(callerId,dburl,sid)},2500);
+}
+async function renderCallerStatus(callerId,callId,dburl,sid,num){
  document.querySelector("nav")?.remove();
- document.getElementById("app").innerHTML=`<div class="card" style="max-width:480px;margin:30px auto;text-align:center">
-   <h2>📞 Ihr Notruf</h2>
-   <div id="callerStatusIcon" style="font-size:54px;margin:14px 0">⏳</div>
-   <div id="callerStatusText" style="font-size:20px;font-weight:800">Verbinde …</div>
-   <div id="callerStatusSub" class="muted" style="margin-top:8px"></div>
-   <p class="muted" style="margin-top:24px;font-size:12px">Diese Anzeige dient nur der Übung/Ausbildung und ersetzt keine echte Rückmeldung im Notfall.</p>
- </div>`;
+ const gen=++callerGen;
+ callerCurrentNum=num||callerCurrentNum;
+ const args=`'${esc(String(callerId))}','${esc(dburl)}','${esc(sid)}'`;
+ document.getElementById("app").innerHTML=callerCallHTML(callerCurrentNum,"Verbunden – Leitstelle",args,`
+   <div id="callerStatusIcon" style="font-size:54px">⏳</div>
+   <div id="callerStatusText" style="font-size:18px;font-weight:800;margin-top:6px">Verbinde …</div>
+   <div id="callerStatusSub" style="opacity:.75;margin-top:6px;font-size:14px"></div>`);
+ const start=Date.now();
+ callerStopTick();
+ callerCallTick=setInterval(()=>{const t=document.getElementById("callerCallTimer");if(t)t.textContent=fmtDur(Date.now()-start)},1000);
  async function refresh(){
    const iconEl=document.getElementById("callerStatusIcon");
    const textEl=document.getElementById("callerStatusText");
@@ -3848,10 +3946,16 @@ async function renderCallerStatus(callerId,callId,dburl,sid){
      subEl.textContent="Dieser Link wurde ohne eingerichtete Live-Verbindung erzeugt.";
      return;
    }
+   const req=await vehicleFetch(dburl,sid,`callRequests/${encodeURIComponent(callerId)}`);
+   if(gen!==callerGen)return;
+   if(req&&req.status==="ended"&&String(req.callId)===String(callId)){
+     callerShowEnded(callerId,dburl,sid,fmtDur(Date.now()-start));
+     return;
+   }
    const call=await vehicleFetch(dburl,sid,`calls/${encodeURIComponent(callId)}`);
    if(!call){
      iconEl.textContent="⏳";textEl.textContent="Ihr Notruf wird aufgenommen …";
-     subEl.textContent="Bitte bleiben Sie am Telefon erreichbar.";
+     subEl.textContent="Bitte bleiben Sie am Telefon.";
      return;
    }
    const units=call.units||[];
@@ -3868,7 +3972,7 @@ async function renderCallerStatus(callerId,callId,dburl,sid){
      subEl.textContent="Rettungsmittel wurden alarmiert und sind auf dem Weg zu Ihnen.";
    }else{
      iconEl.textContent="⏳";textEl.textContent="Ihr Notruf wird bearbeitet";
-     subEl.textContent="Bitte bleiben Sie erreichbar und folgen Sie den Anweisungen der Leitstelle.";
+     subEl.textContent="Bitte bleiben Sie am Telefon und folgen Sie den Anweisungen der Leitstelle.";
    }
  }
  await refresh();
@@ -3920,7 +4024,7 @@ function vehicleCloudURL(dburl,sid,path){
 }
 async function vehicleFetch(dburl,sid,path,method="GET",data=null){
  if(!dburl||!sid)return null;
- const opt={method,headers:{"Content-Type":"application/json"}};
+ const opt={method,headers:{"Content-Type":"application/json"},cache:"no-store"};
  if(data!==null)opt.body=JSON.stringify(data);
  try{
   const r=await fetch(vehicleCloudURL(dburl,sid,path),opt);
@@ -4750,7 +4854,7 @@ function resetAAO(){
 }
 function deleteAAO(id){
  if(isBuiltinAao(id)){toast("Standard-AAOs können nur bearbeitet oder zurückgesetzt werden");return}
- if(confirm("AAO wirklich löschen?")){db.aao=db.aao.filter(x=>String(x.id)!==String(id));save();render("aao")}
+ if(confirm("AAO wirklich löschen?")){db.aao=db.aao.filter(x=>String(x.id)!==String(id));db.deletedAaoIds=db.deletedAaoIds||[];if(!db.deletedAaoIds.includes(String(id)))db.deletedAaoIds.push(String(id));save();render("aao")}
 }
 
 
@@ -5539,7 +5643,7 @@ function nachbarLks(){
 // Die Automatik (Dienstzeiten, Rückkehr zur Wache, Statusfortschritt) läuft nur am Hauptplatz –
 // Monitore bekommen die Ergebnisse per Live-Sync, sonst würden mehrere Geräte gleichzeitig
 // dieselben Fahrzeuge weiterschalten.
-setInterval(()=>{const clock=document.getElementById("clock");if(clock)clock.textContent=new Date().toLocaleTimeString("de-DE");if(IS_MONITOR)return;applyDutySchedule();autoReturnToStation();autoAdvanceEnRoute()},1000);
+setInterval(()=>{renderCallTimerBar();const clock=document.getElementById("clock");if(clock)clock.textContent=new Date().toLocaleTimeString("de-DE");if(IS_MONITOR)return;applyDutySchedule();autoReturnToStation();autoAdvanceEnRoute()},1000);
 // Läuft der Hauptplatz in einem Hintergrund-Tab oder mit gesperrtem Bildschirm, drosseln Browser
 // (v. a. mobil/iOS) genau dieses 1-Sekunden-Intervall stark oder pausieren es ganz – der 07:00/
 // 19:00-Dienstplanwechsel (applyDutySchedule) wurde dann teils erst mit großer Verzögerung
