@@ -132,7 +132,7 @@ table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:10px 8px
 </head>
 <body>
 <div style="padding:6px 10px;font-size:11px;color:#94a3b8;font-weight:700;display:flex;align-items:center;gap:10px;position:sticky;top:0;z-index:10;background:var(--bg)">
- <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v4.44</span>
+ <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v4.45</span>
  <span id="syncState"></span>
  <a id="homeLink" href="#" onclick="render('leitstelle');return false" class="hidden" style="color:#64748b;text-decoration:underline;font-weight:600">🖥️ Leitstelle</a>
  <a id="monitorLink" href="#" onclick="showMonitorQR();return false" style="color:#64748b;text-decoration:underline;font-weight:600;margin-left:auto">🖥️ Monitor hinzufügen</a>
@@ -161,39 +161,39 @@ table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:10px 8px
 const DEFAULTS_FRI_WHV={
  units:[
   
-  {id:1,name:"72-58-01",opta:"Pelikan Friesland 72-58-01",type:"GW Wasserrettung",org:"DLRG",location:"Varel",status:"1",crew:"2",skills:"Wasserrettungsgruppe-S (Wasserrettungszug Friesland) – Strömungsretter",verified:"Nutzerangabe"},
-  {id:2,name:"72-17-01",opta:"Pelikan Friesland 72-17-01",type:"MTW",org:"DLRG",location:"Varel",status:"1",crew:"6",skills:"Wasserrettungsgruppe-S (Wasserrettungszug Friesland) – Mannschaftstransport",verified:"Nutzerangabe"},
-  {id:3,name:"72-19-01",opta:"Pelikan Friesland 72-19-01",type:"GW Drohne",org:"DLRG",location:"Varel",status:"1",crew:"2",skills:"Drohne, Lageerkundung, geländegängig",vehicle:"Ford Ranger",verified:"Nutzerangabe"},
-  {id:606,name:"72-78-01",opta:"Pelikan Friesland 72/78-01",type:"MZB",org:"DLRG",location:"Varel",status:"1",crew:"2",skills:"Wasserrettungsgruppe-S (Wasserrettungszug Friesland) – Motorrettungsboot",vehicle:"Tinn-Silver 600",boatName:"Seelöwe",verified:"BOS-Fahrzeuge"},
-  {id:607,name:"72-78-03",opta:"Pelikan Friesland 72/78-03",type:"RTB",org:"DLRG",location:"Varel",status:"1",crew:"2",skills:"Wasserrettungsgruppe-S (Wasserrettungszug Friesland) – Motorrettungsboot",vehicle:"DSB IRB 350",verified:"BOS-Fahrzeuge"},
+  {id:1,name:"72-58-01",opta:"Pelikan Friesland 72-58-01",type:"GW Wasserrettung",org:"DLRG",location:"Varel",status:"2",crew:"2",skills:"Wasserrettungsgruppe-S (Wasserrettungszug Friesland) – Strömungsretter",verified:"Nutzerangabe"},
+  {id:2,name:"72-17-01",opta:"Pelikan Friesland 72-17-01",type:"MTW",org:"DLRG",location:"Varel",status:"2",crew:"6",skills:"Wasserrettungsgruppe-S (Wasserrettungszug Friesland) – Mannschaftstransport",verified:"Nutzerangabe"},
+  {id:3,name:"72-19-01",opta:"Pelikan Friesland 72-19-01",type:"GW Drohne",org:"DLRG",location:"Varel",status:"2",crew:"2",skills:"Drohne, Lageerkundung, geländegängig",vehicle:"Ford Ranger",verified:"Nutzerangabe"},
+  {id:606,name:"72-78-01",opta:"Pelikan Friesland 72/78-01",type:"MZB",org:"DLRG",location:"Varel",status:"2",crew:"2",skills:"Wasserrettungsgruppe-S (Wasserrettungszug Friesland) – Motorrettungsboot",vehicle:"Tinn-Silver 600",boatName:"Seelöwe",verified:"BOS-Fahrzeuge"},
+  {id:607,name:"72-78-03",opta:"Pelikan Friesland 72/78-03",type:"RTB",org:"DLRG",location:"Varel",status:"2",crew:"2",skills:"Wasserrettungsgruppe-S (Wasserrettungszug Friesland) – Motorrettungsboot",vehicle:"DSB IRB 350",verified:"BOS-Fahrzeuge"},
   // Die 3 weiteren DLRG-Ortsgruppen des Landkreises Friesland, jede mit ihrer festen
   // Fachaufgabe im gemeinsamen "Wasserrettungszug Friesland" (Quelle: DLRG Bezirk
   // Oldenburg-Nord, Stand der Aufgabenverteilung 11.01.2017 – Ortsgruppe Wangerooge ist die
   // 5. Ortsgruppe im Landkreis, gehört aber nicht zum Wasserrettungszug, daher hier nicht
   // aufgeführt):
-  {id:601,name:"76-78-01",opta:"Adler Wangerland 76/78-01",type:"RTB",org:"DLRG",location:"Wangerland",status:"1",crew:"2",skills:"Wasserrettungsgruppe (Wasserrettungszug Friesland) – Bootsführer",vehicle:"IRB Savior",verified:"BOS-Fahrzeuge"},
-  {id:602,name:"76-19-01",opta:"Pelikan Friesland 76/19-01",type:"MZF geländegängig",org:"DLRG",location:"Wangerland",status:"1",crew:"2",skills:"Wasserrettungsgruppe (Wasserrettungszug Friesland) – Materialtransport",verified:"BOS-Fahrzeuge"},
-  {id:608,name:"76-78-02",opta:"Pelikan Friesland 76/78-02",type:"MZB",org:"DLRG",location:"Wangerland",status:"1",crew:"2",skills:"Wasserrettungsgruppe (Wasserrettungszug Friesland) – Motorrettungsboot",vehicle:"Tinn-Silver 600 open",boatName:"Willi Rosenboom",verified:"Ortsgruppen-Website"},
-  {id:609,name:"76-78-03",opta:"Pelikan Friesland 76/78-03",type:"MZB",org:"DLRG",location:"Wangerland",status:"1",crew:"2",skills:"Wasserrettungsgruppe (Wasserrettungszug Friesland) – Motorrettungsboot",boatName:"Wangerland 1",verified:"Ortsgruppen-Website"},
-  {id:603,name:"75-57-01",opta:"Pelikan Friesland 75/57-01",type:"GW Taucher",org:"DLRG",location:"Schortens",status:"1",crew:"2",skills:"Einsatztauchergruppe (Wasserrettungszug Friesland) – Einsatztaucher",verified:"BOS-Fahrzeuge"},
-  {id:610,name:"75-78-01",opta:"Pelikan Friesland 75/78-01",type:"RTB",org:"DLRG",location:"Schortens",status:"1",crew:"2",skills:"Einsatztauchergruppe (Wasserrettungszug Friesland) – Motorrettungsboot",boatName:"Wellenreiter",vehicle:"IRB",verified:"Einsatzbericht dlrg.de"},
-  {id:611,name:"75-17-01",opta:"Pelikan Friesland 75/17-01",type:"MTW",org:"DLRG",location:"Schortens",status:"1",crew:"6",skills:"Einsatztauchergruppe (Wasserrettungszug Friesland) – Mannschaftstransport",verified:"Einsatzbericht dlrg.de"},
-  {id:604,name:"77-57-01",opta:"Pelikan Friesland 77/57-01",type:"GW Wasserrettung",org:"DLRG",location:"Bockhorn",status:"1",crew:"2",skills:"Fachtrupp Technik/Logistik (Wasserrettungszug Friesland) – Gerätetrupp",vehicle:"Mercedes Sprinter 516 CDI 4x4",verified:"BOS-Fahrzeuge"},
-  {id:612,name:"77-77-01",opta:"Pelikan Friesland 77/77-01",type:"MZB",org:"DLRG",location:"Bockhorn",status:"1",crew:"2",skills:"Fachtrupp Technik/Logistik (Wasserrettungszug Friesland) – Motorrettungsboot",boatName:"Freesen Deern",verified:"Einsatzbericht dlrg.de"},
-  {id:613,name:"77-78-01",opta:"Adler Friesland 77/78-01",type:"RTB",org:"DLRG",location:"Bockhorn",status:"1",crew:"2",skills:"Fachtrupp Technik/Logistik (Wasserrettungszug Friesland) – Motorrettungsboot",boatName:"Friesische Wehde",verified:"Einsatzbericht dlrg.de"},
+  {id:601,name:"76-78-01",opta:"Adler Wangerland 76/78-01",type:"RTB",org:"DLRG",location:"Wangerland",status:"2",crew:"2",skills:"Wasserrettungsgruppe (Wasserrettungszug Friesland) – Bootsführer",vehicle:"IRB Savior",verified:"BOS-Fahrzeuge"},
+  {id:602,name:"76-19-01",opta:"Pelikan Friesland 76/19-01",type:"MZF geländegängig",org:"DLRG",location:"Wangerland",status:"2",crew:"2",skills:"Wasserrettungsgruppe (Wasserrettungszug Friesland) – Materialtransport",verified:"BOS-Fahrzeuge"},
+  {id:608,name:"76-78-02",opta:"Pelikan Friesland 76/78-02",type:"MZB",org:"DLRG",location:"Wangerland",status:"2",crew:"2",skills:"Wasserrettungsgruppe (Wasserrettungszug Friesland) – Motorrettungsboot",vehicle:"Tinn-Silver 600 open",boatName:"Willi Rosenboom",verified:"Ortsgruppen-Website"},
+  {id:609,name:"76-78-03",opta:"Pelikan Friesland 76/78-03",type:"MZB",org:"DLRG",location:"Wangerland",status:"2",crew:"2",skills:"Wasserrettungsgruppe (Wasserrettungszug Friesland) – Motorrettungsboot",boatName:"Wangerland 1",verified:"Ortsgruppen-Website"},
+  {id:603,name:"75-57-01",opta:"Pelikan Friesland 75/57-01",type:"GW Taucher",org:"DLRG",location:"Schortens",status:"2",crew:"2",skills:"Einsatztauchergruppe (Wasserrettungszug Friesland) – Einsatztaucher",verified:"BOS-Fahrzeuge"},
+  {id:610,name:"75-78-01",opta:"Pelikan Friesland 75/78-01",type:"RTB",org:"DLRG",location:"Schortens",status:"2",crew:"2",skills:"Einsatztauchergruppe (Wasserrettungszug Friesland) – Motorrettungsboot",boatName:"Wellenreiter",vehicle:"IRB",verified:"Einsatzbericht dlrg.de"},
+  {id:611,name:"75-17-01",opta:"Pelikan Friesland 75/17-01",type:"MTW",org:"DLRG",location:"Schortens",status:"2",crew:"6",skills:"Einsatztauchergruppe (Wasserrettungszug Friesland) – Mannschaftstransport",verified:"Einsatzbericht dlrg.de"},
+  {id:604,name:"77-57-01",opta:"Pelikan Friesland 77/57-01",type:"GW Wasserrettung",org:"DLRG",location:"Bockhorn",status:"2",crew:"2",skills:"Fachtrupp Technik/Logistik (Wasserrettungszug Friesland) – Gerätetrupp",vehicle:"Mercedes Sprinter 516 CDI 4x4",verified:"BOS-Fahrzeuge"},
+  {id:612,name:"77-77-01",opta:"Pelikan Friesland 77/77-01",type:"MZB",org:"DLRG",location:"Bockhorn",status:"2",crew:"2",skills:"Fachtrupp Technik/Logistik (Wasserrettungszug Friesland) – Motorrettungsboot",boatName:"Freesen Deern",verified:"Einsatzbericht dlrg.de"},
+  {id:613,name:"77-78-01",opta:"Adler Friesland 77/78-01",type:"RTB",org:"DLRG",location:"Bockhorn",status:"2",crew:"2",skills:"Fachtrupp Technik/Logistik (Wasserrettungszug Friesland) – Motorrettungsboot",boatName:"Friesische Wehde",verified:"Einsatzbericht dlrg.de"},
   // DRK Kreisverband Varel - Friesische Wehde e.V.: Schnelleinsatzgruppe (SEG) und
   // Katastrophenschutz, hervorgegangen aus dem früheren Sanitätszug 50. Aufgabenbereiche laut
   // Kreisverband: Hintergrund-Rettungsdienst, Sanitätsdienst, Unterstützung bei
   // Großschadenslagen, Katastrophenschutz/SEG, Medical Task Force 6.
-  {id:701,name:"42-11-01",opta:"Rotkreuz Friesland 42/11-01",type:"ELW1",org:"DRK",location:"Varel",status:"1",crew:"3",skills:"Führung Schnelleinsatzgruppe (SEG)",verified:"BOS-Fahrzeuge"},
-  {id:702,name:"42-17-01",opta:"Rotkreuz Friesland 42/17-01",type:"MTW",org:"DRK",location:"Varel",status:"1",crew:"6",skills:"Mannschaftstransport SEG",verified:"BOS-Fahrzeuge"},
-  {id:703,name:"42-17-02",opta:"Rotkreuz Friesland 42/17-02",type:"MTW",org:"DRK",location:"Varel",status:"1",crew:"6",skills:"Mannschaftstransport SEG",verified:"BOS-Fahrzeuge"},
-  {id:704,name:"42-59-01",opta:"Rotkreuz Friesland 42/59-01",type:"GW-SEG",org:"DRK",location:"Varel",status:"1",crew:"3",skills:"Schnelleinsatzgruppe – Sanitäts- und Betreuungsdienst, Großschadenslagen",verified:"BOS-Fahrzeuge"},
-  {id:705,name:"42-83-01",opta:"Rotkreuz Friesland 42/83-01",type:"RTW",org:"DRK",location:"Varel",status:"1",crew:"2",skills:"Hintergrund-Rettungsdienst",verified:"BOS-Fahrzeuge"},
+  {id:701,name:"42-11-01",opta:"Rotkreuz Friesland 42/11-01",type:"ELW1",org:"DRK",location:"Varel",status:"2",crew:"3",skills:"Führung Schnelleinsatzgruppe (SEG)",verified:"BOS-Fahrzeuge"},
+  {id:702,name:"42-17-01",opta:"Rotkreuz Friesland 42/17-01",type:"MTW",org:"DRK",location:"Varel",status:"2",crew:"6",skills:"Mannschaftstransport SEG",verified:"BOS-Fahrzeuge"},
+  {id:703,name:"42-17-02",opta:"Rotkreuz Friesland 42/17-02",type:"MTW",org:"DRK",location:"Varel",status:"2",crew:"6",skills:"Mannschaftstransport SEG",verified:"BOS-Fahrzeuge"},
+  {id:704,name:"42-59-01",opta:"Rotkreuz Friesland 42/59-01",type:"GW-SEG",org:"DRK",location:"Varel",status:"2",crew:"3",skills:"Schnelleinsatzgruppe – Sanitäts- und Betreuungsdienst, Großschadenslagen",verified:"BOS-Fahrzeuge"},
+  {id:705,name:"42-83-01",opta:"Rotkreuz Friesland 42/83-01",type:"RTW",org:"DRK",location:"Varel",status:"2",crew:"2",skills:"Hintergrund-Rettungsdienst",verified:"BOS-Fahrzeuge"},
   // DRK Wasserwacht Wangerooge: Strandwache mit Rettungsboot, Wachtürme ab Mitte Mai täglich
   // 10–18 Uhr besetzt (DRK LV Oldenburg). Kein Funkrufname veröffentlicht; Saisonende 30.09. ist
   // eine ANNAHME. Wird wie ein Wasserrettungsboot (RTB) für Einsätze auf Wangerooge vorgeschlagen.
-  {id:720,name:"Wasserwacht Wangerooge",opta:"DRK Wasserwacht Wangerooge – Rettungsboot",type:"RTB",org:"DRK",location:"Wangerooge",island:"Wangerooge",wasserrettung:true,status:"1",crew:"",skills:"Strandwache / Wasserrettung (saisonal)",verified:"DRK LV Oldenburg (Pressemeldung)",schedule:"season_wasserwacht"},
+  {id:720,name:"Wasserwacht Wangerooge",opta:"DRK Wasserwacht Wangerooge – Rettungsboot",type:"RTB",org:"DRK",location:"Wangerooge",island:"Wangerooge",wasserrettung:true,status:"2",crew:"",skills:"Strandwache / Wasserrettung (saisonal)",verified:"DRK LV Oldenburg (Pressemeldung)",schedule:"season_wasserwacht"},
   // DLRG Wangerooge: Festrumpfschlauchboot "Olli" (seit 03/2025, wangerooge.dlrg.de). Funkrufname nicht veröffentlicht.
   {id:614,name:"DLRG Wangerooge Olli",opta:"DLRG Wangerooge – Boot „Olli“",type:"RTB",org:"DLRG",location:"Wangerooge",island:"Wangerooge",status:"2",crew:"",skills:"Festrumpfschlauchboot (ehrenamtlich)",verified:"DLRG Wangerooge"},
   // DGzRS-Stationen an der niedersächsischen/bremischen Nordseeküste (seenotretter.de, Stand 09/2026).
@@ -213,47 +213,47 @@ const DEFAULTS_FRI_WHV={
   {id:813,name:"EMIL ZIMMERMANN",opta:"DGzRS Fedderwardersiel – EMIL ZIMMERMANN",type:"SRB",org:"DGzRS",location:"Fedderwardersiel",status:"2",crew:"",callsign:"DD 4662",skills:"9,5/10,1-m-Seenotrettungsboot, Besatzung: Freiwillige, Rufzeichen DD 4662",verified:"seenotretter.de"},
   {id:814,name:"HERMANN RUDOLF MEYER",opta:"DGzRS Bremerhaven – HERMANN RUDOLF MEYER",type:"SRK",org:"DGzRS",location:"Bremerhaven",status:"2",crew:"",callsign:"DBAC",skills:"23,1-m-Seenotrettungskreuzer (Tochterboot CHRISTIAN), Besatzung: festangestellt + Freiwillige, Rufzeichen DBAC",verified:"seenotretter.de"},
   {id:815,name:"ANNELIESE KRAMER",opta:"DGzRS Cuxhaven – ANNELIESE KRAMER",type:"SRK",org:"DGzRS",location:"Cuxhaven",status:"2",crew:"",callsign:"DBAM",skills:"28-m-Seenotrettungskreuzer, Besatzung: festangestellt + Freiwillige, Rufzeichen DBAM",verified:"seenotretter.de"},
-  {id:719,name:"42-83-02",opta:"Rotkreuz Friesland 42/83-02",type:"RTW",org:"DRK",location:"Varel",status:"1",crew:"2",skills:"Hintergrund-Rettungsdienst",verified:"Nutzerangabe"},
-  {id:706,name:"48-96-01",opta:"Rotkreuz Friesland 48/96-01",type:"GW-San",org:"DRK",location:"Varel",status:"1",crew:"3",skills:"Sanitätsdienst, Großschadenslagen",verified:"BOS-Fahrzeuge"},
+  {id:719,name:"42-83-02",opta:"Rotkreuz Friesland 42/83-02",type:"RTW",org:"DRK",location:"Varel",status:"2",crew:"2",skills:"Hintergrund-Rettungsdienst",verified:"Nutzerangabe"},
+  {id:706,name:"48-96-01",opta:"Rotkreuz Friesland 48/96-01",type:"GW-San",org:"DRK",location:"Varel",status:"2",crew:"3",skills:"Sanitätsdienst, Großschadenslagen",verified:"BOS-Fahrzeuge"},
   // DRK Kreisverband Jeverland e.V., Bereitschaft Jever: Der Kreisverband deckt Jever, Schortens
   // und Sande ab, u. a. Katastrophenschutz und Unterstützung des Rettungsdienstes Friesland.
   // Wichtig: Jeverland hat keine eigenen RTW – der Notfallkrankentransportwagen (N-KTW) ist
   // aber, wie ein vollwertiger Rettungswagen ausgestattet und besetzt, daher hier bewusst als
   // Typ "RTW" geführt statt als NKTW.
-  {id:713,name:"41-16-01",opta:"Rotkreuz Friesland 41/16-01",type:"MTW",org:"DRK",location:"Jever",status:"1",crew:"6",skills:"Mannschaftstransport",verified:"BOS-Fahrzeuge"},
-  {id:714,name:"41-17-01",opta:"Rotkreuz Friesland 41/17-01",type:"MTW",org:"DRK",location:"Jever",status:"1",crew:"6",skills:"Mannschaftstransport",verified:"BOS-Fahrzeuge"},
-  {id:715,name:"41-19-01",opta:"Rotkreuz Friesland 41/19-01",type:"ELW1",org:"DRK",location:"Jever",status:"1",crew:"3",skills:"Führung (MTW/ELW)",verified:"BOS-Fahrzeuge"},
-  {id:716,name:"41-69-01",opta:"Rotkreuz Friesland 41/69-01",type:"Küchenwagen",org:"DRK",location:"Jever",status:"1",crew:"3",skills:"Verpflegung, Betreuungsdienst",verified:"BOS-Fahrzeuge"},
-  {id:717,name:"41-74-01",opta:"Rotkreuz Friesland 41/74-01",type:"GW-Betreuung",org:"DRK",location:"Jever",status:"1",crew:"3",skills:"Betreuungsdienst",verified:"BOS-Fahrzeuge"},
-  {id:718,name:"41-93-01",opta:"Rotkreuz Friesland 41/93-01",type:"RTW",org:"DRK",location:"Jever",status:"1",crew:"2",skills:"Notfallrettung (Notfallkrankentransportwagen – wie ein RTW besetzt und ausgestattet)",vehicle:"N-KTW",verified:"BOS-Fahrzeuge"},
-  {id:605,name:"71-11-01",opta:"Pelikan Friesland 71/11-01",type:"ELW1",org:"DLRG",location:"Bockhorn",status:"1",crew:"3",skills:"Führungstrupp/Zugtrupp (Wasserrettungszug Friesland) – Einsatzleitung",verified:"BOS-Fahrzeuge"},
+  {id:713,name:"41-16-01",opta:"Rotkreuz Friesland 41/16-01",type:"MTW",org:"DRK",location:"Jever",status:"2",crew:"6",skills:"Mannschaftstransport",verified:"BOS-Fahrzeuge"},
+  {id:714,name:"41-17-01",opta:"Rotkreuz Friesland 41/17-01",type:"MTW",org:"DRK",location:"Jever",status:"2",crew:"6",skills:"Mannschaftstransport",verified:"BOS-Fahrzeuge"},
+  {id:715,name:"41-19-01",opta:"Rotkreuz Friesland 41/19-01",type:"ELW1",org:"DRK",location:"Jever",status:"2",crew:"3",skills:"Führung (MTW/ELW)",verified:"BOS-Fahrzeuge"},
+  {id:716,name:"41-69-01",opta:"Rotkreuz Friesland 41/69-01",type:"Küchenwagen",org:"DRK",location:"Jever",status:"2",crew:"3",skills:"Verpflegung, Betreuungsdienst",verified:"BOS-Fahrzeuge"},
+  {id:717,name:"41-74-01",opta:"Rotkreuz Friesland 41/74-01",type:"GW-Betreuung",org:"DRK",location:"Jever",status:"2",crew:"3",skills:"Betreuungsdienst",verified:"BOS-Fahrzeuge"},
+  {id:718,name:"41-93-01",opta:"Rotkreuz Friesland 41/93-01",type:"RTW",org:"DRK",location:"Jever",status:"2",crew:"2",skills:"Notfallrettung (Notfallkrankentransportwagen – wie ein RTW besetzt und ausgestattet)",vehicle:"N-KTW",verified:"BOS-Fahrzeuge"},
+  {id:605,name:"71-11-01",opta:"Pelikan Friesland 71/11-01",type:"ELW1",org:"DLRG",location:"Bockhorn",status:"2",crew:"3",skills:"Führungstrupp/Zugtrupp (Wasserrettungszug Friesland) – Einsatzleitung",verified:"BOS-Fahrzeuge"},
 
-  {id:101,name:"81-83-01",opta:"Rettung Friesland 81/83-01",type:"RTW",org:"Rettungsdienst",location:"Jever",status:"1",crew:"2",skills:"Notfallrettung",verified:"BOS-Fahrzeuge"},
-  {id:102,name:"81-83-02",opta:"Rettung Friesland 81/83-02",type:"RTW",org:"Rettungsdienst",location:"Jever",status:"1",crew:"2",skills:"Notfallrettung",schedule:"day_as_rtw",verified:"Nutzerangabe"},
+  {id:101,name:"81-83-01",opta:"Rettung Friesland 81/83-01",type:"RTW",org:"Rettungsdienst",location:"Jever",status:"2",crew:"2",skills:"Notfallrettung",verified:"BOS-Fahrzeuge"},
+  {id:102,name:"81-83-02",opta:"Rettung Friesland 81/83-02",type:"RTW",org:"Rettungsdienst",location:"Jever",status:"2",crew:"2",skills:"Notfallrettung",schedule:"day_as_rtw",verified:"Nutzerangabe"},
   {id:103,name:"81-93-01",opta:"Rettung Friesland 81/93-01",type:"NKTW",org:"Rettungsdienst",location:"Jever",status:"6",crew:"2",skills:"Notfalltransport, First Responder",schedule:"night_replacement_81",verified:"Nutzerangabe"},
-  {id:104,name:"82-83-01",opta:"Rettung Friesland 82/83-01",type:"RTW",org:"Rettungsdienst",location:"Varel",status:"1",crew:"2",skills:"Notfallrettung",verified:"BOS-Fahrzeuge"},
-  {id:105,name:"82-83-02",opta:"Rettung Friesland 82/83-02",type:"RTW",org:"Rettungsdienst",location:"Varel",status:"1",crew:"2",skills:"Notfallrettung",schedule:"day_as_rtw",verified:"Nutzerangabe"},
+  {id:104,name:"82-83-01",opta:"Rettung Friesland 82/83-01",type:"RTW",org:"Rettungsdienst",location:"Varel",status:"2",crew:"2",skills:"Notfallrettung",verified:"BOS-Fahrzeuge"},
+  {id:105,name:"82-83-02",opta:"Rettung Friesland 82/83-02",type:"RTW",org:"Rettungsdienst",location:"Varel",status:"2",crew:"2",skills:"Notfallrettung",schedule:"day_as_rtw",verified:"Nutzerangabe"},
   {id:106,name:"82-93-01",opta:"Rettung Friesland 82/93-01",type:"NKTW",org:"Rettungsdienst",location:"Varel",status:"6",crew:"2",skills:"Notfalltransport, First Responder",schedule:"night_replacement_82",verified:"Nutzerangabe"},
-  {id:107,name:"82-82-01",opta:"Rettung Friesland 82/82-01",type:"NEF",org:"Rettungsdienst",location:"Varel",status:"1",crew:"2",skills:"Notarzt",verified:"BOS-Fahrzeuge"},
-  {id:108,name:"84-82-01",opta:"Rettung Friesland 84/82-01",type:"NEF",org:"Rettungsdienst",location:"Sande",status:"1",crew:"2",skills:"Notarzt",verified:"BOS-Fahrzeuge"},
-  {id:110,name:"84-83-01",opta:"Rettung Friesland 84/83-01",type:"RTW",org:"Rettungsdienst",location:"Sande",status:"1",crew:"2",skills:"Notfallrettung",verified:"BOS-Fahrzeuge"},
-  {id:111,name:"84-93-01",opta:"Rettung Friesland 84/93-01",type:"NKTW",org:"Rettungsdienst",location:"Sande",status:"1",crew:"2",skills:"Notfalltransport, First Responder",schedule:"day_only",verified:"Nutzerangabe"},
-  {id:112,name:"87-83-02",opta:"Rettung Friesland 87/83-02",type:"RTW",org:"Rettungsdienst",location:"Bockhorn",status:"1",crew:"2",skills:"Notfallrettung",schedule:"day_only",verified:"BOS-Fahrzeuge"},
-  {id:115,name:"87-83-01",opta:"Rettung Friesland 87/83-01",type:"RTW",org:"Rettungsdienst",location:"Bockhorn",status:"1",crew:"2",skills:"Notfallrettung",verified:"BOS-Fahrzeuge"},
-  {id:116,name:"86-83-01",opta:"Rettung Friesland 86/83-01",type:"RTW",org:"Rettungsdienst",location:"Wangerland",status:"1",crew:"2",skills:"Notfallrettung",verified:"BOS-Fahrzeuge"},
+  {id:107,name:"82-82-01",opta:"Rettung Friesland 82/82-01",type:"NEF",org:"Rettungsdienst",location:"Varel",status:"2",crew:"2",skills:"Notarzt",verified:"BOS-Fahrzeuge"},
+  {id:108,name:"84-82-01",opta:"Rettung Friesland 84/82-01",type:"NEF",org:"Rettungsdienst",location:"Sande",status:"2",crew:"2",skills:"Notarzt",verified:"BOS-Fahrzeuge"},
+  {id:110,name:"84-83-01",opta:"Rettung Friesland 84/83-01",type:"RTW",org:"Rettungsdienst",location:"Sande",status:"2",crew:"2",skills:"Notfallrettung",verified:"BOS-Fahrzeuge"},
+  {id:111,name:"84-93-01",opta:"Rettung Friesland 84/93-01",type:"NKTW",org:"Rettungsdienst",location:"Sande",status:"2",crew:"2",skills:"Notfalltransport, First Responder",schedule:"day_only",verified:"Nutzerangabe"},
+  {id:112,name:"87-83-02",opta:"Rettung Friesland 87/83-02",type:"RTW",org:"Rettungsdienst",location:"Bockhorn",status:"2",crew:"2",skills:"Notfallrettung",schedule:"day_only",verified:"BOS-Fahrzeuge"},
+  {id:115,name:"87-83-01",opta:"Rettung Friesland 87/83-01",type:"RTW",org:"Rettungsdienst",location:"Bockhorn",status:"2",crew:"2",skills:"Notfallrettung",verified:"BOS-Fahrzeuge"},
+  {id:116,name:"86-83-01",opta:"Rettung Friesland 86/83-01",type:"RTW",org:"Rettungsdienst",location:"Wangerland",status:"2",crew:"2",skills:"Notfallrettung",verified:"BOS-Fahrzeuge"},
   // Krankentransportwagen (KTW) des Rettungsdienstes Friesland laut bos-fahrzeuge.info (aktiv, Stand
   // 10/2026): RW Sande 84/91-01, 84/91-02; RW Friesische Wehde 87/91-01. Werden nur für
   // Krankentransporte vorgeschlagen, nie bei Notfällen.
-  {id:120,name:"84-91-01",opta:"Rettung Friesland 84/91-01",type:"KTW",org:"Rettungsdienst",location:"Sande",status:"1",crew:"2",skills:"Krankentransport",verified:"BOS-Fahrzeuge"},
-  {id:121,name:"84-91-02",opta:"Rettung Friesland 84/91-02",type:"KTW",org:"Rettungsdienst",location:"Sande",status:"1",crew:"2",skills:"Krankentransport",verified:"BOS-Fahrzeuge"},
-  {id:122,name:"87-91-01",opta:"Rettung Friesland 87/91-01",type:"KTW",org:"Rettungsdienst",location:"Bockhorn",status:"1",crew:"2",skills:"Krankentransport (RW Friesische Wehde)",verified:"BOS-Fahrzeuge"},
+  {id:120,name:"84-91-01",opta:"Rettung Friesland 84/91-01",type:"KTW",org:"Rettungsdienst",location:"Sande",status:"2",crew:"2",skills:"Krankentransport",verified:"BOS-Fahrzeuge"},
+  {id:121,name:"84-91-02",opta:"Rettung Friesland 84/91-02",type:"KTW",org:"Rettungsdienst",location:"Sande",status:"2",crew:"2",skills:"Krankentransport",verified:"BOS-Fahrzeuge"},
+  {id:122,name:"87-91-01",opta:"Rettung Friesland 87/91-01",type:"KTW",org:"Rettungsdienst",location:"Bockhorn",status:"2",crew:"2",skills:"Krankentransport (RW Friesische Wehde)",verified:"BOS-Fahrzeuge"},
   // Rettungswache Wangerooge, Siedlerstraße 43a, 26486 Wangerooge (bos-fahrzeuge.info, Wache 29077).
   // Inselwache: diese Fahrzeuge werden nur für Einsätze auf Wangerooge vorgeschlagen.
-  {id:117,name:"88-83-01",opta:"Rettung Friesland 88/83-01",type:"RTW",org:"Rettungsdienst",location:"Wangerooge",island:"Wangerooge",status:"1",crew:"2",skills:"Notfallrettung (Insel Wangerooge)",verified:"BOS-Fahrzeuge"},
-  {id:118,name:"88-82-01",opta:"Rettung Friesland 88/82-01",type:"NEF",org:"Rettungsdienst",location:"Wangerooge",island:"Wangerooge",status:"1",crew:"2",skills:"Notarzt (Insel Wangerooge)",verified:"BOS-Fahrzeuge"},
+  {id:117,name:"88-83-01",opta:"Rettung Friesland 88/83-01",type:"RTW",org:"Rettungsdienst",location:"Wangerooge",island:"Wangerooge",status:"2",crew:"2",skills:"Notfallrettung (Insel Wangerooge)",verified:"BOS-Fahrzeuge"},
+  {id:118,name:"88-82-01",opta:"Rettung Friesland 88/82-01",type:"NEF",org:"Rettungsdienst",location:"Wangerooge",island:"Wangerooge",status:"2",crew:"2",skills:"Notarzt (Insel Wangerooge)",verified:"BOS-Fahrzeuge"},
   {id:119,name:"88-83-02",opta:"Rettung Friesland 88/83-02",type:"RTW",org:"Rettungsdienst",location:"Wangerooge",island:"Wangerooge",status:"6",crew:"2",skills:"Reserve-RTW (Insel Wangerooge)",verified:"BOS-Fahrzeuge"},
-  {id:113,name:"OrgL/LNA Varel",opta:"Rettungsdienst Friesland – OrgL/LNA Varel",type:"OrgL/LNA",org:"Rettungsdienst",location:"Varel",status:"1",crew:"1",skills:"Organisatorischer Leiter Rettungsdienst / Leitender Notarzt",verified:"Nutzerangabe"},
-  {id:114,name:"OrgL/LNA Sande",opta:"Rettungsdienst Friesland – OrgL/LNA Sande",type:"OrgL/LNA",org:"Rettungsdienst",location:"Sande",status:"1",crew:"1",skills:"Organisatorischer Leiter Rettungsdienst / Leitender Notarzt",verified:"Nutzerangabe"},
+  {id:113,name:"OrgL/LNA Varel",opta:"Rettungsdienst Friesland – OrgL/LNA Varel",type:"OrgL/LNA",org:"Rettungsdienst",location:"Varel",status:"2",crew:"1",skills:"Organisatorischer Leiter Rettungsdienst / Leitender Notarzt",verified:"Nutzerangabe"},
+  {id:114,name:"OrgL/LNA Sande",opta:"Rettungsdienst Friesland – OrgL/LNA Sande",type:"OrgL/LNA",org:"Rettungsdienst",location:"Sande",status:"2",crew:"1",skills:"Organisatorischer Leiter Rettungsdienst / Leitender Notarzt",verified:"Nutzerangabe"},
 
   {id:201,name:"12-11-01",opta:"Florian Friesland 12-11-1",type:"ELW",org:"Feuerwehr",location:"Varel",status:"2",crew:"6",skills:"Einsatzleitung",verified:"Feuerwehr Varel"},
   {id:202,name:"12-17-01",opta:"Florian Friesland 12-17-1",type:"MTW",org:"Feuerwehr",location:"Varel",status:"2",crew:"9",skills:"Mannschaftstransport",verified:"Feuerwehr Varel"},
@@ -303,17 +303,17 @@ const DEFAULTS_FRI_WHV={
   {id:305,name:"32/NEA",opta:"Heros Jever 32/NEA",type:"NEA 68 kVA",org:"THW",location:"Jever",status:"2",crew:"0",skills:"Stromversorgung",verified:"THW/BOS-Fahrzeuge"},
   {id:306,name:"86/25",opta:"Heros Jever 86/25",type:"MTW OV",org:"THW",location:"Jever",status:"2",crew:"9",skills:"Mannschaftstransport",verified:"THW/BOS-Fahrzeuge"},
 
-  {id:501,name:"Christoph 26",opta:"Christoph 26",type:"RTH",org:"Luftrettung",location:"Sanderbusch (Sande)",status:"1",crew:"3",skills:"Notarzt, Luftrettung, Windenrettung, Intensivtransport",verified:"ADAC Luftrettung",schedule:"24h"},
-  {id:502,name:"Lifeliner 4",opta:"Lifeliner 4",type:"RTH",org:"Luftrettung",location:"Groningen (Eelde)",status:"1",crew:"3",skills:"Notarzt (MMT-Arzt), Luftrettung, Intensivtransport",verified:"ANWB Medical Air Assistance"},
-  {id:503,name:"Christoph 6",opta:"Christoph 6",type:"RTH",org:"Luftrettung",location:"Bremen (Klinikum Links der Weser)",status:"1",crew:"3",skills:"Notarzt, Luftrettung, Intensivtransport",verified:"ADAC Luftrettung"},
+  {id:501,name:"Christoph 26",opta:"Christoph 26",type:"RTH",org:"Luftrettung",location:"Sanderbusch (Sande)",status:"2",crew:"3",skills:"Notarzt, Luftrettung, Windenrettung, Intensivtransport",verified:"ADAC Luftrettung",schedule:"24h"},
+  {id:502,name:"Lifeliner 4",opta:"Lifeliner 4",type:"RTH",org:"Luftrettung",location:"Groningen (Eelde)",status:"2",crew:"3",skills:"Notarzt (MMT-Arzt), Luftrettung, Intensivtransport",verified:"ANWB Medical Air Assistance"},
+  {id:503,name:"Christoph 6",opta:"Christoph 6",type:"RTH",org:"Luftrettung",location:"Bremen (Klinikum Links der Weser)",status:"2",crew:"3",skills:"Notarzt, Luftrettung, Intensivtransport",verified:"ADAC Luftrettung"},
   // Ambulanz-/Krankentransporthubschrauber für die Ostfriesischen Inseln (Northern Helicopter),
   // Flugplatz Norden-Norddeich (EDWS), früher "Rettung Wittmund 79/99-1" in Emden.
   // Tagbereitschaft 08–20 Uhr (rth.info, Stand 08/2024). Besatzungsstärke nicht belegt.
-  {id:504,name:"Northern 06",opta:"Northern 06",type:"KTH",org:"Luftrettung",location:"Norden-Norddeich",status:"1",crew:"",skills:"Ambulanz-/Krankentransporthubschrauber Ostfriesische Inseln ↔ Festland, Rettungswinde",verified:"rth.info (Northern Helicopter)",schedule:"day_8_20"},
+  {id:504,name:"Northern 06",opta:"Northern 06",type:"KTH",org:"Luftrettung",location:"Norden-Norddeich",status:"2",crew:"",skills:"Ambulanz-/Krankentransporthubschrauber Ostfriesische Inseln ↔ Festland, Rettungswinde",verified:"rth.info (Northern Helicopter)",schedule:"day_8_20"},
   // Einziger Intensivtransporthubschrauber (ITH) Niedersachsens (Nds. Innenministerium,
   // intensivverlegung-niedersachsen.de). DRF Luftrettung, Flughafen Hannover-Langenhagen, 24 h,
   // Alarmierung über die ITH-Koordinierungsstelle (KOST) Niedersachsen (rth.info, Stand 04/2026).
-  {id:505,name:"Christoph Niedersachsen",opta:"Christoph Niedersachsen",type:"ITH",org:"Luftrettung",location:"Hannover-Langenhagen",status:"1",crew:"",skills:"Intensivtransport (Verlegung), nachts mit Notarzt und HEMS-TC, Rufname auch Christoph 86",verified:"DRF Luftrettung / rth.info",schedule:"24h"}
+  {id:505,name:"Christoph Niedersachsen",opta:"Christoph Niedersachsen",type:"ITH",org:"Luftrettung",location:"Hannover-Langenhagen",status:"2",crew:"",skills:"Intensivtransport (Verlegung), nachts mit Notarzt und HEMS-TC, Rufname auch Christoph 86",verified:"DRF Luftrettung / rth.info",schedule:"24h"}
 
  ],
  aao:[
@@ -391,10 +391,10 @@ const DEFAULTS_FRI_WHV={
 const DEFAULTS_BREMEN={
  units:(()=>{
    const list=[];
-   for(let i=1;i<=10;i++)list.push({id:1000+i,name:`RTW ${i}`,opta:`RTW ${i}`,type:"RTW",org:"Rettungsdienst",location:"Bremen",status:"1",crew:"2",skills:"Notfallrettung",verified:"Nutzerangabe"});
-   for(let i=1;i<=3;i++)list.push({id:1100+i,name:`NEF ${i}`,opta:`NEF ${i}`,type:"NEF",org:"Rettungsdienst",location:"Bremen",status:"1",crew:"2",skills:"Notarzt",verified:"Nutzerangabe"});
-   list.push({id:1201,name:"OrgL",opta:"OrgL",type:"OrgL/LNA",org:"Rettungsdienst",location:"Bremen",status:"1",crew:"1",skills:"Organisatorischer Leiter Rettungsdienst",verified:"Nutzerangabe"});
-   list.push({id:1202,name:"LNA",opta:"LNA",type:"OrgL/LNA",org:"Rettungsdienst",location:"Bremen",status:"1",crew:"1",skills:"Leitender Notarzt",verified:"Nutzerangabe"});
+   for(let i=1;i<=10;i++)list.push({id:1000+i,name:`RTW ${i}`,opta:`RTW ${i}`,type:"RTW",org:"Rettungsdienst",location:"Bremen",status:"2",crew:"2",skills:"Notfallrettung",verified:"Nutzerangabe"});
+   for(let i=1;i<=3;i++)list.push({id:1100+i,name:`NEF ${i}`,opta:`NEF ${i}`,type:"NEF",org:"Rettungsdienst",location:"Bremen",status:"2",crew:"2",skills:"Notarzt",verified:"Nutzerangabe"});
+   list.push({id:1201,name:"OrgL",opta:"OrgL",type:"OrgL/LNA",org:"Rettungsdienst",location:"Bremen",status:"2",crew:"1",skills:"Organisatorischer Leiter Rettungsdienst",verified:"Nutzerangabe"});
+   list.push({id:1202,name:"LNA",opta:"LNA",type:"OrgL/LNA",org:"Rettungsdienst",location:"Bremen",status:"2",crew:"1",skills:"Leitender Notarzt",verified:"Nutzerangabe"});
    return list;
  })(),
  aao:DEFAULTS_FRI_WHV.aao,
@@ -609,6 +609,14 @@ if(!db.aaoSyncV394){
  });
 }
 if(!Array.isArray(db.activeCalls))db.activeCalls=[];
+// Einmalig (v4.45, auf Wunsch): Fahrzeuge stehen standardmäßig auf Status 2 statt 1. Freie
+// Fahrzeuge in Status 1, die keinem Einsatz zugeordnet sind und nicht gerade zur Wache
+// zurückfahren, auf 2 setzen.
+if(!db.status2DefaultV445){
+ const busy=new Set([db.currentCall,...(db.activeCalls||[])].filter(Boolean).flatMap(c=>[...(c.alarmedUnits||[]),...(c.proposedUnitIds||[])]).map(String));
+ (db.units||[]).forEach(u=>{if(String(u.status)==="1"&&!u.status2Due&&!u.neighborLoan&&!busy.has(String(u.id))){u.status="2";delete u.status1Since}});
+ db.status2DefaultV445=true;
+}
 // Die Cloud-Verbindung (Datenbank-URL, Sitzungs-ID) ist bewusst NICHT Teil des
 // szenario-spezifischen Speichers, sondern liegt in einem gemeinsamen, geteilten Speicherplatz –
 // damit alle drei Szenarien (Friesland/WHV, Übung Bremen, Übung 2) über dieselbe Cloud-Sitzung
@@ -1173,9 +1181,9 @@ function autoReturnToStation(){
  if(changed)save();
 }
 
-// Dienstzeiten je Fahrzeug: innerhalb der Zeiten Status 1 (im Dienst), außerhalb Status 6.
+// Dienstzeiten je Fahrzeug: innerhalb der Zeiten Status 2 (frei auf Wache), außerhalb Status 6.
 // Standardwerte für die mitgelieferten Fahrzeuge; im Fahrzeug-Editor frei änderbar (u.duty).
-// "Frei auf Wache" (2) bleibt als bewusst manuell gesetzter Status unangetastet.
+// Nur der Wechsel Dienstbeginn (6 → 2) und Dienstende (1/2 → 6) wird automatisch gesetzt.
 const DEFAULT_DUTY={
  "81-83-02":{from:"07:00",to:"19:00"},
  "82-83-02":{from:"07:00",to:"19:00"},
@@ -1214,8 +1222,9 @@ function applyDutySchedule(){
  const now=new Date();
  for(const u of (db.units||[])){
    const duty=unitDuty(u); if(!duty)continue;
-   const want=dutyActive(duty,now)?"1":"6";
-   if(["1","6"].includes(String(u.status))&&String(u.status)!==want)setUnitStatus(u,want);
+   const on=dutyActive(duty,now), st=String(u.status);
+   if(on&&st==="6")setUnitStatus(u,"2");
+   else if(!on&&(st==="1"||st==="2"))setUnitStatus(u,"6");
  }
 }
 
@@ -1421,7 +1430,7 @@ function realisticMode(){
   applyDutySchedule();
   const candidates=db.units.filter(u=>["Feuerwehr","Rettungsdienst"].includes(u.org) && !u.schedule && !["0","3","4","5","6","7"].includes(u.status));
   // reset eligible units to plausible base state first
-  candidates.forEach(u=>setUnitStatus(u,u.org==="Feuerwehr"?"2":"1"));
+  candidates.forEach(u=>setUnitStatus(u,"2"));
   // random subset gets realistic non-free states
   const shuffled=[...candidates].sort(()=>Math.random()-.5);
   const n=Math.max(3,Math.min(10,Math.floor(shuffled.length*0.18)));
@@ -3028,7 +3037,7 @@ function unitEditorHTML(){
     <div><label>Zeitraum im Jahr von (optional, TT.MM.)</label><input value="${esc(d.duty.dateFrom)}" placeholder="z. B. 15.05." oninput="unitDraft.duty.dateFrom=this.value"></div>
     <div><label>bis (TT.MM.)</label><input value="${esc(d.duty.dateTo)}" placeholder="z. B. 30.09." oninput="unitDraft.duty.dateTo=this.value"></div>
    </div>
-   <p class="muted" style="font-size:12px">Innerhalb der Zeiten Status 1 (im Dienst), außerhalb Status 6 (außer Dienst). Über Mitternacht geht auch (z. B. 19:00–07:00). Ein bewusst gesetzter Status 2 bleibt unangetastet.</p>`:`<p class="muted" style="font-size:12px">Kein Dienstplan – das Fahrzeug wird nicht automatisch außer Dienst gesetzt.</p>`}`:`<p class="muted" style="margin-top:8px">Bitte zuerst die Kategorie wählen.</p>`}
+   <p class="muted" style="font-size:12px">Zu Dienstbeginn Status 2 (frei auf Wache), zu Dienstende Status 6 (außer Dienst). Über Mitternacht geht auch (z. B. 19:00–07:00). Fahrzeuge im Einsatz werden erst danach außer Dienst gesetzt.</p>`:`<p class="muted" style="font-size:12px">Kein Dienstplan – das Fahrzeug wird nicht automatisch außer Dienst gesetzt.</p>`}`:`<p class="muted" style="margin-top:8px">Bitte zuerst die Kategorie wählen.</p>`}
   <hr>
   <div class="row"><button class="primary" onclick="saveUnitDraft()">💾 Speichern</button><button onclick="unitDraft=null;render('mittel')">Abbrechen</button></div>
  </div>`;
@@ -3057,7 +3066,7 @@ function saveUnitDraft(){
      Object.assign(u,fields,{userEdited:true});
    }
  }else{
-   db.units.push({id:Date.now(),...fields,status:duty.none?"2":(dutyActive(duty)?"1":"6"),custom:true,verified:"Eigene Angabe"});
+   db.units.push({id:Date.now(),...fields,status:duty.none?"2":(dutyActive(duty)?"2":"6"),custom:true,verified:"Eigene Angabe"});
  }
  unitDraft=null; save(); toast("Rettungsmittel gespeichert"); render("mittel");
 }
@@ -5768,10 +5777,9 @@ if(!initVehicleMode()){
  if(!IS_MONITOR){
    let resetChanged=false;
    db.units.forEach(u=>{
-     if(!["6","2"].includes(String(u.status))){ setUnitStatus(u,u.schedule?"1":"2"); resetChanged=true; }
+     if(!["6","2"].includes(String(u.status))){ setUnitStatus(u,"2"); resetChanged=true; }
    });
-   // Fahrzeuge mit Dienstzeiten (z. B. Wasserwacht, Northern 06) sofort auf den passenden Status
-   db.units.forEach(u=>{if(u.schedule&&String(u.status)==="2"){u.status="1";resetChanged=true}});
+   // Fahrzeuge mit Dienstzeiten werden direkt danach über applyDutySchedule() passend gesetzt.
    applyDutySchedule();
    if(resetChanged)save();
  }

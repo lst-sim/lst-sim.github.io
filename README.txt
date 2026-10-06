@@ -936,3 +936,9 @@ Version 4.44:
 - Die bisher fest eingebauten Zeiten (Tag-RTWs, Nacht-NKTWs Jever/Varel, NKTW Sande, RTW
   Bockhorn, Northern 06, Wasserwacht Wangerooge) sind jetzt als vorausgefüllte Dienstzeiten im
   Editor sichtbar und änderbar. In der Fahrzeugliste steht die Dienstzeit unter dem Fahrzeug.
+
+Version 4.45:
+- Fahrzeuge stehen standardmäßig auf Status 2 (frei auf Wache) statt 1: bei den
+  mitgelieferten Fahrzeugen, beim Programmstart, bei "Realistisch" und zu Dienstbeginn
+  (Dienstzeiten: Beginn → Status 2, Ende → Status 6). Bereits laufende Installationen: freie
+  Fahrzeuge in Status 1 ohne Einsatz werden einmalig auf 2 gesetzt.
