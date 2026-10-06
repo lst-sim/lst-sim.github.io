@@ -837,3 +837,10 @@ Version 4.30:
 Version 4.31:
 - NKTW als First Responder nur noch, wenn er in der Reanimations-AAO eingetragen ist (bisher
   kam er bei Reanimation immer automatisch dazu). Weiterhin nur bis 20 km Entfernung.
+
+Version 4.32:
+- IVENA: Gelöschte Anmeldungen/Zuweisungen verschwinden nicht mehr, sondern bleiben
+  durchgestrichen (grau, mit "gelöscht <Uhrzeit>") in der Liste stehen – unter
+  IVENA-Zuweisungen und in der IVENA-Ansicht bei "Angemeldete Patienten / Fahrzeuge".
+  Dort gibt es jetzt auch einen 🗑️-Knopf. Gelöschte zählen nicht mehr als ankommende Patienten
+  und werden nicht mehr als Fahrziel des Fahrzeugs verwendet.
