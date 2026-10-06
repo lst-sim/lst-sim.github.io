@@ -132,7 +132,7 @@ table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:10px 8px
 </head>
 <body>
 <div style="padding:6px 10px;font-size:11px;color:#94a3b8;font-weight:700;display:flex;align-items:center;gap:10px;position:sticky;top:0;z-index:10;background:var(--bg)">
- <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v4.43</span>
+ <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v4.44</span>
  <span id="syncState"></span>
  <a id="homeLink" href="#" onclick="render('leitstelle');return false" class="hidden" style="color:#64748b;text-decoration:underline;font-weight:600">🖥️ Leitstelle</a>
  <a id="monitorLink" href="#" onclick="showMonitorQR();return false" style="color:#64748b;text-decoration:underline;font-weight:600;margin-left:auto">🖥️ Monitor hinzufügen</a>
@@ -1173,25 +1173,49 @@ function autoReturnToStation(){
  if(changed)save();
 }
 
+// Dienstzeiten je Fahrzeug: innerhalb der Zeiten Status 1 (im Dienst), außerhalb Status 6.
+// Standardwerte für die mitgelieferten Fahrzeuge; im Fahrzeug-Editor frei änderbar (u.duty).
+// "Frei auf Wache" (2) bleibt als bewusst manuell gesetzter Status unangetastet.
+const DEFAULT_DUTY={
+ "81-83-02":{from:"07:00",to:"19:00"},
+ "82-83-02":{from:"07:00",to:"19:00"},
+ "81-93-01":{from:"19:00",to:"07:00"},
+ "82-93-01":{from:"19:00",to:"07:00"},
+ "84-93-01":{from:"07:00",to:"19:00"},
+ "87-83-02":{from:"07:00",to:"19:00"},
+ "Northern 06":{from:"08:00",to:"20:00"}, // Tagbereitschaft 08–20 Uhr
+ // DRK Wasserwacht Wangerooge: 15.05.–30.09. (Ende angenommen), täglich 10–18 Uhr
+ "Wasserwacht Wangerooge":{from:"10:00",to:"18:00",dateFrom:"15.05.",dateTo:"30.09."}
+};
+const DUTY_DAYS=["Mo","Di","Mi","Do","Fr","Sa","So"];
+function unitDuty(u){if(u.duty)return u.duty.none?null:u.duty;return DEFAULT_DUTY[u.name]||null}
+function hmToMin(t){const m=String(t||"").match(/^(\d{1,2}):(\d{2})/);return m?Number(m[1])*60+Number(m[2]):null}
+function ddmmToNum(t){const m=String(t||"").match(/^(\d{1,2})\.(\d{1,2})/);return m?Number(m[2])*100+Number(m[1]):null}
+function dutyActive(duty,now=new Date()){
+ if(!duty)return true;
+ const wd=d=>(d.getDay()+6)%7; // 0=Mo … 6=So
+ const days=Array.isArray(duty.days)&&duty.days.length?duty.days:[0,1,2,3,4,5,6];
+ const seasonOk=d=>{const a=ddmmToNum(duty.dateFrom),b=ddmmToNum(duty.dateTo);if(a==null||b==null)return true;const md=(d.getMonth()+1)*100+d.getDate();return a<=b?(md>=a&&md<=b):(md>=a||md<=b)};
+ const f=hmToMin(duty.from), t=hmToMin(duty.to), m=now.getHours()*60+now.getMinutes();
+ if(f==null||t==null||f===t)return days.includes(wd(now))&&seasonOk(now);
+ if(f<t)return m>=f&&m<t&&days.includes(wd(now))&&seasonOk(now);
+ // über Mitternacht: Beginn zählt zum Starttag
+ if(m>=f)return days.includes(wd(now))&&seasonOk(now);
+ if(m<t){const y=new Date(now.getTime()-86400000);return days.includes(wd(y))&&seasonOk(y)}
+ return false;
+}
+function dutyText(duty){
+ if(!duty)return "immer im Dienst";
+ const days=Array.isArray(duty.days)&&duty.days.length&&duty.days.length<7?duty.days.map(i=>DUTY_DAYS[i]).join(", "):"täglich";
+ return `${days} ${duty.from||"?"}–${duty.to||"?"} Uhr${duty.dateFrom&&duty.dateTo?` (${duty.dateFrom}–${duty.dateTo})`:""}`;
+}
 function applyDutySchedule(){
  syncLocationFromOpta();
- const h=new Date().getHours();
- const day=h>=7&&h<19;
- // "Frei auf Wache" (2) ist ein bewusst manuell gesetzter Status (z. B. Übungsleitung nimmt ein
- // Fahrzeug gezielt aus der Rotation) und darf von der Automatik NICHT überschrieben werden –
- // nur der automatische Wechsel zwischen "1" (im Dienst) und "6" (außer Dienst) gehört hierher.
- const set=(name,status)=>{const u=db.units.find(x=>x.name===name);if(u&&["1","6"].includes(u.status)&&u.status!==status)setUnitStatus(u,status)};
- set("81-83-02",day?"1":"6");
- set("82-83-02",day?"1":"6");
- set("81-93-01",day?"6":"1");
- set("82-93-01",day?"6":"1");
- set("84-93-01",day?"1":"6");
- set("87-83-02",day?"1":"6");
- set("Northern 06",h>=8&&h<20?"1":"6"); // Tagbereitschaft 08–20 Uhr
- {
-   // DRK Wasserwacht Wangerooge: 15.05.–30.09. (Ende angenommen), täglich 10–18 Uhr
-   const d=new Date(), md=(d.getMonth()+1)*100+d.getDate();
-   set("Wasserwacht Wangerooge",(md>=515&&md<=930&&h>=10&&h<18)?"1":"6");
+ const now=new Date();
+ for(const u of (db.units||[])){
+   const duty=unitDuty(u); if(!duty)continue;
+   const want=dutyActive(duty,now)?"1":"6";
+   if(["1","6"].includes(String(u.status))&&String(u.status)!==want)setUnitStatus(u,want);
  }
 }
 
@@ -2961,10 +2985,13 @@ function finishCall(id=null){
 // aus den Typen dieser Kategorie (oder frei eingeben).
 var unitDraft=null;
 const UNIT_CATEGORIES=["DLRG","DRK","Rettungsdienst","Feuerwehr","THW","Luftrettung","DGzRS","Polizei"];
-function addUnit(){unitDraft={id:null,org:"",type:"",name:"",opta:"",location:"",crew:"2",skills:""};render("mittel")}
+function addUnit(){unitDraft={id:null,org:"",type:"",name:"",opta:"",location:"",crew:"2",skills:"",dutyOn:false,duty:{from:"07:00",to:"19:00",days:[0,1,2,3,4,5,6],dateFrom:"",dateTo:""}};render("mittel")}
+function unitDutyToggleDay(i,on){const d=unitDraft.duty;d.days=d.days.filter(x=>x!==i);if(on)d.days.push(i);d.days.sort()}
 function editUnit(id){
  const u=db.units.find(x=>String(x.id)===String(id)); if(!u)return;
- unitDraft={id:u.id,org:u.org||"",type:u.type||"",name:u.name||"",opta:u.opta||"",location:u.location||"",crew:String(u.crew??""),skills:u.skills||""};
+ const du=unitDuty(u);
+ unitDraft={id:u.id,org:u.org||"",type:u.type||"",name:u.name||"",opta:u.opta||"",location:u.location||"",crew:String(u.crew??""),skills:u.skills||"",
+   dutyOn:!!du,duty:du?{from:du.from||"07:00",to:du.to||"19:00",days:Array.isArray(du.days)&&du.days.length?[...du.days]:[0,1,2,3,4,5,6],dateFrom:du.dateFrom||"",dateTo:du.dateTo||""}:{from:"07:00",to:"19:00",days:[0,1,2,3,4,5,6],dateFrom:"",dateTo:""}};
  render("mittel");
 }
 function unitEditorHTML(){
@@ -2988,7 +3015,20 @@ function unitEditorHTML(){
    <div><label>Standort</label><input list="unitLocList" value="${esc(d.location)}" oninput="unitDraft.location=this.value"><datalist id="unitLocList">${locs.map(l=>`<option value="${esc(l)}">`).join("")}</datalist></div>
    <div><label>Besatzung</label><input type="number" min="0" value="${esc(d.crew)}" oninput="unitDraft.crew=this.value"></div>
   </div>
-  <label>Fähigkeiten / Hinweise (optional)</label><input value="${esc(d.skills)}" oninput="unitDraft.skills=this.value">`:`<p class="muted" style="margin-top:8px">Bitte zuerst die Kategorie wählen.</p>`}
+  <label>Fähigkeiten / Hinweise (optional)</label><input value="${esc(d.skills)}" oninput="unitDraft.skills=this.value">
+  <label style="margin-top:12px">🕒 Dienstzeiten</label>
+  <div class="row"><button class="${d.dutyOn?"":"primary"}" onclick="unitDraft.dutyOn=false;render('mittel')">Immer im Dienst</button><button class="${d.dutyOn?"primary":""}" onclick="unitDraft.dutyOn=true;render('mittel')">Nur zu bestimmten Zeiten</button></div>
+  ${d.dutyOn?`<div class="formgrid" style="margin-top:6px">
+    <div><label>Dienst von</label><input type="time" value="${esc(d.duty.from)}" oninput="unitDraft.duty.from=this.value"></div>
+    <div><label>bis</label><input type="time" value="${esc(d.duty.to)}" oninput="unitDraft.duty.to=this.value"></div>
+   </div>
+   <label>Wochentage</label>
+   <div class="row" style="gap:10px;flex-wrap:wrap">${DUTY_DAYS.map((n,i)=>`<label style="display:flex;gap:4px;align-items:center;font-weight:500;margin:0"><input type="checkbox" style="width:auto" ${d.duty.days.includes(i)?"checked":""} onchange="unitDutyToggleDay(${i},this.checked)"> ${n}</label>`).join("")}</div>
+   <div class="formgrid">
+    <div><label>Zeitraum im Jahr von (optional, TT.MM.)</label><input value="${esc(d.duty.dateFrom)}" placeholder="z. B. 15.05." oninput="unitDraft.duty.dateFrom=this.value"></div>
+    <div><label>bis (TT.MM.)</label><input value="${esc(d.duty.dateTo)}" placeholder="z. B. 30.09." oninput="unitDraft.duty.dateTo=this.value"></div>
+   </div>
+   <p class="muted" style="font-size:12px">Innerhalb der Zeiten Status 1 (im Dienst), außerhalb Status 6 (außer Dienst). Über Mitternacht geht auch (z. B. 19:00–07:00). Ein bewusst gesetzter Status 2 bleibt unangetastet.</p>`:`<p class="muted" style="font-size:12px">Kein Dienstplan – das Fahrzeug wird nicht automatisch außer Dienst gesetzt.</p>`}`:`<p class="muted" style="margin-top:8px">Bitte zuerst die Kategorie wählen.</p>`}
   <hr>
   <div class="row"><button class="primary" onclick="saveUnitDraft()">💾 Speichern</button><button onclick="unitDraft=null;render('mittel')">Abbrechen</button></div>
  </div>`;
@@ -2998,7 +3038,13 @@ function saveUnitDraft(){
  if(!d.org){toast("Bitte eine Kategorie wählen");return}
  const type=String(d.type||"").trim(); if(!type){toast("Bitte einen Fahrzeugtyp wählen");return}
  const name=String(d.name||d.opta||"").trim(); if(!name){toast("Bitte Kurzname oder Funkrufname eingeben");return}
- const fields={org:d.org,type,name,opta:String(d.opta||"").trim()||name,location:String(d.location||"").trim(),crew:String(d.crew||"").trim(),skills:String(d.skills||"").trim()};
+ if(d.dutyOn){
+   if(hmToMin(d.duty.from)==null||hmToMin(d.duty.to)==null){toast("Bitte Dienstzeiten von/bis angeben");return}
+   if(!d.duty.days.length){toast("Bitte mindestens einen Wochentag wählen");return}
+   if((d.duty.dateFrom||d.duty.dateTo)&&(ddmmToNum(d.duty.dateFrom)==null||ddmmToNum(d.duty.dateTo)==null)){toast("Zeitraum bitte als TT.MM. angeben (beide Felder)");return}
+ }
+ const duty=d.dutyOn?{from:d.duty.from,to:d.duty.to,days:[...d.duty.days],...(d.duty.dateFrom&&d.duty.dateTo?{dateFrom:d.duty.dateFrom,dateTo:d.duty.dateTo}:{})}:{none:true};
+ const fields={org:d.org,type,name,opta:String(d.opta||"").trim()||name,location:String(d.location||"").trim(),crew:String(d.crew||"").trim(),skills:String(d.skills||"").trim(),duty};
  if(d.id!=null){
    const u=db.units.find(x=>String(x.id)===String(d.id));
    if(u){
@@ -3011,7 +3057,7 @@ function saveUnitDraft(){
      Object.assign(u,fields,{userEdited:true});
    }
  }else{
-   db.units.push({id:Date.now(),...fields,status:"2",custom:true,verified:"Eigene Angabe"});
+   db.units.push({id:Date.now(),...fields,status:duty.none?"2":(dutyActive(duty)?"1":"6"),custom:true,verified:"Eigene Angabe"});
  }
  unitDraft=null; save(); toast("Rettungsmittel gespeichert"); render("mittel");
 }
@@ -4552,7 +4598,7 @@ function mittel(){
        <thead><tr><th>Fahrzeug</th><th>Status</th><th>Fahrzeugterminal</th><th>Status ändern</th></tr></thead>
        <tbody>
         ${rows.map(u=>`<tr>
-         <td>${vehicleLabelBlock(u)}${u.gpsUpdatedAt&&(Date.now()-new Date(u.gpsUpdatedAt).getTime())<120000?` <span title="Live-GPS aktiv" style="font-size:11px">📍</span>`:""}</td>
+         <td>${vehicleLabelBlock(u)}${u.gpsUpdatedAt&&(Date.now()-new Date(u.gpsUpdatedAt).getTime())<120000?` <span title="Live-GPS aktiv" style="font-size:11px">📍</span>`:""}${unitDuty(u)?`<br><small class="muted" title="Dienstzeiten">🕒 ${esc(dutyText(unitDuty(u)))}</small>`:""}</td>
          <td><span class="status ${statusClass(String(u.status))}">${statusName(String(u.status))}</span></td>
          <td><div class="row"><button onclick="showVehicleQR('${String(u.id)}')">📱 Link / QR</button><button onclick="openVehiclePreview('${String(u.id)}')">👁️ Vorschau</button><button onclick="editUnit('${String(u.id)}')" title="Fahrzeug bearbeiten">✏️</button><button onclick="deleteUnit('${String(u.id)}')" title="Fahrzeug löschen">🗑️</button></div></td>
          <td>${statusOptionsFor(u).map(s=>`<button class="radio-key-mini${String(u.status)===s?" current":""}" onclick="setStatusFromSelect('${String(u.id)}','${s}')" title="${esc(statusName(s))}">${esc(s)}</button>`).join("")}</td>

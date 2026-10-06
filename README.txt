@@ -927,3 +927,12 @@ Version 4.43:
   Datei (iPad: Teilen-Menü → "In Dateien sichern", AirDrop, Mail …). Laden ersetzt die aktuelle
   Liste durch die aus der Datei (bei Fahrzeugen bleiben laufende Status erhalten). Die Datei
   kann auch an Claude geschickt werden, um den Stand fest als Standard einzubauen.
+
+Version 4.44:
+- Fahrzeug bearbeiten/anlegen: neuer Bereich "🕒 Dienstzeiten" – "Immer im Dienst" oder "Nur zu
+  bestimmten Zeiten" mit Uhrzeit von/bis (auch über Mitternacht, z. B. 19:00–07:00),
+  Wochentagen und optionalem Zeitraum im Jahr (TT.MM.–TT.MM., z. B. Saison). Innerhalb der
+  Zeiten Status 1, außerhalb Status 6; ein bewusst gesetzter Status 2 bleibt.
+- Die bisher fest eingebauten Zeiten (Tag-RTWs, Nacht-NKTWs Jever/Varel, NKTW Sande, RTW
+  Bockhorn, Northern 06, Wasserwacht Wangerooge) sind jetzt als vorausgefüllte Dienstzeiten im
+  Editor sichtbar und änderbar. In der Fahrzeugliste steht die Dienstzeit unter dem Fahrzeug.
