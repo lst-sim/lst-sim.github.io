@@ -953,3 +953,15 @@ Version 4.46:
 - Jedes Gerät lädt beim Start automatisch den neuesten GitHub-Stand (nur wenn neuer als der
   zuletzt übernommene). Laufende Fahrzeugstatus bleiben dabei erhalten.
 - Datei-Sicherung (v4.43) entfällt zugunsten von GitHub.
+
+Version 4.47:
+- AAOs und Fahrzeuge werden jetzt OHNE Einrichtung automatisch dauerhaft gespeichert – in der
+  Live-Datenbank auf einem festen Speicherplatz (unabhängig von der Sitzung). Jede Änderung
+  (AAO speichern/löschen/zurücksetzen, Fahrzeug speichern/löschen) wird sofort hochgeladen,
+  jedes Gerät lädt beim Start den neuesten Stand. Offline gemachte Änderungen werden beim
+  nächsten Start nachgeholt.
+- Beim ersten Start dieser Version legt ein bereits genutztes Gerät seinen Stand als
+  dauerhaften Stand ab. Hat ein weiteres Gerät eigene, abweichende Änderungen, wird einmal
+  gefragt, welcher Stand gelten soll.
+- Buttons: "☁️ Speichern" (von Hand) und "📥 Gespeicherten Stand laden". GitHub (🔑) ist nur
+  noch eine optionale zusätzliche Sicherung.

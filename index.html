@@ -132,7 +132,7 @@ table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:10px 8px
 </head>
 <body>
 <div style="padding:6px 10px;font-size:11px;color:#94a3b8;font-weight:700;display:flex;align-items:center;gap:10px;position:sticky;top:0;z-index:10;background:var(--bg)">
- <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v4.46</span>
+ <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v4.47</span>
  <span id="syncState"></span>
  <a id="homeLink" href="#" onclick="render('leitstelle');return false" class="hidden" style="color:#64748b;text-decoration:underline;font-weight:600">🖥️ Leitstelle</a>
  <a id="monitorLink" href="#" onclick="showMonitorQR();return false" style="color:#64748b;text-decoration:underline;font-weight:600;margin-left:auto">🖥️ Monitor hinzufügen</a>
@@ -4630,9 +4630,9 @@ function mittel(){
      <div class="row">
        <button onclick="realisticMode()">🎲 Realistisch</button>
        <button onclick="openCloudSetup()">☁️ Live-Verbindung</button>
-       <button onclick="saveSetupToGitHub('units')" title="Alle Fahrzeuge dauerhaft in GitHub speichern – gilt für alle Geräte">☁️ Fahrzeuge in GitHub speichern</button>
-       <button onclick="loadSetupFromGitHub('units',true)" title="Gespeicherten GitHub-Stand laden">📥 Aus GitHub laden</button>
-       <button onclick="ghOpenSetup('units')" title="GitHub-Zugang (Token) einrichten">🔑</button>
+       <button onclick="cfgPut('units',true);if(ghToken())saveSetupToGitHub('units')" title="Änderungen werden automatisch dauerhaft gespeichert – hier von Hand">☁️ Speichern</button>
+       <button onclick="cfgSync('units',true)" title="Dauerhaft gespeicherten Stand laden">📥 Gespeicherten Stand laden</button>
+       <button onclick="ghOpenSetup('units')" title="Optional: zusätzlich in GitHub speichern (Token)">🔑</button>
        <button class="primary" onclick="addUnit()">＋ Rettungsmittel</button>
      </div>
    </div>
@@ -4805,7 +4805,8 @@ function ghToken(){try{return localStorage.getItem(GH_TOKEN_KEY)||""}catch(e){re
 function ghPath(kind){return `data/${currentScenarioId}-${kind}.json`}
 function ghSetupHTML(kind){
  return `<div class="card" style="max-width:640px;margin:20px auto">
-  <h2>🔑 GitHub-Zugang einrichten</h2>
+  <h2>🔑 GitHub-Zugang einrichten (optional)</h2>
+  <p class="muted">Nicht nötig: AAOs und Fahrzeuge werden bereits automatisch dauerhaft in der Live-Datenbank gespeichert und auf allen Geräten geladen. GitHub ist nur eine zusätzliche Sicherung.</p>
   <p>Damit AAOs und Fahrzeuge in GitHub gespeichert werden können, braucht dieses Gerät einmalig einen Zugangsschlüssel (Token):</p>
   <ol style="line-height:1.6">
    <li>Auf <b>github.com</b> anmelden → oben rechts Profilbild → <b>Settings</b></li>
@@ -4838,7 +4839,66 @@ function setupData(kind){
 }
 let ghBusy=false; const ghAutoTimers={};
 // Mit eingerichtetem Token wird jede Änderung automatisch (kurz verzögert) in GitHub gespeichert.
-function ghAutoSave(kind){if(!ghToken())return;clearTimeout(ghAutoTimers[kind]);ghAutoTimers[kind]=setTimeout(()=>saveSetupToGitHub(kind),1500)}
+function ghAutoSave(kind){
+ // Immer: dauerhaft in der Live-Datenbank speichern (ohne Einrichtung). Zusätzlich GitHub, falls Token da.
+ db["cfgDirty_"+kind]=true; localStorage.setItem(KEY,JSON.stringify(db));
+ clearTimeout(ghAutoTimers["cfg"+kind]);ghAutoTimers["cfg"+kind]=setTimeout(()=>cfgPut(kind),1000);
+ if(!ghToken())return;clearTimeout(ghAutoTimers[kind]);ghAutoTimers[kind]=setTimeout(()=>saveSetupToGitHub(kind),1500);
+}
+// ─── Dauerhafter Stand für AAOs/Fahrzeuge in der Live-Datenbank (geräteübergreifend) ─────────
+// Fester Speicherplatz unabhängig von der Sitzung; jedes Gerät lädt beim Start den neuesten Stand.
+const CFG_SID="LST-SIM-STANDARD";
+function cfgURL(kind){const base=cleanDatabaseURL(db.cloud?.databaseURL||"");return base?`${base}/sessions/${CFG_SID}/config/${currentScenarioId}/${kind}.json`:null}
+async function cfgGet(kind){
+ const u=cfgURL(kind); if(!u)return null;
+ try{const r=await fetch(u,{cache:"no-store"});if(!r.ok)return null;const v=await r.json();if(!v||!v.stamp||!v.json)return null;const d=JSON.parse(v.json);return d&&d.format==="leitstelle.sim"?{stamp:v.stamp,data:d}:null}catch(e){return null}
+}
+async function cfgPut(kind,manual=false){
+ if(IS_MONITOR)return false;
+ const u=cfgURL(kind); if(!u){if(manual)toast("Keine Datenbank-Verbindung eingerichtet");return false}
+ const stamp=new Date().toISOString(), data=setupData(kind);
+ try{
+   const r=await fetch(u,{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify({stamp,json:JSON.stringify(data)})});
+   if(!r.ok)throw new Error("HTTP "+r.status);
+   db["cfgStamp_"+kind]=stamp; delete db["cfgDirty_"+kind]; localStorage.setItem(KEY,JSON.stringify(db));
+   if(manual)toast(`✅ ${kind==="aao"?"AAOs":"Fahrzeuge"} dauerhaft gespeichert`);
+   return true;
+ }catch(e){if(manual)toast("Speichern fehlgeschlagen – Internetverbindung prüfen");return false}
+}
+function setupListJSON(kind,d){const x=JSON.parse(JSON.stringify(kind==="aao"?(d.aao||[]):(d.units||[])));return JSON.stringify(x)}
+function hasOwnEdits(kind){
+ if(kind==="aao")return JSON.stringify(db.aao||[])!==JSON.stringify(defaults.aao||[])||(db.deletedAaoIds||[]).length>0;
+ return (db.units||[]).some(u=>u.custom||u.userEdited||u.duty)||(db.deletedUnitOptas||[]).length>0;
+}
+async function cfgSync(kind,manual=false){
+ const remote=await cfgGet(kind);
+ const local=db["cfgStamp_"+kind]||"";
+ const label=kind==="aao"?"AAOs":"Fahrzeuge";
+ const apply=()=>{applySetupData(kind,remote.data);db["cfgStamp_"+kind]=remote.stamp;save();
+   if(kind==="units"&&typeof pushAllUnitsCloud==="function")pushAllUnitsCloud();
+   toast(`📥 ${label} geladen (Stand ${new Date(remote.stamp).toLocaleString("de-DE",{day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"})})`);
+   if(!uiLocked&&["aao","mittel","leitstelle"].includes(currentPage))render(currentPage)};
+ if(manual){
+   if(!remote){toast(`Es ist noch kein ${label}-Stand gespeichert`);return}
+   if(confirm(`${label} vom ${new Date(remote.stamp).toLocaleString("de-DE")} laden? Die aktuelle Liste wird ersetzt.`))apply();
+   return;
+ }
+ // Nicht hochgeladene Änderungen dieses Geräts (z. B. offline gespeichert) zuerst sichern
+ if(db["cfgDirty_"+kind]){cfgPut(kind);return}
+ if(remote){
+   if(remote.stamp>local){
+     const differs=setupListJSON(kind,remote.data)!==setupListJSON(kind,setupData(kind));
+     if(!differs){db["cfgStamp_"+kind]=remote.stamp;localStorage.setItem(KEY,JSON.stringify(db));return}
+     // Erstes Zusammenführen: dieses Gerät hat eigene Änderungen, aber noch nie synchronisiert
+     if(!local&&HAD_LOCAL_DATA&&hasOwnEdits(kind)){
+       if(confirm(`Auf diesem Gerät gibt es eigene ${label}, und es gibt bereits einen gespeicherten Stand (${new Date(remote.stamp).toLocaleString("de-DE")}).\n\nOK = ${label} von DIESEM Gerät behalten und dauerhaft speichern\nAbbrechen = gespeicherten Stand laden`)){cfgPut(kind);return}
+     }
+     apply();
+   }else if(local>remote.stamp)cfgPut(kind);
+ }else if(HAD_LOCAL_DATA||local){
+   cfgPut(kind); // noch nichts gespeichert → Stand dieses Geräts als dauerhaften Stand ablegen
+ }
+}
 async function saveSetupToGitHub(kind){
  const token=ghToken(); if(!token){ghOpenSetup(kind);return}
  if(ghBusy){ghAutoSave(kind);return} ghBusy=true;
@@ -4937,7 +4997,7 @@ function aaoRulesText(a){
 let aaoDraft=null;
 function aao(){
  if(aaoDraft)return aaoEditor();
- document.getElementById("app").innerHTML=`<div class="card"><div class="row between"><div><h2>🧠 AAO / Einsatzstichworte</h2><p class="muted">Die AAO steuert den Alarmvorschlag. Passen mehrere AAOs, wird nur die höchste alarmiert (die mit den meisten Fahrzeugen; bei Gleichstand die spezifischere). Rettungsdienst aus XABCDE (RD_X…RD_D) kommt immer dazu.</p></div><div class="row" style="gap:6px;flex-wrap:wrap;justify-content:flex-end"><button onclick="saveSetupToGitHub('aao')" title="Alle AAOs dauerhaft in GitHub speichern – gilt für alle Geräte">☁️ AAOs in GitHub speichern</button><button onclick="loadSetupFromGitHub('aao',true)" title="Gespeicherten GitHub-Stand laden">📥 Aus GitHub laden</button><button onclick="ghOpenSetup('aao')" title="GitHub-Zugang (Token) einrichten">🔑</button><button class="primary" onclick="editAAO(null)">＋ AAO anlegen</button></div></div>
+ document.getElementById("app").innerHTML=`<div class="card"><div class="row between"><div><h2>🧠 AAO / Einsatzstichworte</h2><p class="muted">Die AAO steuert den Alarmvorschlag. Passen mehrere AAOs, wird nur die höchste alarmiert (die mit den meisten Fahrzeugen; bei Gleichstand die spezifischere). Rettungsdienst aus XABCDE (RD_X…RD_D) kommt immer dazu.</p></div><div class="row" style="gap:6px;flex-wrap:wrap;justify-content:flex-end"><button onclick="cfgPut('aao',true);if(ghToken())saveSetupToGitHub('aao')" title="Änderungen werden automatisch dauerhaft gespeichert – hier von Hand">☁️ Speichern</button><button onclick="cfgSync('aao',true)" title="Dauerhaft gespeicherten Stand laden">📥 Gespeicherten Stand laden</button><button onclick="ghOpenSetup('aao')" title="Optional: zusätzlich in GitHub speichern (Token)">🔑</button><button class="primary" onclick="editAAO(null)">＋ AAO anlegen</button></div></div>
  <table><thead><tr><th>Stichwort</th><th>Bedingungen</th><th>Alarmierung</th><th>Mit anderen AAOs</th><th></th></tr></thead><tbody>${db.aao.map(a=>{
    const builtin=isBuiltinAao(a.id);
    return `<tr style="${a.active===false?"opacity:.5":""}"><td><b>${esc(a.name)}</b>${a.keyword?`<br><small class="muted">${esc(a.keyword)}</small>`:""}${builtin&&!a.rulesEdited?"":`<br><span class="pill">${builtin?"Bedingungen geändert":"eigene"}${a.active===false?" · inaktiv":""}</span>`}</td><td>${aaoRulesText(a)}</td><td>${(a.units||[]).map(x=>`${x.n==="pat"?`${esc(x.type)} je Patient`:`${aaoNText(x)}× ${esc(x.type)}`}${x.org?` <small class="muted">(${esc(x.org)})</small>`:""}${x.opt?` <span class="pill">optional</span>`:""}`).join(", ")||`<span class="muted">keine</span>`}</td><td><small>${aaoCombineText(a)}</small></td><td style="white-space:nowrap"><button onclick="editAAO(${JSON.stringify(a.id)})">✏️ Bearbeiten</button>${builtin?"":` <button onclick="deleteAAO(${JSON.stringify(a.id)})">Löschen</button>`}</td></tr>`;
@@ -5867,7 +5927,7 @@ if(!initVehicleMode()){
    if(resetChanged)save();
  }
  render(IS_MONITOR?monitorStartPage:"leitstelle");
- if(!IS_MONITOR){loadSetupFromGitHub("aao");loadSetupFromGitHub("units")}
+ if(!IS_MONITOR){cfgSync("aao").then(()=>cfgSync("units"))}
  if(db.cloud?.enabled && !IS_MONITOR) startCloudPolling();
  startStateSync();
 }
