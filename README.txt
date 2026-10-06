@@ -792,3 +792,9 @@ Version 4.24:
   Fahrzeuge dieser Ortsgruppe.
 - IVENA MANV: Unter IVENA-Zuweisung "🚨 MANV: mehrere Fahrzeuge" – mehrere Fahrzeuge (Status 4)
   auf einmal derselben Klinik zuweisen, je Fahrzeug optional eigener PZC; alle gehen auf Status 7.
+
+Version 4.25:
+- AAO-Fahrzeuge: Bei der Anzahl gibt es jetzt "Pat." – dann kommen so viele Fahrzeuge dieses
+  Typs wie Patienten (z. B. RTW je Patient). Patientenzahl = höchste Angabe aus "Wie viele
+  Personen betroffen", "verletzt/erkrankt/gefährdet", "eingeklemmt" und "durch Feuer
+  bedroht", mindestens 1.

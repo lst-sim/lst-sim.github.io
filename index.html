@@ -132,7 +132,7 @@ table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:10px 8px
 </head>
 <body>
 <div style="padding:6px 10px;font-size:11px;color:#94a3b8;font-weight:700;display:flex;align-items:center;gap:10px;position:sticky;top:0;z-index:10;background:var(--bg)">
- <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v4.24</span>
+ <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v4.25</span>
  <span id="syncState"></span>
  <a id="homeLink" href="#" onclick="render('leitstelle');return false" class="hidden" style="color:#64748b;text-decoration:underline;font-weight:600">🖥️ Leitstelle</a>
  <a id="monitorLink" href="#" onclick="showMonitorQR();return false" style="color:#64748b;text-decoration:underline;font-weight:600;margin-left:auto">🖥️ Monitor hinzufügen</a>
@@ -2024,6 +2024,11 @@ function isBenignExposureText(t){
 // Anzahl-Antworten (eingeklemmt / lebensgefährlich bedroht). Ältere Einsätze hatten "ja"/"nein".
 function answerCount(v){const s=String(v??"").trim().toLowerCase();if(s==="ja")return 1;if(s==="nein"||s==="")return 0;const n=Number(s);return Number.isFinite(n)?n:0}
 function answerYes(v){return answerCount(v)>0}
+// AAO-Anzahl "Pat." = so viele Fahrzeuge wie Patienten. Patientenzahl = größte der Angaben
+// (Betroffene, verletzt/erkrankt/gefährdet, eingeklemmt, durch Feuer bedroht), mindestens 1.
+function patientCount(a){a=a||{};return Math.max(1,Number(a.count)||0,answerCount(a.personDanger),answerCount(a.trapped),answerCount(a.firePeople))}
+function aaoN(x,a){return x&&x.n==="pat"?patientCount(a):(Number(x&&x.n)||1)}
+function aaoNText(x){return x&&x.n==="pat"?"Pat.":String(Number(x&&x.n)||1)}
 function needsXABCDE(c=db.currentCall){
  if(!c)return false;
  if(isManv(c))return false; // MANV: Sichtung statt Einzel-XABCDE
@@ -2432,7 +2437,7 @@ function evaluate(){
  };
  // Alarmierung aus der (bearbeitbaren) AAO-Tabelle; Fallback auf den Standard, falls ein
  // Eintrag fehlt.
- const addAao=(id,nOverride)=>{const prev=src;src=id;for(const x of aaoUnits(id))add(x.type,nOverride?nOverride(x):(Number(x.n)||1),x.org||null);src=prev};
+ const addAao=(id,nOverride)=>{const prev=src;src=id;for(const x of aaoUnits(id))add(x.type,nOverride?nOverride(x):aaoN(x,a),x.org||null);src=prev};
  const kw=(id,fallback)=>{const k=aaoKeyword(id,fallback);kwMap[id]=k;return k};
 
  if(e==="Reanimation" || (a.b_breath==="Keine normale Atmung" && a.d_disability==="Bewusstlos")){
@@ -2443,8 +2448,8 @@ function evaluate(){
    if(reaHasNktw){
      const free=availableUnits("NKTW","Rettungsdienst");
      for(const x of aaoUnits(5)){
-       if(x.type==="NKTW"){for(let i=0;i<(Number(x.n)||1);i++){if(free[i])req.push({src,exact:free[i].id,type:"NKTW",org:"Rettungsdienst",firstResponder:true});else add("NKTW",1,x.org||"Rettungsdienst")}}
-       else add(x.type,Number(x.n)||1,x.org||null);
+       if(x.type==="NKTW"){for(let i=0;i<aaoN(x,a);i++){if(free[i])req.push({src,exact:free[i].id,type:"NKTW",org:"Rettungsdienst",firstResponder:true});else add("NKTW",1,x.org||"Rettungsdienst")}}
+       else add(x.type,aaoN(x,a),x.org||null);
      }
    }else{
      addAao(5);
@@ -2548,7 +2553,7 @@ function evaluate(){
      req=req.filter(r=>!["RTW","NEF"].includes(r.type));
      src="r0mod";
      for(const x of aaoUnits(17)){
-       const n=Number(x.n)||1;
+       const n=aaoN(x,a);
        if(x.type==="NKTW"){
          // Kein freier NKTW → wie bisher ersatzweise RTW
          const free=availableUnits("NKTW",x.org||"Rettungsdienst");
@@ -2570,14 +2575,14 @@ function evaluate(){
  const cnt=Number(a.count)||0;
  if(cnt>3){
    // RTW-Anzahl skaliert weiterhin mit der Verletztenzahl (mind. 1 RTW je 3 Verletzte).
-   addAao(9,x=>x.type==="RTW"?Math.max(Number(x.n)||1,Math.ceil(cnt/3)):(Number(x.n)||1));
+   addAao(9,x=>x.type==="RTW"?Math.max(aaoN(x,a),Math.ceil(cnt/3)):aaoN(x,a));
    keyword=`MANV – ${keyword} – ${cnt} Verletzte`;
    kwMap[9]=keyword;
  }
  // Eigene (selbst angelegte, aktive) AAOs: greifen zusätzlich, wenn alle Bedingungen passen.
  for(const ca of customAaoMatches(c)){
    src=ca.id; kwMap[ca.id]=ca.keyword||ca.name;
-   for(const x of (ca.units||[]))add(x.type,Number(x.n)||1,x.org||null);
+   for(const x of (ca.units||[]))add(x.type,aaoN(x,a),x.org||null);
    src="base";
  }
  // Nur die höchste passende AAO alarmieren.
@@ -4499,13 +4504,13 @@ function aao(){
  document.getElementById("app").innerHTML=`<div class="card"><div class="row between"><div><h2>🧠 AAO / Einsatzstichworte</h2><p class="muted">Die AAO steuert den Alarmvorschlag. Passen mehrere AAOs, wird nur die höchste alarmiert (die mit den meisten Fahrzeugen; bei Gleichstand die spezifischere). Rettungsdienst aus XABCDE (RD_X…RD_D) kommt immer dazu.</p></div><button class="primary" onclick="editAAO(null)">＋ AAO anlegen</button></div>
  <table><thead><tr><th>Stichwort</th><th>Bedingungen</th><th>Alarmierung</th><th>Mit anderen AAOs</th><th></th></tr></thead><tbody>${db.aao.map(a=>{
    const builtin=isBuiltinAao(a.id);
-   return `<tr style="${a.active===false?"opacity:.5":""}"><td><b>${esc(a.name)}</b>${a.keyword?`<br><small class="muted">${esc(a.keyword)}</small>`:""}${builtin&&!a.rulesEdited?"":`<br><span class="pill">${builtin?"Bedingungen geändert":"eigene"}${a.active===false?" · inaktiv":""}</span>`}</td><td>${aaoRulesText(a)}</td><td>${(a.units||[]).map(x=>`${Number(x.n)||1}× ${esc(x.type)}${x.org?` <small class="muted">(${esc(x.org)})</small>`:""}`).join(", ")||`<span class="muted">keine</span>`}</td><td><small>${aaoCombineText(a)}</small></td><td style="white-space:nowrap"><button onclick="editAAO(${JSON.stringify(a.id)})">✏️ Bearbeiten</button>${builtin?"":` <button onclick="deleteAAO(${JSON.stringify(a.id)})">Löschen</button>`}</td></tr>`;
+   return `<tr style="${a.active===false?"opacity:.5":""}"><td><b>${esc(a.name)}</b>${a.keyword?`<br><small class="muted">${esc(a.keyword)}</small>`:""}${builtin&&!a.rulesEdited?"":`<br><span class="pill">${builtin?"Bedingungen geändert":"eigene"}${a.active===false?" · inaktiv":""}</span>`}</td><td>${aaoRulesText(a)}</td><td>${(a.units||[]).map(x=>`${x.n==="pat"?`${esc(x.type)} je Patient`:`${aaoNText(x)}× ${esc(x.type)}`}${x.org?` <small class="muted">(${esc(x.org)})</small>`:""}`).join(", ")||`<span class="muted">keine</span>`}</td><td><small>${aaoCombineText(a)}</small></td><td style="white-space:nowrap"><button onclick="editAAO(${JSON.stringify(a.id)})">✏️ Bearbeiten</button>${builtin?"":` <button onclick="deleteAAO(${JSON.stringify(a.id)})">Löschen</button>`}</td></tr>`;
  }).join("")}</tbody></table></div>`;
 }
 function editAAO(id){
  const src=id==null?null:db.aao.find(x=>String(x.id)===String(id));
  aaoDraft=src?JSON.parse(JSON.stringify(src)):{id:null,name:"",keyword:"",rules:{event:"Medizinischer Notfall"},units:[{type:"RTW",n:1,org:"Rettungsdienst"}],active:true};
- aaoDraft.units=(aaoDraft.units||[]).map(x=>({type:x.type||"",n:Number(x.n)||1,org:x.org||""}));
+ aaoDraft.units=(aaoDraft.units||[]).map(x=>({type:x.type||"",n:x.n==="pat"?"pat":(Number(x.n)||1),org:x.org||""}));
  aaoDraft._rules=Object.entries(aaoDraft.rules||{}).map(([k,v])=>({k,v:String(v)}));
  aaoDraft.combine=aaoDraft.combine||"nein"; aaoDraft.combineWith=(aaoDraft.combineWith||[]).map(String);
  render("aao");
@@ -4522,7 +4527,7 @@ function aaoEditor(){
    return `<div class="row" style="flex-wrap:nowrap;margin-bottom:6px"><select style="flex:1" onchange="aaoSetRuleKey(${i},this.value)">${Object.entries(AAO_RULE_FIELDS).map(([k,x])=>`<option value="${k}" ${k===r.k?"selected":""}>${esc(x.label)}</option>`).join("")}${AAO_RULE_FIELDS[r.k]?"":`<option selected value="${esc(r.k)}">${esc(r.k)}</option>`}</select><div style="flex:1">${valInput}</div><button title="Bedingung entfernen" onclick="aaoDraft._rules.splice(${i},1);render('aao')">✕</button></div>`;
  };
  const unitRow=(u,i)=>`<div class="row" style="flex-wrap:nowrap;margin-bottom:6px">
-   <input style="width:64px;flex:0 0 64px" type="number" min="1" value="${esc(u.n)}" oninput="aaoDraft.units[${i}].n=Number(this.value)||1" title="Anzahl">
+   <select style="width:78px;flex:0 0 78px" onchange="aaoDraft.units[${i}].n=this.value==='pat'?'pat':(Number(this.value)||1)" title="Anzahl – „Pat.“ = so viele wie Patienten">${[...new Set([1,2,3,4,5,6,7,8,9,10,Number(u.n)||1])].sort((p,q)=>p-q).map(k=>`<option value="${k}" ${u.n!=="pat"&&Number(u.n)===k?"selected":""}>${k}</option>`).join("")}<option value="pat" ${u.n==="pat"?"selected":""}>Pat.</option></select>
    <input style="flex:1" list="aaoTypeList" value="${esc(u.type)}" placeholder="Fahrzeugtyp" oninput="aaoDraft.units[${i}].type=this.value">
    <select style="flex:1" onchange="aaoDraft.units[${i}].org=this.value"><option value="">beliebige Organisation</option>${[...new Set([...orgs,u.org].filter(Boolean))].map(o=>`<option ${o===u.org?"selected":""}>${esc(o)}</option>`).join("")}</select>
    <button title="Fahrzeug entfernen" onclick="aaoDraft.units.splice(${i},1);render('aao')">✕</button></div>`;
@@ -4568,7 +4573,7 @@ function saveAAO(){
  const d=aaoDraft; if(!d)return;
  const name=String(d.name||"").trim();
  if(!name){toast("Bitte einen Namen eingeben");return}
- const units=d.units.map(u=>({type:String(u.type||"").trim(),n:Math.max(1,Number(u.n)||1),...(u.org?{org:u.org}:{})})).filter(u=>u.type);
+ const units=d.units.map(u=>({type:String(u.type||"").trim(),n:u.n==="pat"?"pat":Math.max(1,Number(u.n)||1),...(u.org?{org:u.org}:{})})).filter(u=>u.type);
  const builtin=d.id!=null&&isBuiltinAao(d.id)&&!d.rulesEdited;
  let rules=d.rules||{};
  if(!builtin){
