@@ -776,3 +776,19 @@ Version 4.23:
 - Vorbereitung Umzug auf lst-sim.github.io: Die neue Adresse übernimmt beim ersten Aufruf über
   die Weiterleitung von der alten Adresse automatisch die Live-Verbindung (Sitzung) und die
   Geräteeinstellungen und holt dann den kompletten Leitstellen-Stand aus der Sitzung.
+
+Version 4.24:
+- Nachbar-Landkreis: Ist der eigene RTW/NEF weiter als 20 km Luftlinie entfernt (oder keiner
+  frei), wird das nächste freie Fahrzeug aus dem Nachbar-LK vorgeschlagen (🤝) und bei der
+  Alarmierung ausgeliehen. Ein NKTW als First Responder wird nur noch bis 20 km vorgeschlagen.
+- KTWs Landkreis Friesland ergänzt (Quelle: bos-fahrzeuge.info): 84/91-01 und 84/91-02 (Sande),
+  87/91-01 (Bockhorn, RW Friesische Wehde).
+- Neuer Button "🚑 Krankentransport annehmen": Meldung KT-Entlassung / KT-Verlegung /
+  KT-Einweisung, dann Abholort (für die Fahrzeugwahl nötig), dann Freitext. Vorschlag: nächster
+  freier KTW, sonst NKTW. Keine Sonderrechte, deutlich längere Anfahrtszeit.
+- KTWs werden bei Notfällen nie vorgeschlagen, stehen aber unter "Rettungsmittel bearbeiten"
+  zur manuellen Auswahl.
+- AAO "+ Fahrzeug": Auswahl "Vollalarm DLRG <Ort>" und "Vollalarm DRK <Ort>" – alarmiert alle
+  Fahrzeuge dieser Ortsgruppe.
+- IVENA MANV: Unter IVENA-Zuweisung "🚨 MANV: mehrere Fahrzeuge" – mehrere Fahrzeuge (Status 4)
+  auf einmal derselben Klinik zuweisen, je Fahrzeug optional eigener PZC; alle gehen auf Status 7.
