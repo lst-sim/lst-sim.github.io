@@ -829,3 +829,7 @@ Version 4.29:
   werden mit alarmiert. Ein optionaler "Vollalarm DLRG/DRK" ist ein einziger Haken für die
   ganze nächste Ortsgruppe. Angeboten werden die optionalen Fahrzeuge der AAO(s), die
   tatsächlich alarmiert wird/werden.
+
+Version 4.30:
+- "Psy Problem?" wird nur noch gefragt, wenn auch E (XABCDE) abgefragt wurde – sonst
+  "nicht erhoben" (z. B. Feuer, Technische Hilfe, Reanimation mit Abkürzung).

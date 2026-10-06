@@ -132,7 +132,7 @@ table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:10px 8px
 </head>
 <body>
 <div style="padding:6px 10px;font-size:11px;color:#94a3b8;font-weight:700;display:flex;align-items:center;gap:10px;position:sticky;top:0;z-index:10;background:var(--bg)">
- <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v4.29</span>
+ <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v4.30</span>
  <span id="syncState"></span>
  <a id="homeLink" href="#" onclick="render('leitstelle');return false" class="hidden" style="color:#64748b;text-decoration:underline;font-weight:600">🖥️ Leitstelle</a>
  <a id="monitorLink" href="#" onclick="showMonitorQR();return false" style="color:#64748b;text-decoration:underline;font-weight:600;margin-left:auto">🖥️ Monitor hinzufügen</a>
@@ -2113,6 +2113,9 @@ function questionHTML(q){
    if(!needsXABCDE(c))return skip("nicht erhoben");
  }
  if(id==="e_exposure" && !needsXABCDE(c))
+   return skip("nicht erhoben");
+ // "Psy Problem?" nur, wenn E (XABCDE) tatsächlich abgefragt wurde
+ if(id==="psy" && (!needsXABCDE(c)||reaShortcutActive(c)))
    return skip("nicht erhoben");
 
  if(id==="location" && c.callerGpsPending){
