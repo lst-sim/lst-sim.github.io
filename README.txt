@@ -861,3 +861,15 @@ Version 4.35:
 - Die Klinikansicht "Patientenzuweisungen" (Krankenhaus wählen → Tabelle) steht jetzt nur noch
   unter 📋 IVENA-Zuweisungen und ersetzt dort die bisherige Gesamtliste. Die IVENA-Ansicht zeigt
   nur noch die Kapazitäts-Tabelle (mit der Spalte "📥 24h").
+
+Version 4.36:
+- IVENA-Zuweisungen im Aufbau wie das echte IVENA: "Bitte wählen Sie einen
+  Versorgungsbereich" (Auswahl), "Bitte wählen Sie ein Krankenhaus" (Knöpfe, gewähltes grau),
+  darunter die gelbe Tabelle: Patienten-Übergabe-Punkt, Behandlungsdringlichkeit (SK aus dem
+  PZC), Alarmzeit/Eintreffzeit (blau), Schockraum, Herzkatheter, Anlass, BG-Fall/Schwanger,
+  M/W/Alter, Beatmet/Reanim., Ansteckungsfähig, Fachbereich/Diagnose (grün, rot wenn
+  abgemeldet), Leitstelle, Zuweisung/VAK-Nr., Arztbegleitet, Transportmittel/Bemerkung, dazu
+  "Abgerufen am …". Neueste Alarmzeit oben.
+- Neue Zusatzangabe H (Herzkatheter) bei den Zuweisungen.
+- Noch nicht abgebildet (fest eingetragen): Übergabepunkt immer "Notaufnahme", Anlass "k.A.",
+  Zuweisung "RD", Leitstelle "LST FRI/WHV" ohne Telefonnummer.

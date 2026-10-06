@@ -132,7 +132,7 @@ table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:10px 8px
 </head>
 <body>
 <div style="padding:6px 10px;font-size:11px;color:#94a3b8;font-weight:700;display:flex;align-items:center;gap:10px;position:sticky;top:0;z-index:10;background:var(--bg)">
- <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v4.35</span>
+ <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v4.36</span>
  <span id="syncState"></span>
  <a id="homeLink" href="#" onclick="render('leitstelle');return false" class="hidden" style="color:#64748b;text-decoration:underline;font-weight:600">🖥️ Leitstelle</a>
  <a id="monitorLink" href="#" onclick="showMonitorQR();return false" style="color:#64748b;text-decoration:underline;font-weight:600;margin-left:auto">🖥️ Monitor hinzufügen</a>
@@ -4820,7 +4820,7 @@ function toggleAsgNefField(){
 // ─── IVENA-Zusatzangaben ─────────────────────────────────────────────────────────────────────
 // Werden bei der Anmeldung als Kürzel nebeneinander abgefragt; ohne Aktion stehen alle auf "–".
 // Kürzel angelehnt an die IVENA-Patientenanzeige (S, BG, SS, B, R, I, N) – Übungsdarstellung.
-const IVENA_FLAGS=[["s","S","Schockraum"],["bg","BG","BG-lich (Arbeits-/Wegeunfall)"],["ss","SS","Schwanger"],["b","B","Beatmet"],["r","R","Reanimiert"],["i","I","Ansteckungsfähig"],["n","N","Arztbegleitet"]];
+const IVENA_FLAGS=[["s","S","Schockraum"],["h","H","Herzkatheter"],["bg","BG","BG-lich (Arbeits-/Wegeunfall)"],["ss","SS","Schwanger"],["b","B","Beatmet"],["r","R","Reanimiert"],["i","I","Ansteckungsfähig"],["n","N","Arztbegleitet"]];
 window._ivState=window._ivState||{};
 function ivenaFlagsHTML(prefix,onN){
  window._ivState[prefix]={flags:{},g:"",onN:onN||""};
@@ -5257,60 +5257,71 @@ function ivenaMatrixHTML(rows){
  </table></div>
  <div class="row" style="gap:12px;font-size:12px;margin-top:6px"><span><span style="display:inline-block;width:12px;height:12px;background:#16a34a;vertical-align:middle"></span> frei</span><span><span style="display:inline-block;width:12px;height:12px;background:#dc2626;vertical-align:middle"></span> abgemeldet (bis)</span><span><span style="display:inline-block;width:12px;height:12px;background:#e5e7eb;vertical-align:middle"></span> nicht vorhanden</span><span>📥 angemeldete Patienten (24 h)</span></div>`;
 }
-// IVENA-Klinikansicht wie im echten System: erst das Krankenhaus auswählen, dann stehen alle
-// Zuweisungen/Anmeldungen für dieses Haus (letzte 24 h) in einer Tabelle. Auswahl gilt pro Gerät.
+// IVENA-Klinikansicht wie im echten System: Versorgungsbereich wählen, Krankenhaus antippen,
+// dann alle Patientenzuweisungen dieses Hauses (letzte 24 h) in der gelben IVENA-Tabelle.
+// Auswahl gilt pro Gerät.
 let ivenaHouse=(()=>{try{return localStorage.getItem("lst-ivena-house")||""}catch(e){return ""}})();
+let ivenaHouseArea=(()=>{try{return localStorage.getItem("lst-ivena-area")||""}catch(e){return ""}})();
 function setIvenaHouse(v){ivenaHouse=v||"";try{localStorage.setItem("lst-ivena-house",ivenaHouse)}catch(e){};render("ivenaZuweisungen")}
+function setIvenaHouseArea(v){ivenaHouseArea=v||"";try{localStorage.setItem("lst-ivena-area",ivenaHouseArea)}catch(e){};render("ivenaZuweisungen")}
+const IVENA_Y="#ffcc00", IVENA_G="#bff5c0";
 function ivenaIncomingHTML(){
  const now=Date.now();
  const houses=db.ivena||[];
- const active=h=>(db.ivenaAssignments||[]).filter(a=>!a.deleted&&String(a.hospitalId)===String(h.id)&&ivenaRecent(a,now)).length;
- const h=houses.find(x=>String(x.id)===String(ivenaHouse))||null;
- const fmt=d=>d?new Date(d).toLocaleString("de-DE",{day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"}):"–";
- const picker=`<div class="row" style="gap:8px;align-items:center;flex-wrap:wrap"><label style="margin:0">Krankenhaus</label>
-   <select style="flex:1;min-width:240px" onchange="setIvenaHouse(this.value)"><option value="">– Krankenhaus auswählen –</option>${houses.map(x=>{const n=active(x);return `<option value="${x.id}" ${h&&String(h.id)===String(x.id)?"selected":""}>${esc(x.name)}${x.place?` (${esc(x.place)})`:""}${n?` – ${n} Anmeldung${n>1?"en":""}`:""}</option>`}).join("")}</select></div>`;
- let body;
- if(!h){
-   body=`<p class="muted" style="margin-top:10px">Bitte ein Krankenhaus auswählen, um dessen Patientenzuweisungen anzuzeigen.</p>`;
- }else{
-   const list=(db.ivenaAssignments||[]).filter(a=>String(a.hospitalId)===String(h.id)&&ivenaRecent(a,now))
-     .slice().sort((a,b)=>{
-       // erst die noch erwarteten (nächste Ankunft oben), dann die eingetroffenen (jüngste oben), gelöschte zuletzt
-       if(!!a.deleted!==!!b.deleted)return a.deleted?1:-1;
-       const ta=new Date(a.eta||a.createdAt||0).getTime(), tb=new Date(b.eta||b.createdAt||0).getTime();
-       const fa=ta>=now, fb=tb>=now;
-       if(fa!==fb)return fa?-1:1;
-       return fa?ta-tb:tb-ta;
-     });
-   const flagCell=(a,k)=>{const f=a.flags||{s:!!a.schockraum,n:!!a.na};const on=!!f[k],ed=ivenaEd(a,"f_"+k);
-     return `<td style="text-align:center;font-weight:800;${on?(ed?`background:${IVENA_EDIT_BLUE};color:#fff`:"background:#d71920;color:#fff"):(ed?`color:${IVENA_EDIT_BLUE}`:"color:#94a3b8")}">${on?"X":"–"}</td>`};
-   const th=(t,ttl)=>`<th style="text-align:center;padding:6px 4px"${ttl?` title="${esc(ttl)}"`:""}>${t}</th>`;
-   body=list.length?`<div style="overflow:auto;margin-top:10px"><table class="keep-table" style="min-width:1050px"><thead><tr>
-     <th>Eintreffzeit</th><th>Rettungsmittel</th><th>PZC</th><th>Indikation</th><th>Fachbereich</th>
-     ${IVENA_FLAGS.map(([k,abbr,title])=>th(abbr,title)).join("")}${th("Geschl.")}${th("Alter")}<th>Info</th><th>Angemeldet</th><th></th>
-    </tr></thead><tbody>
-    ${list.map(a=>{
-      const t=a.eta?new Date(a.eta).getTime():null;
-      const past=t!=null&&t<now;
-      const mins=t!=null?Math.round((t-now)/60000):null;
-      const us=(a.vehicleIds||[]).map(id=>db.units.find(u=>String(u.id)===String(id))).filter(Boolean);
-      return `<tr style="${a.deleted?IVENA_DEL_STYLE+";background:#f8fafc":past?"background:#f8fafc;color:#475569":""}">
-       <td style="white-space:nowrap">${ivenaBlue(a,"eta",`<b>${fmt(a.eta)}</b>`)}${mins!=null&&!a.deleted?`<br><small class="muted">${mins>=0?`in ${mins} min`:(-mins>=60?`eingetroffen vor ${Math.floor(-mins/60)} h ${-mins%60} min`:`eingetroffen vor ${-mins} min`)}</small>`:""}</td>
-       <td style="min-width:190px">${(a.vehicleLabels||[]).map(l=>`<div style="white-space:nowrap">${esc(l)}</div>`).join("")||"–"}${us.length&&!a.deleted?`<small class="muted">${us.map(u=>`Status ${esc(u.status)}`).join(" / ")}</small>`:""}</td>
-       <td style="white-space:nowrap">${ivenaBlue(a,"pzc",`<b style="letter-spacing:1px">${esc(a.pzc||"–")}</b>`)}</td>
-       <td>${ivenaBlue(a,"pzc",esc(pzcRmiLabel(a.rmi)||"–"))}</td>
-       <td>${ivenaBlue(a,"pzc",esc(a.fach||"–"))}</td>
-       ${IVENA_FLAGS.map(([k])=>flagCell(a,k)).join("")}
-       <td style="text-align:center">${ivenaBlue(a,"geschlecht",esc(a.geschlecht||"–"))}</td>
-       <td style="text-align:center;white-space:nowrap">${ivenaBlue(a,"pzc",(a.alter!==""&&a.alter!=null)?`${esc(a.alter)} J.`:"–")}</td>
-       <td style="font-size:12px">${a.info?ivenaBlue(a,"info",esc(a.info)):"–"}</td>
-       <td style="white-space:nowrap"><small>${fmt(a.createdAt)}</small>${a.edited&&Object.keys(a.edited).length?`<br><small style="color:${IVENA_EDIT_BLUE}">geändert ${fmt(a.updatedAt)}</small>`:""}${a.deleted?`<br><small style="color:#b91c1c;display:inline-block;text-decoration:none">🗑️ gelöscht ${fmt(a.deletedAt)}</small>`:""}</td>
-       <td style="white-space:nowrap">${a.deleted?"":`<button style="padding:4px 8px" onclick="editIvenaAssignment('${a.id}','ivenaZuweisungen')" title="Bearbeiten">✏️</button><button style="padding:4px 8px" onclick="deleteIvenaAssignment('${a.id}','ivenaZuweisungen')" title="Löschen">🗑️</button>`}</td>
-      </tr>`;}).join("")}
-   </tbody></table></div>`:`<p class="muted" style="margin-top:10px">Keine Patientenzuweisungen für ${esc(h.name)} in den letzten 24 h.</p>`;
- }
- return `<div style="margin-top:6px"><h3>📥 Patientenzuweisungen <small class="muted" style="font-weight:500">(Klinikansicht · letzte 24 h)</small></h3>${picker}${body}</div>`;
+ const areas=[...new Set(houses.map(h=>h.area||"Sonstige"))];
+ const area=areas.includes(ivenaHouseArea)?ivenaHouseArea:(houses.find(x=>String(x.id)===String(ivenaHouse))?.area||areas[0]||"");
+ const inArea=houses.filter(h=>(h.area||"Sonstige")===area);
+ const h=inArea.find(x=>String(x.id)===String(ivenaHouse))||null;
+ const hm=d=>d?new Date(d).toLocaleTimeString("de-DE",{hour:"2-digit",minute:"2-digit"}):"–";
+ const btn=(x)=>{const sel=h&&String(h.id)===String(x.id);const n=(db.ivenaAssignments||[]).filter(a=>!a.deleted&&String(a.hospitalId)===String(x.id)&&ivenaRecent(a,now)).length;
+   return `<button onclick="setIvenaHouse('${x.id}')" style="border-radius:2px;padding:6px 10px;font-weight:700;${sel?"background:#8a8a8a;color:#fff;border-color:#8a8a8a":"background:#fff;color:#111;border:1px solid #888"}">${esc(x.name)}${n?` <small style="font-weight:600">(${n})</small>`:""}</button>`};
+ let out=`<div style="margin-top:6px">
+  <div style="font-size:20px;font-weight:800">Bitte wählen Sie einen Versorgungsbereich:</div>
+  <select style="max-width:440px;margin:6px 0 10px" onchange="setIvenaHouseArea(this.value)">${areas.map(a=>`<option ${a===area?"selected":""}>${esc(a)}</option>`).join("")}</select>
+  <div style="font-size:20px;font-weight:800">Bitte wählen Sie ein Krankenhaus:</div>
+  <div class="row" style="gap:6px;flex-wrap:wrap;margin:6px 0 12px">${inArea.map(btn).join("")||`<span class="muted">Keine Krankenhäuser in diesem Bereich.</span>`}</div>`;
+ if(!h)return out+`</div>`;
+ const list=(db.ivenaAssignments||[]).filter(a=>String(a.hospitalId)===String(h.id)&&ivenaRecent(a,now))
+   .slice().sort((a,b)=>new Date(b.createdAt||0)-new Date(a.createdAt||0)); // neueste Alarmzeit oben
+ const closures=ivenaActiveClosures(h);
+ const td=(html,st="")=>`<td style="border:1px solid #b5b5b5;padding:4px 6px;text-align:center;vertical-align:middle;${st}">${html}</td>`;
+ const pm=(on,abbr,k,a)=>{const ed=ivenaEd(a,"f_"+k);return `<span style="${ed?`color:${IVENA_EDIT_BLUE}`:""}">${abbr}${on?"+":"-"}</span>`};
+ const rows=list.map(a=>{
+   const f=a.flags||{s:!!a.schockraum,n:!!a.na};
+   const sk=a.dringlichkeit?`SK${esc(a.dringlichkeit)}`:"–";
+   const us=(a.vehicleIds||[]).map(id=>db.units.find(u=>String(u.id)===String(id))).filter(Boolean);
+   const tType=us[0]?.type||((a.vehicleLabels||[])[0]||"").match(/\(([^)]+)\)\s*$/)?.[1]||"–";
+   const optas=(a.vehicleLabels||[]).map(l=>esc(l.replace(/\s*\([^)]*\)\s*$/,""))).join("<br>");
+   const closed=a.fach&&closures.some(c=>c.fach===a.fach);
+   const big="font-size:22px;font-weight:700";
+   return `<tr style="${a.deleted?IVENA_DEL_STYLE:""}">
+    ${td("<b>Notaufnahme</b>",`background:${IVENA_Y};text-align:left;font-size:14px`)}
+    ${td(`<div><span style="display:inline-block;width:26px;height:26px;border-radius:50%;background:#cfcfcf"></span> <span style="display:inline-block;width:26px;height:26px;border-radius:50%;background:#cfcfcf"></span></div><div style="${big}">${ivenaBlue(a,"pzc",sk)}</div>`)}
+    ${td(`<div style="${big}">${hm(a.createdAt)}</div><div style="${big};color:#1d4ed8">${ivenaBlue(a,"eta",hm(a.eta))}</div>`)}
+    ${td(`<span style="${big}">${pm(!!f.s,"S","s",a)}</span>`,f.s&&!a.deleted?"background:#ffc4c4":"")}
+    ${td(`<span style="${big}">${pm(!!f.h,"H","h",a)}</span>`,f.h&&!a.deleted?"background:#ffc4c4":"")}
+    ${td(`<b>k.A.</b>`)}
+    ${td(`<div style="${big}">${pm(!!f.bg,"BG","bg",a)}</div>${f.ss?`<div style="${big}">${pm(true,"SS","ss",a)}</div>`:""}`)}
+    ${td(`<div style="${big}">${ivenaBlue(a,"geschlecht",esc(a.geschlecht||"–"))}</div><div style="${big}">${ivenaBlue(a,"pzc",(a.alter!==""&&a.alter!=null)?esc(a.alter):"–")}</div>`)}
+    ${td(`<div style="${big}">${pm(!!f.b,"B","b",a)}</div><div style="${big}">${pm(!!f.r,"R","r",a)}</div>`)}
+    ${td(`<span style="${big}">${f.i?pm(true,"I","i",a):"k.A."}</span>`)}
+    ${td(`<div style="font-weight:700">${ivenaBlue(a,"pzc",esc(a.fach||"–"))}</div><div style="font-weight:700">${ivenaBlue(a,"pzc",a.rmi?`${esc(a.rmi)} ${esc(pzcRmiLabel(a.rmi))}`:"")}</div>`,`background:${a.deleted?"#f1f5f9":closed?"#ffc4c4":IVENA_G}`)}
+    ${td(`<b>${esc(IVENA_LST_LABEL)}</b>`)}
+    ${td(`<b>RD</b>`)}
+    ${td(`<span style="${big}">${pm(!!f.n,"N","n",a)}</span>`)}
+    ${td(`<div style="${big}">${esc(tType)}</div><div style="font-size:13px">${optas}</div>${a.info?`<div style="font-size:13px">${ivenaBlue(a,"info",esc(a.info))}</div>`:""}${a.deleted?`<div style="font-size:12px;color:#b91c1c;display:inline-block;text-decoration:none">🗑️ gelöscht ${hm(a.deletedAt)}</div>`:""}`,"min-width:170px")}
+    ${td(a.deleted?"":`<button style="padding:3px 6px" onclick="editIvenaAssignment('${a.id}','ivenaZuweisungen')" title="Bearbeiten">✏️</button><button style="padding:3px 6px" onclick="deleteIvenaAssignment('${a.id}','ivenaZuweisungen')" title="Löschen">🗑️</button>`,"background:#fff")}
+   </tr>`;}).join("");
+ const th=t=>`<th style="background:${IVENA_Y};color:#111;border:1px solid #b5b5b5;padding:6px 4px;text-align:center;font-size:13px;line-height:1.3;text-transform:none;letter-spacing:0">${t}</th>`;
+ const dt=new Date();
+ out+=`<div style="overflow:auto;border:2px solid ${IVENA_Y}"><table class="keep-table" style="min-width:1250px;border-collapse:collapse;width:100%"><thead><tr>
+   ${th("Patienten-<br>Übergabe-Punkt")}${th("Behandlungs-<br>dringlichkeit")}${th("Alarmzeit<br>Eintreffzeit")}${th("Schock-<br>raum")}${th("Herzka-<br>theter")}${th("Anlass")}${th("BG-Fall /<br>Schwanger")}${th("M/W<br>Alter")}${th("Beatmet<br>Reanim.")}${th("Ansteck-<br>ungsfähig")}${th("Fachbereich<br>Diagnose")}${th("Leitstelle")}${th("Zuweisung<br>/ VAK-Nr.")}${th("Arzt-<br>begleitet")}${th("Transport-<br>mittel<br>Bemerkung")}${th("")}
+  </tr></thead><tbody>${rows||`<tr><td colspan="16" class="muted" style="padding:12px">Keine Patientenzuweisungen für ${esc(h.name)} in den letzten 24 h.</td></tr>`}</tbody></table></div>
+  <div style="text-align:right;font-size:12px;margin-top:4px">Abgerufen am ${dt.toLocaleDateString("de-DE")} ${dt.toLocaleTimeString("de-DE",{hour:"2-digit",minute:"2-digit"})} Uhr</div></div>`;
+ return out;
 }
+// Leitstellen-Kennung in der IVENA-Tabelle (Telefonnummer bewusst nicht hinterlegt – nicht verifiziert).
+const IVENA_LST_LABEL="LST FRI/WHV";
 function ivena(){
  const areas=[...new Set(db.ivena.map(h=>h.area||"Sonstige"))];
  const rows=db.ivena.filter(h=>db.ivenaAreaFilter.includes(h.area||"Sonstige"));
