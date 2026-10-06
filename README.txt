@@ -873,3 +873,11 @@ Version 4.36:
 - Neue Zusatzangabe H (Herzkatheter) bei den Zuweisungen.
 - Noch nicht abgebildet (fest eingetragen): Übergabepunkt immer "Notaufnahme", Anlass "k.A.",
   Zuweisung "RD", Leitstelle "LST FRI/WHV" ohne Telefonnummer.
+
+Version 4.37:
+- IVENA: Neues Feld "Anlass" bei jeder Zuweisung (Einzel, MANV, Fahrzeugterminal, Bearbeiten):
+  k.A., Häuslicher Einsatz, aus Arztpraxis, Öffentlicher Raum, Verkehrsunfall, Arbeitsunfall,
+  Sportunfall, Schulunfall, Pflegeeinrichtung, Verlegung, Sonstiges. Steht in der Spalte
+  "Anlass"; nachträgliche Änderung wird blau.
+- Spalte "Zuweisung": RD, wenn das Rettungsmittel selbst (Fahrzeugterminal) angemeldet hat,
+  LST, wenn die Leitstelle angemeldet hat.

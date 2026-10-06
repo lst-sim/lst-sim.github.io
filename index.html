@@ -132,7 +132,7 @@ table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:10px 8px
 </head>
 <body>
 <div style="padding:6px 10px;font-size:11px;color:#94a3b8;font-weight:700;display:flex;align-items:center;gap:10px;position:sticky;top:0;z-index:10;background:var(--bg)">
- <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v4.36</span>
+ <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v4.37</span>
  <span id="syncState"></span>
  <a id="homeLink" href="#" onclick="render('leitstelle');return false" class="hidden" style="color:#64748b;text-decoration:underline;font-weight:600">🖥️ Leitstelle</a>
  <a id="monitorLink" href="#" onclick="showMonitorQR();return false" style="color:#64748b;text-decoration:underline;font-weight:600;margin-left:auto">🖥️ Monitor hinzufügen</a>
@@ -4303,6 +4303,7 @@ async function openVehicleIvenaAssignment(unitId,dburl,sid,callId){
   </div>
   ${pzcFieldsHTML("vAsg")}
   ${ivenaFlagsHTML("vAsg")}
+  ${ivenaAnlassHTML("vAsg")}
   ${etaFieldsHTML("vAsg")}
   <div class="row" style="margin-top:14px">
    <button onclick="renderVehicleTerminal('${unitId}','${dburl.replace(/'/g,"\\'")}','${sid.replace(/'/g,"\\'")}')">Abbrechen</button>
@@ -4347,7 +4348,7 @@ async function saveVehicleIvenaAssignment(unitId,dburl,sid){
    fach, schockraum, geschlecht, alter, na,
    rmi:pz.rmi, dringlichkeit:pz.dringlichkeit, pzc:pz.pzc, flags:zus.flags, info:zus.info,
    vehicleIds, vehicleLabels,
-   eta,
+   eta, anlass:ivenaAnlassRead("vAsg"),
    createdAt:new Date().toISOString(),
    source:"vehicle"
  };
@@ -4822,6 +4823,10 @@ function toggleAsgNefField(){
 // Kürzel angelehnt an die IVENA-Patientenanzeige (S, BG, SS, B, R, I, N) – Übungsdarstellung.
 const IVENA_FLAGS=[["s","S","Schockraum"],["h","H","Herzkatheter"],["bg","BG","BG-lich (Arbeits-/Wegeunfall)"],["ss","SS","Schwanger"],["b","B","Beatmet"],["r","R","Reanimiert"],["i","I","Ansteckungsfähig"],["n","N","Arztbegleitet"]];
 window._ivState=window._ivState||{};
+// Anlass der Zuweisung (Spalte "Anlass" in der IVENA-Klinikansicht)
+const IVENA_ANLASS=["k.A.","Häuslicher Einsatz","aus Arztpraxis","Öffentlicher Raum","Verkehrsunfall","Arbeitsunfall","Sportunfall","Schulunfall","Pflegeeinrichtung","Verlegung","Sonstiges"];
+function ivenaAnlassHTML(prefix,val){val=val||"k.A.";return `<label style="margin-top:10px">Anlass</label><select id="${prefix}Anlass">${[...new Set([...IVENA_ANLASS,val])].map(x=>`<option ${x===val?"selected":""}>${esc(x)}</option>`).join("")}</select>`}
+function ivenaAnlassRead(prefix){return document.getElementById(prefix+"Anlass")?.value||"k.A."}
 function ivenaFlagsHTML(prefix,onN){
  window._ivState[prefix]={flags:{},g:"",onN:onN||""};
  return `<div style="margin-top:10px;border:1px solid var(--line);border-radius:10px;padding:10px">
@@ -4879,6 +4884,7 @@ function editIvenaAssignment(id,back){
   <select id="edAHospital">${hospitals.map(h=>`<option value="${h.id}" ${String(h.id)===String(a.hospitalId)?"selected":""}>${esc(h.name)}${h.place?` (${esc(h.place)})`:""}</option>`).join("")}</select>
   ${pzcFieldsHTML("edA")}
   ${ivenaFlagsHTML("edA")}
+  ${ivenaAnlassHTML("edA",a.anlass)}
   ${etaFieldsHTML("edA")}
   <div class="row" style="margin-top:14px">
    <button onclick="render('${back==="ivena"?"ivena":"ivenaZuweisungen"}')">Abbrechen</button>
@@ -4908,12 +4914,14 @@ function saveEditedIvenaAssignment(id,back){
  IVENA_FLAGS.forEach(([k])=>{if(!!zus.flags[k]!==!!oldFlags[k])ed["f_"+k]=true});
  if((zus.geschlecht||"")!==(a.geschlecht||""))ed.geschlecht=true;
  if((zus.info||"")!==(a.info||""))ed.info=true;
+ const anlass=ivenaAnlassRead("edA");
+ if(anlass!==(a.anlass||"k.A."))ed.anlass=true;
  const oldEta=a.eta?new Date(a.eta).getTime():null, newEta=new Date(eta).getTime();
  if(oldEta===null||Math.abs(oldEta-newEta)>=60000)ed.eta=true;
  Object.assign(a,{
    hospitalId:hospital.id, hospitalName:hospital.name,
    rmi:pz.rmi, dringlichkeit:pz.dringlichkeit, alter:pz.alter, pzc:pz.pzc, fach:pzcFachrichtung(pz.rmi),
-   flags:zus.flags, schockraum:zus.flags.s, na:zus.flags.n, geschlecht:zus.geschlecht, info:zus.info,
+   flags:zus.flags, schockraum:zus.flags.s, na:zus.flags.n, geschlecht:zus.geschlecht, info:zus.info, anlass,
    eta, updatedAt:new Date().toISOString()
  });
  // Neue Klinik = neue Anmeldung dort: keine blauen Markierungen.
@@ -5068,6 +5076,7 @@ function openIvenaAssignment(){
   </div>
   ${pzcFieldsHTML("asg")}
   ${ivenaFlagsHTML("asg","asgOnN")}
+  ${ivenaAnlassHTML("asg")}
   <div id="asgNefWrap" class="hidden">
    <label style="margin-top:10px">Begleitendes NEF/RTH (optional, Status 4)</label>
    <select id="asgNef"><option value="">– kein separates Begleitfahrzeug –</option>${nefUnits.map(u=>`<option value="${u.id}">${esc(u.opta||u.name)} · ${esc(u.type)}${u.location?` (${esc(u.location)})`:""}</option>`).join("")}</select>
@@ -5098,6 +5107,7 @@ function openIvenaManv(){
      <input class="manvPzc" data-id="${u.id}" inputmode="numeric" maxlength="6" placeholder="PZC" style="width:110px;flex:0 0 110px" oninput="manvPzcHint(this)">
     </div><div class="manvHint muted" data-id="${u.id}" style="font-size:12px;padding:0 10px 6px"></div>`).join("")}
   </div>
+  ${ivenaAnlassHTML("manv")}
   <label style="margin-top:10px">Weitere Informationen (für alle)</label>
   <input id="manvInfo" placeholder="z. B. MANV Einsatz #…, Sichtungskategorie …">
   ${etaFieldsHTML("manv")}
@@ -5121,6 +5131,7 @@ function saveIvenaManv(){
  const ids=[...document.querySelectorAll(".manvChk")].filter(x=>x.checked).map(x=>x.dataset.id);
  if(!ids.length){toast("Bitte mindestens ein Fahrzeug wählen");return}
  const info=String(document.getElementById("manvInfo")?.value||"").trim();
+ const anlass=ivenaAnlassRead("manv");
  db.ivenaAssignments=db.ivenaAssignments||[];
  let n=0;
  for(const id of ids){
@@ -5133,7 +5144,7 @@ function saveIvenaManv(){
    const a={id:Date.now()+n,hospitalId:hospital.id,hospitalName:hospital.name,
      fach:valid?pzcFachrichtung(f.code):"",schockraum:false,geschlecht:"",alter:valid?String(Number(raw.slice(3,5))):"",na:false,
      rmi:valid?f.code:"",dringlichkeit:valid?raw[5]:"",pzc:valid?raw:"",flags:{},info:(info?info+" · ":"")+"MANV",
-     vehicleIds:[u.id],vehicleLabels:[`${u.opta||u.name} (${u.type})`],eta,createdAt:new Date().toISOString(),source:"leitstelle-manv"};
+     vehicleIds:[u.id],vehicleLabels:[`${u.opta||u.name} (${u.type})`],eta,anlass,createdAt:new Date().toISOString(),source:"leitstelle-manv"};
    db.ivenaAssignments.unshift(a);
    if(db.cloud?.enabled)cloudRequest(`ivenaAssignments/${encodeURIComponent(String(a.id))}`,"PUT",a);
    n++;
@@ -5173,7 +5184,7 @@ function saveIvenaAssignment(){
    rmi:pz.rmi, dringlichkeit:pz.dringlichkeit, pzc:pz.pzc, flags:zus.flags, info:zus.info,
    vehicleIds:vehicles.map(u=>u.id),
    vehicleLabels:vehicles.map(u=>`${u.opta||u.name} (${u.type})`),
-   eta,
+   eta, anlass:ivenaAnlassRead("asg"),
    createdAt:new Date().toISOString(),
    source:"leitstelle"
  };
@@ -5300,14 +5311,14 @@ function ivenaIncomingHTML(){
     ${td(`<div style="${big}">${hm(a.createdAt)}</div><div style="${big};color:#1d4ed8">${ivenaBlue(a,"eta",hm(a.eta))}</div>`)}
     ${td(`<span style="${big}">${pm(!!f.s,"S","s",a)}</span>`,f.s&&!a.deleted?"background:#ffc4c4":"")}
     ${td(`<span style="${big}">${pm(!!f.h,"H","h",a)}</span>`,f.h&&!a.deleted?"background:#ffc4c4":"")}
-    ${td(`<b>k.A.</b>`)}
+    ${td(`<b>${ivenaBlue(a,"anlass",esc(a.anlass||"k.A."))}</b>`)}
     ${td(`<div style="${big}">${pm(!!f.bg,"BG","bg",a)}</div>${f.ss?`<div style="${big}">${pm(true,"SS","ss",a)}</div>`:""}`)}
     ${td(`<div style="${big}">${ivenaBlue(a,"geschlecht",esc(a.geschlecht||"–"))}</div><div style="${big}">${ivenaBlue(a,"pzc",(a.alter!==""&&a.alter!=null)?esc(a.alter):"–")}</div>`)}
     ${td(`<div style="${big}">${pm(!!f.b,"B","b",a)}</div><div style="${big}">${pm(!!f.r,"R","r",a)}</div>`)}
     ${td(`<span style="${big}">${f.i?pm(true,"I","i",a):"k.A."}</span>`)}
     ${td(`<div style="font-weight:700">${ivenaBlue(a,"pzc",esc(a.fach||"–"))}</div><div style="font-weight:700">${ivenaBlue(a,"pzc",a.rmi?`${esc(a.rmi)} ${esc(pzcRmiLabel(a.rmi))}`:"")}</div>`,`background:${a.deleted?"#f1f5f9":closed?"#ffc4c4":IVENA_G}`)}
     ${td(`<b>${esc(IVENA_LST_LABEL)}</b>`)}
-    ${td(`<b>RD</b>`)}
+    ${td(`<b title="${a.source==="vehicle"?"vom Rettungsmittel selbst angemeldet":"von der Leitstelle angemeldet"}">${a.source==="vehicle"?"RD":"LST"}</b>`)}
     ${td(`<span style="${big}">${pm(!!f.n,"N","n",a)}</span>`)}
     ${td(`<div style="${big}">${esc(tType)}</div><div style="font-size:13px">${optas}</div>${a.info?`<div style="font-size:13px">${ivenaBlue(a,"info",esc(a.info))}</div>`:""}${a.deleted?`<div style="font-size:12px;color:#b91c1c;display:inline-block;text-decoration:none">🗑️ gelöscht ${hm(a.deletedAt)}</div>`:""}`,"min-width:170px")}
     ${td(a.deleted?"":`<button style="padding:3px 6px" onclick="editIvenaAssignment('${a.id}','ivenaZuweisungen')" title="Bearbeiten">✏️</button><button style="padding:3px 6px" onclick="deleteIvenaAssignment('${a.id}','ivenaZuweisungen')" title="Löschen">🗑️</button>`,"background:#fff")}
