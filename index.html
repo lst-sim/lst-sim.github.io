@@ -132,7 +132,7 @@ table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:10px 8px
 </head>
 <body>
 <div style="padding:6px 10px;font-size:11px;color:#94a3b8;font-weight:700;display:flex;align-items:center;gap:10px;position:sticky;top:0;z-index:10;background:var(--bg)">
- <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v4.38</span>
+ <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v4.39</span>
  <span id="syncState"></span>
  <a id="homeLink" href="#" onclick="render('leitstelle');return false" class="hidden" style="color:#64748b;text-decoration:underline;font-weight:600">🖥️ Leitstelle</a>
  <a id="monitorLink" href="#" onclick="showMonitorQR();return false" style="color:#64748b;text-decoration:underline;font-weight:600;margin-left:auto">🖥️ Monitor hinzufügen</a>
@@ -3698,6 +3698,21 @@ async function copyCallerLink(){
  const val=document.getElementById("callerLink")?.value||"";
  try{await navigator.clipboard.writeText(val);toast("Anrufer-Link kopiert")}catch(e){toast("Link markieren und kopieren")}
 }
+// Freiton ("Tuten") beim Anrufer, bis die Leitstelle den Notruf annimmt: 425 Hz, 1 s Ton / 4 s Pause.
+let ringbackTimer=null;
+function ringbackBeep(){
+ try{
+   if(!vehicleAudioCtx)vehicleAudioCtx=new (window.AudioContext||window.webkitAudioContext)();
+   const ctx=vehicleAudioCtx; if(ctx.state==="suspended")ctx.resume();
+   const o=ctx.createOscillator(), g=ctx.createGain(), t=ctx.currentTime;
+   o.type="sine"; o.frequency.value=425;
+   g.gain.setValueAtTime(0,t); g.gain.linearRampToValueAtTime(0.25,t+0.02);
+   g.gain.setValueAtTime(0.25,t+0.98); g.gain.linearRampToValueAtTime(0,t+1.0);
+   o.connect(g); g.connect(ctx.destination); o.start(t); o.stop(t+1.02);
+ }catch(e){}
+}
+function startRingback(){if(ringbackTimer)return;ringbackBeep();ringbackTimer=setInterval(ringbackBeep,5000)}
+function stopRingback(){if(ringbackTimer){clearInterval(ringbackTimer);ringbackTimer=null}}
 async function renderCallerTerminal(callerId,dburl,sid){
  document.querySelector("nav")?.remove();
  let painted="";
@@ -3718,11 +3733,13 @@ async function renderCallerTerminal(callerId,dburl,sid){
    ]);
    const linkedCallId=(req&&req.status==="accepted"&&req.callId)?String(req.callId):(slot&&slot.callId?String(slot.callId):null);
    if(linkedCallId){
+     stopRingback();
      clearInterval(vehiclePollTimer);
      renderCallerStatus(callerId,linkedCallId,dburl,sid);
      return;
    }
    if(req&&req.status==="ringing"){
+     startRingback();
      if(painted!=="ringing"){
        document.getElementById("app").innerHTML=`<div class="card" style="max-width:480px;margin:30px auto;text-align:center">
          <h2>📞 Notruf wird verbunden …</h2>
@@ -3734,6 +3751,7 @@ async function renderCallerTerminal(callerId,dburl,sid){
      }
      return;
    }
+   stopRingback();
    if(painted!=="dial"){
      document.getElementById("app").innerHTML=`<div class="card" style="max-width:480px;margin:30px auto;text-align:center">
        <h2>📞 Anrufer-Terminal</h2>
@@ -3754,7 +3772,7 @@ async function renderCallerTerminal(callerId,dburl,sid){
 }
 async function dial112(callerId,dburl,sid){
  if(!dburl||!sid){toast("Keine Verbindung");return}
- try{playAlarmTone();}catch(e){}
+ startRingback(); // Freiton bis zur Annahme (Tippen entsperrt den Ton auf dem Handy)
  let lat=null,lng=null;
  try{
    const pos=await new Promise((res,rej)=>{

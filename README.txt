@@ -885,3 +885,7 @@ Version 4.37:
 Version 4.38:
 - Eingehender Notruf (Anrufer-Terminal) in der Leitstelle ohne Ton – nur noch visuell über die
   rote Leiste (und kurze Einblendung).
+
+Version 4.39:
+- Anrufer-Terminal: Nach dem Wählen der 112 ertönt ein Freiton ("Tuten", 425 Hz, 1 s Ton /
+  4 s Pause) statt des Alarmtons – so lange, bis die Leitstelle den Notruf annimmt.
