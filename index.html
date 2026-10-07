@@ -15,6 +15,14 @@
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <style>
+ /* Kompakte IVENA-Ansichten: alles auf einen Bildschirm */
+ .ivc{padding:12px 14px}
+ .ivc h2{font-size:18px;margin:0}
+ .ivc p.muted{font-size:12px;margin:2px 0}
+ .ivc label{margin:6px 0 3px;font-size:12px}
+ .ivc button{padding:5px 9px;font-size:12px;border-radius:8px}
+ .ivc .row{gap:6px}
+
 :root{--bg:#eef2f6;--panel:#fff;--ink:#17202a;--muted:#66717d;--line:#d9e0e7;--nav:#0b1220;--accent:#e30613;--green:#198754;--yellow:#e0a800;--red:#c82333;--blue:#1976d2}
 *{box-sizing:border-box} html,body{overflow-x:hidden;max-width:100%} body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:var(--bg);color:var(--ink)}
 header{height:64px;background:var(--nav);color:white;display:flex;align-items:center;justify-content:space-between;padding:0 18px;position:sticky;top:0;z-index:10}
@@ -132,7 +140,7 @@ table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:10px 8px
 </head>
 <body>
 <div style="padding:6px 10px;font-size:11px;color:#94a3b8;font-weight:700;display:flex;align-items:center;gap:10px;position:sticky;top:0;z-index:10;background:var(--bg)">
- <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v4.55</span>
+ <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v4.56</span>
  <span id="syncState"></span>
  <a id="homeLink" href="#" onclick="render('leitstelle');return false" class="hidden" style="color:#64748b;text-decoration:underline;font-weight:600">🖥️ Leitstelle</a>
  <a id="monitorLink" href="#" onclick="showMonitorQR();return false" style="color:#64748b;text-decoration:underline;font-weight:600;margin-left:auto">🖥️ Monitor hinzufügen</a>
@@ -5606,7 +5614,7 @@ function openIvenaAssignment(){
 }
 // ─── IVENA MANV: mehrere Transportmittel auf einmal einer Klinik zuweisen ────────────────────
 function openIvenaManv(){
- const hospitals=db.ivena, units=assignableTransportUnits().filter(u=>u.type!=="NEF");
+ const hospitals=db.ivena, units=assignableTransportUnits().filter(u=>u.type!=="NEF"), nefs=assignableNefUnits();
  if(!units.length){toast("Kein Transportmittel in Status 4 (Am Einsatzort)");return}
  uiLocked=true;
  document.getElementById("app").innerHTML=`<div class="card">
@@ -5621,6 +5629,11 @@ function openIvenaManv(){
      <input type="checkbox" class="manvChk" data-id="${u.id}" style="width:auto">
      <div style="flex:1;min-width:0"><b>${esc(u.opta||u.name)}</b><br><small class="muted">${esc(u.type)}${u.location?` · ${esc(u.location)}`:""}</small></div>
      <input class="manvPzc" data-id="${u.id}" inputmode="numeric" maxlength="6" placeholder="PZC" style="width:110px;flex:0 0 110px" oninput="manvPzcHint(this)">
+    </div><div style="padding:0 10px 4px 38px;display:flex;flex-wrap:wrap;gap:6px 12px;align-items:center;font-size:13px">
+      <label style="display:flex;gap:4px;align-items:center;margin:0;font-weight:600"><input type="checkbox" class="manvS" data-id="${u.id}" style="width:auto" onchange="manvHospPick(this)"> S+ Schockraum</label>
+      <label style="display:flex;gap:4px;align-items:center;margin:0;font-weight:600"><input type="checkbox" class="manvN" data-id="${u.id}" style="width:auto" onchange="manvHospPick(this);const w=document.querySelector('.manvNefWrap[data-id=&quot;${u.id}&quot;]');if(w)w.style.display=this.checked?'':'none'"> N+ NEF / arztbegleitet</label>
+      <span class="manvNefWrap" data-id="${u.id}" style="display:none"><select class="manvNef" data-id="${u.id}" style="font-size:13px;padding:4px 8px;width:auto"><option value="">– ohne eigenes NEF-Fahrzeug –</option>${nefs.map(n=>`<option value="${n.id}">${esc(n.opta||n.name)} (${esc(n.type)})</option>`).join("")}</select></span>
+      <input class="manvInfoRow" data-id="${u.id}" placeholder="Info zu diesem Patienten" style="flex:1;min-width:180px;font-size:13px;padding:5px 8px" oninput="manvHospPick(this)">
     </div><div style="padding:0 10px 4px 38px"><select class="manvHosp" data-id="${u.id}" style="font-size:13px;padding:5px 8px" onchange="manvHospPick(this)"><option value="">↳ Zielklinik wie oben (Standard)</option>${hospitals.map(h=>`<option value="${h.id}">↳ ${esc(h.name)}${h.place?` (${esc(h.place)})`:""}</option>`).join("")}</select></div><div class="manvHint muted" data-id="${u.id}" style="font-size:12px;padding:0 10px 6px 38px;border-bottom:1px solid var(--line)"></div>`).join("")}
   </div>
   ${ivenaAnlassHTML("manv")}
@@ -5633,7 +5646,7 @@ function openIvenaManv(){
   </div>
  </div>`;
 }
-function manvHospPick(el){if(el.value){const c=document.querySelector(`.manvChk[data-id="${el.dataset.id}"]`);if(c)c.checked=true}}
+function manvHospPick(el){if(el.value||el.checked){const c=document.querySelector(`.manvChk[data-id="${el.dataset.id}"]`);if(c)c.checked=true}}
 function manvPzcHint(el){
  el.value=el.value.replace(/\D/g,"").slice(0,6);
  const hint=document.querySelector(`.manvHint[data-id="${el.dataset.id}"]`);
@@ -5657,6 +5670,14 @@ function saveIvenaManv(){
    const f=raw.length>=3?pzcFind(raw.slice(0,3)):null;
    if(raw&&!(raw.length===6&&f&&f.allowed.includes(raw[5]))){toast(`PZC bei ${u?.opta||u?.name||id} unvollständig/ungültig`);return}
  }
+ const nefPick={};
+ for(const id of ids){
+   if(!document.querySelector(`.manvN[data-id="${id}"]`)?.checked)continue;
+   const nid=document.querySelector(`.manvNef[data-id="${id}"]`)?.value||"";
+   if(!nid)continue;
+   if(Object.values(nefPick).includes(nid)){toast("Ein NEF kann nur bei einem Patienten mitfahren");return}
+   nefPick[id]=nid;
+ }
  let n=0; const byHosp={};
  for(const id of ids){
    const u=db.units.find(x=>String(x.id)===String(id)); if(!u||String(u.status)!=="4")continue;
@@ -5666,11 +5687,16 @@ function saveIvenaManv(){
    const hSel=document.querySelector(`.manvHosp[data-id="${id}"]`)?.value||"";
    const hospital=(hSel&&db.ivena.find(h=>String(h.id)===String(hSel)))||defHospital;
    byHosp[hospital.name]=(byHosp[hospital.name]||0)+1;
-   setUnitStatus(u,"7");
+   const sPlus=!!document.querySelector(`.manvS[data-id="${id}"]`)?.checked;
+   const nPlus=!!document.querySelector(`.manvN[data-id="${id}"]`)?.checked;
+   const rowInfo=String(document.querySelector(`.manvInfoRow[data-id="${id}"]`)?.value||"").trim();
+   const nefU=nefPick[id]?db.units.find(x=>String(x.id)===String(nefPick[id])&&String(x.status)==="4"):null;
+   const vehicles=nefU?[u,nefU]:[u];
+   vehicles.forEach(v=>setUnitStatus(v,"7"));
    const a={id:Date.now()+n,hospitalId:hospital.id,hospitalName:hospital.name,
-     fach:valid?pzcFachrichtung(f.code):"",schockraum:false,geschlecht:"",alter:valid?String(Number(raw.slice(3,5))):"",na:false,
-     rmi:valid?f.code:"",dringlichkeit:valid?raw[5]:"",pzc:valid?raw:"",flags:{},info:(info?info+" · ":"")+"MANV",
-     vehicleIds:[u.id],vehicleLabels:[`${u.opta||u.name} (${u.type})`],eta,anlass,createdAt:new Date().toISOString(),source:"leitstelle-manv"};
+     fach:valid?pzcFachrichtung(f.code):"",schockraum:sPlus,geschlecht:"",alter:valid?String(Number(raw.slice(3,5))):"",na:nPlus,
+     rmi:valid?f.code:"",dringlichkeit:valid?raw[5]:"",pzc:valid?raw:"",flags:{s:sPlus,n:nPlus},info:[rowInfo,info,"MANV"].filter(Boolean).join(" · "),
+     vehicleIds:vehicles.map(v=>v.id),vehicleLabels:vehicles.map(v=>`${v.opta||v.name} (${v.type})`),eta,anlass,createdAt:new Date().toISOString(),source:"leitstelle-manv"};
    db.ivenaAssignments.unshift(a);
    if(db.cloud?.enabled)cloudRequest(`ivenaAssignments/${encodeURIComponent(String(a.id))}`,"PUT",a);
    n++;
@@ -5732,7 +5758,7 @@ function deleteIvenaAssignment(id,back="ivenaZuweisungen"){
 const IVENA_DEL_STYLE="text-decoration:line-through;color:#94a3b8;opacity:.7";
 function ivenaZuweisungen(){
  // Klinikansicht wie im echten IVENA: Krankenhaus auswählen → alle Zuweisungen dieses Hauses.
- document.getElementById("app").innerHTML=`<div class="card">
+ document.getElementById("app").innerHTML=`<div class="card ivc">
   <div class="row between"><div><h2>📋 IVENA-Zuweisungen</h2><p class="muted">Simulierte Patiententransporte: Fahrzeug(e) → Zielklinik. Rein trainingsintern, keine Verbindung zum realen IVENA.</p></div><button class="primary" onclick="openIvenaAssignment()">➕ Neue Zuweisung</button></div>
   ${ivenaIncomingHTML()}
  </div>`;
@@ -5771,7 +5797,7 @@ function ivenaRecent(a,now=Date.now()){const t=new Date(a.eta||a.createdAt||0).g
 const IVENA_FACH_ABBR={"Chirurgie":"CHI","Innere Medizin":"INN","Pädiatrie":"PÄD","Gynäkologie/Geburtshilfe":"GYN","Neurologie / Stroke Unit":"NEU/SU","Kardiologie / Chest Pain Unit":"KAR/CPU","Intensivmedizin":"ITS","Schockraum":"SR","Psychiatrie":"PSY","HNO":"HNO","Augenheilkunde":"AUG","Urologie":"URO"};
 function ivenaMatrixHTML(rows){
  const now=Date.now();
- const head=IVENA_FACHRICHTUNGEN.map(f=>`<th title="${esc(f)}" style="text-align:center;padding:6px 4px;font-size:11px;white-space:nowrap">${esc(IVENA_FACH_ABBR[f]||f)}</th>`).join("");
+ const head=IVENA_FACHRICHTUNGEN.map(f=>`<th title="${esc(f)}" style="text-align:center;padding:3px 1px;font-size:9px;white-space:nowrap;letter-spacing:0">${esc(IVENA_FACH_ABBR[f]||f)}</th>`).join("");
  const body=rows.map(h=>{
    const closures=ivenaActiveClosures(h);
    const offered=new Set(h.fachrichtungen||[]);
@@ -5786,13 +5812,14 @@ function ivenaMatrixHTML(rows){
      if(cl){const until=new Date(cl.until).toLocaleTimeString("de-DE",{hour:"2-digit",minute:"2-digit"});return `<td title="${esc(f)}: abgemeldet bis ${until}${manual?" – antippen zum Freigeben":""}" ${manual?`onclick="ivenaReopen('${h.id}','${cl.id}')"`:""} style="background:#dc2626;color:#fff;text-align:center;font-size:10px;font-weight:800;border:1px solid #fff;${manual?"cursor:pointer":""}">${until}</td>`;}
      return `<td title="${esc(f)}: frei${manual?" – antippen zum Abmelden":""}" ${manual?`onclick="openIvenaClosure('${h.id}',${fq})"`:""} style="background:#16a34a;border:1px solid #fff;${manual?"cursor:pointer":""}"></td>`;
    }).join("");
-   return `<tr><td class="ivm-name" style="white-space:nowrap;padding:6px 8px;position:sticky;left:0;background:#fff;z-index:1"><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${dot};margin-right:6px"></span><b>${esc(h.name)}</b><br><small class="muted">${esc(h.place||"")}</small></td>${cells}<td style="text-align:center;font-weight:800">${incoming||""}</td></tr>`;
+   return `<tr style="height:28px"><td class="ivm-name" style="padding:2px 6px;font-size:12px;line-height:1.2;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;position:sticky;left:0;background:#fff;z-index:1" title="${esc(h.name)}${h.place?` (${esc(h.place)})`:""}"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${dot};margin-right:4px"></span><b>${esc(h.name)}</b> <small class="muted">${esc(h.place||"")}</small></td>${cells}<td style="text-align:center;font-weight:800;font-size:12px;padding:0">${incoming||""}</td></tr>`;
  }).join("");
- return `<div style="overflow:auto;margin-top:10px"><table class="keep-table" style="border-collapse:separate;border-spacing:0;min-width:640px">
-  <thead><tr><th style="position:sticky;left:0;background:#fff">Klinik</th>${head}<th title="angemeldete Patienten (letzte 24 h)" style="text-align:center">📥 24h</th></tr></thead>
+ return `<div style="overflow:auto;margin-top:6px"><table class="keep-table" style="border-collapse:separate;border-spacing:0;width:100%;table-layout:fixed">
+  <colgroup><col style="width:34%">${IVENA_FACHRICHTUNGEN.map(()=>"<col>").join("")}<col style="width:34px"></colgroup>
+  <thead><tr><th style="position:sticky;left:0;background:#fff;padding:3px 6px;font-size:10px">Klinik</th>${head}<th title="angemeldete Patienten (letzte 24 h)" style="text-align:center;padding:3px 0;font-size:9px">📥24h</th></tr></thead>
   <tbody>${body||`<tr><td colspan="${IVENA_FACHRICHTUNGEN.length+2}" class="muted">Keine Kliniken im gewählten Bereich.</td></tr>`}</tbody>
  </table></div>
- <div class="row" style="gap:12px;font-size:12px;margin-top:6px"><span><span style="display:inline-block;width:12px;height:12px;background:#16a34a;vertical-align:middle"></span> frei</span><span><span style="display:inline-block;width:12px;height:12px;background:#dc2626;vertical-align:middle"></span> abgemeldet (bis)</span><span><span style="display:inline-block;width:12px;height:12px;background:#e5e7eb;vertical-align:middle"></span> nicht vorhanden</span><span>📥 angemeldete Patienten (24 h)</span></div>`;
+ <div class="row" style="gap:10px;font-size:11px;margin-top:4px"><span><span style="display:inline-block;width:10px;height:10px;background:#16a34a;vertical-align:middle"></span> frei</span><span><span style="display:inline-block;width:12px;height:12px;background:#dc2626;vertical-align:middle"></span> abgemeldet (bis)</span><span><span style="display:inline-block;width:12px;height:12px;background:#e5e7eb;vertical-align:middle"></span> nicht vorhanden</span><span>📥 angemeldete Patienten (24 h)</span></div>`;
 }
 // IVENA-Klinikansicht wie im echten System: Versorgungsbereich wählen, Krankenhaus antippen,
 // dann alle Patientenzuweisungen dieses Hauses (letzte 24 h) in der gelben IVENA-Tabelle.
@@ -5811,17 +5838,17 @@ function ivenaIncomingHTML(){
  const h=inArea.find(x=>String(x.id)===String(ivenaHouse))||null;
  const hm=d=>d?new Date(d).toLocaleTimeString("de-DE",{hour:"2-digit",minute:"2-digit"}):"–";
  const btn=(x)=>{const sel=h&&String(h.id)===String(x.id);const n=(db.ivenaAssignments||[]).filter(a=>!a.deleted&&String(a.hospitalId)===String(x.id)&&ivenaRecent(a,now)).length;
-   return `<button onclick="setIvenaHouse('${x.id}')" style="border-radius:2px;padding:6px 10px;font-weight:700;${sel?"background:#8a8a8a;color:#fff;border-color:#8a8a8a":"background:#fff;color:#111;border:1px solid #888"}">${esc(x.name)}${n?` <small style="font-weight:600">(${n})</small>`:""}</button>`};
+   return `<button onclick="setIvenaHouse('${x.id}')" style="border-radius:2px;padding:4px 8px;font-size:12px;font-weight:700;${sel?"background:#8a8a8a;color:#fff;border-color:#8a8a8a":"background:#fff;color:#111;border:1px solid #888"}">${esc(x.name)}${n?` <small style="font-weight:600">(${n})</small>`:""}</button>`};
  let out=`<div style="margin-top:6px">
-  <div style="font-size:20px;font-weight:800">Bitte wählen Sie einen Versorgungsbereich:</div>
+  <div style="font-size:15px;font-weight:800">Bitte wählen Sie einen Versorgungsbereich:</div>
   <select style="max-width:440px;margin:6px 0 10px" onchange="setIvenaHouseArea(this.value)">${areas.map(a=>`<option ${a===area?"selected":""}>${esc(a)}</option>`).join("")}</select>
-  <div style="font-size:20px;font-weight:800">Bitte wählen Sie ein Krankenhaus:</div>
+  <div style="font-size:15px;font-weight:800">Bitte wählen Sie ein Krankenhaus:</div>
   <div class="row" style="gap:6px;flex-wrap:wrap;margin:6px 0 12px">${inArea.map(btn).join("")||`<span class="muted">Keine Krankenhäuser in diesem Bereich.</span>`}</div>`;
  if(!h)return out+`</div>`;
  const list=(db.ivenaAssignments||[]).filter(a=>String(a.hospitalId)===String(h.id)&&ivenaRecent(a,now))
    .slice().sort((a,b)=>new Date(b.createdAt||0)-new Date(a.createdAt||0)); // neueste Alarmzeit oben
  const closures=ivenaActiveClosures(h);
- const td=(html,st="")=>`<td style="border:1px solid #b5b5b5;padding:4px 6px;text-align:center;vertical-align:middle;${st}">${html}</td>`;
+ const td=(html,st="")=>`<td style="border:1px solid #b5b5b5;padding:2px 3px;text-align:center;vertical-align:middle;font-size:12px;${st}">${html}</td>`;
  const pm=(on,abbr,k,a)=>{const ed=ivenaEd(a,"f_"+k);return `<span style="${ed?`color:${IVENA_EDIT_BLUE}`:""}">${abbr}${on?"+":"-"}</span>`};
  const rows=list.map(a=>{
    const f=a.flags||{s:!!a.schockraum,n:!!a.na};
@@ -5830,10 +5857,10 @@ function ivenaIncomingHTML(){
    const tType=us[0]?.type||((a.vehicleLabels||[])[0]||"").match(/\(([^)]+)\)\s*$/)?.[1]||"–";
    const optas=(a.vehicleLabels||[]).map(l=>esc(l.replace(/\s*\([^)]*\)\s*$/,""))).join("<br>");
    const closed=a.fach&&closures.some(c=>c.fach===a.fach);
-   const big="font-size:22px;font-weight:700";
+   const big="font-size:15px;font-weight:700;line-height:1.15";
    return `<tr style="${a.deleted?IVENA_DEL_STYLE:""}">
-    ${td("<b>Notaufnahme</b>",`background:${IVENA_Y};text-align:left;font-size:14px`)}
-    ${td(`<div><span style="display:inline-block;width:26px;height:26px;border-radius:50%;background:#cfcfcf"></span> <span style="display:inline-block;width:26px;height:26px;border-radius:50%;background:#cfcfcf"></span></div><div style="${big}">${ivenaBlue(a,"pzc",sk)}</div>`)}
+    ${td("<b>Notauf&shy;nahme</b>",`background:${IVENA_Y};text-align:left;font-size:11px`)}
+    ${td(`<div><span style="display:inline-block;width:13px;height:13px;border-radius:50%;background:#cfcfcf"></span> <span style="display:inline-block;width:13px;height:13px;border-radius:50%;background:#cfcfcf"></span></div><div style="${big}">${ivenaBlue(a,"pzc",sk)}</div>`)}
     ${td(`<div style="${big}">${hm(a.createdAt)}</div><div style="${big};color:#1d4ed8">${ivenaBlue(a,"eta",hm(a.eta))}</div>`)}
     ${td(`<span style="${big}">${pm(!!f.s,"S","s",a)}</span>`,f.s&&!a.deleted?"background:#ffc4c4":"")}
     ${td(`<span style="${big}">${pm(!!f.h,"H","h",a)}</span>`,f.h&&!a.deleted?"background:#ffc4c4":"")}
@@ -5846,12 +5873,12 @@ function ivenaIncomingHTML(){
     ${td(`<b>${esc(IVENA_LST_LABEL)}</b>`)}
     ${td(`<b title="${a.source==="vehicle"?"vom Rettungsmittel selbst angemeldet":"von der Leitstelle angemeldet"}">${a.source==="vehicle"?"RD":"LST"}</b>`)}
     ${td(`<span style="${big}">${pm(!!f.n,"N","n",a)}</span>`)}
-    ${td(`<div style="${big}">${esc(tType)}</div><div style="font-size:13px">${optas}</div>${a.info?`<div style="font-size:13px">${ivenaBlue(a,"info",esc(a.info))}</div>`:""}${a.deleted?`<div style="font-size:12px;color:#b91c1c;display:inline-block;text-decoration:none">🗑️ gelöscht ${hm(a.deletedAt)}</div>`:""}`,"min-width:170px")}
+    ${td(`<div style="${big}">${esc(tType)}</div><div style="font-size:13px">${optas}</div>${a.info?`<div style="font-size:13px">${ivenaBlue(a,"info",esc(a.info))}</div>`:""}${a.deleted?`<div style="font-size:12px;color:#b91c1c;display:inline-block;text-decoration:none">🗑️ gelöscht ${hm(a.deletedAt)}</div>`:""}`,"min-width:110px")}
     ${td(a.deleted?"":`<button style="padding:3px 6px" onclick="editIvenaAssignment('${a.id}','ivenaZuweisungen')" title="Bearbeiten">✏️</button><button style="padding:3px 6px" onclick="deleteIvenaAssignment('${a.id}','ivenaZuweisungen')" title="Löschen">🗑️</button>`,"background:#fff")}
    </tr>`;}).join("");
- const th=t=>`<th style="background:${IVENA_Y};color:#111;border:1px solid #b5b5b5;padding:6px 4px;text-align:center;font-size:13px;line-height:1.3;text-transform:none;letter-spacing:0">${t}</th>`;
+ const th=t=>`<th style="background:${IVENA_Y};color:#111;border:1px solid #b5b5b5;padding:3px 2px;text-align:center;font-size:10px;line-height:1.2;text-transform:none;letter-spacing:0">${t}</th>`;
  const dt=new Date();
- out+=`<div style="overflow:auto;border:2px solid ${IVENA_Y}"><table class="keep-table" style="min-width:1250px;border-collapse:collapse;width:100%"><thead><tr>
+ out+=`<div style="overflow:auto;border:2px solid ${IVENA_Y}"><table class="keep-table" style="border-collapse:collapse;width:100%"><thead><tr>
    ${th("Patienten-<br>Übergabe-Punkt")}${th("Behandlungs-<br>dringlichkeit")}${th("Alarmzeit<br>Eintreffzeit")}${th("Schock-<br>raum")}${th("Herzka-<br>theter")}${th("Anlass")}${th("BG-Fall /<br>Schwanger")}${th("M/W<br>Alter")}${th("Beatmet<br>Reanim.")}${th("Ansteck-<br>ungsfähig")}${th("Fachbereich<br>Diagnose")}${th("Leitstelle")}${th("Zuweisung<br>/ VAK-Nr.")}${th("Arzt-<br>begleitet")}${th("Transport-<br>mittel<br>Bemerkung")}${th("")}
   </tr></thead><tbody>${rows||`<tr><td colspan="16" class="muted" style="padding:12px">Keine Patientenzuweisungen für ${esc(h.name)} in den letzten 24 h.</td></tr>`}</tbody></table></div>
   <div style="text-align:right;font-size:12px;margin-top:4px">Abgerufen am ${dt.toLocaleDateString("de-DE")} ${dt.toLocaleTimeString("de-DE",{hour:"2-digit",minute:"2-digit"})} Uhr</div></div>`;
@@ -5864,11 +5891,11 @@ function ivena(){
  const rows=db.ivena.filter(h=>db.ivenaAreaFilter.includes(h.area||"Sonstige"));
  const isAuto=db.ivenaMode==="auto";
  const byFach=db.ivenaViewMode==="fachrichtung";
- document.getElementById("app").innerHTML=`<div class="card">
-  <div class="row between"><div><h2>🏥 IVENA – Übungsansicht</h2><p class="muted">Lokale Simulation für die Ausbildung. Keine Verbindung zum realen IVENA-System und keine Echtzeit-Kapazitätsdaten.</p></div><button class="primary" onclick="addIvena()">＋ Ziel hinzufügen</button></div>
+ document.getElementById("app").innerHTML=`<div class="card ivc">
+  <div class="row between"><div><h2>🏥 IVENA – Übungsansicht</h2><p class="muted">Lokale Simulation – keine Verbindung zum realen IVENA.</p></div><button class="primary" onclick="addIvena()">＋ Ziel hinzufügen</button></div>
   <label style="margin-top:4px">Leitstellenbereiche</label>
   <div class="row">${areas.map(a=>`<button class="${db.ivenaAreaFilter.includes(a)?"primary":""}" onclick="toggleIvenaArea('${a.replace(/'/g,"\\'")}')">${db.ivenaAreaFilter.includes(a)?"✅ ":""}${esc(a)}</button>`).join("")}</div>
-  <div class="row between" style="margin-top:14px;background:#f8fafc;border-radius:10px;padding:10px 12px">
+  <div class="row between" style="margin-top:8px;background:#f8fafc;border-radius:10px;padding:6px 10px;font-size:12px">
    <div><b>Fachrichtungs-Abmeldungen:</b> <span class="muted">${isAuto?"Werden zufällig gewürfelt.":"Manuell: Feld in der Tabelle antippen – grün = abmelden, rot = wieder freigeben."}</span></div>
    <div class="row">
     <button class="${isAuto?"":"primary"}" onclick="${isAuto?"toggleIvenaMode()":""}">🖐️ Manuell</button>
@@ -5877,7 +5904,7 @@ function ivena(){
    </div>
   </div>
   ${ivenaMatrixHTML(rows)}
-  <details style="margin-top:16px" ${db.ivenaControlsOpen?"open":""} ontoggle="db.ivenaControlsOpen=this.open">
+  <details style="margin-top:8px;font-size:13px" ${db.ivenaControlsOpen?"open":""} ontoggle="db.ivenaControlsOpen=this.open">
   <summary style="cursor:pointer;font-weight:800">⚙️ Übungssteuerung: Status, Abmeldungen, Kliniken bearbeiten</summary>
   <div class="row" style="margin-top:12px">
    <button class="${byFach?"":"primary"}" onclick="${byFach?"toggleIvenaViewMode()":""}">🏥 Nach Klinik</button>

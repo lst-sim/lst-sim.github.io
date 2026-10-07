@@ -1021,3 +1021,11 @@ Version 4.55:
 - MANV-Stichwort nennt die Lage (z. B. F_2_Y) nur noch, wenn deren AAO auch wirklich alarmiert
   wird. Vorher stand z. B. "F_2_Y" im Stichwort, obwohl die AAO "Feuer mit
   Personengefährdung" gar nicht gegriffen hat (ihre Bedingungen passten nicht).
+
+Version 4.56:
+- IVENA kompakter, damit alles auf einen Bildschirm passt: Kapazitäts-Tabelle mit einzeiligen
+  Klinikzeilen, kleinerer Schrift und fester Spaltenbreite; Patientenzuweisungen
+  (Klinikansicht) mit kleinerer Schrift ohne Mindestbreite; Kopfbereiche und Knöpfe kleiner.
+- MANV-Sammelzuweisung je Fahrzeug: "S+ Schockraum", "N+ NEF / arztbegleitet" (optional mit
+  begleitendem NEF in Status 4, das ebenfalls auf 7 geht) und ein eigenes Info-Feld. Ein NEF
+  kann nur bei einem Patienten mitfahren.
