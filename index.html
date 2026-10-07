@@ -140,7 +140,7 @@ table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:10px 8px
 </head>
 <body>
 <div style="padding:6px 10px;font-size:11px;color:#94a3b8;font-weight:700;display:flex;align-items:center;gap:10px;position:sticky;top:0;z-index:10;background:var(--bg)">
- <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v4.59</span>
+ <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v4.60</span>
  <span id="syncState"></span>
  <a id="homeLink" href="#" onclick="render('leitstelle');return false" class="hidden" style="color:#64748b;text-decoration:underline;font-weight:600">🖥️ Leitstelle</a>
  <a id="monitorLink" href="#" onclick="showMonitorQR();return false" style="color:#64748b;text-decoration:underline;font-weight:600;margin-left:auto">🖥️ Monitor hinzufügen</a>
@@ -758,7 +758,7 @@ function karte(){
     <section>
       <div class="card">
         <div class="row between">
-          <div><h2>🗺️ Einsatzkarte</h2><div class="muted">Adresse suchen oder den Marker direkt auf der Karte setzen.</div></div>
+          <div><h2>🗺️ Einsatzkarte</h2><div class="muted">${stagingPickMode?"🅿️ <b>Bereitstellungsort wählen:</b> auf die Karte tippen.":"Adresse suchen oder den Marker direkt auf der Karte setzen."}</div></div>
           ${c?`<span class="status s2">Einsatz #${c.id}</span>`:`<span class="pill">Kein laufender Einsatz</span>`}
         </div>
         <div class="mapSearch" style="margin-top:12px">
@@ -766,6 +766,7 @@ function karte(){
           <button class="primary" onclick="searchMap()">🔎 Suchen</button>
         </div>
         <div id="mapResults" style="margin:8px 0"></div>
+        ${c?`<div class="row" style="gap:6px;margin-bottom:8px;flex-wrap:wrap"><button class="${stagingPickMode?"primary":""}" onclick="stagingPickMode=!stagingPickMode;karte()">🅿️ ${stagingPickMode?"Bereitstellungsort wird gewählt – zum Abbrechen tippen":"Bereitstellungsort auf Karte wählen"}</button>${c.staging?`<span class="pill">🅿️ ${esc(c.staging.name)}</span><button onclick="setStaging(null,'karte')">✕ entfernen</button>`:""}${stagingPickMode?`<button onclick="stagingPickMode=false;prepareAlarm()">⬅️ Zurück zur Alarmierung</button>`:""}</div>`:""}
         <div id="map"></div>
       </div>
     </section>
@@ -809,11 +810,41 @@ function initMap(){
   renderHospitalMarkersOnMap();
   renderVehiclePositionsOnMap();
 
+  renderStagingMarkerOnMap();
   leafletMap.on("click", async e=>{
+    if(stagingPickMode&&db.currentCall){await stagingFromMap(e.latlng.lat,e.latlng.lng);return}
     setIncidentMarker(e.latlng.lat,e.latlng.lng,true);
     await reverseGeocode(e.latlng.lat,e.latlng.lng);
   });
   setTimeout(()=>leafletMap.invalidateSize(),150);
+}
+let stagingPickMode=false, stagingMarker=null;
+function renderStagingMarkerOnMap(){
+ if(!leafletMap||typeof L==="undefined")return;
+ if(stagingMarker){leafletMap.removeLayer(stagingMarker);stagingMarker=null}
+ // Bereitstellungsorte aller offenen Einsätze anzeigen
+ for(const c of allOpenCalls()){
+   const st=c.staging; if(!st||!Number.isFinite(Number(st.lat)))continue;
+   const icon=L.divIcon({html:`<div style="background:#0369a1;color:#fff;border-radius:6px;padding:2px 6px;font-weight:800;font-size:13px;border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.4);white-space:nowrap">🅿️ BR</div>`,className:"",iconSize:[44,24],iconAnchor:[22,12]});
+   const m=L.marker([Number(st.lat),Number(st.lng)],{icon}).addTo(leafletMap).bindPopup(`<b>🅿️ Bereitstellungsraum</b><br>${esc(st.name)}<br><small>Einsatz #${esc(c.id)} – Landfahrzeuge sammeln hier</small>`);
+   if(db.currentCall&&String(c.id)===String(db.currentCall.id))stagingMarker=m;
+ }
+}
+async function stagingFromMap(lat,lng){
+ const c=db.currentCall; if(!c)return;
+ let name=`Kartenpunkt ${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+ try{
+   const r=await fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}`,{headers:{"Accept":"application/json"}});
+   const j=await r.json(); const a=j&&j.address||{};
+   const short=[a.road||a.harbour||a.amenity||a.leisure,a.house_number,a.village||a.town||a.city||a.suburb].filter(Boolean).join(" ");
+   if(short)name=short;
+ }catch(e){}
+ const given=prompt("Name für den Bereitstellungsort (wird gespeichert):",name);
+ if(given===null)return;
+ const pl={id:Date.now(),name:String(given||name).trim()||name,lat,lng};
+ db.stagingPlaces=db.stagingPlaces||[]; db.stagingPlaces.push(pl);
+ applyStaging(c,{name:pl.name,lat,lng});
+ stagingPickMode=false; toast(`🅿️ Bereitstellungsort: ${pl.name}`); karte();
 }
 function vehicleMapEmoji(u){
  if(u.org==="DGzRS")return"⚓";
@@ -1912,6 +1943,7 @@ function incidentCard(c,isSelected){
     ${!c.alarmTime?`<button class="primary" onclick="selectCall('${esc(c.id)}','notruf')">Weiter bearbeiten</button>`:""}
     <button onclick="openAdditionalResources('${esc(c.id)}')">✏️ Rettungsmittel bearbeiten</button>
     ${c.alarmTime?`<button class="btn blue" onclick="openNachforderung('${esc(c.id)}')">📟 Nachforderung</button>`:""}
+    <button onclick="activateCallById('${esc(c.id)}');stagingPickMode=true;render('karte')" title="Bereitstellungsort für Landfahrzeuge auf der Karte wählen">🅿️ ${c.staging?esc(c.staging.name):"Bereitstellungsort"}</button>
     <button class="primary" onclick="finishCall('${esc(c.id)}')">✅ Einsatz abschließen</button>
    </div>
  </div>`;
@@ -2972,16 +3004,25 @@ function stagingSectionHTML(c){
   <div style="font-size:12px;margin:2px 0 6px">Alle Landfahrzeuge fahren zum Bereitstellungsort – nur Boote, Hubschrauber und DGzRS direkt zur Einsatzstelle.</div>
   ${c.staging?`<div class="row" style="gap:8px;align-items:center"><span style="font-size:16px;font-weight:800">📍 ${esc(c.staging.name)}</span><button style="padding:4px 10px;font-size:12px" onclick="setStaging(null)">✕ entfernen</button></div>`:`<div class="muted" style="font-size:12px">Noch kein Bereitstellungsort – Landfahrzeuge fahren zur Einsatzstelle.</div>`}
   ${places.length?`<div class="row" style="flex-wrap:wrap;gap:6px;margin-top:6px">${places.map(pl=>`<button style="padding:4px 10px;font-size:12px" class="${c.staging&&c.staging.name===pl.name?"primary":""}" onclick="setStaging(${esc(JSON.stringify(pl.id))})">${esc(pl.name)}${pl.km!=null?` <small>(${pl.km.toFixed(1)} km)</small>`:""}</button>`).join("")}</div>`:""}
-  <div class="row" style="gap:6px;margin-top:6px;flex-wrap:nowrap"><input id="stagingAddr" placeholder="Adresse/Ort, z. B. Hafen Hooksiel" style="flex:1;font-size:13px;padding:6px 8px"><button style="padding:4px 10px;font-size:12px" onclick="stagingSearch()">🔎 Festlegen</button></div>
+  <div class="row" style="gap:6px;margin-top:6px;flex-wrap:nowrap"><input id="stagingAddr" placeholder="Adresse/Ort, z. B. Hafen Hooksiel" style="flex:1;font-size:13px;padding:6px 8px"><button style="padding:4px 10px;font-size:12px" onclick="stagingSearch()">🔎 Festlegen</button><button style="padding:4px 10px;font-size:12px" onclick="stagingPickMode=true;render('karte')">🗺️ Auf Karte wählen</button></div>
   <label style="display:flex;gap:6px;align-items:center;font-weight:500;font-size:12px;margin:4px 0 0"><input type="checkbox" id="stagingSave" style="width:auto" checked> als festen Bereitstellungsort speichern (für spätere Einsätze)</label>
   ${places.length?`<details style="margin-top:4px;font-size:12px"><summary>Gespeicherte Bereitstellungsorte verwalten</summary>${places.map(pl=>`<div class="row between" style="padding:2px 0">${esc(pl.name)}<button style="padding:2px 8px;font-size:11px" onclick="deleteStagingPlace(${esc(JSON.stringify(pl.id))})">🗑️</button></div>`).join("")}</details>`:""}
  </div>`;
 }
-function setStaging(id){
+// Vor der Alarmierung wird der Vorschlag neu berechnet; danach ändert sich nur das Ziel der
+// Landfahrzeuge (Karte/Terminal/Fahrzeit), die alarmierten Fahrzeuge bleiben.
+function applyStaging(c,st){
+ if(st)c.staging=st; else delete c.staging;
+ c.history=c.history||[];
+ c.history.push({q:"🅿️ Bereitstellungsort",a:st?st.name:"entfernt"});
+ if(!c.alarmTime)evaluate();
+ save(); if(db.cloud?.enabled&&c.alarmTime)setTimeout(()=>pushCallCloud(c),0);
+}
+function setStaging(id,back){
  const c=db.currentCall; if(!c)return;
- if(id==null)delete c.staging;
- else{const pl=(db.stagingPlaces||[]).find(x=>String(x.id)===String(id));if(!pl)return;c.staging={name:pl.name,lat:pl.lat,lng:pl.lng}}
- evaluate(); save(); if(db.cloud?.enabled&&c.alarmTime)setTimeout(()=>pushCallCloud(c),0); prepareAlarm();
+ if(id==null)applyStaging(c,null);
+ else{const pl=(db.stagingPlaces||[]).find(x=>String(x.id)===String(id));if(!pl)return;applyStaging(c,{name:pl.name,lat:pl.lat,lng:pl.lng})}
+ if(back==="karte")karte(); else if(c.alarmTime&&back!=="alarm")render("leitstelle"); else prepareAlarm();
 }
 async function stagingSearch(){
  const c=db.currentCall; if(!c)return;
@@ -2995,8 +3036,7 @@ async function stagingSearch(){
    if(!rows||!rows[0]){toast("Ort nicht gefunden");return}
    const pl={id:Date.now(),name:q,lat:Number(rows[0].lat),lng:Number(rows[0].lon)};
    if(keep){db.stagingPlaces=db.stagingPlaces||[];db.stagingPlaces.push(pl)}
-   c.staging={name:pl.name,lat:pl.lat,lng:pl.lng};
-   evaluate(); save(); if(db.cloud?.enabled&&c.alarmTime)setTimeout(()=>pushCallCloud(c),0);
+   applyStaging(c,{name:pl.name,lat:pl.lat,lng:pl.lng});
    toast(`Bereitstellungsort: ${pl.name}`); prepareAlarm();
  }catch(e){toast("Ortssuche nicht erreichbar")}
 }

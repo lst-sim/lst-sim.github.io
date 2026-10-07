@@ -1057,3 +1057,12 @@ Version 4.59:
   DLRG-Boote vom Festland). Gilt für Vorschlag, Krankentransport, Vollalarm, THW-Fachgruppen,
   "Fahrzeuge bearbeiten" und die Auswahl beim Nachfordern (dort mit Hinweis 🏝️). Kein
   Nachbar-LK auf der Insel. Ausnahme: Liegt der Einsatzort auf dem Wasser, dürfen Boote hin.
+
+Version 4.60:
+- Bereitstellungsort auf der Karte wählen: "🗺️ Auf Karte wählen" im Alarmierungsfenster bzw.
+  "🅿️ Bereitstellungsort" am laufenden Einsatz öffnet die Karte im Auswahlmodus – Tippen setzt
+  den Ort (Name wird vorgeschlagen und gespeichert).
+- Karte: Bereitstellungsräume werden als "🅿️ BR" angezeigt; Landfahrzeuge fahren dorthin und
+  stehen dort (Status 4), Boote/Hubschrauber an der Einsatzstelle.
+- Bereitstellungsort auch nach der Alarmierung änderbar (alarmierte Fahrzeuge bleiben, nur das
+  Ziel der Landfahrzeuge ändert sich); Änderung steht im Einsatzverlauf.
