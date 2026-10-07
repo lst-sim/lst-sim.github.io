@@ -132,7 +132,7 @@ table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:10px 8px
 </head>
 <body>
 <div style="padding:6px 10px;font-size:11px;color:#94a3b8;font-weight:700;display:flex;align-items:center;gap:10px;position:sticky;top:0;z-index:10;background:var(--bg)">
- <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v4.52</span>
+ <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v4.53</span>
  <span id="syncState"></span>
  <a id="homeLink" href="#" onclick="render('leitstelle');return false" class="hidden" style="color:#64748b;text-decoration:underline;font-weight:600">🖥️ Leitstelle</a>
  <a id="monitorLink" href="#" onclick="showMonitorQR();return false" style="color:#64748b;text-decoration:underline;font-weight:600;margin-left:auto">🖥️ Monitor hinzufügen</a>
@@ -332,10 +332,10 @@ const DEFAULTS_FRI_WHV={
   {"id":10,"name":"Rettungsdienst – RD_X kritische Blutung","keyword":"R1N1_Trauma schwer","rules":{"x_massive":"Ja"},"units":[{"type":"RTW","n":1,"org":"Rettungsdienst"},{"type":"NEF","n":1,"org":"Rettungsdienst"}]},
   {"id":11,"name":"Rettungsdienst – RD_B Atemstillstand","keyword":"R1N1_Reanimation","rules":{"b_breath":"Keine normale Atmung"},"units":[{"type":"RTW","n":1,"org":"Rettungsdienst"},{"type":"NEF","n":1,"org":"Rettungsdienst"}]},
   {"id":12,"name":"Rettungsdienst – RD_C relevante Blutung","keyword":"R1N1_Med. Notfall schwer","rules":{"c_circ":"Relevante Blutung"},"units":[{"type":"RTW","n":1,"org":"Rettungsdienst"},{"type":"NEF","n":1,"org":"Rettungsdienst"}]},
-  {"id":13,"name":"Rettungsdienst – RD_C Schockzeichen","keyword":"R1N1_Kreislauf Schwer","rules":{"c_circ":"Auffällig / Schockzeichen"},"units":[{"type":"NEF","n":1,"org":"Rettungsdienst"},{"type":"RTW","n":1,"org":"Rettungsdienst"}]},
-  {"id":14,"name":"Rettungsdienst – RD_A Atemweg gefährdet","keyword":"R1N1_Atemnot Schwer","rules":{"a_airway":"Gefährdet / verlegt"},"units":[{"type":"NEF","n":1,"org":"Rettungsdienst"},{"type":"RTW","n":1,"org":"Rettungsdienst"}]},
+  {"id":13,"name":"Rettungsdienst – RD_C Schockzeichen","keyword":"R1N1_Kreislauf Schwer","rules":{},"orRules":[{"k":"c_circ","v":"Auffällig"},{"k":"c_circ","v":"Schockzeichen"}],"units":[{"type":"NEF","n":1,"org":"Rettungsdienst"},{"type":"RTW","n":1,"org":"Rettungsdienst"}]},
+  {"id":14,"name":"Rettungsdienst – RD_A Atemweg gefährdet","keyword":"R1N1_Atemnot Schwer","rules":{},"orRules":[{"k":"a_airway","v":"Gefährdet"},{"k":"a_airway","v":"Verlegt"}],"units":[{"type":"NEF","n":1,"org":"Rettungsdienst"},{"type":"RTW","n":1,"org":"Rettungsdienst"}]},
   {"id":15,"name":"Rettungsdienst – RD_D Bewusstlos","keyword":"R1N1_Bewusstseinsstörung Schwer","rules":{"d_disability":"Bewusstlos"},"units":[{"type":"NEF","n":1,"org":"Rettungsdienst"},{"type":"RTW","n":1,"org":"Rettungsdienst"}]},
-  {"id":16,"name":"Rettungsdienst – RD_D Krampfanfall","keyword":"R1_Krampfanfall","rules":{"d_disability":"Krampfanfall / neurologisch auffällig"},"units":[{"type":"RTW","n":1,"org":"Rettungsdienst"}]},
+  {"id":16,"name":"Rettungsdienst – RD_D Krampfanfall","keyword":"R1_Krampfanfall","rules":{},"orRules":[{"k":"d_disability","v":"Krampfanfall"},{"k":"d_disability","v":"Neurologisch auffällig"}],"units":[{"type":"RTW","n":1,"org":"Rettungsdienst"}]},
   {"id":17,"name":"Rettungsdienst – Med. Hilfeleistung leicht (R0, unauffälliges XABCDE)","keyword":"R0_Med. Hilfeleistung leicht","rules":{"x_massive":"Nein","a_airway":"Frei","b_breath":"Normal","c_circ":"Unauffällig","d_disability":"Wach / orientiert","e_exposure":"unauffällig/leer"},"units":[{"type":"NKTW","n":1,"org":"Rettungsdienst"}]},
   {"id":19,"name":"DLRG Wasser 4 – Boot in Notlage (Unfallort auf dem Wasser)","keyword":"H_Boot","rules":{"event":"Verkehrsunfall","locationIsWater":"ja"},"units":[{"type":"RTB","n":1,"org":"DLRG"},{"type":"GW Wasserrettung","n":1,"org":"DLRG"},{"type":"HLF","n":1,"org":"Feuerwehr"},{"type":"RTW","n":1,"org":"Rettungsdienst"},{"type":"GW Drohne","n":1,"org":"DLRG"},{"type":"MTW","n":1,"org":"DLRG"},{"type":"ELW","n":1,"org":"Feuerwehr"}]},
   {"id":20,"name":"Feuerwehr/Rettungsdienst – Verkehrsunfall ohne eingeklemmte Person","keyword":"R1_VU","rules":{"event":"Verkehrsunfall","trapped":"nein/unbekannt"},"units":[{"type":"HLF","n":1,"org":"Feuerwehr"},{"type":"RTW","n":1,"org":"Rettungsdienst"}]},
@@ -2122,7 +2122,7 @@ function reaShortcutActive(c=db.currentCall){
  const a=c.answers||{};
  return a.event==="Reanimation" || a.b_breath==="Keine normale Atmung";
 }
-const REA_SHORTCUT_DEFAULTS={x_massive:"Nein",a_airway:"Gefährdet / verlegt",b_breath:"Keine normale Atmung",c_circ:"Unklar",d_disability:"Bewusstlos",e_exposure:"Nicht einzeln erhoben – Reanimations-Kurzabfrage"};
+const REA_SHORTCUT_DEFAULTS={x_massive:"Nein",a_airway:"Gefährdet",b_breath:"Keine normale Atmung",c_circ:"Unklar",d_disability:"Bewusstlos",e_exposure:"Nicht einzeln erhoben – Reanimations-Kurzabfrage"};
 function questionHTML(q){
  const [id,label,type]=q;
  if(type==="ktType")return `<label>${label}</label><div class="answer">${["KT-Entlassung","KT-Verlegung","KT-Einweisung"].map(v=>`<button onclick="answer('ktType','${v}')">🚑 ${v}</button>`).join("")}</div>`;
@@ -2244,7 +2244,8 @@ function questionHTML(q){
    <button onclick="answer('${id}','Unklar')">Unklar</button></div>`;
  if(type==="xairway") return `<label>${label}</label><div class="answer">
    <button onclick="answer('${id}','Frei')">Frei</button>
-   <button onclick="answer('${id}','Gefährdet / verlegt')">Gefährdet / verlegt</button>
+   <button onclick="answer('${id}','Gefährdet')">Gefährdet</button>
+   <button onclick="answer('${id}','Verlegt')">Verlegt</button>
    <button onclick="answer('${id}','Unklar')">Unklar</button></div>`;
  if(type==="xbreathing") return `<label>${label}</label><div class="answer">
    <button onclick="answer('${id}','Normal')">Normal</button>
@@ -2253,14 +2254,16 @@ function questionHTML(q){
    <button onclick="answer('${id}','Unklar')">Unklar</button></div>`;
  if(type==="xcirc") return `<label>${label}</label><div class="answer">
    <button onclick="answer('${id}','Unauffällig')">Unauffällig</button>
-   <button onclick="answer('${id}','Auffällig / Schockzeichen')">Auffällig / Schockzeichen</button>
+   <button onclick="answer('${id}','Auffällig')">Auffällig</button>
+   <button onclick="answer('${id}','Schockzeichen')">Schockzeichen</button>
    <button onclick="answer('${id}','Relevante Blutung')">Relevante Blutung</button>
    <button onclick="answer('${id}','Unklar')">Unklar</button></div>`;
  if(type==="xdisability") return `<label>${label}</label><div class="answer">
    <button onclick="answer('${id}','Wach / orientiert')">Wach / orientiert</button>
    <button onclick="answer('${id}','Bewusstseinsgetrübt')">Bewusstseinsgetrübt</button>
    <button onclick="answer('${id}','Bewusstlos')">Bewusstlos</button>
-   <button onclick="answer('${id}','Krampfanfall / neurologisch auffällig')">Krampfanfall / neurologisch auffällig</button>
+   <button onclick="answer('${id}','Krampfanfall')">Krampfanfall</button>
+   <button onclick="answer('${id}','Neurologisch auffällig')">Neurologisch auffällig</button>
    <button onclick="answer('${id}','Unklar')">Unklar</button></div>`;
  return `<label>${label}</label><div class="answer"><button onclick="answer('${id}','ja')">Ja</button><button onclick="answer('${id}','nein')">Nein</button><button onclick="answer('${id}','unbekannt')">Unbekannt</button></div>`;
 }
@@ -2620,18 +2623,18 @@ function evaluate(){
    } else if(a.c_circ==="Relevante Blutung"){
      if(!reaAlready)addAao(12);
      xLabel=kw(12,"RD_C – Relevante Blutung (Schockraum voranmelden)");
-   } else if(a.c_circ==="Auffällig / Schockzeichen"){
+   } else if(["Schockzeichen","Auffällig","Auffällig / Schockzeichen"].includes(a.c_circ)){
      if(!reaAlready)addAao(13);
-     xLabel=kw(13,"RD_C – Schockzeichen");
-   } else if(a.a_airway==="Gefährdet / verlegt"){
+     xLabel=kw(13,a.c_circ==="Auffällig"?"RD_C – Kreislauf auffällig":"RD_C – Schockzeichen");
+   } else if(["Verlegt","Gefährdet","Gefährdet / verlegt"].includes(a.a_airway)){
      if(!reaAlready)addAao(14);
-     xLabel=kw(14,"RD_A – Atemweg gefährdet");
+     xLabel=kw(14,a.a_airway==="Verlegt"?"RD_A – Atemweg verlegt":"RD_A – Atemweg gefährdet");
    } else if(a.d_disability==="Bewusstlos"){
      if(!reaAlready)addAao(15);
      xLabel=kw(15,"RD_D – Bewusstlos");
-   } else if(a.d_disability==="Krampfanfall / neurologisch auffällig"){
+   } else if(["Krampfanfall","Neurologisch auffällig","Krampfanfall / neurologisch auffällig"].includes(a.d_disability)){
      if(!reaAlready)addAao(16);
-     xLabel=kw(16,"RD_D – Krampfanfall");
+     xLabel=kw(16,a.d_disability==="Neurologisch auffällig"?"RD_D – Neurologisch auffällig":"RD_D – Krampfanfall");
    } else if(a.b_breath==="Auffällig"){
      xLabel="RD_B – Atmung auffällig";
    } else if(a.d_disability==="Bewusstseinsgetrübt"){
@@ -4751,10 +4754,10 @@ const AAO_RULE_FIELDS={
  fireObject:{label:"Feuer – was brennt",values:["Einfamilienhaus","Mehrfamilienhaus","Fabrik","Wald/Wiese","Kleinbrand","k.A."]},
  psy:{label:"Psy Problem",values:["Ja","Nein"]},
  x_massive:{label:"X – kritische Blutung",values:["Nein","Ja","Unklar"]},
- a_airway:{label:"A – Atemweg",values:["Frei","Gefährdet / verlegt","Unklar"]},
+ a_airway:{label:"A – Atemweg",values:["Frei","Gefährdet","Verlegt","Unklar"]},
  b_breath:{label:"B – Atmung",values:["Normal","Auffällig","Keine normale Atmung","Unklar"]},
- c_circ:{label:"C – Kreislauf",values:["Unauffällig","Auffällig / Schockzeichen","Relevante Blutung","Unklar"]},
- d_disability:{label:"D – Bewusstsein",values:["Wach / orientiert","Bewusstseinsgetrübt","Bewusstlos","Krampfanfall / neurologisch auffällig","Unklar"]},
+ c_circ:{label:"C – Kreislauf",values:["Unauffällig","Auffällig","Schockzeichen","Relevante Blutung","Unklar"]},
+ d_disability:{label:"D – Bewusstsein",values:["Wach / orientiert","Bewusstseinsgetrübt","Bewusstlos","Krampfanfall","Neurologisch auffällig","Unklar"]},
  e_exposure:{label:"E – weitere Befunde (Text)",free:true,placeholder:"exakter Text"},
  locationIsWater:{label:"Einsatzort auf dem Wasser",values:["ja","nein"]},
  freeText:{label:"Freitext enthält",free:true,placeholder:"Stichwort(e), mehrere mit Komma = eins davon"}
@@ -5025,7 +5028,12 @@ function aaoRuleMatches(val,rule,key){
    const v=Number(val),n=Number(m[2]);
    return ({">":v>n,"<":v<n,">=":v>=n,"<=":v<=n}[m[1]])??(v===n);
  }
- return String(val).trim().toLowerCase()===r.toLowerCase();
+ // Frühere zusammengefasste Werte (vor v4.53) passen weiterhin auf beide neuen Einzelwerte.
+ const LEGACY={"gefährdet / verlegt":["gefährdet","verlegt"],"auffällig / schockzeichen":["auffällig","schockzeichen"],"krampfanfall / neurologisch auffällig":["krampfanfall","neurologisch auffällig"]};
+ const vv=String(val).trim().toLowerCase(), rr=r.toLowerCase();
+ if(LEGACY[rr]&&(LEGACY[rr].includes(vv)||vv===rr))return true;
+ if(LEGACY[vv]&&LEGACY[vv].includes(rr))return true;
+ return vv===rr;
 }
 function customAaoMatches(c){
  const a={...(c?.answers||{}),count:c?.answers?.count??c?.count,locationIsWater:c?.locationIsWater?"ja":"nein"};

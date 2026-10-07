@@ -998,3 +998,9 @@ Version 4.52:
   Standard-AAO alarmiert nichts mehr und kommt bei Updates nicht wieder. Über
   "↺ Gelöschte Standard-AAOs" (erscheint nur, wenn welche gelöscht sind) lassen sie sich
   zurückholen.
+
+Version 4.53:
+- XABCDE-Abfrage mit getrennten Knöpfen: A "Gefährdet" / "Verlegt", C "Auffällig" /
+  "Schockzeichen", D "Krampfanfall" / "Neurologisch auffällig". Auch als AAO-Bedingungen
+  einzeln wählbar. Die Standard-AAOs RD_A, RD_C und RD_D greifen weiterhin bei beiden Werten
+  (wie bisher); ältere AAOs mit den früheren zusammengefassten Werten passen auf beide.
