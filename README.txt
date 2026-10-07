@@ -1038,3 +1038,15 @@ Version 4.57:
   FGr Elektroversorgung, OV – mit "Ganze Fachgruppe" (alle freien Fahrzeuge der Gruppe auf
   einmal) oder einzelnen Fahrzeugen. Die Zuordnung ist aus den Fahrzeugangaben abgeleitet und
   im Fahrzeug-Editor (Feld "THW-Fachgruppe") änderbar.
+
+Version 4.58:
+- Rettungsmittel bearbeiten / Nachforderung: In jeder Kategorie stehen jetzt ALLE Fahrzeuge,
+  nach Typ gruppiert und nach Entfernung sortiert – jedes einzeln wählbar (mit Status bzw.
+  "bereits im Einsatz"), dazu je Typ "Nächstes freies".
+- Bereitstellungsort bei Einsätzen auf dem Wasser: Im Alarmierungsfenster "🅿️ Bereitstellungsort
+  für Landfahrzeuge" (erscheint automatisch, wenn der Einsatzort auf dem Wasser liegt, sonst
+  über einen Knopf). Ort per Adresse festlegen und optional als festen Bereitstellungsort
+  speichern; gespeicherte Orte nach Entfernung zur Auswahl. Alle Landfahrzeuge werden dann mit
+  der Entfernung zum Bereitstellungsort vorgeschlagen, fahren auf der Karte dorthin und sehen
+  ihn am Fahrzeugterminal ("🅿️ Bereitstellungsraum anfahren"); nur Boote, Hubschrauber und
+  DGzRS fahren direkt zur Einsatzstelle. Steht auch im Alarmtext.

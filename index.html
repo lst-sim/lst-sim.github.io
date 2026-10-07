@@ -140,7 +140,7 @@ table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:10px 8px
 </head>
 <body>
 <div style="padding:6px 10px;font-size:11px;color:#94a3b8;font-weight:700;display:flex;align-items:center;gap:10px;position:sticky;top:0;z-index:10;background:var(--bg)">
- <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v4.57</span>
+ <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v4.58</span>
  <span id="syncState"></span>
  <a id="homeLink" href="#" onclick="render('leitstelle');return false" class="hidden" style="color:#64748b;text-decoration:underline;font-weight:600">🖥️ Leitstelle</a>
  <a id="monitorLink" href="#" onclick="showMonitorQR();return false" style="color:#64748b;text-decoration:underline;font-weight:600;margin-left:auto">🖥️ Monitor hinzufügen</a>
@@ -883,8 +883,21 @@ function hospitalPoint(hospitalId){
  if(!h)return null;
  return HOSPITAL_OVERRIDE[h.name]||AREA_CENTERS[h.place]||null;
 }
-function callDestinationPoint(call){
+// Bereitstellungsort bei Einsätzen auf dem Wasser: Landfahrzeuge fahren dorthin, nur Boote und
+// Hubschrauber (sowie DGzRS) direkt zur Einsatzstelle auf dem Wasser.
+function waterCapable(u){
+ if(!u)return false;
+ if(u.org==="Luftrettung"||u.org==="DGzRS")return true;
+ return ["RTB","MZB","SRB","SRK","Boot"].includes(u.type)||/boot/i.test(String(u.type||""));
+}
+function stagingFor(call,u){
+ const st=call&&call.staging;
+ if(!st||!Number.isFinite(Number(st.lat))||!Number.isFinite(Number(st.lng))||!u||waterCapable(u))return null;
+ return [Number(st.lat),Number(st.lng)];
+}
+function callDestinationPoint(call,u){
  if(!call)return null;
+ const sp=stagingFor(call,u); if(sp)return sp;
  if(Number.isFinite(Number(call.lat))&&Number.isFinite(Number(call.lng)))return [Number(call.lat),Number(call.lng)];
  const txt=((call.location||"")+" "+(call.geocodedAddress||"")).toLowerCase();
  for(const [area,pt] of Object.entries(AREA_CENTERS))
@@ -917,7 +930,7 @@ function simulatedUnitPosition(u){
 
  if(status==="3"){
    const call=findUnitCall(u);
-   const dest=callDestinationPoint(call)||home;
+   const dest=callDestinationPoint(call,u)||home;
    const etaMs=(estimatedEtaMinutes(u)||10)*60000;
    const startMs=u.status3Since||(call?.alarmTime?new Date(call.alarmTime).getTime():Date.now());
    const frac=Math.min(1,Math.max(0,(Date.now()-startMs)/etaMs));
@@ -925,11 +938,11 @@ function simulatedUnitPosition(u){
  }
  if(status==="4"){
    const call=findUnitCall(u);
-   return callDestinationPoint(call)||home;
+   return callDestinationPoint(call,u)||home;
  }
  if(status==="7"){
    const call=findUnitCall(u);
-   const start=callDestinationPoint(call)||home;
+   const start=callDestinationPoint(call,u)||home;
    const asg=findUnitHospitalAssignment(u);
    const dest=(asg&&hospitalPoint(asg.hospitalId))||start;
    const etaMs=(estimatedEtaMinutes(u)||10)*60000; // vereinfachend: gleiche Reisegeschwindigkeit
@@ -945,7 +958,7 @@ function simulatedUnitPosition(u){
    const asg=findUnitHospitalAssignment(u);
    const call=findUnitCall(u);
    const hp=asg&&hospitalPoint(asg.hospitalId);
-   const cp=!hp&&call&&callDestinationPoint(call);
+   const cp=!hp&&call&&callDestinationPoint(call,u);
    const start=hp||cp;
    if(!start)return null; // kein erkennbarer vorheriger Ort -> einfach an der Wache
    const totalMs=(u.status2Due&&u.status1Since)?(u.status2Due-u.status1Since):8*60000;
@@ -1107,7 +1120,7 @@ function setUnitStatus(u,status){
    const asg=findUnitHospitalAssignment(u);
    const call=findUnitCall(u);
    const hp=asg&&hospitalPoint(asg.hospitalId);
-   const cp=!hp&&call&&callDestinationPoint(call);
+   const cp=!hp&&call&&callDestinationPoint(call,u);
    const start=hp||cp;
    const home=unitPoint(u);
    if(start&&home){
@@ -1143,7 +1156,7 @@ function autoAdvanceEnRoute(){
      // (geographicRank()/estimatedEtaMinutes() beziehen sich auf db.currentCall). Sonst bleibt
      // die Automatik aus, sobald kein oder ein anderer Einsatz geöffnet ist.
      const call=findUnitCall(u);
-     const home=unitPoint(u), dest=callDestinationPoint(call);
+     const home=unitPoint(u), dest=callDestinationPoint(call,u);
      if(home&&dest){
        const km=haversine(home[0],home[1],dest[0],dest[1]);
        const etaMs=(etaMinutesForDistance(u,km)||10)*60000;
@@ -1159,7 +1172,7 @@ function autoAdvanceEnRoute(){
    } else if(status==="7" && u.status7Since){
      const call=findUnitCall(u);
      const asg=findUnitHospitalAssignment(u);
-     const start=callDestinationPoint(call)||unitPoint(u);
+     const start=callDestinationPoint(call,u)||unitPoint(u);
      const dest=asg&&hospitalPoint(asg.hospitalId);
      if(start&&dest){
        const km=haversine(start[0],start[1],dest[0],dest[1]);
@@ -1372,7 +1385,7 @@ function unitPoint(u){
  return null;
 }
 function geographicRank(u){
- const target=incidentPoint(), home=unitPoint(u);
+ const target=stagingFor(db.currentCall,u)||incidentPoint(), home=unitPoint(u);
  if(target&&home)return haversine(target[0],target[1],home[0],home[1]);
  const area=incidentArea();
  if(area&&optaAreaName(u)===area)return 0;
@@ -1670,9 +1683,20 @@ function resourcePickerCatsHTML(mode){
      </div>`;
    }).join("");
  }
- const types=[...new Set(db.units.filter(u=>u.org===pickerCat&&!u.neighborLoan).map(u=>u.type).filter(Boolean))];
- const ordered=pickerCat==="Rettungsdienst"?ktLast(types.map(t=>({type:t}))).map(x=>x.type):types.sort((a,b)=>a.localeCompare(b,"de"));
- return tabs+`<div class="answer">${ordered.map(t=>btn(t,t,pickerCat)).join("")}</div>`;
+ // Alle Fahrzeuge der Kategorie, nach Typ gruppiert – jedes einzeln wählbar, dazu "Nächstes freies".
+ const c=db.currentCall; const assigned=new Set([...(c?.alarmedUnits||[]),...(c?.proposedUnitIds||[])].map(String));
+ const all=db.units.filter(u=>u.org===pickerCat&&!u.neighborLoan);
+ const types=[...new Set(all.map(u=>u.type).filter(Boolean))].sort((a,b)=>a.localeCompare(b,"de"));
+ const ordered=pickerCat==="Rettungsdienst"?ktLast(types.map(t=>({type:t}))).map(x=>x.type):types;
+ return tabs+ordered.map(t=>{
+   const us=nearestFirst(all.filter(u=>u.type===t));
+   const typeArg=JSON.stringify(t).replace(/"/g,"'");
+   const anyFree=us.some(u=>["1","2","8"].includes(String(u.status))&&!assigned.has(String(u.id)));
+   return `<div style="border:1px solid var(--line);border-radius:10px;padding:6px 10px;margin-bottom:6px">
+     <div class="row between" style="flex-wrap:wrap"><b>${esc(t)}</b><button style="padding:4px 10px;font-size:12px" ${anyFree?"":"disabled"} onclick="addResourceType(${typeArg},'${mode}',${esc(JSON.stringify(pickerCat))})">Nächstes freies</button></div>
+     <div class="answer" style="margin-top:4px">${us.map(u=>{const ok=["1","2","8"].includes(String(u.status))&&!assigned.has(String(u.id));return `<button ${ok?"":"disabled"} onclick="addResourceUnitId('${u.id}','${mode}')" style="padding:6px 10px">${esc(u.opta||u.name)}<small style="display:block">${esc(u.location||"")} · ${ok?dist(u):assigned.has(String(u.id))?"bereits im Einsatz":"Status "+esc(u.status)}</small></button>`}).join("")}</div>
+   </div>`;
+ }).join("");
 }
 function showResourcePicker(mode="additional"){
  const c=db.currentCall;
@@ -2812,7 +2836,8 @@ function evaluate(){
 
 
  let selected=[], used=new Set(), usedN=new Set();
- const ip=incidentPoint();
+ // Nachbar-RTW/NEF sind Landfahrzeuge: bei Bereitstellungsort dessen Entfernung zählen
+ const ip=(c.staging&&Number.isFinite(Number(c.staging.lat)))?[Number(c.staging.lat),Number(c.staging.lng)]:incidentPoint();
  // Nachbar-Landkreis: ist das eigene Fahrzeug weiter als 20 km entfernt (oder keins frei), wird
  // ein näheres freies Fahrzeug gleichen Typs aus dem Nachbar-LK vorgeschlagen.
  // Manuell gewählte Einsatzstufe (R0 / R1 / R1N1) im Alarmierungsfenster überschreibt die
@@ -2906,6 +2931,7 @@ function buildMeldertext(c, nafoReason=""){
     txt+=`\nXABCDE: X ${a.x_massive}; A ${a.a_airway}; B ${a.b_breath}; C ${a.c_circ}; D ${a.d_disability}; E ${a.e_exposure}`;
   }
   if(c.answers?.psy==="Ja")txt+=`\nPsy-Problem: Ja`;
+  if(c.staging?.name)txt+=`\nBereitstellungsraum (Landfahrzeuge): ${c.staging.name}`;
   if(c.answers?.fireKind&&c.answers.fireKind!=="nicht zutreffend")txt+=`\nFeuer: ${c.answers.fireKind} · Objekt: ${c.answers.fireObject||"k.A."}`;
   if(String(c.answers?.freeText||"").trim())txt+=`\nNotruf-Freitext: ${c.answers.freeText}`;
   if(c.alarmFreeText)txt+=`\nAlarmierungs-Freitext: ${c.alarmFreeText}`;
@@ -2933,6 +2959,47 @@ function showNafo(text){
 }
 
 
+function stagingSectionHTML(c){
+ if(!c||(!c.locationIsWater&&!c.staging&&!c.showStaging))return `<div style="margin-top:6px"><button onclick="db.currentCall.showStaging=true;prepareAlarm()" style="font-size:12px;padding:4px 10px">🅿️ Bereitstellungsort festlegen</button></div>`;
+ const ip=incidentPoint();
+ const places=(db.stagingPlaces||[]).map(pl=>({...pl,km:ip?haversine(ip[0],ip[1],pl.lat,pl.lng):null})).sort((a,b)=>(a.km??1e9)-(b.km??1e9));
+ return `<div class="suggest" style="margin-top:10px;background:#e0f2fe;border-color:#7dd3fc">
+  <b>🅿️ Bereitstellungsort für Landfahrzeuge</b>${c.locationIsWater?` <small class="muted">(Einsatzstelle auf dem Wasser)</small>`:""}
+  <div style="font-size:12px;margin:2px 0 6px">Alle Landfahrzeuge fahren zum Bereitstellungsort – nur Boote, Hubschrauber und DGzRS direkt zur Einsatzstelle.</div>
+  ${c.staging?`<div class="row" style="gap:8px;align-items:center"><span style="font-size:16px;font-weight:800">📍 ${esc(c.staging.name)}</span><button style="padding:4px 10px;font-size:12px" onclick="setStaging(null)">✕ entfernen</button></div>`:`<div class="muted" style="font-size:12px">Noch kein Bereitstellungsort – Landfahrzeuge fahren zur Einsatzstelle.</div>`}
+  ${places.length?`<div class="row" style="flex-wrap:wrap;gap:6px;margin-top:6px">${places.map(pl=>`<button style="padding:4px 10px;font-size:12px" class="${c.staging&&c.staging.name===pl.name?"primary":""}" onclick="setStaging(${esc(JSON.stringify(pl.id))})">${esc(pl.name)}${pl.km!=null?` <small>(${pl.km.toFixed(1)} km)</small>`:""}</button>`).join("")}</div>`:""}
+  <div class="row" style="gap:6px;margin-top:6px;flex-wrap:nowrap"><input id="stagingAddr" placeholder="Adresse/Ort, z. B. Hafen Hooksiel" style="flex:1;font-size:13px;padding:6px 8px"><button style="padding:4px 10px;font-size:12px" onclick="stagingSearch()">🔎 Festlegen</button></div>
+  <label style="display:flex;gap:6px;align-items:center;font-weight:500;font-size:12px;margin:4px 0 0"><input type="checkbox" id="stagingSave" style="width:auto" checked> als festen Bereitstellungsort speichern (für spätere Einsätze)</label>
+  ${places.length?`<details style="margin-top:4px;font-size:12px"><summary>Gespeicherte Bereitstellungsorte verwalten</summary>${places.map(pl=>`<div class="row between" style="padding:2px 0">${esc(pl.name)}<button style="padding:2px 8px;font-size:11px" onclick="deleteStagingPlace(${esc(JSON.stringify(pl.id))})">🗑️</button></div>`).join("")}</details>`:""}
+ </div>`;
+}
+function setStaging(id){
+ const c=db.currentCall; if(!c)return;
+ if(id==null)delete c.staging;
+ else{const pl=(db.stagingPlaces||[]).find(x=>String(x.id)===String(id));if(!pl)return;c.staging={name:pl.name,lat:pl.lat,lng:pl.lng}}
+ evaluate(); save(); if(db.cloud?.enabled&&c.alarmTime)setTimeout(()=>pushCallCloud(c),0); prepareAlarm();
+}
+async function stagingSearch(){
+ const c=db.currentCall; if(!c)return;
+ const q=String(document.getElementById("stagingAddr")?.value||"").trim(); if(q.length<3){toast("Bitte Adresse/Ort eingeben");return}
+ const keep=!!document.getElementById("stagingSave")?.checked;
+ toast("Suche Bereitstellungsort …");
+ try{
+   const full=/friesland|wilhelmshaven|niedersachsen/i.test(q)?q:`${q}, Friesland, Niedersachsen`;
+   const res=await fetch(`https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&countrycodes=de&q=${encodeURIComponent(full)}`,{headers:{"Accept":"application/json"}});
+   const rows=await res.json();
+   if(!rows||!rows[0]){toast("Ort nicht gefunden");return}
+   const pl={id:Date.now(),name:q,lat:Number(rows[0].lat),lng:Number(rows[0].lon)};
+   if(keep){db.stagingPlaces=db.stagingPlaces||[];db.stagingPlaces.push(pl)}
+   c.staging={name:pl.name,lat:pl.lat,lng:pl.lng};
+   evaluate(); save(); if(db.cloud?.enabled&&c.alarmTime)setTimeout(()=>pushCallCloud(c),0);
+   toast(`Bereitstellungsort: ${pl.name}`); prepareAlarm();
+ }catch(e){toast("Ortssuche nicht erreichbar")}
+}
+function deleteStagingPlace(id){
+ if(!confirm("Gespeicherten Bereitstellungsort löschen?"))return;
+ db.stagingPlaces=(db.stagingPlaces||[]).filter(x=>String(x.id)!==String(id)); save(); prepareAlarm();
+}
 function prepareAlarm(){
  const c=db.currentCall;
  // Auch ohne verfügbare Einsatzmittel alarmierbar – der Einsatz wird angelegt, Fahrzeuge
@@ -2958,6 +3025,7 @@ function prepareAlarm(){
    ${c.aaoWinner?`<div class="muted" style="font-size:12px;margin-top:4px">AAO: ${esc(c.aaoWinner)}${(c.aaoCombined||[]).length?` · zusätzlich: ${esc(c.aaoCombined.join(", "))}`:""}${(c.aaoExcluded||[]).length?` · <span style="color:#b91c1c">⛔ ausgeschlossen: ${esc(c.aaoExcluded.join(", "))}</span>`:""}</div>`:""}
    <div class="row" style="margin-top:8px;gap:6px;flex-wrap:wrap"><span class="muted">Einsatzstufe:</span>${["R0","R1","R1N1"].map(l=>`<button class="${rLevelOf(c)===l?"primary":""}" onclick="setRLevel('${l}')">${l}</button>`).join("")}<button class="${c.rOverride?"":"primary"}" onclick="setRLevel(null)">Automatisch</button></div>
    <small class="muted">R0 = ohne Sonderrechte (kein Nachbar-LK) · R1 = mit Sonderrechten, ohne NEF · R1N1 = mit Notarzt (NEF). Wechsel setzt den Fahrzeugvorschlag neu.</small>
+   ${stagingSectionHTML(c)}
    <label style="margin-top:12px">Vorgeschlagene Einsatzmittel</label>
    <div class="suggest">${esc(c.suggestion||"—")}</div>
    ${(c.optionalOffer||[]).length?`<label style="margin-top:12px">➕ Optionale Fahrzeuge (AAO) – bei Bedarf anhaken</label>
@@ -3601,7 +3669,7 @@ async function pushCallCloud(c){
    id:u.id,name:u.name,opta:u.opta,type:u.type,org:u.org,status:String(u.status)
  }));
  await cloudRequest(`calls/${encodeURIComponent(String(c.id))}`,"PUT",{
-   id:c.id,location:c.location||"",keyword:c.keyword||"",count:c.count||"",
+   id:c.id,location:c.location||"",keyword:c.keyword||"",count:c.count||"",staging:c.staging||null,
    suggestion:c.suggestion||"",alarmFreeText:c.alarmFreeText||"",
    alarmTime:c.alarmTime||null,endTime:c.endTime||null,
    unitIds,units,history:c.history||[],nafo:c.nafo||[],
@@ -4522,7 +4590,7 @@ async function renderVehicleTerminal(unitId,dburl,sid){
      const body=document.getElementById("vehicleBody"); if(!body)return;
      body.innerHTML=`${vehicleGeoWatchId?`<div style="font-size:10px;opacity:.8;margin-bottom:4px">📍 STANDORT LIVE</div>`:""}
       <div style="display:flex;justify-content:space-between;align-items:baseline"><b style="font-size:15px">${unit?esc(statusName(String(unit.status))):"—"}</b><span style="font-size:20px;font-weight:800">${unit?esc(String(unit.status)):"?"}</span></div>
-      ${calls.length?calls.map(c=>`<div style="margin-top:6px;font-size:11px;border-top:1px solid #2a3325;padding-top:5px">🚨 ${esc(c.keyword||"Einsatz")}<br>📍 ${esc(c.location||"Ort unbekannt")}</div>`).join(""):`<div style="margin-top:6px;font-size:11px;opacity:.7">Kein aktueller Einsatz</div>`}
+      ${calls.length?calls.map(c=>`<div style="margin-top:6px;font-size:11px;border-top:1px solid #2a3325;padding-top:5px">🚨 ${esc(c.keyword||"Einsatz")}<br>📍 ${esc(c.location||"Ort unbekannt")}${c.staging&&c.staging.name&&!waterCapable(local)?`<br>🅿️ BR: ${esc(c.staging.name)}`:""}</div>`).join(""):`<div style="margin-top:6px;font-size:11px;opacity:.7">Kein aktueller Einsatz</div>`}
       ${sdsList.length?`<div style="margin-top:6px;font-size:11px;border-top:1px solid #2a3325;padding-top:5px;color:#ffd966">✉️ SDS: ${esc(sdsList[0].text)}</div>`:""}`;
      const keypad=document.getElementById("vehicleKeypad");
      if(keypad)keypad.innerHTML=radioKeypadHTML(local,unit?.status,unitId,dburl,sid);
@@ -4534,6 +4602,7 @@ async function renderVehicleTerminal(unitId,dburl,sid){
     ${calls.length?calls.map(c=>`<div class="card call" style="margin-top:12px">
        <div class="row between"><h2>🚨 ${esc(c.keyword||"Einsatz")}</h2><span class="status s3">ALARM</span></div>
        <div class="big">📍 ${esc(c.location||"Ort unbekannt")}</div>
+       ${c.staging&&c.staging.name&&!waterCapable(local)?`<div class="suggest" style="background:#e0f2fe;border-color:#7dd3fc"><b>🅿️ Bereitstellungsraum anfahren:</b><div style="font-size:18px;font-weight:800">${esc(c.staging.name)}</div><small>Einsatzstelle liegt auf dem Wasser – nur Boote/Hubschrauber direkt zur Einsatzstelle.</small></div>`:""}
        ${c.alarmFreeText?`<div class="suggest"><b>Meldetext / Zusatz:</b><div>${esc(c.alarmFreeText)}</div></div>`:""}
        <div class="suggest"><b>Alarmierte Mittel</b><div>${esc(c.suggestion||"—")}</div></div>
        ${Array.isArray(c.nafo)&&c.nafo.length?`<div class="card" style="background:#fff7ed"><b>📟 Nachforderung / Lageänderung</b>${c.nafo.slice(-3).map(n=>`<div>${esc(n.reason||"")}</div>`).join("")}</div>`:""}
