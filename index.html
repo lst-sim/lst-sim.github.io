@@ -132,7 +132,7 @@ table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:10px 8px
 </head>
 <body>
 <div style="padding:6px 10px;font-size:11px;color:#94a3b8;font-weight:700;display:flex;align-items:center;gap:10px;position:sticky;top:0;z-index:10;background:var(--bg)">
- <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v4.53</span>
+ <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v4.54</span>
  <span id="syncState"></span>
  <a id="homeLink" href="#" onclick="render('leitstelle');return false" class="hidden" style="color:#64748b;text-decoration:underline;font-weight:600">🖥️ Leitstelle</a>
  <a id="monitorLink" href="#" onclick="showMonitorQR();return false" style="color:#64748b;text-decoration:underline;font-weight:600;margin-left:auto">🖥️ Monitor hinzufügen</a>
@@ -2069,7 +2069,7 @@ function notruf(){
   <div class="card"><h3>Abfrageverlauf</h3>${c.history.length?c.history.map(x=>`<div style="padding:7px 0;border-bottom:1px solid var(--line)"><b>${esc(x.q)}</b><br>${esc(x.a)}</div>`).join(""):"<span class='muted'>Noch keine Antworten.</span>"}</div>
  </section>
  <aside>
-  <div class="card"><h2>🧠 Live-Bewertung</h2><div class="big">${esc(c.keyword||"—")}</div>${c.aaoWinner?`<div class="muted" style="font-size:12px;margin-top:4px">AAO: ${esc(c.aaoWinner)}${(c.aaoCombined||[]).length?` · zusätzlich: ${esc(c.aaoCombined.join(", "))}`:""}${(c.aaoMatches||[]).filter(n=>n!==c.aaoWinner&&!(c.aaoCombined||[]).includes(n)).length?` · ebenfalls passend (nicht alarmiert): ${esc(c.aaoMatches.filter(n=>n!==c.aaoWinner&&!(c.aaoCombined||[]).includes(n)).join(", "))}`:""}</div>`:""}<p>${c.suggestion||"Antworten fehlen noch."}</p></div>
+  <div class="card"><h2>🧠 Live-Bewertung</h2><div class="big">${esc(c.keyword||"—")}</div>${c.aaoWinner?`<div class="muted" style="font-size:12px;margin-top:4px">AAO: ${esc(c.aaoWinner)}${(c.aaoCombined||[]).length?` · zusätzlich: ${esc(c.aaoCombined.join(", "))}`:""}${(c.aaoMatches||[]).filter(n=>n!==c.aaoWinner&&!(c.aaoCombined||[]).includes(n)).length?` · ebenfalls passend (nicht alarmiert): ${esc(c.aaoMatches.filter(n=>n!==c.aaoWinner&&!(c.aaoCombined||[]).includes(n)).join(", "))}`:""}${(c.aaoExcluded||[]).length?`<br><span style="color:#b91c1c">⛔ ausgeschlossen: ${esc(c.aaoExcluded.join(", "))}</span>`:""}</div>`:""}<p>${c.suggestion||"Antworten fehlen noch."}</p></div>
   <div class="card"><h2>🚑 Nächste verfügbare Mittel</h2>${nearest.length?nearest.map(u=>`<div class="row between" style="padding:6px 0;border-bottom:1px solid var(--line)"><span><b>${esc(u.type||"—")}</b><br><small class="muted">${esc(u.opta||u.name||"—")}${geographicRank(u)<999?` · ~${geographicRank(u).toFixed(1)} km · ca. ${estimatedEtaMinutes(u)} min`:``}</small></span><span class="status ${statusClass(u.status)}">${statusName(u.status)}</span></div>`).join(""):`<span class="muted">Keine verfügbaren Mittel</span>`}</div>
  </aside></div>`;
  if(q && q[0]==="location" && !c.callerGpsPending) setTimeout(initNotrufMap,0);
@@ -2538,7 +2538,8 @@ function evaluate(){
  // Alarmierung aus der (bearbeitbaren) AAO-Tabelle; Fallback auf den Standard, falls ein
  // Eintrag fehlt.
  const addAao=(id,nOverride)=>{const prev=src;src=id;for(const x of aaoUnits(id))add(x.type,nOverride?nOverride(x):aaoN(x,a),x.org||null);src=prev};
- const kw=(id,fallback)=>{const k=aaoKeyword(id,fallback);kwMap[id]=k;return k};
+ let firstKwId=null; // die AAO der eigentlichen Lage (vor XABCDE/MANV-Zusätzen)
+ const kw=(id,fallback)=>{const k=aaoKeyword(id,fallback);kwMap[id]=k;if(firstKwId==null)firstKwId=String(id);return k};
 
  if(e==="Reanimation" || (a.b_breath==="Keine normale Atmung" && a.d_disability==="Bewusstlos")){
    keyword=kw(5,"REANIMATION R1N1");
@@ -2675,6 +2676,7 @@ function evaluate(){
  if(cnt>3){
    // RTW-Anzahl skaliert weiterhin mit der Verletztenzahl (mind. 1 RTW je 3 Verletzte).
    addAao(9,x=>x.type==="RTW"?Math.max(aaoN(x,a),Math.ceil(cnt/3)):aaoN(x,a));
+   var manvBaseKw=keyword;
    keyword=`MANV – ${keyword} – ${cnt} Verletzte`;
    kwMap[9]=keyword;
  }
@@ -2696,6 +2698,15 @@ function evaluate(){
      const all=req;
      req=req.filter(r=>String(r.src)===win||r.src==="r0mod");
      if(kwMap[win])keyword=kwMap[win];
+     // Aktive AAOs: jede weitere darf nur dazu, wenn sie sich mit KEINER bereits aktiven ausschließt.
+     const active=[win], excludedNames=[];
+     const blocked=k=>active.some(o=>aaoExcluded(o,k));
+     const noteExcl=k=>{const n=(aaoEntry(k)?.name)||k;if(!excludedNames.includes(n))excludedNames.push(n)};
+     // MANV ist ein Zusatz zur eigentlichen Lage: deren AAO (z. B. Feuer) läuft mit, außer sie ist ausgeschlossen.
+     if(win==="9"&&firstKwId&&firstKwId!=="9"&&groups.has(firstKwId)&&!["10","11","12","13","14","15","16"].includes(firstKwId)){
+       if(blocked(firstKwId)){noteExcl(firstKwId);keyword=`MANV – ${cnt} Verletzte`;kwMap[9]=keyword}
+       else{active.push(firstKwId);req.push(...all.filter(r=>String(r.src)===firstKwId))}
+     }
      // Weitere AAO dazunehmen – aufgefüllt (Maximalprinzip), nicht doppelt.
      const topUp=(gid)=>{
        const xs=all.filter(r=>String(r.src)===gid); if(!xs.length)return false;
@@ -2709,30 +2720,38 @@ function evaluate(){
        }
        return added;
      };
-     // Rettungsdienst nach XABCDE (RD_X/A/B/C/D) kommt immer dazu.
+     // Rettungsdienst nach XABCDE (RD_X/A/B/C/D) kommt immer dazu – außer ausgeschlossen.
      const XABCDE_AAO=["10","11","12","13","14","15","16"];
      for(const xid of XABCDE_AAO){
-       if(xid===win||aaoExcluded(win,xid))continue;
+       if(xid===win||!groups.has(xid))continue;
+       if(blocked(xid)){noteExcl(xid);continue}
+       active.push(xid);
        if(topUp(xid)&&kwMap[xid])keyword=`${keyword} · ${kwMap[xid]}`;
      }
-     // "Mit anderen AAOs": die gewählte AAO entscheidet, welche weiteren passenden AAOs dazukommen.
-     c.aaoCombined=[]; const combinedIds=[];
-     for(const k of groups.keys()){
-       if(k===win||k==="base"||XABCDE_AAO.includes(k))continue;
+     // "Mit anderen AAOs": größere zuerst; nur wenn erlaubt und mit keiner aktiven ausgeschlossen.
+     c.aaoCombined=[];
+     const cands=[...groups.keys()].filter(k=>!active.includes(k)&&k!=="base"&&!XABCDE_AAO.includes(k)).sort((x,y)=>groups.get(y)-groups.get(x));
+     for(const k of cands){
+       if(blocked(k)){noteExcl(k);continue}
        if(!aaoCombinable(win,k))continue;
-       // Auch untereinander dürfen sich die dazugenommenen AAOs nicht ausschließen.
-       if(combinedIds.some(o=>aaoExcluded(o,k)))continue;
-       combinedIds.push(k);
-       // Kombinierte AAOs werden vollständig dazu alarmiert (Fahrzeuge addieren sich).
+       active.push(k);
        const extra=all.filter(r=>String(r.src)===k);
        if(extra.length){req.push(...extra);if(kwMap[k])keyword=`${keyword} · ${kwMap[k]}`}
        c.aaoCombined.push((aaoEntry(k)?.name)||k);
      }
+     if(active.includes(firstKwId)&&firstKwId!==win){const n=(aaoEntry(firstKwId)?.name)||firstKwId;if(!c.aaoCombined.includes(n))c.aaoCombined.unshift(n)}
+     // MANV-Stichwort ohne die Lage-AAO, wenn diese durch eine aktive AAO ausgeschlossen ist
+     if(win==="9"&&firstKwId&&!active.includes(firstKwId)&&active.some(o=>aaoExcluded(o,firstKwId))){
+       const old=kwMap[9]; if(old&&keyword.startsWith(old))keyword=`MANV – ${cnt} Verletzte`+keyword.slice(old.length);
+       noteExcl(firstKwId);
+     }
      c.aaoWinner=(aaoEntry(win)?.name)||null; winAao=win;
-     const matched=Object.keys(kwMap).map(String);
-     activeAao=[win,...XABCDE_AAO.filter(x=>x!==win&&groups.has(x)),...[...groups.keys()].filter(k=>k!==win&&k!=="base"&&!XABCDE_AAO.includes(k)&&aaoCombinable(win,k)),
-       ...matched.filter(k=>!groups.has(k)&&k!==win&&aaoCombinable(win,k))];
-   }else{c.aaoWinner=null;activeAao=Object.keys(kwMap).map(String)}
+     c.aaoExcluded=excludedNames;
+     // Passende AAOs ohne Pflichtfahrzeuge (nur optionale) zählen mit, wenn nicht ausgeschlossen.
+     for(const k of Object.keys(kwMap).map(String)){if(!groups.has(k)&&!active.includes(k)&&!blocked(k)&&aaoCombinable(win,k))active.push(k)}
+     for(const ca of customAaoMatches(c)){const k=String(ca.id);if(!groups.has(k)&&!active.includes(k)&&!blocked(k)&&!(ca.units||[]).some(x=>!x.opt))active.push(k)}
+     activeAao=active;
+   }else{c.aaoWinner=null;c.aaoExcluded=[];activeAao=[...Object.keys(kwMap).map(String),...customAaoMatches(c).filter(ca=>!(ca.units||[]).some(x=>!x.opt)).map(ca=>String(ca.id))]}
  }
 
 
@@ -2791,7 +2810,7 @@ function evaluate(){
    const offer=[], seen=new Set();
    // Angeboten werden die optionalen Fahrzeuge ALLER passenden AAOs (auch Standard-AAOs, deren
    // Fahrzeuge über den festen Abfragezweig kommen, und AAOs nur mit optionalen Fahrzeugen).
-   const offerIds=[...new Set([...activeAao,...Object.keys(kwMap).map(String),...customAaoMatches(c).map(x=>String(x.id))])].filter(k=>k!=="base"&&!(winAao&&k!==winAao&&aaoExcluded(winAao,k)));
+   const offerIds=[...new Set(activeAao)].filter(k=>k!=="base");
    for(const id of offerIds){
      for(const x of aaoOptUnits(id)){
        const va=vollalarmGroup(x.type), aaoName=(aaoEntry(id)?.name)||String(id);
@@ -2880,6 +2899,7 @@ function prepareAlarm(){
  document.getElementById("app").innerHTML=`<div class="card call">
    <div class="row between"><div><h2>🚨 Alarmierung vorbereiten</h2><div class="muted">Noch keine Alarmierung – Angaben prüfen und ergänzen.</div></div><button onclick="render('leitstelle')">Abbrechen</button></div>
    <label>Einsatzstichwort</label><div class="big">${esc(c.keyword||"—")}</div>
+   ${c.aaoWinner?`<div class="muted" style="font-size:12px;margin-top:4px">AAO: ${esc(c.aaoWinner)}${(c.aaoCombined||[]).length?` · zusätzlich: ${esc(c.aaoCombined.join(", "))}`:""}${(c.aaoExcluded||[]).length?` · <span style="color:#b91c1c">⛔ ausgeschlossen: ${esc(c.aaoExcluded.join(", "))}</span>`:""}</div>`:""}
    <div class="row" style="margin-top:8px;gap:6px;flex-wrap:wrap"><span class="muted">Einsatzstufe:</span>${["R0","R1","R1N1"].map(l=>`<button class="${rLevelOf(c)===l?"primary":""}" onclick="setRLevel('${l}')">${l}</button>`).join("")}<button class="${c.rOverride?"":"primary"}" onclick="setRLevel(null)">Automatisch</button></div>
    <small class="muted">R0 = ohne Sonderrechte (kein Nachbar-LK) · R1 = mit Sonderrechten, ohne NEF · R1N1 = mit Notarzt (NEF). Wechsel setzt den Fahrzeugvorschlag neu.</small>
    <label style="margin-top:12px">Vorgeschlagene Einsatzmittel</label>

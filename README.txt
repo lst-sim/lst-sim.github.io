@@ -1004,3 +1004,15 @@ Version 4.53:
   "Schockzeichen", D "Krampfanfall" / "Neurologisch auffällig". Auch als AAO-Bedingungen
   einzeln wählbar. Die Standard-AAOs RD_A, RD_C und RD_D greifen weiterhin bei beiden Werten
   (wie bisher); ältere AAOs mit den früheren zusammengefassten Werten passen auf beide.
+
+Version 4.54:
+- Fehler behoben: "Nie zusammen mit" wurde nicht überall beachtet. Jetzt wird die Liste der
+  aktiven AAOs Schritt für Schritt aufgebaut (höchste zuerst, dann XABCDE, dann weitere nach
+  Größe) – jede weitere AAO kommt nur dazu, wenn sie sich mit KEINER bereits aktiven ausschließt.
+- Optionale Fahrzeuge werden nur noch aus den tatsächlich aktiven AAOs angeboten (nicht mehr
+  aus ausgeschlossenen oder unterlegenen AAOs).
+- MANV ist ein Zusatz zur eigentlichen Lage: Die AAO der Lage (z. B. Verkehrsunfall, Feuer)
+  wird bei MANV jetzt mit alarmiert – außer sie ist ausgeschlossen; dann steht sie auch nicht
+  mehr im Stichwort.
+- Im Alarmierungsfenster und in der Live-Bewertung steht jetzt, welche AAO alarmiert wird,
+  welche zusätzlich und welche "⛔ ausgeschlossen" wurden.
