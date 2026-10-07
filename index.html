@@ -132,7 +132,7 @@ table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:10px 8px
 </head>
 <body>
 <div style="padding:6px 10px;font-size:11px;color:#94a3b8;font-weight:700;display:flex;align-items:center;gap:10px;position:sticky;top:0;z-index:10;background:var(--bg)">
- <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v4.48</span>
+ <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v4.49</span>
  <span id="syncState"></span>
  <a id="homeLink" href="#" onclick="render('leitstelle');return false" class="hidden" style="color:#64748b;text-decoration:underline;font-weight:600">🖥️ Leitstelle</a>
  <a id="monitorLink" href="#" onclick="showMonitorQR();return false" style="color:#64748b;text-decoration:underline;font-weight:600;margin-left:auto">🖥️ Monitor hinzufügen</a>
@@ -2657,7 +2657,7 @@ function evaluate(){
    src="base";
  }
  // Nur die höchste passende AAO alarmieren.
- let activeAao=[];
+ let activeAao=[], winAao=null;
  {
    const groups=new Map();
    for(const r of req){if(r.src==="r0mod")continue;const k=String(r.src);if(!groups.has(k))groups.set(k,0);groups.set(k,groups.get(k)+1)}
@@ -2684,20 +2684,23 @@ function evaluate(){
      // Rettungsdienst nach XABCDE (RD_X/A/B/C/D) kommt immer dazu.
      const XABCDE_AAO=["10","11","12","13","14","15","16"];
      for(const xid of XABCDE_AAO){
-       if(xid===win)continue;
+       if(xid===win||aaoExcluded(win,xid))continue;
        if(topUp(xid)&&kwMap[xid])keyword=`${keyword} · ${kwMap[xid]}`;
      }
      // "Mit anderen AAOs": die gewählte AAO entscheidet, welche weiteren passenden AAOs dazukommen.
-     c.aaoCombined=[];
+     c.aaoCombined=[]; const combinedIds=[];
      for(const k of groups.keys()){
        if(k===win||k==="base"||XABCDE_AAO.includes(k))continue;
        if(!aaoCombinable(win,k))continue;
+       // Auch untereinander dürfen sich die dazugenommenen AAOs nicht ausschließen.
+       if(combinedIds.some(o=>aaoExcluded(o,k)))continue;
+       combinedIds.push(k);
        // Kombinierte AAOs werden vollständig dazu alarmiert (Fahrzeuge addieren sich).
        const extra=all.filter(r=>String(r.src)===k);
        if(extra.length){req.push(...extra);if(kwMap[k])keyword=`${keyword} · ${kwMap[k]}`}
        c.aaoCombined.push((aaoEntry(k)?.name)||k);
      }
-     c.aaoWinner=(aaoEntry(win)?.name)||null;
+     c.aaoWinner=(aaoEntry(win)?.name)||null; winAao=win;
      const matched=Object.keys(kwMap).map(String);
      activeAao=[win,...XABCDE_AAO.filter(x=>x!==win&&groups.has(x)),...[...groups.keys()].filter(k=>k!==win&&k!=="base"&&!XABCDE_AAO.includes(k)&&aaoCombinable(win,k)),
        ...matched.filter(k=>!groups.has(k)&&k!==win&&aaoCombinable(win,k))];
@@ -2760,7 +2763,7 @@ function evaluate(){
    const offer=[], seen=new Set();
    // Angeboten werden die optionalen Fahrzeuge ALLER passenden AAOs (auch Standard-AAOs, deren
    // Fahrzeuge über den festen Abfragezweig kommen, und AAOs nur mit optionalen Fahrzeugen).
-   const offerIds=[...new Set([...activeAao,...Object.keys(kwMap).map(String),...customAaoMatches(c).map(x=>String(x.id))])].filter(k=>k!=="base");
+   const offerIds=[...new Set([...activeAao,...Object.keys(kwMap).map(String),...customAaoMatches(c).map(x=>String(x.id))])].filter(k=>k!=="base"&&!(winAao&&k!==winAao&&aaoExcluded(winAao,k)));
    for(const id of offerIds){
      for(const x of aaoOptUnits(id)){
        const va=vollalarmGroup(x.type), aaoName=(aaoEntry(id)?.name)||String(id);
@@ -4956,13 +4959,20 @@ function aaoAllows(aId,bId){
  if(m==="mit")return (a.combineWith||[]).map(String).includes(String(bId));
  return false;
 }
+// "Nie zusammen mit": reicht, wenn EINE der beiden AAOs die andere ausschließt – schlägt jede Erlaubnis.
+function aaoExcluded(aId,bId){
+ const a=aaoEntry(aId), b=aaoEntry(bId);
+ return !!((a?.excludeWith||[]).map(String).includes(String(bId))||(b?.excludeWith||[]).map(String).includes(String(aId)));
+}
 // Es reicht, wenn eine der beiden AAOs die Kombination erlaubt ("Ja" oder die andere angehakt).
-function aaoCombinable(winId,otherId){return aaoAllows(winId,otherId)||aaoAllows(otherId,winId)}
+function aaoCombinable(winId,otherId){if(aaoExcluded(winId,otherId))return false;return aaoAllows(winId,otherId)||aaoAllows(otherId,winId)}
 function aaoCombineText(a){
  const m=a.combine||"nein";
- if(m==="ja")return "Ja";
- if(m==="mit"){const names=(a.combineWith||[]).map(id=>aaoEntry(id)?.name).filter(Boolean);return names.length?`mit: ${names.map(esc).join(", ")}`:"mit: (keine gewählt)"}
- return "Nein";
+ const ex=(a.excludeWith||[]).map(id=>aaoEntry(id)?.name).filter(Boolean);
+ const exTxt=ex.length?`<br><span style="color:#b91c1c">⛔ nie mit: ${ex.map(esc).join(", ")}</span>`:"";
+ if(m==="ja")return "Ja"+exTxt;
+ if(m==="mit"){const names=(a.combineWith||[]).map(id=>aaoEntry(id)?.name).filter(Boolean);return (names.length?`mit: ${names.map(esc).join(", ")}`:"mit: (keine gewählt)")+exTxt}
+ return "Nein"+exTxt;
 }
 function aaoRuleMatches(val,rule,key){
  if((key==="trapped"||key==="firePeople"||key==="personDanger")&&/^(ja|nein|unbekannt)$/i.test(String(rule).trim())){
@@ -5008,7 +5018,7 @@ function editAAO(id){
  aaoDraft=src?JSON.parse(JSON.stringify(src)):{id:null,name:"",keyword:"",rules:{event:"Medizinischer Notfall"},units:[{type:"RTW",n:1,org:"Rettungsdienst"}],active:true};
  aaoDraft.units=(aaoDraft.units||[]).map(x=>({type:x.type||"",n:x.n==="pat"?"pat":(Number(x.n)||1),org:x.org||"",opt:!!x.opt}));
  aaoDraft._rules=Object.entries(aaoDraft.rules||{}).map(([k,v])=>({k,v:String(v)}));
- aaoDraft.combine=aaoDraft.combine||"nein"; aaoDraft.combineWith=(aaoDraft.combineWith||[]).map(String);
+ aaoDraft.combine=aaoDraft.combine||"nein"; aaoDraft.combineWith=(aaoDraft.combineWith||[]).map(String); aaoDraft.excludeWith=(aaoDraft.excludeWith||[]).map(String);
  render("aao");
 }
 function aaoEditor(){
@@ -5042,6 +5052,11 @@ function aaoEditor(){
   ${d.combine==="mit"?`<details open style="margin-top:6px;border:1px solid var(--line);border-radius:8px;padding:6px 10px"><summary><b>AAOs auswählen</b> (${d.combineWith.length} gewählt)</summary>
    <div style="max-height:260px;overflow:auto;margin-top:6px">${db.aao.filter(x=>String(x.id)!==String(d.id)).map(x=>`<label style="display:flex;gap:8px;align-items:center;font-weight:500;margin:4px 0"><input type="checkbox" style="width:auto" ${d.combineWith.includes(String(x.id))?"checked":""} onchange="aaoToggleWith('${String(x.id)}',this.checked)"> ${esc(x.name)}</label>`).join("")}</div>
   </details>`:`<p class="muted" style="margin:4px 0 0;font-size:12px">${d.combine==="ja"?"Passt diese AAO zusammen mit anderen, laufen alle zusammen – die Fahrzeuge aller AAOs werden addiert.":"Diese AAO läuft nicht von sich aus mit anderen (andere AAOs können sie aber über ihre eigene Einstellung mitnehmen)."}</p>`}
+  <label>Nie zusammen mit</label>
+  <details ${d.excludeWith.length?"open":""} style="border:1px solid var(--line);border-radius:8px;padding:6px 10px"><summary id="aaoExclSum"><b>AAOs ausschließen</b> (${d.excludeWith.length} gewählt)</summary>
+   <p class="muted" style="font-size:12px;margin:4px 0">Diese AAOs werden nie zusammen mit dieser alarmiert – auch wenn eine von beiden „Mit anderen AAOs: Ja“ hat. Passen beide, gilt nur die höhere.</p>
+   <div style="max-height:260px;overflow:auto;margin-top:6px">${db.aao.filter(x=>String(x.id)!==String(d.id)).map(x=>`<label style="display:flex;gap:8px;align-items:center;font-weight:500;margin:4px 0"><input type="checkbox" style="width:auto" ${d.excludeWith.includes(String(x.id))?"checked":""} onchange="aaoToggleExclude('${String(x.id)}',this.checked)"> ${esc(x.name)}</label>`).join("")}</div>
+  </details>
   <label>Alarmierung</label>
   <datalist id="aaoTypeList">${types.map(t=>`<option value="${esc(t)}">`).join("")}</datalist>
   ${d.units.map(unitRow).join("")||`<p class="muted">Keine Fahrzeuge.</p>`}
@@ -5053,6 +5068,13 @@ function aaoEditor(){
    ${d.id!=null&&isBuiltinAao(d.id)?`<button onclick="resetAAO()">↺ Standard wiederherstellen</button>`:""}
   </div>
  </div>`;
+}
+function aaoToggleExclude(id,on){
+ const set=new Set(aaoDraft.excludeWith||[]);
+ if(on)set.add(String(id)); else set.delete(String(id));
+ aaoDraft.excludeWith=[...set];
+ const sum=document.getElementById("aaoExclSum");
+ if(sum)sum.innerHTML=`<b>AAOs ausschließen</b> (${aaoDraft.excludeWith.length} gewählt)`;
 }
 function aaoToggleWith(id,on){
  const set=new Set(aaoDraft.combineWith||[]);
@@ -5084,6 +5106,7 @@ function saveAAO(){
  if(d.rulesEdited)entry.rulesEdited=true;
  entry.combine=d.combine||"nein";
  if(entry.combine==="mit")entry.combineWith=(d.combineWith||[]).map(String);
+ if((d.excludeWith||[]).length)entry.excludeWith=(d.excludeWith||[]).map(String);
  const idx=db.aao.findIndex(x=>String(x.id)===String(entry.id));
  if(idx>=0)db.aao[idx]=entry; else db.aao.push(entry);
  aaoDraft=null;

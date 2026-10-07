@@ -971,3 +971,10 @@ Version 4.48:
   Fahrzeug, Standard = "wie oben"). Die Klinik oben gilt für alle ohne eigene Auswahl.
 - Fehler behoben: Bei einem ungültigen PZC wurden vorher schon die Fahrzeuge davor zugewiesen.
   Jetzt werden erst alle PZC geprüft, dann wird zugewiesen.
+
+Version 4.49:
+- AAO-Editor: neuer Bereich "Nie zusammen mit" – AAOs ankreuzen, die nie zusammen mit dieser
+  alarmiert werden dürfen. Der Ausschluss gilt in beide Richtungen und schlägt jede Erlaubnis
+  ("Mit anderen AAOs: Ja/Mit diesen …"); passen beide, gilt nur die höhere. Gilt auch für die
+  immer dazukommenden RD-AAOs aus XABCDE und für optionale Fahrzeuge. In der AAO-Liste mit
+  "⛔ nie mit: …" angezeigt.
