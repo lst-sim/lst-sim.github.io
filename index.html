@@ -132,7 +132,7 @@ table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:10px 8px
 </head>
 <body>
 <div style="padding:6px 10px;font-size:11px;color:#94a3b8;font-weight:700;display:flex;align-items:center;gap:10px;position:sticky;top:0;z-index:10;background:var(--bg)">
- <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v4.49</span>
+ <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v4.50</span>
  <span id="syncState"></span>
  <a id="homeLink" href="#" onclick="render('leitstelle');return false" class="hidden" style="color:#64748b;text-decoration:underline;font-weight:600">🖥️ Leitstelle</a>
  <a id="monitorLink" href="#" onclick="showMonitorQR();return false" style="color:#64748b;text-decoration:underline;font-weight:600;margin-left:auto">🖥️ Monitor hinzufügen</a>
@@ -1988,6 +1988,7 @@ const qs=[
  ["callType","☎️ Über welche Nummer ist der Anruf eingegangen?","calltype"],
  ["location","📍 Wo genau ist der Notfallort?","text"],
  ["event","❓ Was ist passiert?","event112"],
+ ["fireKind","🔥 Was ist zu sehen – und was brennt?","fireDetail"],
  ["count","👥 Wie viele Personen/Tiere sind betroffen?","count"],
  ["trapped","🚗 Wie viele Personen sind eingeklemmt oder eingeschlossen?","ynTech"],
  ["firePeople","🔥 Wie viele Personen sind durch Feuer/Rauch lebensgefährlich bedroht?","ynFire"],
@@ -2147,6 +2148,14 @@ function questionHTML(q){
  </div>`;
 
  if(type==="ynFire"&&!fire)return skip("nicht zutreffend");
+ if(type==="fireDetail"){
+   if(!fire)return skip("nicht zutreffend");
+   window._fireSel={kind:"",obj:""};
+   const grp=(key,list)=>`<div class="answer">${list.map(([v,ic])=>`<button data-fg="${key}" data-v="${esc(v)}" onclick="fireDetailPick('${key}',this)">${ic} ${esc(v)}</button>`).join("")}</div>`;
+   return `<label>🔥 Was ist zu sehen?</label>${grp("kind",FIRE_KINDS)}
+    <label style="margin-top:12px">🏠 Was brennt?</label>${grp("obj",FIRE_OBJECTS)}
+    <div class="row" style="margin-top:12px"><button class="primary" onclick="fireDetailSubmit()">✔ Weiter</button><span class="muted" style="font-size:12px">Nicht Gewähltes wird als „k.A.“ übernommen.</span></div>`;
+ }
  if(type==="ynTech"&&!tech)return skip("nicht zutreffend");
  if(id==="water"&&!water)return skip("nein");
  if(type==="waterState"&&e!=="Person im Wasser")return skip("nicht zutreffend");
@@ -2424,6 +2433,22 @@ function chooseNotrufMapResult(i){
  const box=document.getElementById("notrufMapResults");if(box)box.innerHTML="";
 }
 
+const FIRE_KINDS=[["Feuerschein","🌅"],["Offene große Flammen","🔥"],["Brandgeruch","👃"],["Rauchentwicklung","💨"]];
+const FIRE_OBJECTS=[["Einfamilienhaus","🏠"],["Mehrfamilienhaus","🏢"],["Fabrik","🏭"],["Wald/Wiese","🌲"],["Kleinbrand","🗑️"]];
+function fireDetailPick(key,btn){
+ window._fireSel=window._fireSel||{kind:"",obj:""};
+ const v=btn.dataset.v, cur=window._fireSel[key];
+ window._fireSel[key]=cur===v?"":v;
+ document.querySelectorAll(`button[data-fg="${key}"]`).forEach(b=>{const on=b.dataset.v===window._fireSel[key];b.style.background=on?"#e30613":"";b.style.color=on?"#fff":"";b.style.borderColor=on?"#e30613":""});
+}
+async function fireDetailSubmit(){
+ const c=db.currentCall; if(!c)return;
+ const sel=window._fireSel||{};
+ c.answers.fireObject=sel.obj||"k.A.";
+ await answer("fireKind",sel.kind||"k.A.");
+ c.history.push({id:"fireObject",q:"🏠 Was brennt?",a:c.answers.fireObject,auto:true});
+ save(); notruf();
+}
 async function answer(k,v,auto=false){
  const c=db.currentCall;
  c.answers[k]=v;
@@ -2803,6 +2828,7 @@ function buildMeldertext(c, nafoReason=""){
     txt+=`\nXABCDE: X ${a.x_massive}; A ${a.a_airway}; B ${a.b_breath}; C ${a.c_circ}; D ${a.d_disability}; E ${a.e_exposure}`;
   }
   if(c.answers?.psy==="Ja")txt+=`\nPsy-Problem: Ja`;
+  if(c.answers?.fireKind&&c.answers.fireKind!=="nicht zutreffend")txt+=`\nFeuer: ${c.answers.fireKind} · Objekt: ${c.answers.fireObject||"k.A."}`;
   if(String(c.answers?.freeText||"").trim())txt+=`\nNotruf-Freitext: ${c.answers.freeText}`;
   if(c.alarmFreeText)txt+=`\nAlarmierungs-Freitext: ${c.alarmFreeText}`;
   if(mittel) txt+=`\nWeitere Rettungsmittel: ${mittel}`;
@@ -4721,6 +4747,8 @@ const AAO_RULE_FIELDS={
  firePeople:{label:"Anzahl lebensgefährlich bedroht (Feuer)",free:true,placeholder:"z. B. >0, 2, >=3 (oder ja/nein)"},
  personDanger:{label:"Anzahl verletzt/erkrankt/gefährdet",free:true,placeholder:"z. B. >0, 2, >=3 (oder ja/nein)"},
  danger:{label:"Weitere Gefahren",values:["ja","nein","unbekannt"]},
+ fireKind:{label:"Feuer – was ist zu sehen",values:["Feuerschein","Offene große Flammen","Brandgeruch","Rauchentwicklung","k.A."]},
+ fireObject:{label:"Feuer – was brennt",values:["Einfamilienhaus","Mehrfamilienhaus","Fabrik","Wald/Wiese","Kleinbrand","k.A."]},
  psy:{label:"Psy Problem",values:["Ja","Nein"]},
  x_massive:{label:"X – kritische Blutung",values:["Nein","Ja","Unklar"]},
  a_airway:{label:"A – Atemweg",values:["Frei","Gefährdet / verlegt","Unklar"]},

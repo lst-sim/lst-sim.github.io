@@ -978,3 +978,11 @@ Version 4.49:
   ("Mit anderen AAOs: Ja/Mit diesen …"); passen beide, gilt nur die höhere. Gilt auch für die
   immer dazukommenden RD-AAOs aus XABCDE und für optionale Fahrzeuge. In der AAO-Liste mit
   "⛔ nie mit: …" angezeigt.
+
+Version 4.50:
+- Notrufabfrage, Pfad Feuer: neue Seite direkt nach "Was ist passiert?" mit zwei Auswahlen –
+  "Was ist zu sehen?" (Feuerschein, Offene große Flammen, Brandgeruch, Rauchentwicklung) und
+  darunter "Was brennt?" (Einfamilienhaus, Mehrfamilienhaus, Fabrik, Wald/Wiese, Kleinbrand),
+  dann "Weiter" (nicht Gewähltes = k.A.). Steht im Alarmtext und ist als AAO-Bedingung
+  ("Feuer – was ist zu sehen" / "Feuer – was brennt") wählbar. Bei anderen Lagen entfällt die
+  Seite.
