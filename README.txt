@@ -992,3 +992,9 @@ Version 4.51:
   "oder" markierten Bedingungen muss nur EINE passen, alle anderen müssen immer passen. Das
   gleiche Feld kann dafür mehrfach vorkommen (z. B. Feuer + Einfamilienhaus oder
   Mehrfamilienhaus). In der AAO-Liste blau als "entweder … oder …" angezeigt.
+
+Version 4.52:
+- Alle AAOs löschbar, auch die Standard-AAOs (mit Sicherheitsabfrage). Eine gelöschte
+  Standard-AAO alarmiert nichts mehr und kommt bei Updates nicht wieder. Über
+  "↺ Gelöschte Standard-AAOs" (erscheint nur, wenn welche gelöscht sind) lassen sie sich
+  zurückholen.

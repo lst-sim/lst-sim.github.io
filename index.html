@@ -132,7 +132,7 @@ table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:10px 8px
 </head>
 <body>
 <div style="padding:6px 10px;font-size:11px;color:#94a3b8;font-weight:700;display:flex;align-items:center;gap:10px;position:sticky;top:0;z-index:10;background:var(--bg)">
- <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v4.51</span>
+ <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v4.52</span>
  <span id="syncState"></span>
  <a id="homeLink" href="#" onclick="render('leitstelle');return false" class="hidden" style="color:#64748b;text-decoration:underline;font-weight:600">🖥️ Leitstelle</a>
  <a id="monitorLink" href="#" onclick="showMonitorQR();return false" style="color:#64748b;text-decoration:underline;font-weight:600;margin-left:auto">🖥️ Monitor hinzufügen</a>
@@ -4968,7 +4968,12 @@ async function loadSetupFromGitHub(kind,manual=false){
  }catch(e){if(manual)toast("GitHub-Stand konnte nicht geladen werden");return false}
 }
 function isBuiltinAao(id){return LINKED_AAO_IDS.has(String(id))}
-function aaoEntry(id){return (db.aao||[]).find(a=>String(a.id)===String(id))||(defaults.aao||[]).find(a=>String(a.id)===String(id))||null}
+function aaoEntry(id){
+ const own=(db.aao||[]).find(a=>String(a.id)===String(id)); if(own)return own;
+ // Selbst gelöschte (auch Standard-)AAOs alarmieren nichts mehr.
+ if((db.deletedAaoIds||[]).map(String).includes(String(id)))return null;
+ return (defaults.aao||[]).find(a=>String(a.id)===String(id))||null;
+}
 // Standard-AAO mit geänderten Bedingungen: der feste Abfragezweig alarmiert dafür nichts mehr,
 // stattdessen greift sie wie eine eigene AAO über ihre neuen Bedingungen.
 function aaoRulesEdited(id){return !!(db.aao||[]).find(a=>String(a.id)===String(id))?.rulesEdited}
@@ -5043,10 +5048,10 @@ function aaoRulesText(a){
 let aaoDraft=null;
 function aao(){
  if(aaoDraft)return aaoEditor();
- document.getElementById("app").innerHTML=`<div class="card"><div class="row between"><div><h2>🧠 AAO / Einsatzstichworte</h2><p class="muted">Die AAO steuert den Alarmvorschlag. Passen mehrere AAOs, wird nur die höchste alarmiert (die mit den meisten Fahrzeugen; bei Gleichstand die spezifischere). Rettungsdienst aus XABCDE (RD_X…RD_D) kommt immer dazu.</p></div><div class="row" style="gap:6px;flex-wrap:wrap;justify-content:flex-end"><button onclick="cfgPut('aao',true);if(ghToken())saveSetupToGitHub('aao')" title="Änderungen werden automatisch dauerhaft gespeichert – hier von Hand">☁️ Speichern</button><button onclick="cfgSync('aao',true)" title="Dauerhaft gespeicherten Stand laden">📥 Gespeicherten Stand laden</button><button onclick="ghOpenSetup('aao')" title="Optional: zusätzlich in GitHub speichern (Token)">🔑</button><button class="primary" onclick="editAAO(null)">＋ AAO anlegen</button></div></div>
+ document.getElementById("app").innerHTML=`<div class="card"><div class="row between"><div><h2>🧠 AAO / Einsatzstichworte</h2><p class="muted">Die AAO steuert den Alarmvorschlag. Passen mehrere AAOs, wird nur die höchste alarmiert (die mit den meisten Fahrzeugen; bei Gleichstand die spezifischere). Rettungsdienst aus XABCDE (RD_X…RD_D) kommt immer dazu.</p></div><div class="row" style="gap:6px;flex-wrap:wrap;justify-content:flex-end"><button onclick="cfgPut('aao',true);if(ghToken())saveSetupToGitHub('aao')" title="Änderungen werden automatisch dauerhaft gespeichert – hier von Hand">☁️ Speichern</button><button onclick="cfgSync('aao',true)" title="Dauerhaft gespeicherten Stand laden">📥 Gespeicherten Stand laden</button><button onclick="ghOpenSetup('aao')" title="Optional: zusätzlich in GitHub speichern (Token)">🔑</button>${(db.deletedAaoIds||[]).some(id=>(defaults.aao||[]).some(a=>String(a.id)===String(id)))?`<button onclick="restoreDeletedStdAao()" title="Gelöschte Standard-AAOs zurückholen">↺ Gelöschte Standard-AAOs</button>`:""}<button class="primary" onclick="editAAO(null)">＋ AAO anlegen</button></div></div>
  <table><thead><tr><th>Stichwort</th><th>Bedingungen</th><th>Alarmierung</th><th>Mit anderen AAOs</th><th></th></tr></thead><tbody>${db.aao.map(a=>{
    const builtin=isBuiltinAao(a.id);
-   return `<tr style="${a.active===false?"opacity:.5":""}"><td><b>${esc(a.name)}</b>${a.keyword?`<br><small class="muted">${esc(a.keyword)}</small>`:""}${builtin&&!a.rulesEdited?"":`<br><span class="pill">${builtin?"Bedingungen geändert":"eigene"}${a.active===false?" · inaktiv":""}</span>`}</td><td>${aaoRulesText(a)}</td><td>${(a.units||[]).map(x=>`${x.n==="pat"?`${esc(x.type)} je Patient`:`${aaoNText(x)}× ${esc(x.type)}`}${x.org?` <small class="muted">(${esc(x.org)})</small>`:""}${x.opt?` <span class="pill">optional</span>`:""}`).join(", ")||`<span class="muted">keine</span>`}</td><td><small>${aaoCombineText(a)}</small></td><td style="white-space:nowrap"><button onclick="editAAO(${JSON.stringify(a.id)})">✏️ Bearbeiten</button>${builtin?"":` <button onclick="deleteAAO(${JSON.stringify(a.id)})">Löschen</button>`}</td></tr>`;
+   return `<tr style="${a.active===false?"opacity:.5":""}"><td><b>${esc(a.name)}</b>${a.keyword?`<br><small class="muted">${esc(a.keyword)}</small>`:""}${builtin&&!a.rulesEdited?"":`<br><span class="pill">${builtin?"Bedingungen geändert":"eigene"}${a.active===false?" · inaktiv":""}</span>`}</td><td>${aaoRulesText(a)}</td><td>${(a.units||[]).map(x=>`${x.n==="pat"?`${esc(x.type)} je Patient`:`${aaoNText(x)}× ${esc(x.type)}`}${x.org?` <small class="muted">(${esc(x.org)})</small>`:""}${x.opt?` <span class="pill">optional</span>`:""}`).join(", ")||`<span class="muted">keine</span>`}</td><td><small>${aaoCombineText(a)}</small></td><td style="white-space:nowrap"><button onclick="editAAO(${JSON.stringify(a.id)})">✏️ Bearbeiten</button><button onclick="deleteAAO(${JSON.stringify(a.id)})">Löschen</button></td></tr>`;
  }).join("")}</tbody></table></div>`;
 }
 function editAAO(id){
@@ -5164,9 +5169,17 @@ function resetAAO(){
  toast("AAO zurückgesetzt"); ghAutoSave("aao");
  render("aao");
 }
+function restoreDeletedStdAao(){
+ const ids=(db.deletedAaoIds||[]).filter(id=>(defaults.aao||[]).some(a=>String(a.id)===String(id)));
+ if(!ids.length)return;
+ if(!confirm(`${ids.length} gelöschte Standard-AAO(s) wiederherstellen?`))return;
+ db.deletedAaoIds=(db.deletedAaoIds||[]).filter(id=>!ids.includes(id));
+ for(const id of ids){const d=(defaults.aao||[]).find(a=>String(a.id)===String(id));if(d&&!db.aao.some(a=>String(a.id)===String(id)))db.aao.push(JSON.parse(JSON.stringify(d)))}
+ save(); toast("Standard-AAOs wiederhergestellt"); render("aao"); ghAutoSave("aao");
+}
 function deleteAAO(id){
- if(isBuiltinAao(id)){toast("Standard-AAOs können nur bearbeitet oder zurückgesetzt werden");return}
- if(confirm("AAO wirklich löschen?")){db.aao=db.aao.filter(x=>String(x.id)!==String(id));db.deletedAaoIds=db.deletedAaoIds||[];if(!db.deletedAaoIds.includes(String(id)))db.deletedAaoIds.push(String(id));save();render("aao");ghAutoSave("aao")}
+ const e=aaoEntry(id);
+ if(confirm(isBuiltinAao(id)?`Standard-AAO „${e?.name||id}“ wirklich löschen?\n\nSie alarmiert danach nichts mehr. Über „↺ Gelöschte Standard-AAOs“ kann sie wiederhergestellt werden.`:"AAO wirklich löschen?")){db.aao=db.aao.filter(x=>String(x.id)!==String(id));db.deletedAaoIds=db.deletedAaoIds||[];if(!db.deletedAaoIds.includes(String(id)))db.deletedAaoIds.push(String(id));save();render("aao");ghAutoSave("aao")}
 }
 
 
