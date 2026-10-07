@@ -1016,3 +1016,8 @@ Version 4.54:
   mehr im Stichwort.
 - Im Alarmierungsfenster und in der Live-Bewertung steht jetzt, welche AAO alarmiert wird,
   welche zusätzlich und welche "⛔ ausgeschlossen" wurden.
+
+Version 4.55:
+- MANV-Stichwort nennt die Lage (z. B. F_2_Y) nur noch, wenn deren AAO auch wirklich alarmiert
+  wird. Vorher stand z. B. "F_2_Y" im Stichwort, obwohl die AAO "Feuer mit
+  Personengefährdung" gar nicht gegriffen hat (ihre Bedingungen passten nicht).

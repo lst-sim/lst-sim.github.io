@@ -132,7 +132,7 @@ table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:10px 8px
 </head>
 <body>
 <div style="padding:6px 10px;font-size:11px;color:#94a3b8;font-weight:700;display:flex;align-items:center;gap:10px;position:sticky;top:0;z-index:10;background:var(--bg)">
- <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v4.54</span>
+ <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v4.55</span>
  <span id="syncState"></span>
  <a id="homeLink" href="#" onclick="render('leitstelle');return false" class="hidden" style="color:#64748b;text-decoration:underline;font-weight:600">🖥️ Leitstelle</a>
  <a id="monitorLink" href="#" onclick="showMonitorQR();return false" style="color:#64748b;text-decoration:underline;font-weight:600;margin-left:auto">🖥️ Monitor hinzufügen</a>
@@ -2740,10 +2740,11 @@ function evaluate(){
        c.aaoCombined.push((aaoEntry(k)?.name)||k);
      }
      if(active.includes(firstKwId)&&firstKwId!==win){const n=(aaoEntry(firstKwId)?.name)||firstKwId;if(!c.aaoCombined.includes(n))c.aaoCombined.unshift(n)}
-     // MANV-Stichwort ohne die Lage-AAO, wenn diese durch eine aktive AAO ausgeschlossen ist
-     if(win==="9"&&firstKwId&&!active.includes(firstKwId)&&active.some(o=>aaoExcluded(o,firstKwId))){
+     // MANV-Stichwort: die Lage (z. B. F_2_Y) nur nennen, wenn deren AAO auch wirklich alarmiert wird
+     // (nicht, wenn sie ausgeschlossen ist, nicht passt oder keine Fahrzeuge bringt).
+     if(win==="9"&&firstKwId&&!active.includes(firstKwId)){
        const old=kwMap[9]; if(old&&keyword.startsWith(old))keyword=`MANV – ${cnt} Verletzte`+keyword.slice(old.length);
-       noteExcl(firstKwId);
+       if(active.some(o=>aaoExcluded(o,firstKwId)))noteExcl(firstKwId);
      }
      c.aaoWinner=(aaoEntry(win)?.name)||null; winAao=win;
      c.aaoExcluded=excludedNames;
