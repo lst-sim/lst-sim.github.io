@@ -140,7 +140,7 @@ table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:10px 8px
 </head>
 <body>
 <div style="padding:6px 10px;font-size:11px;color:#94a3b8;font-weight:700;display:flex;align-items:center;gap:10px;position:sticky;top:0;z-index:10;background:var(--bg)">
- <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v4.56</span>
+ <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v4.57</span>
  <span id="syncState"></span>
  <a id="homeLink" href="#" onclick="render('leitstelle');return false" class="hidden" style="color:#64748b;text-decoration:underline;font-weight:600">🖥️ Leitstelle</a>
  <a id="monitorLink" href="#" onclick="showMonitorQR();return false" style="color:#64748b;text-decoration:underline;font-weight:600;margin-left:auto">🖥️ Monitor hinzufügen</a>
@@ -1478,11 +1478,22 @@ function activateCallById(id){
 function unitLabel(u){
  return `${u.opta||u.name} – ${u.type}${u.location?` (${u.location})`:""}`;
 }
-function chooseAvailableByType(type){
+// THW-Fachgruppen (aus den Fahrzeugangaben abgeleitet; je Fahrzeug im Editor änderbar)
+const THW_GROUP_DEFAULT={
+ "Heros Jever 21/10":"Zugtrupp (ZTr)",
+ "Heros Jever 22/51":"Bergungsgruppe (B)",
+ "Heros Jever 24/54":"Fachgruppe Notversorgung und Notinstandsetzung (N)",
+ "Heros Jever 32/43":"Fachgruppe Elektroversorgung (E)",
+ "Heros Jever 32/NEA":"Fachgruppe Elektroversorgung (E)",
+ "Heros Jever 86/25":"Ortsverband (OV)"
+};
+function thwGroup(u){return String(u.fachgruppe||THW_GROUP_DEFAULT[u.opta]||"Ohne Fachgruppe").trim()}
+function chooseAvailableByType(type,org=null){
  const types=Array.isArray(type)?type:[type];
- const primary=nearestFirst(db.units.filter(u=>!u.neighborLoan&&types.includes(u.type) && ["1","2"].includes(String(u.status))));
+ const orgOk=u=>!org||u.org===org;
+ const primary=nearestFirst(db.units.filter(u=>!u.neighborLoan&&orgOk(u)&&types.includes(u.type) && ["1","2"].includes(String(u.status))));
  if(primary.length)return primary[0];
- const fallback=nearestFirst(db.units.filter(u=>!u.neighborLoan&&types.includes(u.type) && String(u.status)==="8"));
+ const fallback=nearestFirst(db.units.filter(u=>!u.neighborLoan&&orgOk(u)&&types.includes(u.type) && String(u.status)==="8"));
  return fallback[0]||null;
 }
 // Wasserrettungszug Friesland: Das Führungsfahrzeug (Pelikan Friesland 71/11-01, ELW1) wird
@@ -1634,6 +1645,35 @@ function openNachforderung(id){
  if(!c.alarmTime){toast("Nachforderung erst nach der Erstalarmierung");return}
  showResourcePicker("nafo");
 }
+// Rettungsmittel nach Kategorie (Organisation) wie in der Fahrzeugliste; THW zusätzlich nach Fachgruppe.
+let pickerCat="quick";
+function setPickerCat(cat,mode){pickerCat=cat;showResourcePicker(mode)}
+function resourcePickerCatsHTML(mode){
+ const orgs=[...new Set([...UNIT_CATEGORIES,...(db.units||[]).map(u=>u.org).filter(Boolean)])].filter(o=>(db.units||[]).some(u=>u.org===o&&!u.neighborLoan));
+ if(pickerCat!=="quick"&&!orgs.includes(pickerCat))pickerCat="quick";
+ const icon=o=>(typeof ORG_ICON!=="undefined"&&ORG_ICON[o])||"🚗";
+ const tabs=`<div class="row" style="flex-wrap:wrap;gap:6px;margin:6px 0 10px">${[["quick","⭐ Häufig"],...orgs.map(o=>[o,`${icon(o)} ${o}`])].map(([k,t])=>`<button class="${pickerCat===k?"primary":""}" onclick="setPickerCat(${esc(JSON.stringify(k))},'${mode}')">${esc(t)}</button>`).join("")}</div>`;
+ const dist=u=>u&&geographicRank(u)<999?`${geographicRank(u).toFixed(1)} km`:"verfügbar";
+ const btn=(t,label,org)=>{const u=chooseAvailableByType(t,org);const typeArg=JSON.stringify(t).replace(/"/g,"'");
+   return `<button ${u?"":"disabled"} onclick="addResourceType(${typeArg},'${mode}'${org?`,${esc(JSON.stringify(org))}`:""})">${esc(label||(Array.isArray(t)?t.join("/"):t))}<small style="display:block">${u?`${esc(u.opta||u.name)} · ${dist(u)}`:"nicht verfügbar"}</small></button>`};
+ if(pickerCat==="quick")return tabs+`<div class="answer">${QUICK_RESOURCE_TYPES.map(({type:t,label})=>btn(t,label,null)).join("")}</div>`;
+ if(pickerCat==="THW"){
+   const c=db.currentCall; const assigned=new Set([...(c?.alarmedUnits||[]),...(c?.proposedUnitIds||[])].map(String));
+   const thw=db.units.filter(u=>u.org==="THW"&&!u.neighborLoan);
+   const groups=[...new Set(thw.map(thwGroup))];
+   return tabs+groups.map(g=>{
+     const us=thw.filter(u=>thwGroup(u)===g);
+     const free=us.filter(u=>["1","2","8"].includes(String(u.status))&&!assigned.has(String(u.id)));
+     return `<div style="border:1px solid var(--line);border-radius:10px;padding:8px 10px;margin-bottom:8px">
+       <div class="row between" style="flex-wrap:wrap"><b>🛠️ ${esc(g)}</b><button class="primary" ${free.length?"":"disabled"} onclick="addThwGroup(${esc(JSON.stringify(g))},'${mode}')">Ganze Fachgruppe (${free.length})</button></div>
+       <div class="answer" style="margin-top:6px">${us.map(u=>{const ok=["1","2","8"].includes(String(u.status))&&!assigned.has(String(u.id));return `<button ${ok?"":"disabled"} onclick="addResourceUnitId('${u.id}','${mode}')">${esc(u.type)}<small style="display:block">${esc(u.opta||u.name)} · ${ok?dist(u):assigned.has(String(u.id))?"bereits im Einsatz":"Status "+esc(u.status)}</small></button>`}).join("")}</div>
+     </div>`;
+   }).join("");
+ }
+ const types=[...new Set(db.units.filter(u=>u.org===pickerCat&&!u.neighborLoan).map(u=>u.type).filter(Boolean))];
+ const ordered=pickerCat==="Rettungsdienst"?ktLast(types.map(t=>({type:t}))).map(x=>x.type):types.sort((a,b)=>a.localeCompare(b,"de"));
+ return tabs+`<div class="answer">${ordered.map(t=>btn(t,t,pickerCat)).join("")}</div>`;
+}
 function showResourcePicker(mode="additional"){
  const c=db.currentCall;
  if(!c){toast("Kein Einsatz ausgewählt");return}
@@ -1652,15 +1692,7 @@ function showResourcePicker(mode="additional"){
   ${assignedUnits.length?assignedUnits.map(u=>`<div class="row between" style="padding:8px 0;border-bottom:1px solid var(--line)"><span>${vehicleLabelBlock(u)}</span><button onclick="removeCallUnit('${esc(String(u.id))}')">🗑️ Entfernen</button></div>`).join(""):`<p class="muted">Noch keine Mittel zugeordnet.</p>`}
   <hr>`:""}
   <label style="margin-top:12px">${isNafo?"Rettungsmittel nachfordern":"Rettungsmittel hinzufügen"}</label>
-  <div class="answer">
-   ${QUICK_RESOURCE_TYPES.map(({type:t,label})=>{
-     const u=chooseAvailableByType(t);
-     const distance=u&&geographicRank(u)<999?`${geographicRank(u).toFixed(1)} km`:"verfügbar";
-     const typeArg=JSON.stringify(t).replace(/"/g,"'");
-     const displayLabel=label||(Array.isArray(t)?t.join("/"):t);
-     return `<button ${u?"":"disabled"} onclick="addResourceType(${typeArg},'${mode}')">${esc(displayLabel)}<small style="display:block">${u?`${esc(u.opta||u.name)} · ${distance}`:"nicht verfügbar"}</small></button>`;
-   }).join("")}
-  </div>
+  ${resourcePickerCatsHTML(mode)}
   ${isNafo?`<hr><label>Aktuell dem Einsatz zugeordnet</label><div class="suggest">${esc(c.suggestion||"Noch keine Mittel.")}</div>`:""}
   <p class="muted">${isNafo?"Das gewählte Mittel wird sofort als Nachforderung alarmiert und auf Status 3 gesetzt.":"Bei bereits alarmiertem Einsatz wird ein neu hinzugefügtes Mittel sofort dem Einsatz zugeordnet und auf Status 3 gesetzt. Ein entferntes Mittel wird sofort wieder freigegeben (Status 1). Vor der Erstalarmierung wirkt sich beides nur auf den Alarmvorschlag aus."}</p>
  </div>`;
@@ -1690,13 +1722,29 @@ function removeCallUnit(unitId){
  toast(`${u.opta||u.name} entfernt`);
  showResourcePicker("additional");
 }
-function addResourceType(type,mode="additional"){
+function addResourceType(type,mode="additional",org=null){
  const c=db.currentCall;
  if(!c)return;
- const u=chooseAvailableByType(type);
+ const u=chooseAvailableByType(type,org);
  const typeLabel=Array.isArray(type)?type.join("/"):type;
  if(!u){toast(`${typeLabel} nicht verfügbar`);showResourcePicker(mode);return}
-
+ addResourceUnits([u],mode);
+}
+function addResourceUnitId(id,mode="additional"){
+ const u=db.units.find(x=>String(x.id)===String(id));
+ if(!u||!["1","2","8"].includes(String(u.status))){toast("Fahrzeug nicht verfügbar");showResourcePicker(mode);return}
+ addResourceUnits([u],mode);
+}
+function addThwGroup(group,mode="additional"){
+ const c=db.currentCall; if(!c)return;
+ const assigned=new Set([...(c.alarmedUnits||[]),...(c.proposedUnitIds||[])].map(String));
+ const list=db.units.filter(u=>u.org==="THW"&&thwGroup(u)===group&&["1","2","8"].includes(String(u.status))&&!assigned.has(String(u.id)));
+ if(!list.length){toast(`${group}: kein freies Fahrzeug`);showResourcePicker(mode);return}
+ addResourceUnits(list,mode,`THW ${group}`);
+}
+function addResourceUnits(list,mode="additional",groupLabel=""){
+ const c=db.currentCall;
+ if(!c||!list.length)return;
  const isNafo=mode==="nafo";
  let reason="";
  if(isNafo){
@@ -1704,36 +1752,35 @@ function addResourceType(type,mode="additional"){
    if(!reason){toast("Bitte zuerst einen Nachforderungsgrund eintragen");return}
    c.pendingNafoReason=reason;
  }
-
- appendUnitToCall(c,u,isNafo?"Nachforderung":"zusätzlich");
-
- if(c.alarmTime || isNafo){
-   if(!u.phoneAssigned)setUnitStatus(u,"3");
-   c.alarmedUnits=c.alarmedUnits||[];
-   if(!c.alarmedUnits.some(id=>String(id)===String(u.id)))c.alarmedUnits.push(u.id);
+ for(const u of list){
+   appendUnitToCall(c,u,isNafo?"Nachforderung":"zusätzlich");
+   if(c.alarmTime || isNafo){
+     if(!u.phoneAssigned)setUnitStatus(u,"3");
+     c.alarmedUnits=c.alarmedUnits||[];
+     if(!c.alarmedUnits.some(id=>String(id)===String(u.id)))c.alarmedUnits.push(u.id);
+   }
  }
-
+ const labels=list.map(unitLabel).join(", ");
  const now=new Date();
  if(isNafo){
-   const text=buildMeldertext(c,reason)+`\nNachgefordertes Rettungsmittel: ${unitLabel(u)}`;
+   const text=buildMeldertext(c,reason)+`\nNachgefordert${groupLabel?` (${groupLabel})`:""}: ${labels}`;
    c.nafo=c.nafo||[];
-   c.nafo.push({time:now.toISOString(),reason,unitId:u.id,type:u.type,text});
-   c.history.push({q:"📟 Nachforderung",a:`${unitLabel(u)} | ${reason}`});
+   for(const u of list)c.nafo.push({time:now.toISOString(),reason,unitId:u.id,type:u.type,text});
+   c.history.push({q:"📟 Nachforderung",a:`${groupLabel?groupLabel+": ":""}${labels} | ${reason}`});
    delete c.pendingNafoReason;
    save();
    if(db.cloud?.enabled)setTimeout(()=>pushCallCloud(c),0);
-   toast(`${u.opta||u.name} nachgefordert`);
+   toast(`${groupLabel||list[0].opta||list[0].name} nachgefordert`);
    showNafo(text);
    return;
  }
-
  c.history.push({
    q:c.alarmTime?"➕ Zusätzliches Rettungsmittel alarmiert":"➕ Zum Alarmvorschlag ergänzt",
-   a:unitLabel(u)
+   a:`${groupLabel?groupLabel+": ":""}${labels}`
  });
  save();
  if(db.cloud?.enabled)setTimeout(()=>pushCallCloud(c),0);
- toast(c.alarmTime?`${u.opta||u.name} zusätzlich alarmiert`:`${u.opta||u.name} zum Vorschlag ergänzt`);
+ toast(c.alarmTime?`${groupLabel||list[0].opta||list[0].name} zusätzlich alarmiert`:`${groupLabel||list[0].opta||list[0].name} zum Vorschlag ergänzt`);
  showResourcePicker("additional");
 }
 
@@ -3060,7 +3107,7 @@ function unitDutyToggleDay(i,on){const d=unitDraft.duty;d.days=d.days.filter(x=>
 function editUnit(id){
  const u=db.units.find(x=>String(x.id)===String(id)); if(!u)return;
  const du=unitDuty(u);
- unitDraft={id:u.id,org:u.org||"",type:u.type||"",name:u.name||"",opta:u.opta||"",location:u.location||"",crew:String(u.crew??""),skills:u.skills||"",
+ unitDraft={id:u.id,org:u.org||"",type:u.type||"",name:u.name||"",opta:u.opta||"",location:u.location||"",crew:String(u.crew??""),skills:u.skills||"",fachgruppe:u.org==="THW"?thwGroup(u).replace(/^Ohne Fachgruppe$/,""):"",
    dutyOn:!!du,duty:du?{from:du.from||"07:00",to:du.to||"19:00",days:Array.isArray(du.days)&&du.days.length?[...du.days]:[0,1,2,3,4,5,6],dateFrom:du.dateFrom||"",dateTo:du.dateTo||""}:{from:"07:00",to:"19:00",days:[0,1,2,3,4,5,6],dateFrom:"",dateTo:""}};
  render("mittel");
 }
@@ -3086,6 +3133,7 @@ function unitEditorHTML(){
    <div><label>Besatzung</label><input type="number" min="0" value="${esc(d.crew)}" oninput="unitDraft.crew=this.value"></div>
   </div>
   <label>Fähigkeiten / Hinweise (optional)</label><input value="${esc(d.skills)}" oninput="unitDraft.skills=this.value">
+  ${d.org==="THW"?`<label>THW-Fachgruppe (für „Nachfordern nach Fachgruppe“)</label><input list="thwGroupList" value="${esc(d.fachgruppe||"")}" placeholder="z. B. Bergungsgruppe (B)" oninput="unitDraft.fachgruppe=this.value"><datalist id="thwGroupList">${[...new Set([...Object.values(THW_GROUP_DEFAULT),...db.units.filter(u=>u.org==="THW").map(thwGroup)])].filter(g=>g!=="Ohne Fachgruppe").map(g=>`<option value="${esc(g)}">`).join("")}</datalist>`:""}
   <label style="margin-top:12px">🕒 Dienstzeiten</label>
   <div class="row"><button class="${d.dutyOn?"":"primary"}" onclick="unitDraft.dutyOn=false;render('mittel')">Immer im Dienst</button><button class="${d.dutyOn?"primary":""}" onclick="unitDraft.dutyOn=true;render('mittel')">Nur zu bestimmten Zeiten</button></div>
   ${d.dutyOn?`<div class="formgrid" style="margin-top:6px">
@@ -3115,6 +3163,7 @@ function saveUnitDraft(){
  }
  const duty=d.dutyOn?{from:d.duty.from,to:d.duty.to,days:[...d.duty.days],...(d.duty.dateFrom&&d.duty.dateTo?{dateFrom:d.duty.dateFrom,dateTo:d.duty.dateTo}:{})}:{none:true};
  const fields={org:d.org,type,name,opta:String(d.opta||"").trim()||name,location:String(d.location||"").trim(),crew:String(d.crew||"").trim(),skills:String(d.skills||"").trim(),duty};
+ if(d.org==="THW")fields.fachgruppe=String(d.fachgruppe||"").trim();
  if(d.id!=null){
    const u=db.units.find(x=>String(x.id)===String(d.id));
    if(u){

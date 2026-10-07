@@ -1029,3 +1029,12 @@ Version 4.56:
 - MANV-Sammelzuweisung je Fahrzeug: "S+ Schockraum", "N+ NEF / arztbegleitet" (optional mit
   begleitendem NEF in Status 4, das ebenfalls auf 7 geht) und ein eigenes Info-Feld. Ein NEF
   kann nur bei einem Patienten mitfahren.
+
+Version 4.57:
+- "Rettungsmittel bearbeiten" und "Nachforderung": Auswahl nach Kategorie wie bei den
+  Fahrzeugen (⭐ Häufig, DLRG, DRK, Rettungsdienst, Feuerwehr, THW, Luftrettung, DGzRS …). Je
+  Kategorie alle Fahrzeugtypen dieser Organisation mit dem nächsten freien Fahrzeug.
+- THW nach Fachgruppe: Zugtrupp, Bergungsgruppe, FGr Notversorgung/Notinstandsetzung,
+  FGr Elektroversorgung, OV – mit "Ganze Fachgruppe" (alle freien Fahrzeuge der Gruppe auf
+  einmal) oder einzelnen Fahrzeugen. Die Zuordnung ist aus den Fahrzeugangaben abgeleitet und
+  im Fahrzeug-Editor (Feld "THW-Fachgruppe") änderbar.
