@@ -132,7 +132,7 @@ table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:10px 8px
 </head>
 <body>
 <div style="padding:6px 10px;font-size:11px;color:#94a3b8;font-weight:700;display:flex;align-items:center;gap:10px;position:sticky;top:0;z-index:10;background:var(--bg)">
- <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v4.50</span>
+ <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v4.51</span>
  <span id="syncState"></span>
  <a id="homeLink" href="#" onclick="render('leitstelle');return false" class="hidden" style="color:#64748b;text-decoration:underline;font-weight:600">🖥️ Leitstelle</a>
  <a id="monitorLink" href="#" onclick="showMonitorQR();return false" style="color:#64748b;text-decoration:underline;font-weight:600;margin-left:auto">🖥️ Monitor hinzufügen</a>
@@ -5024,13 +5024,21 @@ function aaoRuleMatches(val,rule,key){
 }
 function customAaoMatches(c){
  const a={...(c?.answers||{}),count:c?.answers?.count??c?.count,locationIsWater:c?.locationIsWater?"ja":"nein"};
- return (db.aao||[]).filter(x=>(!isBuiltinAao(x.id)||x.rulesEdited)&&x.active!==false&&x.rules&&Object.keys(x.rules).length
-   &&Object.entries(x.rules).every(([k,v])=>aaoRuleMatches(a[k],v,k)));
+ // UND-Bedingungen (rules) müssen alle passen; von den Entweder-oder-Bedingungen (orRules) mindestens eine.
+ return (db.aao||[]).filter(x=>{
+   if((isBuiltinAao(x.id)&&!x.rulesEdited)||x.active===false)return false;
+   const and=Object.entries(x.rules||{}), or=Array.isArray(x.orRules)?x.orRules.filter(r=>r&&r.k):[];
+   if(!and.length&&!or.length)return false;
+   return and.every(([k,v])=>aaoRuleMatches(a[k],v,k))&&(!or.length||or.some(r=>aaoRuleMatches(a[r.k],r.v,r.k)));
+ });
 }
 function aaoRulesText(a){
- const r=Object.entries(a.rules||{});
- if(!r.length)return `<span class="muted">—</span>`;
- return r.map(([k,v])=>`${esc(AAO_RULE_FIELDS[k]?.label||k)} = ${esc(v)}`).join(" · ");
+ const r=Object.entries(a.rules||{}), or=Array.isArray(a.orRules)?a.orRules.filter(x=>x&&x.k):[];
+ if(!r.length&&!or.length)return `<span class="muted">—</span>`;
+ const t=(k,v)=>`${esc(AAO_RULE_FIELDS[k]?.label||k)} = ${esc(v)}`;
+ const andTxt=r.map(([k,v])=>t(k,v)).join(" · ");
+ const orTxt=or.length?`<span style="color:#1d4ed8">entweder ${or.map(x=>t(x.k,x.v)).join(" <b>oder</b> ")}</span>`:"";
+ return [andTxt,orTxt].filter(Boolean).join(" · ");
 }
 let aaoDraft=null;
 function aao(){
@@ -5045,7 +5053,7 @@ function editAAO(id){
  const src=id==null?null:db.aao.find(x=>String(x.id)===String(id));
  aaoDraft=src?JSON.parse(JSON.stringify(src)):{id:null,name:"",keyword:"",rules:{event:"Medizinischer Notfall"},units:[{type:"RTW",n:1,org:"Rettungsdienst"}],active:true};
  aaoDraft.units=(aaoDraft.units||[]).map(x=>({type:x.type||"",n:x.n==="pat"?"pat":(Number(x.n)||1),org:x.org||"",opt:!!x.opt}));
- aaoDraft._rules=Object.entries(aaoDraft.rules||{}).map(([k,v])=>({k,v:String(v)}));
+ aaoDraft._rules=[...Object.entries(aaoDraft.rules||{}).map(([k,v])=>({k,v:String(v)})),...(Array.isArray(aaoDraft.orRules)?aaoDraft.orRules:[]).filter(r=>r&&r.k).map(r=>({k:r.k,v:String(r.v),or:true}))];
  aaoDraft.combine=aaoDraft.combine||"nein"; aaoDraft.combineWith=(aaoDraft.combineWith||[]).map(String); aaoDraft.excludeWith=(aaoDraft.excludeWith||[]).map(String);
  render("aao");
 }
@@ -5058,7 +5066,7 @@ function aaoEditor(){
    const valInput=!f||f.free
      ?`<input value="${esc(r.v)}" placeholder="${esc(f?.placeholder||"Wert")}" oninput="aaoDraft._rules[${i}].v=this.value">`
      :`<select onchange="aaoDraft._rules[${i}].v=this.value">${f.values.map(v=>`<option ${v===r.v?"selected":""}>${esc(v)}</option>`).join("")}${f.values.includes(r.v)?"":`<option selected>${esc(r.v)}</option>`}</select>`;
-   return `<div class="row" style="flex-wrap:nowrap;margin-bottom:6px"><select style="flex:1" onchange="aaoSetRuleKey(${i},this.value)">${Object.entries(AAO_RULE_FIELDS).map(([k,x])=>`<option value="${k}" ${k===r.k?"selected":""}>${esc(x.label)}</option>`).join("")}${AAO_RULE_FIELDS[r.k]?"":`<option selected value="${esc(r.k)}">${esc(r.k)}</option>`}</select><div style="flex:1">${valInput}</div><button title="Bedingung entfernen" onclick="aaoDraft._rules.splice(${i},1);render('aao')">✕</button></div>`;
+   return `<div class="row" style="flex-wrap:nowrap;margin-bottom:6px"><select style="flex:1" onchange="aaoSetRuleKey(${i},this.value)">${Object.entries(AAO_RULE_FIELDS).map(([k,x])=>`<option value="${k}" ${k===r.k?"selected":""}>${esc(x.label)}</option>`).join("")}${AAO_RULE_FIELDS[r.k]?"":`<option selected value="${esc(r.k)}">${esc(r.k)}</option>`}</select><div style="flex:1">${valInput}</div><label title="Entweder-oder: von allen so markierten Bedingungen reicht EINE" style="display:flex;gap:4px;align-items:center;font-weight:500;white-space:nowrap;margin:0;${r.or?"color:#1d4ed8":""}"><input type="checkbox" style="width:auto" ${r.or?"checked":""} onchange="aaoDraft._rules[${i}].or=this.checked;render('aao')"> oder</label><button title="Bedingung entfernen" onclick="aaoDraft._rules.splice(${i},1);render('aao')">✕</button></div>`;
  };
  const unitRow=(u,i)=>`<div class="row" style="flex-wrap:nowrap;margin-bottom:6px">
    <select style="width:78px;flex:0 0 78px" onchange="aaoDraft.units[${i}].n=this.value==='pat'?'pat':(Number(this.value)||1)" title="Anzahl – „Pat.“ = so viele wie Patienten">${[...new Set([1,2,3,4,5,6,7,8,9,10,Number(u.n)||1])].sort((p,q)=>p-q).map(k=>`<option value="${k}" ${u.n!=="pat"&&Number(u.n)===k?"selected":""}>${k}</option>`).join("")}<option value="pat" ${u.n==="pat"?"selected":""}>Pat.</option></select>
@@ -5073,7 +5081,7 @@ function aaoEditor(){
   <label>Bedingungen</label>
   ${builtin?`<div class="suggest-compact">${aaoRulesText(d)}<br><span class="muted">Fest mit der Notrufabfrage verknüpft.</span></div>
      <button style="margin-top:6px" onclick="aaoDraft.rulesEdited=true;aaoDraft.active=aaoDraft.active!==false;render('aao')">✏️ Bedingungen ändern</button>`
-   :`${d._rules.map(ruleRow).join("")}<button onclick="aaoDraft._rules.push({k:'event',v:'Medizinischer Notfall'});render('aao')">＋ Bedingung</button>
+   :`${d._rules.map(ruleRow).join("")}${d._rules.some(r=>r.or)?`<p style="font-size:12px;margin:2px 0 6px;color:#1d4ed8">Mit „oder“ markiert: davon muss nur <b>eine</b> passen. Alle anderen Bedingungen müssen <b>immer</b> passen.</p>`:`<p class="muted" style="font-size:12px;margin:2px 0 6px">Alle Bedingungen müssen passen. Für „entweder – oder“ bei den betreffenden Bedingungen den Haken „oder“ setzen (gleiches Feld mehrfach geht auch, z. B. Einfamilienhaus oder Mehrfamilienhaus).</p>`}<button onclick="aaoDraft._rules.push({k:'event',v:'Medizinischer Notfall'});render('aao')">＋ Bedingung</button>
      <label style="display:flex;gap:8px;align-items:center;margin-top:10px"><input type="checkbox" style="width:auto" ${d.active!==false?"checked":""} onchange="aaoDraft.active=this.checked"> Aktiv (wird bei der Disposition berücksichtigt)</label>`}
   <label>Mit anderen AAOs benutzen</label>
   <div class="row">${[["nein","Nein"],["ja","Ja"],["mit","Mit diesen …"]].map(([v,t])=>`<button class="${d.combine===v?"primary":""}" onclick="aaoDraft.combine='${v}';render('aao')">${t}</button>`).join("")}</div>
@@ -5113,7 +5121,7 @@ function aaoToggleWith(id,on){
 }
 function aaoSetRuleKey(i,k){
  const f=AAO_RULE_FIELDS[k];
- aaoDraft._rules[i]={k,v:f&&!f.free?f.values[0]:""};
+ aaoDraft._rules[i]={k,v:f&&!f.free?f.values[0]:"",or:!!aaoDraft._rules[i]?.or};
  render("aao");
 }
 function saveAAO(){
@@ -5122,13 +5130,15 @@ function saveAAO(){
  if(!name){toast("Bitte einen Namen eingeben");return}
  const units=d.units.map(u=>({type:String(u.type||"").trim(),n:u.n==="pat"?"pat":Math.max(1,Number(u.n)||1),...(u.org?{org:u.org}:{}),...(u.opt?{opt:true}:{})})).filter(u=>u.type);
  const builtin=d.id!=null&&isBuiltinAao(d.id)&&!d.rulesEdited;
- let rules=d.rules||{};
+ let rules=d.rules||{}, orRules=Array.isArray(d.orRules)?d.orRules:[];
  if(!builtin){
-   rules={};
-   for(const r of d._rules){const v=String(r.v||"").trim();if(r.k&&v)rules[r.k]=v}
-   if(!Object.keys(rules).length){toast("Mindestens eine Bedingung angeben");return}
+   rules={}; orRules=[];
+   for(const r of d._rules){const v=String(r.v||"").trim();if(!r.k||!v)continue;if(r.or)orRules.push({k:r.k,v});else rules[r.k]=v}
+   if(!Object.keys(rules).length&&!orRules.length){toast("Mindestens eine Bedingung angeben");return}
+   if(orRules.length===1){toast("Für „entweder – oder“ bitte mindestens zwei Bedingungen mit „oder“ markieren");return}
  }
  const entry={id:d.id??Date.now(),name,rules,units};
+ if(orRules.length)entry.orRules=orRules;
  if(String(d.keyword||"").trim())entry.keyword=String(d.keyword).trim();
  if(!builtin)entry.active=d.active!==false;
  if(d.rulesEdited)entry.rulesEdited=true;

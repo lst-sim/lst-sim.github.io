@@ -986,3 +986,9 @@ Version 4.50:
   dann "Weiter" (nicht Gewähltes = k.A.). Steht im Alarmtext und ist als AAO-Bedingung
   ("Feuer – was ist zu sehen" / "Feuer – was brennt") wählbar. Bei anderen Lagen entfällt die
   Seite.
+
+Version 4.51:
+- AAO-Bedingungen "entweder – oder": Neben jeder Bedingung ein Haken "oder". Von allen mit
+  "oder" markierten Bedingungen muss nur EINE passen, alle anderen müssen immer passen. Das
+  gleiche Feld kann dafür mehrfach vorkommen (z. B. Feuer + Einfamilienhaus oder
+  Mehrfamilienhaus). In der AAO-Liste blau als "entweder … oder …" angezeigt.
