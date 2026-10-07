@@ -140,7 +140,7 @@ table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:10px 8px
 </head>
 <body>
 <div style="padding:6px 10px;font-size:11px;color:#94a3b8;font-weight:700;display:flex;align-items:center;gap:10px;position:sticky;top:0;z-index:10;background:var(--bg)">
- <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v4.58</span>
+ <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v4.59</span>
  <span id="syncState"></span>
  <a id="homeLink" href="#" onclick="render('leitstelle');return false" class="hidden" style="color:#64748b;text-decoration:underline;font-weight:600">🖥️ Leitstelle</a>
  <a id="monitorLink" href="#" onclick="showMonitorQR();return false" style="color:#64748b;text-decoration:underline;font-weight:600;margin-left:auto">🖥️ Monitor hinzufügen</a>
@@ -1433,10 +1433,13 @@ function incidentOnWangerooge(){
  if(p)return p[0]>53.76&&p[0]<53.81&&p[1]>7.84&&p[1]<7.99;
  return false;
 }
+// Insel Wangerooge: Fahrzeuge der Insel kommen nicht aufs Festland und umgekehrt. Nur
+// Hubschrauber fliegen rüber. Ausnahme: Liegt der Einsatzort auf dem Wasser, dürfen Boote hin.
+function unitOnIsland(u){return u.island==="Wangerooge"||u.location==="Wangerooge"}
 function islandReachable(u){
- if(u.org==="Luftrettung"||u.org==="DGzRS")return true;
- if(u.org==="DLRG"&&!u.island)return true;
- return incidentOnWangerooge()===(u.island==="Wangerooge");
+ if(u.org==="Luftrettung")return true;
+ if(db.currentCall?.locationIsWater&&waterCapable(u))return true;
+ return incidentOnWangerooge()===unitOnIsland(u);
 }
 function availableUnits(type,org=null){
  const orgOk=u=>!org||u.org===org||(org==="DLRG"&&u.wasserrettung);
@@ -1504,9 +1507,9 @@ function thwGroup(u){return String(u.fachgruppe||THW_GROUP_DEFAULT[u.opta]||"Ohn
 function chooseAvailableByType(type,org=null){
  const types=Array.isArray(type)?type:[type];
  const orgOk=u=>!org||u.org===org;
- const primary=nearestFirst(db.units.filter(u=>!u.neighborLoan&&orgOk(u)&&types.includes(u.type) && ["1","2"].includes(String(u.status))));
+ const primary=nearestFirst(db.units.filter(u=>!u.neighborLoan&&orgOk(u)&&islandReachable(u)&&types.includes(u.type) && ["1","2"].includes(String(u.status))));
  if(primary.length)return primary[0];
- const fallback=nearestFirst(db.units.filter(u=>!u.neighborLoan&&orgOk(u)&&types.includes(u.type) && String(u.status)==="8"));
+ const fallback=nearestFirst(db.units.filter(u=>!u.neighborLoan&&orgOk(u)&&islandReachable(u)&&types.includes(u.type) && String(u.status)==="8"));
  return fallback[0]||null;
 }
 // Wasserrettungszug Friesland: Das Führungsfahrzeug (Pelikan Friesland 71/11-01, ELW1) wird
@@ -1615,7 +1618,7 @@ function manageProposal(){
  if(!c){toast("Kein Einsatz ausgewählt");return}
  const proposal=c.proposal||[];
  const proposedIds=new Set((c.proposedUnitIds||[]).map(String));
- const available=ktLast(nearestFirst(db.units.filter(u=>["1","2","8"].includes(String(u.status)) && !proposedIds.has(String(u.id)))));
+ const available=ktLast(nearestFirst(db.units.filter(u=>["1","2","8"].includes(String(u.status)) && islandReachable(u) && !proposedIds.has(String(u.id)))));
  document.getElementById("app").innerHTML=`<div class="card call">
   <div class="row between"><div><h2>🚗 Fahrzeuge vor Alarmierung bearbeiten</h2><div class="muted">Einsatz #${esc(c.id)} · ${esc(c.location||"Ort unbekannt")} – noch nicht alarmiert.</div></div><button onclick="prepareAlarm()">Zurück</button></div>
   <label style="margin-top:10px">Aktuell vorgeschlagen</label>
@@ -1691,10 +1694,10 @@ function resourcePickerCatsHTML(mode){
  return tabs+ordered.map(t=>{
    const us=nearestFirst(all.filter(u=>u.type===t));
    const typeArg=JSON.stringify(t).replace(/"/g,"'");
-   const anyFree=us.some(u=>["1","2","8"].includes(String(u.status))&&!assigned.has(String(u.id)));
+   const anyFree=us.some(u=>islandReachable(u)&&["1","2","8"].includes(String(u.status))&&!assigned.has(String(u.id)));
    return `<div style="border:1px solid var(--line);border-radius:10px;padding:6px 10px;margin-bottom:6px">
      <div class="row between" style="flex-wrap:wrap"><b>${esc(t)}</b><button style="padding:4px 10px;font-size:12px" ${anyFree?"":"disabled"} onclick="addResourceType(${typeArg},'${mode}',${esc(JSON.stringify(pickerCat))})">Nächstes freies</button></div>
-     <div class="answer" style="margin-top:4px">${us.map(u=>{const ok=["1","2","8"].includes(String(u.status))&&!assigned.has(String(u.id));return `<button ${ok?"":"disabled"} onclick="addResourceUnitId('${u.id}','${mode}')" style="padding:6px 10px">${esc(u.opta||u.name)}<small style="display:block">${esc(u.location||"")} · ${ok?dist(u):assigned.has(String(u.id))?"bereits im Einsatz":"Status "+esc(u.status)}</small></button>`}).join("")}</div>
+     <div class="answer" style="margin-top:4px">${us.map(u=>{const reach=islandReachable(u);const ok=reach&&["1","2","8"].includes(String(u.status))&&!assigned.has(String(u.id));return `<button ${ok?"":"disabled"} onclick="addResourceUnitId('${u.id}','${mode}')" style="padding:6px 10px">${esc(u.opta||u.name)}<small style="display:block">${esc(u.location||"")} · ${!reach?(unitOnIsland(u)?"🏝️ nur Insel":"🏝️ nicht auf die Insel"):ok?dist(u):assigned.has(String(u.id))?"bereits im Einsatz":"Status "+esc(u.status)}</small></button>`}).join("")}</div>
    </div>`;
  }).join("");
 }
@@ -1756,13 +1759,14 @@ function addResourceType(type,mode="additional",org=null){
 }
 function addResourceUnitId(id,mode="additional"){
  const u=db.units.find(x=>String(x.id)===String(id));
+ if(u&&!islandReachable(u)){toast(unitOnIsland(u)?"Fahrzeug der Insel Wangerooge – kommt nicht aufs Festland":"Kommt nicht auf die Insel Wangerooge – nur Hubschrauber");return}
  if(!u||!["1","2","8"].includes(String(u.status))){toast("Fahrzeug nicht verfügbar");showResourcePicker(mode);return}
  addResourceUnits([u],mode);
 }
 function addThwGroup(group,mode="additional"){
  const c=db.currentCall; if(!c)return;
  const assigned=new Set([...(c.alarmedUnits||[]),...(c.proposedUnitIds||[])].map(String));
- const list=db.units.filter(u=>u.org==="THW"&&thwGroup(u)===group&&["1","2","8"].includes(String(u.status))&&!assigned.has(String(u.id)));
+ const list=db.units.filter(u=>u.org==="THW"&&thwGroup(u)===group&&islandReachable(u)&&["1","2","8"].includes(String(u.status))&&!assigned.has(String(u.id)));
  if(!list.length){toast(`${group}: kein freies Fahrzeug`);showResourcePicker(mode);return}
  addResourceUnits(list,mode,`THW ${group}`);
 }
@@ -2849,7 +2853,7 @@ function evaluate(){
    keyword=withRLevel(keyword,lv); sr=lv!=="R0"; c.rZero=lv==="R0";
  }
  const neighborFor=(type,ownKm)=>{
-   if(!ip||!["RTW","NEF"].includes(type))return null;
+   if(!ip||!["RTW","NEF"].includes(type)||incidentOnWangerooge())return null; // Insel: kein Nachbar-LK
    let best=null;
    (db.neighborUnits||[]).filter(n=>n.type===type&&["1","2"].includes(String(n.status))&&!usedN.has(String(n.id))&&Number.isFinite(n.lat)&&Number.isFinite(n.lng)).forEach(n=>{
      const km=haversine(ip[0],ip[1],n.lat,n.lng);

@@ -1050,3 +1050,10 @@ Version 4.58:
   der Entfernung zum Bereitstellungsort vorgeschlagen, fahren auf der Karte dorthin und sehen
   ihn am Fahrzeugterminal ("🅿️ Bereitstellungsraum anfahren"); nur Boote, Hubschrauber und
   DGzRS fahren direkt zur Einsatzstelle. Steht auch im Alarmtext.
+
+Version 4.59:
+- Insel Wangerooge strikt: Fahrzeuge der Insel kommen nicht aufs Festland und Festland-
+  Fahrzeuge nicht auf die Insel – nur Hubschrauber fliegen rüber (bisher durften auch DGzRS und
+  DLRG-Boote vom Festland). Gilt für Vorschlag, Krankentransport, Vollalarm, THW-Fachgruppen,
+  "Fahrzeuge bearbeiten" und die Auswahl beim Nachfordern (dort mit Hinweis 🏝️). Kein
+  Nachbar-LK auf der Insel. Ausnahme: Liegt der Einsatzort auf dem Wasser, dürfen Boote hin.
