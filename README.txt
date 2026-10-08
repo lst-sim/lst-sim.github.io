@@ -1066,3 +1066,17 @@ Version 4.60:
   stehen dort (Status 4), Boote/Hubschrauber an der Einsatzstelle.
 - Bereitstellungsort auch nach der Alarmierung änderbar (alarmierte Fahrzeuge bleiben, nur das
   Ziel der Landfahrzeuge ändert sich); Änderung steht im Einsatzverlauf.
+
+Version 4.61:
+- FTZ Landkreis Friesland (Jever) ergänzt (Quelle: BOS-Fahrzeuge, Wache "LK Friesland FTZ
+  Jever", nur aktive Fahrzeuge): WLF 19/65-01, 19/66-01, 19/66-03, 19/79-01 sowie die
+  Abrollbehälter 19/AB-G, 19/AB-HFS 04, 19/AB-Küche1, 19/AB-Küche2, 19/AB-Logistik,
+  19/AB-Mulde, 29/AB-TEL und 19/AB-Übungscontainer Leckage. Langformen von "AB-G" und
+  "AB-HFS" sind nicht bestätigt.
+- Abrollbehälter nur mit WLF: Ein AB wird nur vorgeschlagen/alarmiert, wenn ein WLF ihn holen
+  kann. Freies WLF: lädt den AB an der FTZ (5 min) und fährt zum Einsatz. Kein freies WLF: ein
+  WLF, das an einem anderen Einsatz steht, setzt dort seinen AB ab (der bleibt dort), fährt zur
+  FTZ, lädt den neuen AB und fährt zum neuen Einsatz – entsprechend längere Anfahrt. Steht im
+  Vorschlag ("holt … an der FTZ, kommt von Einsatz #… und setzt dort ab · ca. … min") und im
+  Verlauf beider Einsätze. Auf der Karte bleibt der AB an der FTZ, bis das WLF ihn geladen hat.
+  Ohne WLF: "kein WLF". Gilt für AAO, Nachforderung und "Rettungsmittel bearbeiten".

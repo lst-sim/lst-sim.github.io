@@ -140,7 +140,7 @@ table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:10px 8px
 </head>
 <body>
 <div style="padding:6px 10px;font-size:11px;color:#94a3b8;font-weight:700;display:flex;align-items:center;gap:10px;position:sticky;top:0;z-index:10;background:var(--bg)">
- <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v4.60</span>
+ <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v4.61</span>
  <span id="syncState"></span>
  <a id="homeLink" href="#" onclick="render('leitstelle');return false" class="hidden" style="color:#64748b;text-decoration:underline;font-weight:600">🖥️ Leitstelle</a>
  <a id="monitorLink" href="#" onclick="showMonitorQR();return false" style="color:#64748b;text-decoration:underline;font-weight:600;margin-left:auto">🖥️ Monitor hinzufügen</a>
@@ -303,6 +303,18 @@ const DEFAULTS_FRI_WHV={
   // aber nicht aufgeführt – auf Nutzerbestätigung aufgenommen.
   {id:254,name:"18-48-01",opta:"Florian Friesland 18/48-01",type:"HLF",org:"Feuerwehr",location:"Wangerooge",island:"Wangerooge",status:"2",crew:"",skills:"Hilfeleistungslöschgruppenfahrzeug (HLF 20)",verified:"BOS-Fahrzeuge (Wachenübersicht) + Nutzerangabe"},
   {id:255,name:"18-64-01",opta:"Florian Friesland 18/64-01",type:"GW-L1",org:"Feuerwehr",location:"Wangerooge",island:"Wangerooge",status:"2",crew:"",skills:"Gerätewagen Logistik 1",verified:"BOS-Fahrzeuge (Wachenübersicht) + Nutzerangabe"},
+  {id:260,name:"19-65-01",opta:"Florian Friesland 19/65-01",type:"WLF",org:"Feuerwehr",location:"Jever",status:"2",crew:"2",skills:"Wechselladerfahrzeug – holt Abrollbehälter an der FTZ – FTZ Landkreis Friesland, Jever",verified:"BOS-Fahrzeuge (Wache LK Friesland FTZ Jever)"},
+  {id:261,name:"19-66-01",opta:"Florian Friesland 19/66-01",type:"WLF",org:"Feuerwehr",location:"Jever",status:"2",crew:"2",skills:"Wechselladerfahrzeug – holt Abrollbehälter an der FTZ – FTZ Landkreis Friesland, Jever",verified:"BOS-Fahrzeuge (Wache LK Friesland FTZ Jever)"},
+  {id:262,name:"19-66-03",opta:"Florian Friesland 19/66-03",type:"WLF",org:"Feuerwehr",location:"Jever",status:"2",crew:"2",skills:"Wechselladerfahrzeug – holt Abrollbehälter an der FTZ – FTZ Landkreis Friesland, Jever",verified:"BOS-Fahrzeuge (Wache LK Friesland FTZ Jever)"},
+  {id:263,name:"19-79-01",opta:"Florian Friesland 19/79-01",type:"WLF",org:"Feuerwehr",location:"Jever",status:"2",crew:"2",skills:"Wechselladerfahrzeug – holt Abrollbehälter an der FTZ – FTZ Landkreis Friesland, Jever",verified:"BOS-Fahrzeuge (Wache LK Friesland FTZ Jever)"},
+  {id:270,name:"19-AB-G",opta:"Florian Friesland 19/AB-G",type:"AB-G",org:"Feuerwehr",location:"Jever",status:"2",crew:"0",skills:"Abrollbehälter „AB-G“ (Bezeichnung laut BOS-Fahrzeuge; vermutlich Gefahrgut) – FTZ Landkreis Friesland, Jever",verified:"BOS-Fahrzeuge (Wache LK Friesland FTZ Jever)"},
+  {id:271,name:"19-AB-HFS04",opta:"Florian Friesland 19/AB-HFS 04",type:"AB-HFS",org:"Feuerwehr",location:"Jever",status:"2",crew:"0",skills:"Abrollbehälter „AB-HFS 04“ (Bezeichnung laut BOS-Fahrzeuge) – FTZ Landkreis Friesland, Jever",verified:"BOS-Fahrzeuge (Wache LK Friesland FTZ Jever)"},
+  {id:272,name:"19-AB-Kueche1",opta:"Florian Friesland 19/AB-Küche1",type:"AB-Küche",org:"Feuerwehr",location:"Jever",status:"2",crew:"0",skills:"Abrollbehälter Küche 1 – Verpflegung – FTZ Landkreis Friesland, Jever",verified:"BOS-Fahrzeuge (Wache LK Friesland FTZ Jever)"},
+  {id:273,name:"19-AB-Kueche2",opta:"Florian Friesland 19/AB-Küche2",type:"AB-Küche",org:"Feuerwehr",location:"Jever",status:"2",crew:"0",skills:"Abrollbehälter Küche 2 – Verpflegung – FTZ Landkreis Friesland, Jever",verified:"BOS-Fahrzeuge (Wache LK Friesland FTZ Jever)"},
+  {id:274,name:"19-AB-Logistik",opta:"Florian Friesland 19/AB-Logistik",type:"AB-Logistik",org:"Feuerwehr",location:"Jever",status:"2",crew:"0",skills:"Abrollbehälter Logistik – FTZ Landkreis Friesland, Jever",verified:"BOS-Fahrzeuge (Wache LK Friesland FTZ Jever)"},
+  {id:275,name:"19-AB-Mulde",opta:"Florian Friesland 19/AB-Mulde",type:"AB-Mulde",org:"Feuerwehr",location:"Jever",status:"2",crew:"0",skills:"Abrollbehälter Mulde – FTZ Landkreis Friesland, Jever",verified:"BOS-Fahrzeuge (Wache LK Friesland FTZ Jever)"},
+  {id:276,name:"29-AB-TEL",opta:"Florian Friesland 29/AB-TEL",type:"AB-TEL",org:"Feuerwehr",location:"Jever",status:"2",crew:"0",skills:"Abrollbehälter Technische Einsatzleitung (TEL), seit 2015 – FTZ Landkreis Friesland, Jever",verified:"BOS-Fahrzeuge (Wache LK Friesland FTZ Jever)"},
+  {id:277,name:"19-AB-Leckage",opta:"Florian Friesland 19/AB-Übungscontainer Leckage",type:"AB-Übung Leckage",org:"Feuerwehr",location:"Jever",status:"2",crew:"0",skills:"Übungscontainer Leckage (Ausbildung) – FTZ Landkreis Friesland, Jever",verified:"BOS-Fahrzeuge (Wache LK Friesland FTZ Jever)"},
 
   {id:301,name:"21/10",opta:"Heros Jever 21/10",type:"MTW Zugtrupp",org:"THW",location:"Jever",status:"2",crew:"4",skills:"Führung",verified:"THW/BOS-Fahrzeuge"},
   {id:302,name:"22/51",opta:"Heros Jever 22/51",type:"GKW 1",org:"THW",location:"Jever",status:"2",crew:"9",skills:"Bergung, Technische Hilfe",verified:"THW/BOS-Fahrzeuge"},
@@ -926,6 +938,53 @@ function stagingFor(call,u){
  if(!st||!Number.isFinite(Number(st.lat))||!Number.isFinite(Number(st.lng))||!u||waterCapable(u))return null;
  return [Number(st.lat),Number(st.lng)];
 }
+// ─── Wechsellader (WLF) und Abrollbehälter (AB) der FTZ Jever ─────────────────────────────────
+// Ein AB kommt nur mit einem WLF zum Einsatz. Freies WLF: lädt den AB an der FTZ und fährt los.
+// Kein freies WLF: ein WLF, das schon an einem anderen Einsatz steht, setzt dort seinen AB ab,
+// fährt zur FTZ, lädt den neuen AB und fährt dann zum neuen Einsatz (dauert logistisch länger).
+const AB_LOAD_MIN=5;
+function isAB(u){return /^AB-/.test(String(u?.type||""))}
+function isWLF(u){return u?.type==="WLF"}
+function wlfPlanFor(ab,dest,call,exclude){
+ const via=unitPoint(ab); if(!via||!dest)return null;
+ const leg=(w,a,b)=>{const km=haversine(a[0],a[1],b[0],b[1]);return km<0.3?0:(etaMinutesForDistance(w,km)||0)};
+ let best=null;
+ for(const w of (db.units||[]).filter(isWLF)){
+   if(exclude&&exclude.has(String(w.id)))continue;
+   if(!islandReachable(w))continue;
+   const st=String(w.status);
+   let from=null, fromCall=null, busy=false;
+   if(["1","2"].includes(st)){from=(st==="1"&&simulatedUnitPosition(w))||unitPoint(w)}
+   else if(st==="4"){fromCall=findUnitCall(w);if(!fromCall||(call&&String(fromCall.id)===String(call.id)))continue;from=callDestinationPoint(fromCall,w);busy=true}
+   else continue;
+   if(!from)continue;
+   const t1=leg(w,from,via), t2=Math.max(1,leg(w,via,dest)||etaMinutesForDistance(w,0)||1);
+   const total=t1+AB_LOAD_MIN+t2;
+   const rank=(busy?100000:0)+total; // freie WLF immer bevorzugt
+   if(!best||rank<best.rank)best={wlf:w,from,via,t1,t2,total,busy,fromCallId:fromCall?String(fromCall.id):null,rank};
+ }
+ return best;
+}
+// Plan beim Alarmieren umsetzen: WLF bekommt seine Route, altes AB bleibt am alten Einsatz.
+function applyAbPlan(c,pl){
+ const w=db.units.find(x=>String(x.id)===String(pl.wlfId)), ab=db.units.find(x=>String(x.id)===String(pl.abId));
+ if(!w||!ab)return;
+ if(pl.fromCallId){
+   const old=allOpenCalls().find(x=>String(x.id)===String(pl.fromCallId));
+   if(old){
+     old.alarmedUnits=(old.alarmedUnits||[]).filter(id=>String(id)!==String(w.id));
+     old.proposedUnitIds=(old.proposedUnitIds||[]).filter(id=>String(id)!==String(w.id));
+     old.history=old.history||[];
+     old.history.push({q:"🚛 WLF abgezogen",a:`${w.opta||w.name} setzt den Abrollbehälter hier ab und holt an der FTZ ${ab.opta||ab.name} für Einsatz #${c.id}`});
+   }
+   for(const o of db.units)if(isAB(o)&&String(o.wlfId)===String(w.id))delete o.wlfId; // alter AB bleibt stehen
+ }
+ setUnitStatus(w,"3"); setUnitStatus(ab,"3");
+ w.route={from:pl.from,via:pl.via,t1:pl.t1,load:AB_LOAD_MIN,t2:pl.t2,abId:ab.id};
+ w.carriesAb=ab.id; ab.wlfId=w.id;
+ c.history=c.history||[];
+ c.history.push({q:"🚛 Abrollbehälter",a:`${ab.opta||ab.name} mit ${w.opta||w.name}${pl.fromCallId?` (WLF kommt von Einsatz #${pl.fromCallId}, setzt dort ab)`:""} – Ankunft ca. ${pl.total} min`});
+}
 function callDestinationPoint(call,u){
  if(!call)return null;
  const sp=stagingFor(call,u); if(sp)return sp;
@@ -958,6 +1017,20 @@ function simulatedUnitPosition(u){
  const status=String(u.status);
  const home=unitPoint(u);
  if(!home)return null;
+ // Abrollbehälter: steht an der FTZ, bis das WLF ihn geladen hat, dann fährt er mit.
+ if(isAB(u)&&u.wlfId&&status==="3"){
+   const w=db.units.find(x=>String(x.id)===String(u.wlfId));
+   if(!w||!w.route)return null;
+   const m=(Date.now()-(w.status3Since||Date.now()))/60000;
+   return m<w.route.t1+w.route.load?null:simulatedUnitPosition(w);
+ }
+ if(status==="3"&&u.route){
+   const call=findUnitCall(u); const dest=callDestinationPoint(call,u)||home; const r=u.route;
+   const m=(Date.now()-(u.status3Since||Date.now()))/60000;
+   if(m<r.t1)return interpolatePoint(r.from,r.via,r.t1?m/r.t1:1);
+   if(m<r.t1+r.load)return r.via;
+   return interpolatePoint(r.via,dest,Math.min(1,(m-r.t1-r.load)/Math.max(1,r.t2)));
+ }
 
  if(status==="3"){
    const call=findUnitCall(u);
@@ -1135,6 +1208,8 @@ function useMyLocation(){
 
 function setUnitStatus(u,status){
  const wasFree=["1","2"].includes(String(u.status));
+ if(String(status)!=="3")delete u.route;
+ if(["1","2","6"].includes(String(status))){delete u.carriesAb; if(isAB(u))delete u.wlfId}
  u.status=String(status);
  if(["1","2"].includes(String(status))){if(!wasFree||!u.freeSince)u.freeSince=Date.now()}else delete u.freeSince;
  delete u.status1Since; delete u.status2Due;
@@ -1181,7 +1256,15 @@ function autoAdvanceEnRoute(){
  db.units.forEach(u=>{
    if(u.phoneControlled)return;
    const status=String(u.status);
-   if(status==="3" && u.status3Since){
+   if(isAB(u)&&u.wlfId){
+     const w=db.units.find(x=>String(x.id)===String(u.wlfId));
+     if(status==="3"&&w&&String(w.status)==="4"){setUnitStatus(u,"4");u.wlfId=w.id;changed=true}
+     return;
+   }
+   if(status==="3" && u.status3Since && u.route){
+     const r=u.route;
+     if(now-u.status3Since>=(r.t1+r.load+r.t2)*60000){const ab=r.abId;setUnitStatus(u,"4");if(ab!=null)u.carriesAb=ab;changed=true}
+   } else if(status==="3" && u.status3Since){
      // ETA anhand der TATSÄCHLICH dem Fahrzeug zugeordneten Einsatzstelle berechnen – NICHT
      // anhand des Einsatzes, der gerade zufällig in der Leitstellenoberfläche geöffnet ist
      // (geographicRank()/estimatedEtaMinutes() beziehen sich auf db.currentCall). Sonst bleibt
@@ -1728,7 +1811,7 @@ function resourcePickerCatsHTML(mode){
    const anyFree=us.some(u=>islandReachable(u)&&["1","2","8"].includes(String(u.status))&&!assigned.has(String(u.id)));
    return `<div style="border:1px solid var(--line);border-radius:10px;padding:6px 10px;margin-bottom:6px">
      <div class="row between" style="flex-wrap:wrap"><b>${esc(t)}</b><button style="padding:4px 10px;font-size:12px" ${anyFree?"":"disabled"} onclick="addResourceType(${typeArg},'${mode}',${esc(JSON.stringify(pickerCat))})">Nächstes freies</button></div>
-     <div class="answer" style="margin-top:4px">${us.map(u=>{const reach=islandReachable(u);const ok=reach&&["1","2","8"].includes(String(u.status))&&!assigned.has(String(u.id));return `<button ${ok?"":"disabled"} onclick="addResourceUnitId('${u.id}','${mode}')" style="padding:6px 10px">${esc(u.opta||u.name)}<small style="display:block">${esc(u.location||"")} · ${!reach?(unitOnIsland(u)?"🏝️ nur Insel":"🏝️ nicht auf die Insel"):ok?dist(u):assigned.has(String(u.id))?"bereits im Einsatz":"Status "+esc(u.status)}</small></button>`}).join("")}</div>
+     <div class="answer" style="margin-top:4px">${us.map(u=>{const reach=islandReachable(u);const ok=reach&&["1","2","8"].includes(String(u.status))&&!assigned.has(String(u.id));const abPl=ok&&isAB(u)?wlfPlanFor(u,callDestinationPoint(c,u)||incidentPoint(),c):null;const abBlocked=ok&&isAB(u)&&!abPl;return `<button ${ok&&!abBlocked?"":"disabled"} onclick="addResourceUnitId('${u.id}','${mode}')" style="padding:6px 10px">${esc(u.opta||u.name)}<small style="display:block">${isAB(u)&&ok?(abPl?`🚛 ${esc(abPl.wlf.opta||abPl.wlf.name)}${abPl.busy?` (von Einsatz #${esc(abPl.fromCallId)})`:""} · ca. ${Math.round(abPl.total)} min`:"🚛 kein WLF verfügbar"):""}${isAB(u)&&ok?"<br>":""}${esc(u.location||"")} · ${!reach?(unitOnIsland(u)?"🏝️ nur Insel":"🏝️ nicht auf die Insel"):ok?dist(u):assigned.has(String(u.id))?"bereits im Einsatz":"Status "+esc(u.status)}</small></button>`}).join("")}</div>
    </div>`;
  }).join("");
 }
@@ -1804,6 +1887,16 @@ function addThwGroup(group,mode="additional"){
 function addResourceUnits(list,mode="additional",groupLabel=""){
  const c=db.currentCall;
  if(!c||!list.length)return;
+ // Abrollbehälter: passendes WLF mitnehmen
+ const plans=[];
+ for(const u of [...list]){
+   if(!isAB(u))continue;
+   const ex=new Set([...list,...plans.map(p=>p._w)].filter(isWLF).map(x=>String(x.id)));
+   const pl=wlfPlanFor(u,callDestinationPoint(c,u)||incidentPoint(),c,ex);
+   if(!pl){toast(`${u.opta||u.name}: kein Wechsellader (WLF) verfügbar`);showResourcePicker(mode);return}
+   plans.push({abId:u.id,wlfId:pl.wlf.id,from:pl.from,via:pl.via,t1:pl.t1,t2:pl.t2,total:Math.round(pl.total),fromCallId:pl.fromCallId,_w:pl.wlf});
+   list.push(pl.wlf);
+ }
  const isNafo=mode==="nafo";
  let reason="";
  if(isNafo){
@@ -1818,6 +1911,10 @@ function addResourceUnits(list,mode="additional",groupLabel=""){
      c.alarmedUnits=c.alarmedUnits||[];
      if(!c.alarmedUnits.some(id=>String(id)===String(u.id)))c.alarmedUnits.push(u.id);
    }
+ }
+ if(plans.length){
+   if(c.alarmTime||isNafo)plans.forEach(pl=>applyAbPlan(c,pl));
+   else c.abPlans=[...(c.abPlans||[]),...plans.map(({_w,...p})=>p)];
  }
  const labels=list.map(unitLabel).join(", ");
  const now=new Date();
@@ -2893,7 +2990,20 @@ function evaluate(){
    });
    return best;
  };
+ const abPlans=[];
  for(const r of req){
+   // Abrollbehälter nur zusammen mit einem WLF (frei – sonst eines von einem anderen Einsatz)
+   if(/^AB-/.test(String(r.type))&&!r.exact){
+     const ab=availableUnits(r.type,r.org).filter(x=>!used.has(x.id))[0];
+     if(!ab){selected.push({missing:true,type:r.type,org:r.org});continue}
+     const pl=wlfPlanFor(ab,callDestinationPoint(c,ab)||ip,c,new Set([...used].map(String)));
+     if(!pl){selected.push({missing:true,type:`${r.type} – kein WLF`,org:r.org});continue}
+     used.add(ab.id); used.add(pl.wlf.id);
+     selected.push({...ab,abWith:pl.wlf.opta||pl.wlf.name});
+     selected.push({...pl.wlf,wlfFor:ab.opta||ab.name,wlfBusy:pl.busy,wlfFrom:pl.fromCallId,wlfTotal:Math.round(pl.total)});
+     abPlans.push({abId:ab.id,wlfId:pl.wlf.id,from:pl.from,via:pl.via,t1:pl.t1,t2:pl.t2,total:Math.round(pl.total),fromCallId:pl.fromCallId});
+     continue;
+   }
    let u=null;
    if(r.exact&&!used.has(r.exact))u=db.units.find(x=>x.id===r.exact);
    else if(r.exact)continue; // Fahrzeug schon eingeplant – nicht doppelt
@@ -2951,7 +3061,8 @@ function evaluate(){
  c.proposedUnitIds=selected.filter(x=>!x.missing&&!x.neighbor).map(x=>x.id);
  c.neighborProposal=selected.filter(x=>x.neighbor).map(x=>x.id);
  c.proposal=selected;
- c.suggestion=selected.map(x=>x.missing?`⚠️ ${x.type} (${x.org||"beliebig"}) nicht verfügbar`:x.neighbor?`🤝 ${x.opta} – ${x.type} (Nachbar-LK ${x.district}, ~${x.neighborKm.toFixed(1)} km Luftlinie)`:`${x.opta||x.name} – ${x.type}${x.firstResponder?" (First Responder)":""}${Number.isFinite(geographicRank(x))&&geographicRank(x)<999?` (~${geographicRank(x).toFixed(1)} km Luftlinie)`:``}`).join(" · ");
+ c.abPlans=abPlans;
+ c.suggestion=selected.map(x=>x.wlfFor?`${x.opta||x.name} – WLF (holt ${x.wlfFor} an der FTZ${x.wlfBusy?`, kommt von Einsatz #${x.wlfFrom} und setzt dort ab`:""} · ca. ${x.wlfTotal} min)`:x.abWith?`${x.opta||x.name} – ${x.type} (auf ${x.abWith})`:x.missing?`⚠️ ${x.type} (${x.org||"beliebig"}) nicht verfügbar`:x.neighbor?`🤝 ${x.opta} – ${x.type} (Nachbar-LK ${x.district}, ~${x.neighborKm.toFixed(1)} km Luftlinie)`:`${x.opta||x.name} – ${x.type}${x.firstResponder?" (First Responder)":""}${Number.isFinite(geographicRank(x))&&geographicRank(x)<999?` (~${geographicRank(x).toFixed(1)} km Luftlinie)`:``}`).join(" · ");
  c.sr=sr;
 }
 
@@ -3138,6 +3249,8 @@ function alarmProposal(){
    if(!u.phoneAssigned)setUnitStatus(u,"3");
    if(!c.alarmedUnits.includes(id))c.alarmedUnits.push(id);
  }
+ for(const pl of (c.abPlans||[]))if(c.alarmedUnits.some(id=>String(id)===String(pl.wlfId))&&c.alarmedUnits.some(id=>String(id)===String(pl.abId)))applyAbPlan(c,pl);
+ c.abPlans=[];
  c.alarmTime=now.toISOString();
  c.history.push({q:"🚨 Alarmierung",a:`Vorschlag alarmiert – ${now.toLocaleTimeString("de-DE")}${c.alarmFreeText?` | Freitext: ${c.alarmFreeText}`:""}`});
  save();
