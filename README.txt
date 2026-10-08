@@ -1080,3 +1080,17 @@ Version 4.61:
   Vorschlag ("holt … an der FTZ, kommt von Einsatz #… und setzt dort ab · ca. … min") und im
   Verlauf beider Einsätze. Auf der Karte bleibt der AB an der FTZ, bis das WLF ihn geladen hat.
   Ohne WLF: "kein WLF". Gilt für AAO, Nachforderung und "Rettungsmittel bearbeiten".
+
+Version 4.62:
+- Alarmierung nach Eintreffzeit statt Kilometern: Vorschläge, "Nächstes freies",
+  Nachforderung und Anzeigen nutzen die geschätzte Eintreffzeit (Ausrückzeit + Fahrzeit) und
+  zeigen nur noch "ca. X min" (keine km mehr).
+- Fahrzeit: Straße ≈ 1,3 × Luftlinie, mit Sonderrechten ~60 km/h, ohne (R0) ~45 km/h;
+  Hubschrauber ~200 km/h, Boote ~30 km/h (SRK ~35 km/h).
+- Ausrückzeiten (Standard, je Fahrzeug im Editor änderbar): hauptamtlicher Rettungsdienst und
+  Nachbar-LK 1 min, Luftrettung 3 min, FTZ 2 min, DGzRS-Seenotrettungskreuzer 2 min,
+  Freiwillige Feuerwehr 6 min, DLRG 10 min, DGzRS-Freiwilligenstationen 10 min, DRK 12 min,
+  THW 15 min. Status 1 (frei über Funk): keine Ausrückzeit.
+- Nachbar-LK: RTW/NEF aus dem Nachbarkreis wird vorgeschlagen, wenn es schneller da ist als das
+  eigene (bisher: eigenes > 20 km). Hinweis "Nachbar anfragen", wenn kein eigenes RTW/NEF
+  innerhalb von 15 min da ist. First Responder nur, wenn er schneller als das RTW und ≤ 15 min ist.

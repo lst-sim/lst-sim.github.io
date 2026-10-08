@@ -140,7 +140,7 @@ table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:10px 8px
 </head>
 <body>
 <div style="padding:6px 10px;font-size:11px;color:#94a3b8;font-weight:700;display:flex;align-items:center;gap:10px;position:sticky;top:0;z-index:10;background:var(--bg)">
- <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v4.61</span>
+ <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v4.62</span>
  <span id="syncState"></span>
  <a id="homeLink" href="#" onclick="render('leitstelle');return false" class="hidden" style="color:#64748b;text-decoration:underline;font-weight:600">🖥️ Leitstelle</a>
  <a id="monitorLink" href="#" onclick="showMonitorQR();return false" style="color:#64748b;text-decoration:underline;font-weight:600;margin-left:auto">🖥️ Monitor hinzufügen</a>
@@ -947,7 +947,7 @@ function isAB(u){return /^AB-/.test(String(u?.type||""))}
 function isWLF(u){return u?.type==="WLF"}
 function wlfPlanFor(ab,dest,call,exclude){
  const via=unitPoint(ab); if(!via||!dest)return null;
- const leg=(w,a,b)=>{const km=haversine(a[0],a[1],b[0],b[1]);return km<0.3?0:(etaMinutesForDistance(w,km)||0)};
+ const leg=(w,a,b)=>{const km=haversine(a[0],a[1],b[0],b[1]);return km<0.3?0:Math.round(travelMinutes(w,km)||0)};
  let best=null;
  for(const w of (db.units||[]).filter(isWLF)){
    if(exclude&&exclude.has(String(w.id)))continue;
@@ -958,7 +958,7 @@ function wlfPlanFor(ab,dest,call,exclude){
    else if(st==="4"){fromCall=findUnitCall(w);if(!fromCall||(call&&String(fromCall.id)===String(call.id)))continue;from=callDestinationPoint(fromCall,w);busy=true}
    else continue;
    if(!from)continue;
-   const t1=leg(w,from,via), t2=Math.max(1,leg(w,via,dest)||etaMinutesForDistance(w,0)||1);
+   const t1=leg(w,from,via)+(busy?0:unitTurnoutMin(w)), t2=Math.max(1,leg(w,via,dest));
    const total=t1+AB_LOAD_MIN+t2;
    const rank=(busy?100000:0)+total; // freie WLF immer bevorzugt
    if(!best||rank<best.rank)best={wlf:w,from,via,t1,t2,total,busy,fromCallId:fromCall?String(fromCall.id):null,rank};
@@ -1505,22 +1505,47 @@ function geographicRank(u){
  if(area&&optaAreaName(u)===area)return 0;
  return 999;
 }
+// ─── Realistische Eintreffzeit = Ausrückzeit + Fahrzeit ─────────────────────────────────────
+// Ausrückzeit (Alarm bis Status 3): hauptamtlich besetzt (Rettungsdienst, Luftrettung, FTZ,
+// DGzRS-Seenotrettungskreuzer) kurz; ehrenamtlich (Freiwillige Feuerwehr, DLRG, DRK, THW,
+// DGzRS-Freiwilligenstationen) deutlich länger, weil die Helfer erst zur Wache kommen müssen.
+// Je Fahrzeug im Editor überschreibbar (u.turnoutMin). Status 1 (frei über Funk): Besatzung sitzt
+// schon im Fahrzeug → keine Ausrückzeit.
+function unitTurnoutDefault(u){
+ if(!u)return 2;
+ if(u.neighborLoan||u.district)return 1;
+ const o=u.org;
+ if(o==="Luftrettung")return 3;
+ if(o==="Rettungsdienst"||o==="Polizei")return 1;
+ if(o==="DGzRS")return u.type==="SRK"?2:10;
+ if(o==="Feuerwehr")return /FTZ/.test(String(u.skills||""))?2:6;
+ if(o==="DLRG")return 10;
+ if(o==="DRK")return 12;
+ if(o==="THW")return 15;
+ return 5;
+}
+function unitTurnoutMin(u){
+ if(String(u?.status)==="1")return 0;
+ const own=Number(u?.turnoutMin);
+ return Number.isFinite(own)&&String(u?.turnoutMin??"")!==""?own:unitTurnoutDefault(u);
+}
+// Reine Fahrzeit: Straße ≈ 1,3 × Luftlinie; mit Sonderrechten ~60 km/h, ohne (R0) ~45 km/h.
+// Hubschrauber ~200 km/h, Boote ~30 km/h (Seenotrettungskreuzer ~35 km/h) – jeweils Luftlinie.
+function travelMinutes(u,km,noSr=false){
+ if(km==null||km>=999)return null;
+ const isAir=u.type==="RTH"||u.type==="ITH"||u.type==="KTH"||u.org==="Luftrettung";
+ const isBoat=!isAir&&typeof waterCapable==="function"&&waterCapable(u);
+ const speed=isAir?200:isBoat?(u.type==="SRK"?35:30):(noSr?45:60);
+ const factor=(isAir||isBoat)?1:1.3;
+ return (km*factor/speed)*60;
+}
+function unitCallIsR0(u){try{const c=findUnitCall(u);if(c)return !!c.rZero;return !!(db.currentCall?.rZero)}catch(e){return false}}
 function etaMinutesForDistance(u,km){
  if(km==null||km>=999)return null;
- // Rettungshubschrauber sind deutlich schneller unterwegs als Bodenfahrzeuge (Reisegeschwindigkeit
- // typischer Rettungshubschrauber ca. 200 km/h), dafür etwas längere Rüst-/Startzeit.
- // Das DRK ist ehrenamtlich organisiert (Kreisverbände Jeverland und Varel-Friesische Wehde) –
- // die Helfer müssen erst von zuhause/der Arbeit zur Wache, was deutlich länger dauert als bei
- // hauptamtlich besetzten Wachen. Das wirkt sich sowohl auf die Zeit bis zum Ausrücken (Status 3)
- // als auch auf die Ankunftszeit (Status 4) aus, da beide auf dieser geschätzten Gesamtzeit beruhen.
- const isAir=u.type==="RTH"||u.org==="Luftrettung";
- const isVolunteer=u.org==="DRK";
  // Krankentransport: ohne Sonderrechte, mit Vorlauf – deutlich mehr Zeit
  let kt=false; try{kt=!!(typeof findUnitCall==="function"&&findUnitCall(u)?.kt)||(!!db.currentCall?.kt&&(db.currentCall.proposedUnitIds||[]).some(id=>String(id)===String(u.id)))}catch(e){}
- if(kt)return Math.max(1,Math.round(15+(km/45)*60));
- const speedKmh=isAir?200:60;
- const turnoutMin=isAir?5:(isVolunteer?12:2);
- return Math.max(1,Math.round(turnoutMin+(km/speedKmh)*60));
+ if(kt)return Math.max(1,Math.round(15+(km*1.3/45)*60));
+ return Math.max(1,Math.round(unitTurnoutMin(u)+travelMinutes(u,km,unitCallIsR0(u))));
 }
 function estimatedEtaMinutes(u){
  return etaMinutesForDistance(u,geographicRank(u));
@@ -1740,7 +1765,7 @@ function manageProposal(){
   <label style="margin-top:14px">Verfügbares Fahrzeug hinzufügen</label>
   <select id="manualAddUnit">
    <option value="">– Fahrzeug wählen –</option>
-   ${available.map(u=>`<option value="${u.id}">${esc(u.type)} · ${esc(u.opta||u.name)}${geographicRank(u)<999?` (~${geographicRank(u).toFixed(1)} km, ca. ${estimatedEtaMinutes(u)} min)`:""}</option>`).join("")}
+   ${available.map(u=>`<option value="${u.id}">${esc(u.type)} · ${esc(u.opta||u.name)}${geographicRank(u)<999?` (ca. ${estimatedEtaMinutes(u)} min)`:""}</option>`).join("")}
   </select>
   <div class="row" style="margin-top:10px"><button class="primary" onclick="addManualUnit()">➕ Hinzufügen</button></div>
  </div>`;
@@ -1783,7 +1808,7 @@ function resourcePickerCatsHTML(mode){
  if(pickerCat!=="quick"&&!orgs.includes(pickerCat))pickerCat="quick";
  const icon=o=>(typeof ORG_ICON!=="undefined"&&ORG_ICON[o])||"🚗";
  const tabs=`<div class="row" style="flex-wrap:wrap;gap:6px;margin:6px 0 10px">${[["quick","⭐ Häufig"],...orgs.map(o=>[o,`${icon(o)} ${o}`])].map(([k,t])=>`<button class="${pickerCat===k?"primary":""}" onclick="setPickerCat(${esc(JSON.stringify(k))},'${mode}')">${esc(t)}</button>`).join("")}</div>`;
- const dist=u=>u&&geographicRank(u)<999?`${geographicRank(u).toFixed(1)} km`:"verfügbar";
+ const dist=u=>u&&geographicRank(u)<999?`ca. ${estimatedEtaMinutes(u)} min`:"verfügbar";
  const btn=(t,label,org)=>{const u=chooseAvailableByType(t,org);const typeArg=JSON.stringify(t).replace(/"/g,"'");
    return `<button ${u?"":"disabled"} onclick="addResourceType(${typeArg},'${mode}'${org?`,${esc(JSON.stringify(org))}`:""})">${esc(label||(Array.isArray(t)?t.join("/"):t))}<small style="display:block">${u?`${esc(u.opta||u.name)} · ${dist(u)}`:"nicht verfügbar"}</small></button>`};
  if(pickerCat==="quick")return tabs+`<div class="answer">${QUICK_RESOURCE_TYPES.map(({type:t,label})=>btn(t,label,null)).join("")}</div>`;
@@ -2008,8 +2033,11 @@ function needsNeighborHelp(call){
  // für diesen Einsatz alarmiert wurde (call.neighborUnitId gesetzt), gilt der Bedarf als gedeckt.
  if(call.neighborUnitId)return false;
  if(!callDestinationPoint(call))return false;
- const ownKm=nearestOwnUnitKm(call);
- return ownKm===null||ownKm>20;
+ // Eigenes RTW/NEF nicht innerhalb von 15 min (Hilfsfrist) da → Nachbar anfragen
+ const dest=callDestinationPoint(call);
+ let best=null;
+ db.units.filter(u=>["RTW","NEF"].includes(u.type)&&["1","2"].includes(String(u.status))).forEach(u=>{const p=unitPoint(u);if(!p)return;const e=etaMinutesForDistance(u,haversine(dest[0],dest[1],p[0],p[1]));if(best==null||e<best)best=e});
+ return best===null||best>15;
 }
 function incidentCard(c,isSelected){
  const state=c.alarmTime?"Alarmiert":"Bearbeitung";
@@ -2282,7 +2310,7 @@ function notruf(){
  </section>
  <aside>
   <div class="card"><h2>🧠 Live-Bewertung</h2><div class="big">${esc(c.keyword||"—")}</div>${c.aaoWinner?`<div class="muted" style="font-size:12px;margin-top:4px">AAO: ${esc(c.aaoWinner)}${(c.aaoCombined||[]).length?` · zusätzlich: ${esc(c.aaoCombined.join(", "))}`:""}${(c.aaoMatches||[]).filter(n=>n!==c.aaoWinner&&!(c.aaoCombined||[]).includes(n)).length?` · ebenfalls passend (nicht alarmiert): ${esc(c.aaoMatches.filter(n=>n!==c.aaoWinner&&!(c.aaoCombined||[]).includes(n)).join(", "))}`:""}${(c.aaoExcluded||[]).length?`<br><span style="color:#b91c1c">⛔ ausgeschlossen: ${esc(c.aaoExcluded.join(", "))}</span>`:""}</div>`:""}<p>${c.suggestion||"Antworten fehlen noch."}</p></div>
-  <div class="card"><h2>🚑 Nächste verfügbare Mittel</h2>${nearest.length?nearest.map(u=>`<div class="row between" style="padding:6px 0;border-bottom:1px solid var(--line)"><span><b>${esc(u.type||"—")}</b><br><small class="muted">${esc(u.opta||u.name||"—")}${geographicRank(u)<999?` · ~${geographicRank(u).toFixed(1)} km · ca. ${estimatedEtaMinutes(u)} min`:``}</small></span><span class="status ${statusClass(u.status)}">${statusName(u.status)}</span></div>`).join(""):`<span class="muted">Keine verfügbaren Mittel</span>`}</div>
+  <div class="card"><h2>🚑 Nächste verfügbare Mittel</h2>${nearest.length?nearest.map(u=>`<div class="row between" style="padding:6px 0;border-bottom:1px solid var(--line)"><span><b>${esc(u.type||"—")}</b><br><small class="muted">${esc(u.opta||u.name||"—")}${geographicRank(u)<999?` · ca. ${estimatedEtaMinutes(u)} min`:``}</small></span><span class="status ${statusClass(u.status)}">${statusName(u.status)}</span></div>`).join(""):`<span class="muted">Keine verfügbaren Mittel</span>`}</div>
  </aside></div>`;
  if(q && q[0]==="location" && !c.callerGpsPending) setTimeout(initNotrufMap,0);
 }
@@ -2729,7 +2757,7 @@ function evaluate(){
    c.proposal=u?[{...u}]:[{missing:true,type:"KTW",org:"Rettungsdienst"}];
    c.proposedUnitIds=u?[u.id]:[];
    c.neighborProposal=[];
-   c.suggestion=u?`${u.opta||u.name} – ${u.type}${Number.isFinite(geographicRank(u))&&geographicRank(u)<999?` (~${geographicRank(u).toFixed(1)} km Luftlinie)`:""}`:"⚠️ KTW/NKTW nicht verfügbar";
+   c.suggestion=u?`${u.opta||u.name} – ${u.type}${Number.isFinite(geographicRank(u))&&geographicRank(u)<999?` (ca. ${estimatedEtaMinutes(u)} min)`:""}`:"⚠️ KTW/NKTW nicht verfügbar";
    return;
  }
  let req=[], keyword="Noch unklar", sr=true;
@@ -2981,12 +3009,14 @@ function evaluate(){
    if(lv==="R1N1"&&!req.some(r=>r.type==="NEF"))add("NEF",1,"Rettungsdienst");
    keyword=withRLevel(keyword,lv); sr=lv!=="R0"; c.rZero=lv==="R0";
  }
- const neighborFor=(type,ownKm)=>{
+ // Nachbar-LK-Fahrzeug nur, wenn es SCHNELLER da ist als das eigene (Eintreffzeit, nicht km).
+ const neighborFor=(type,ownEta)=>{
    if(!ip||!["RTW","NEF"].includes(type)||incidentOnWangerooge())return null; // Insel: kein Nachbar-LK
    let best=null;
    (db.neighborUnits||[]).filter(n=>n.type===type&&["1","2"].includes(String(n.status))&&!usedN.has(String(n.id))&&Number.isFinite(n.lat)&&Number.isFinite(n.lng)).forEach(n=>{
      const km=haversine(ip[0],ip[1],n.lat,n.lng);
-     if((ownKm==null||km<ownKm)&&(!best||km<best.km))best={n,km};
+     const eta=etaMinutesForDistance({...n,org:"Rettungsdienst",neighborLoan:true,status:String(n.status)},km);
+     if((ownEta==null||eta<ownEta)&&(!best||eta<best.eta))best={n,km,eta};
    });
    return best;
  };
@@ -3013,14 +3043,13 @@ function evaluate(){
    }
    // Nachbar-LK nie bei R0 (ohne Sonderrechte) – dann fährt das eigene Fahrzeug, auch wenn weit weg.
    if(!c.rZero&&!r.exact&&!r.firstResponder&&(r.org==null||r.org==="Rettungsdienst")){
-     const ownKm=u?geographicRank(u):null;
-     if(!u||(ownKm!=null&&ownKm<999&&ownKm>20)){
-       const nb=neighborFor(r.type,u&&ownKm<999?ownKm:null);
-       if(nb){selected.push({...nb.n,neighbor:true,neighborKm:nb.km});usedN.add(String(nb.n.id));continue}
-     }
+     const ownEta=u?estimatedEtaMinutes(u):null;
+     const nb=neighborFor(r.type,ownEta);
+     if(nb){selected.push({...nb.n,neighbor:true,neighborKm:nb.km,neighborEta:nb.eta});usedN.add(String(nb.n.id));continue}
    }
    // First Responder nur sinnvoll, wenn er wirklich in der Nähe ist (≤ 20 km).
-   if(r.firstResponder&&u){const fk=geographicRank(u);if(fk!=null&&fk<999&&fk>20)continue}
+   // First Responder nur, wenn er schneller ist als das schnellste RTW (und höchstens 15 min braucht)
+   if(r.firstResponder&&u){const fe=estimatedEtaMinutes(u);const rtw=selected.filter(x=>x.type==="RTW"&&!x.missing).map(x=>x.neighbor?x.neighborEta:estimatedEtaMinutes(x)).filter(Number.isFinite);if(fe==null||fe>15||(rtw.length&&fe>=Math.min(...rtw)))continue}
    if(u){selected.push({...u,firstResponder:!!r.firstResponder});used.add(u.id)}
    else selected.push({missing:true,type:r.type,org:r.org});
  }
@@ -3062,7 +3091,7 @@ function evaluate(){
  c.neighborProposal=selected.filter(x=>x.neighbor).map(x=>x.id);
  c.proposal=selected;
  c.abPlans=abPlans;
- c.suggestion=selected.map(x=>x.wlfFor?`${x.opta||x.name} – WLF (holt ${x.wlfFor} an der FTZ${x.wlfBusy?`, kommt von Einsatz #${x.wlfFrom} und setzt dort ab`:""} · ca. ${x.wlfTotal} min)`:x.abWith?`${x.opta||x.name} – ${x.type} (auf ${x.abWith})`:x.missing?`⚠️ ${x.type} (${x.org||"beliebig"}) nicht verfügbar`:x.neighbor?`🤝 ${x.opta} – ${x.type} (Nachbar-LK ${x.district}, ~${x.neighborKm.toFixed(1)} km Luftlinie)`:`${x.opta||x.name} – ${x.type}${x.firstResponder?" (First Responder)":""}${Number.isFinite(geographicRank(x))&&geographicRank(x)<999?` (~${geographicRank(x).toFixed(1)} km Luftlinie)`:``}`).join(" · ");
+ c.suggestion=selected.map(x=>x.wlfFor?`${x.opta||x.name} – WLF (holt ${x.wlfFor} an der FTZ${x.wlfBusy?`, kommt von Einsatz #${x.wlfFrom} und setzt dort ab`:""} · ca. ${x.wlfTotal} min)`:x.abWith?`${x.opta||x.name} – ${x.type} (auf ${x.abWith})`:x.missing?`⚠️ ${x.type} (${x.org||"beliebig"}) nicht verfügbar`:x.neighbor?`🤝 ${x.opta} – ${x.type} (Nachbar-LK ${x.district}, ca. ${x.neighborEta} min)`:`${x.opta||x.name} – ${x.type}${x.firstResponder?" (First Responder)":""}${Number.isFinite(geographicRank(x))&&geographicRank(x)<999?` (ca. ${estimatedEtaMinutes(x)} min)`:``}`).join(" · ");
  c.sr=sr;
 }
 
@@ -3188,7 +3217,7 @@ function prepareAlarm(){
      if(o.unitIds){const chk=o.unitIds.every(i=>(c.optionalChecked||[]).map(String).includes(String(i)));
        return `<label style="display:flex;gap:8px;align-items:center;font-weight:500;margin:4px 0"><input type="checkbox" style="width:auto" ${chk?"checked":""} onchange="toggleOptionalUnit('${o.unitIds.join(",")}',this.checked)"> ${esc(o.type)} <small class="muted">(${o.unitIds.length} Fahrzeuge: ${esc(o.unitIds.map(i=>db.units.find(x=>x.id===i)?.type).filter(Boolean).join(", "))})</small> <small class="muted">· ${esc(o.aao)}</small></label>`}
      const u=o.unitId!=null?db.units.find(x=>x.id===o.unitId):null;const km=u?geographicRank(u):null;
-     return u?`<label style="display:flex;gap:8px;align-items:center;font-weight:500;margin:4px 0"><input type="checkbox" style="width:auto" ${(c.optionalChecked||[]).map(String).includes(String(u.id))?"checked":""} onchange="toggleOptionalUnit('${String(u.id)}',this.checked)"> ${esc(u.opta||u.name)} – ${esc(u.type)}${km!=null&&km<999?` <small class="muted">(~${km.toFixed(1)} km)</small>`:""} <small class="muted">· ${esc(o.aao)}</small></label>`
+     return u?`<label style="display:flex;gap:8px;align-items:center;font-weight:500;margin:4px 0"><input type="checkbox" style="width:auto" ${(c.optionalChecked||[]).map(String).includes(String(u.id))?"checked":""} onchange="toggleOptionalUnit('${String(u.id)}',this.checked)"> ${esc(u.opta||u.name)} – ${esc(u.type)}${km!=null&&km<999?` <small class="muted">(ca. ${estimatedEtaMinutes(u)} min)</small>`:""} <small class="muted">· ${esc(o.aao)}</small></label>`
        :`<div class="muted" style="margin:4px 0">☐ ${esc(o.type)} – nicht verfügbar <small>· ${esc(o.aao)}</small></div>`}).join("")}</div>`:""}
    ${(c.proposedUnitIds.length+(c.neighborProposal||[]).length)?"":`<div class="suggest" style="margin-top:8px;background:#fff1f1;border-color:#f3b4b4">⚠️ Kein Einsatzmittel verfügbar. Der Einsatz wird trotzdem alarmiert und angelegt – Fahrzeuge können über „Rettungsmittel bearbeiten“ oder später per Nachforderung ergänzt werden.</div>`}
    ${xtext?`<label style="margin-top:12px">XABCDE</label><pre style="white-space:pre-wrap;background:#f8fafc;padding:10px;border-radius:10px">${esc(xtext)}</pre>`:""}
@@ -3332,7 +3361,7 @@ function unitDutyToggleDay(i,on){const d=unitDraft.duty;d.days=d.days.filter(x=>
 function editUnit(id){
  const u=db.units.find(x=>String(x.id)===String(id)); if(!u)return;
  const du=unitDuty(u);
- unitDraft={id:u.id,org:u.org||"",type:u.type||"",name:u.name||"",opta:u.opta||"",location:u.location||"",crew:String(u.crew??""),skills:u.skills||"",fachgruppe:u.org==="THW"?thwGroup(u).replace(/^Ohne Fachgruppe$/,""):"",
+ unitDraft={id:u.id,org:u.org||"",type:u.type||"",name:u.name||"",opta:u.opta||"",location:u.location||"",crew:String(u.crew??""),skills:u.skills||"",turnoutMin:u.turnoutMin??"",fachgruppe:u.org==="THW"?thwGroup(u).replace(/^Ohne Fachgruppe$/,""):"",
    dutyOn:!!du,duty:du?{from:du.from||"07:00",to:du.to||"19:00",days:Array.isArray(du.days)&&du.days.length?[...du.days]:[0,1,2,3,4,5,6],dateFrom:du.dateFrom||"",dateTo:du.dateTo||""}:{from:"07:00",to:"19:00",days:[0,1,2,3,4,5,6],dateFrom:"",dateTo:""}};
  render("mittel");
 }
@@ -3356,6 +3385,7 @@ function unitEditorHTML(){
    <div><label>Funkrufname / OPTA</label><input value="${esc(d.opta)}" placeholder="z. B. Rettung Friesland 82/83-03" oninput="unitDraft.opta=this.value"></div>
    <div><label>Standort</label><input list="unitLocList" value="${esc(d.location)}" oninput="unitDraft.location=this.value"><datalist id="unitLocList">${locs.map(l=>`<option value="${esc(l)}">`).join("")}</datalist></div>
    <div><label>Besatzung</label><input type="number" min="0" value="${esc(d.crew)}" oninput="unitDraft.crew=this.value"></div>
+   <div><label>Ausrückzeit in min (leer = Standard ${unitTurnoutDefault({org:d.org,type:d.type,skills:d.skills})} min)</label><input type="number" min="0" max="60" value="${esc(d.turnoutMin??"")}" placeholder="${unitTurnoutDefault({org:d.org,type:d.type,skills:d.skills})}" oninput="unitDraft.turnoutMin=this.value"></div>
   </div>
   <label>Fähigkeiten / Hinweise (optional)</label><input value="${esc(d.skills)}" oninput="unitDraft.skills=this.value">
   ${d.org==="THW"?`<label>THW-Fachgruppe (für „Nachfordern nach Fachgruppe“)</label><input list="thwGroupList" value="${esc(d.fachgruppe||"")}" placeholder="z. B. Bergungsgruppe (B)" oninput="unitDraft.fachgruppe=this.value"><datalist id="thwGroupList">${[...new Set([...Object.values(THW_GROUP_DEFAULT),...db.units.filter(u=>u.org==="THW").map(thwGroup)])].filter(g=>g!=="Ohne Fachgruppe").map(g=>`<option value="${esc(g)}">`).join("")}</datalist>`:""}
@@ -3389,6 +3419,7 @@ function saveUnitDraft(){
  const duty=d.dutyOn?{from:d.duty.from,to:d.duty.to,days:[...d.duty.days],...(d.duty.dateFrom&&d.duty.dateTo?{dateFrom:d.duty.dateFrom,dateTo:d.duty.dateTo}:{})}:{none:true};
  const fields={org:d.org,type,name,opta:String(d.opta||"").trim()||name,location:String(d.location||"").trim(),crew:String(d.crew||"").trim(),skills:String(d.skills||"").trim(),duty};
  if(d.org==="THW")fields.fachgruppe=String(d.fachgruppe||"").trim();
+ fields.turnoutMin=String(d.turnoutMin??"").trim()===""?"":Math.max(0,Number(d.turnoutMin)||0);
  if(d.id!=null){
    const u=db.units.find(x=>String(x.id)===String(d.id));
    if(u){
