@@ -1094,3 +1094,14 @@ Version 4.62:
 - Nachbar-LK: RTW/NEF aus dem Nachbarkreis wird vorgeschlagen, wenn es schneller da ist als das
   eigene (bisher: eigenes > 20 km). Hinweis "Nachbar anfragen", wenn kein eigenes RTW/NEF
   innerhalb von 15 min da ist. First Responder nur, wenn er schneller als das RTW und ≤ 15 min ist.
+
+Version 4.63:
+- IVENA im Handymodus aufgeräumt:
+  - Kapazitätsübersicht: Fachbereichs-Kürzel stehen senkrecht (keine Überlappung mehr),
+    Kliniknamen einzeilig (gekürzt, voller Name beim Antippen/Hovern), Ort ausgeblendet,
+    kleinere Knöpfe – die ganze Tabelle passt auf den Bildschirm.
+  - Zuweisungen: statt der 16-spaltigen Tabelle eine Karte je Patient (Fahrzeug, Alarm-/
+    Eintreffzeit, SK, M/W + Alter, Fachbereich/Diagnose grün bzw. rot, Kennzeichen S/H/N/B/R/BG
+    als Plaketten, Anlass, Info, Bearbeiten/Löschen). Gelöschte bleiben durchgestrichen.
+  - MANV-Sammelzuweisung: kompaktere Schrift und schmaleres PZC-Feld.
+- Tablet/PC-Ansicht unverändert.
