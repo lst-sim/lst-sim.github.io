@@ -1168,3 +1168,16 @@ Version 4.69:
   (Jahresbericht 2016). Kartenlage je Strand nur ungefähr.
 - Hochwasser für alle Türme nach Wilhelmshaven gerechnet – an Schillig/Hooksiel und besonders
   Wangerooge kommt es real früher; ein Versatz je Ort ist nicht hinterlegt.
+
+Version 4.70:
+- First-Responder-Zeitregel (gilt für NKTW als First Responder aus der AAO, besetzte Wachtürme und
+  Fahrzeuge mit angemeldeter Besatzung ab RS): First Responder nur, wenn er schneller da ist als
+  das erste andere Einsatzmittel des Einsatzes (egal welches) – bei Reanimation um mehr als 1 min,
+  bei Verkehrsunfall um mehr als 2 min, sonst um mehr als 3 min. Vorher: schneller als das RTW
+  (NKTW) bzw. mind. 2 min schneller als RTW/NEF (angemeldete Besatzung) bzw. nur Umkreis 2 km
+  (Wachturm; der Umkreis bleibt zusätzlich bestehen).
+- Wachtürme und angemeldete Besatzungen, die die Regel erfüllen, sind im Alarmvorschlag jetzt
+  vorab angehakt (abwählbar). Die Zeitersparnis steht dabei.
+- AAO-Bearbeitung: neue Einstellung „First Responder“ – Standard (Regel oben), Eigene
+  Zeitersparnis (mehr als X min, 0 = sobald schneller) oder Nie. Bei mehreren passenden AAOs gilt
+  die führende AAO.

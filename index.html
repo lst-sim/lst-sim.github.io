@@ -162,7 +162,7 @@ table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:10px 8px
 </head>
 <body>
 <div style="padding:6px 10px;font-size:11px;color:#94a3b8;font-weight:700;display:flex;align-items:center;gap:10px;position:sticky;top:0;z-index:10;background:var(--bg)">
- <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v4.69</span>
+ <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v4.70</span>
  <span id="syncState"></span>
  <a id="homeLink" href="#" onclick="render('leitstelle');return false" class="hidden" style="color:#64748b;text-decoration:underline;font-weight:600">🖥️ Leitstelle</a>
  <a id="monitorLink" href="#" onclick="showMonitorQR();return false" style="color:#64748b;text-decoration:underline;font-weight:600;margin-left:auto">🖥️ Monitor hinzufügen</a>
@@ -2511,6 +2511,30 @@ function xabcdeComplete(c=db.currentCall){
 // übersprungen (RTW+NEF sind über das Stichwort "REANIMATION R1N1" ohnehin schon vorgeschlagen,
 // die eigentliche Erhärtung erfolgt klinisch vor Ort) – nur Ort, Anzahl, Gefahren, Patienten-
 // daten und der eigene Freitext (seit v3.93) werden noch real erfragt.
+// First-Responder-Zeitregel (Nutzerangabe): nötige Zeitersparnis in Minuten gegenüber dem ersten
+// eintreffenden Einsatzmittel – Reanimation mehr als 1 min, Verkehrsunfall mehr als 2 min, sonst mehr als 3 min.
+// In der AAO einstellbar (a.fr): "auto" = diese Regel, "off" = nie First Responder,
+// "min" = eigene Mindest-Zeitersparnis a.frMin (0 = immer, sobald schneller). Es gilt die führende AAO.
+function frThreshold(c=db.currentCall){
+ if(!c)return 3;
+ const a=c.aaoWinnerId!=null?aaoEntry(c.aaoWinnerId):null;
+ if(a?.fr==="off")return Infinity;
+ if(a?.fr==="min"&&Number.isFinite(Number(a.frMin)))return Math.max(0,Number(a.frMin));
+ if(reaShortcutActive(c)||/reanimation/i.test(String(c.keyword||"")))return 1;
+ if((c.answers||{}).event==="Verkehrsunfall"||/(^|_)VU|Verkehrsunfall|Eingeklemmt/i.test(String(c.keyword||"")))return 2;
+ return 3;
+}
+// Früheste Eintreffzeit aller (nicht als First Responder) vorgeschlagenen Einsatzmittel; Infinity, wenn keins
+function frRuleText(c=db.currentCall){
+ const t=frThreshold(c), a=c?.aaoWinnerId!=null?aaoEntry(c.aaoWinnerId):null;
+ if(t===Infinity)return "laut AAO keine First Responder";
+ const src=a?.fr==="min"?"laut AAO":t===1?"Rea":t===2?"VU":"Standard";
+ return `${src}: ${t===0?"sobald schneller":`> ${t} min schneller`} als das erste Einsatzmittel`;
+}
+function frFirstEta(list){
+ const e=(list||[]).filter(x=>!x.missing&&!x.firstResponder&&!x.abWith).map(x=>x.wlfFor?x.wlfTotal:x.neighbor?x.neighborEta:estimatedEtaMinutes(x)).filter(Number.isFinite);
+ return e.length?Math.min(...e):Infinity;
+}
 function reaShortcutActive(c=db.currentCall){
  if(!c)return false;
  const a=c.answers||{};
@@ -2907,7 +2931,7 @@ function evaluate(){
    const gr=x=>{const k=geographicRank(x);return Number.isFinite(k)?k:999};
    cand.sort((p,q)=>(gr(p)+(p.type==="NKTW"?2:0))-(gr(q)+(q.type==="NKTW"?2:0)));
    const u=cand[0]||null;
-   c.keyword=t; c.sr=false; c.rZero=false; c.aaoWinner=null; c.aaoMatches=[]; c.aaoCombined=[];
+   c.keyword=t; c.sr=false; c.rZero=false; c.aaoWinner=null; c.aaoWinnerId=null; c.aaoMatches=[]; c.aaoCombined=[];
    c.proposal=u?[{...u}]:[{missing:true,type:"KTW",org:"Rettungsdienst"}];
    c.proposedUnitIds=u?[u.id]:[];
    c.neighborProposal=[];
@@ -3140,13 +3164,13 @@ function evaluate(){
        const old=kwMap[9]; if(old&&keyword.startsWith(old))keyword=`MANV – ${cnt} Verletzte`+keyword.slice(old.length);
        if(active.some(o=>aaoExcluded(o,firstKwId)))noteExcl(firstKwId);
      }
-     c.aaoWinner=(aaoEntry(win)?.name)||null; winAao=win;
+     c.aaoWinner=(aaoEntry(win)?.name)||null; c.aaoWinnerId=win; winAao=win;
      c.aaoExcluded=excludedNames;
      // Passende AAOs ohne Pflichtfahrzeuge (nur optionale) zählen mit, wenn nicht ausgeschlossen.
      for(const k of Object.keys(kwMap).map(String)){if(!groups.has(k)&&!active.includes(k)&&!blocked(k)&&aaoCombinable(win,k))active.push(k)}
      for(const ca of customAaoMatches(c)){const k=String(ca.id);if(!groups.has(k)&&!active.includes(k)&&!blocked(k)&&!(ca.units||[]).some(x=>!x.opt))active.push(k)}
      activeAao=active;
-   }else{c.aaoWinner=null;c.aaoExcluded=[];activeAao=[...Object.keys(kwMap).map(String),...customAaoMatches(c).filter(ca=>!(ca.units||[]).some(x=>!x.opt)).map(ca=>String(ca.id))]}
+   }else{c.aaoWinner=null;c.aaoWinnerId=null;c.aaoExcluded=[];activeAao=[...Object.keys(kwMap).map(String),...customAaoMatches(c).filter(ca=>!(ca.units||[]).some(x=>!x.opt)).map(ca=>String(ca.id))]}
  }
 
 
@@ -3203,9 +3227,17 @@ function evaluate(){
    }
    // First Responder nur sinnvoll, wenn er wirklich in der Nähe ist (≤ 20 km).
    // First Responder nur, wenn er schneller ist als das schnellste RTW (und höchstens 15 min braucht)
-   if(r.firstResponder&&u){const fe=estimatedEtaMinutes(u);const rtw=selected.filter(x=>x.type==="RTW"&&!x.missing).map(x=>x.neighbor?x.neighborEta:estimatedEtaMinutes(x)).filter(Number.isFinite);if(fe==null||fe>15||(rtw.length&&fe>=Math.min(...rtw)))continue}
+   // (Zeitersparnis gegenüber dem ersten anderen Einsatzmittel wird nach der Auswahl geprüft.)
+   if(r.firstResponder&&u){const fe=estimatedEtaMinutes(u);if(fe==null||fe>15)continue}
    if(u){selected.push({...u,firstResponder:!!r.firstResponder});used.add(u.id)}
    else selected.push({missing:true,type:r.type,org:r.org});
+ }
+ // First Responder nur bei echter Zeitersparnis gegenüber dem ersten eintreffenden Einsatzmittel
+ // (Nutzerangabe): Reanimation > 1 min, Verkehrsunfall > 2 min, sonst > 3 min.
+ for(let i=selected.length-1;i>=0;i--){
+   const x=selected[i]; if(!x.firstResponder)continue;
+   const fe=estimatedEtaMinutes(x), first=frFirstEta(selected);
+   if(!(first-fe>frThreshold(c))){selected.splice(i,1);used.delete(x.id)}
  }
  {
    const elw=maybeAddDlrgElw1(selected.filter(x=>!x.missing));
@@ -3236,41 +3268,37 @@ function evaluate(){
        for(;got<want;got++)offer.push({unitId:null,type:x.type,aao:aaoName});
      }
    }
-   // Fahrzeuge mit gesondert angemeldeter Besatzung (z. B. DLRG mit NFS an Bord) als qualifizierte
-   // Ersthelfer anbieten – nur wenn sie mind. 2 min schneller da sind als das schnellste vorgeschlagene RTW bzw.
-   // (bei Notarzt an Bord) NEF/RTH. Nur Angebot zum Anhaken, nie automatisch.
+   // First Responder ohne AAO-Eintrag: Fahrzeuge mit gesondert angemeldeter Besatzung (ab RS, z. B.
+   // DLRG mit NFS an Bord – nur bei Einsätzen mit RTW/NEF/RTH) und besetzte DLRG-Wachtürme (≤ 2 km).
+   // Gleiche Zeitregel wie oben (Rea > 1 min, VU > 2 min, sonst > 3 min vor dem ersten Einsatzmittel);
+   // erfüllt → angeboten UND vorab angehakt (abwählbar), sonst gar nicht angeboten.
    {
-     const etaOf=x=>x.neighbor?x.neighborEta:estimatedEtaMinutes(x);
-     const minEta=types=>{const l=selected.filter(x=>types.includes(x.type));if(!l.length)return null;const e=l.filter(x=>!x.missing).map(etaOf).filter(Number.isFinite);return e.length?Math.min(...e):Infinity};
-     const rtwEta=minEta(["RTW"]), naEta=minEta(["NEF","RTH","ITH"]);
-     if(rtwEta!=null||naEta!=null){
-       for(const u of db.units){
-         if(!u.qualNow||u.neighborLoan||used.has(u.id)||seen.has(u.id))continue;
-         if(!["1","2"].includes(String(u.status))||!islandReachable(u))continue;
-         if(["RTW","NEF","RTH","ITH"].includes(u.type)||isAB(u))continue; // reguläre Rettungsmittel bzw. Abrollbehälter
-         const r=qualRank(qualTokens(u.qualNow)), e=estimatedEtaMinutes(u);
-         if(!Number.isFinite(e)||e>15)continue;
-         let why=null;
-         if(r>=6&&naEta!=null&&e<=naEta-2)why=`Notarzt an Bord · schneller als ${naEta===Infinity?"kein NEF verfügbar":`NEF/RTH (ca. ${naEta} min)`}`;
-         else if(r>=4&&rtwEta!=null&&e<=rtwEta-2)why=`${qualRankName(r)} an Bord · schneller als ${rtwEta===Infinity?"kein RTW verfügbar":`RTW (ca. ${rtwEta} min)`}`;
-         if(!why)continue;
-         seen.add(u.id);
-         offer.push({unitId:u.id,type:u.type,aao:`🩺 ${why}`,qual:true,label:`qualifizierter Ersthelfer: ${qualTokens(u.qualNow).join(" + ")}`});
-       }
+     const first=frFirstEta(selected), thr=frThreshold(c);
+     const rd=selected.some(x=>["RTW","NEF","RTH","ITH"].includes(x.type));
+     const saveTxt=e=>first===Infinity?"kein anderes Einsatzmittel verfügbar":`${first-e} min vor dem ersten Einsatzmittel (ca. ${first} min)`;
+     const push=(u,why,label)=>{
+       seen.add(u.id);
+       offer.push({unitId:u.id,type:u.type,aao:why,qual:true,fr:true,label});
+       c.frAutoChecked=c.frAutoChecked||[];
+       if(!c.frAutoChecked.includes(String(u.id))){c.frAutoChecked.push(String(u.id));c.optionalChecked=[...new Set([...(c.optionalChecked||[]).map(String),String(u.id)])]}
+     };
+     if(rd)for(const u of db.units){
+       if(!u.qualNow||u.neighborLoan||used.has(u.id)||seen.has(u.id))continue;
+       if(!["1","2"].includes(String(u.status))||!islandReachable(u))continue;
+       if(["RTW","NEF","RTH","ITH"].includes(u.type)||isAB(u))continue; // reguläre Rettungsmittel bzw. Abrollbehälter
+       const r=qualRank(qualTokens(u.qualNow)), e=estimatedEtaMinutes(u);
+       if(r<4||!Number.isFinite(e)||e>15||!(first-e>thr))continue;
+       push(u,`🩺 ${qualRankName(r)} an Bord · ${saveTxt(e)}`,`First Responder: ${qualTokens(u.qualNow).join(" + ")}`);
      }
-   }
-   // Besetzte DLRG-Wachtürme (Status 1) im Umkreis von 2 km um den Einsatzort als First Responder
-   // anbieten – bei jedem Einsatz, unabhängig vom Einsatzstichwort. Sonst nie alarmierbar.
-   {
      const ip=incidentPoint();
      if(ip)for(const u of db.units){
        if(!notAlarmable(u)||String(u.status)!=="1"||used.has(u.id)||seen.has(u.id))continue;
        const up=unitPoint(u); if(!up)continue;
        const m=Math.round(haversine(ip[0],ip[1],up[0],up[1])*1000);
-       if(m>2000)continue;
-       seen.add(u.id);
+       const e=estimatedEtaMinutes(u);
+       if(m>2000||!Number.isFinite(e)||!(first-e>thr))continue;
        const q=unitQual(u).join(" + ");
-       offer.push({unitId:u.id,type:u.type,aao:`🗼 ${u.type} besetzt · ca. ${m<100?"<100":Math.round(m/50)*50} m vom Einsatzort${q?` · ${q}`:""}`,qual:true,label:`First Responder (${u.type}${q?`, ${q}`:""})`});
+       push(u,`🗼 ${u.type} besetzt · ca. ${m<100?"<100":Math.round(m/50)*50} m entfernt · ${saveTxt(e)}${q?` · ${q}`:""}`,`First Responder (${u.type}${q?`, ${q}`:""})`);
      }
    }
    c.optionalOffer=offer;
@@ -3403,7 +3431,7 @@ function prepareAlarm(){
    ${stagingSectionHTML(c)}
    <label style="margin-top:12px">Vorgeschlagene Einsatzmittel</label>
    <div class="suggest">${esc(c.suggestion||"—")}</div>
-   ${(c.optionalOffer||[]).length?`<label style="margin-top:12px">➕ Optionale Fahrzeuge${c.optionalOffer.some(o=>o.qual)?" (AAO / First Responder)":" (AAO)"} – bei Bedarf anhaken</label>
+   ${(c.optionalOffer||[]).length?`<label style="margin-top:12px">➕ Optionale Fahrzeuge${c.optionalOffer.some(o=>o.qual)?` (AAO / First Responder – ${esc(frRuleText(c))})`:" (AAO)"} – bei Bedarf anhaken</label>
    <div class="suggest" style="background:#f8fafc">${c.optionalOffer.map(o=>{
      if(o.unitIds){const chk=o.unitIds.every(i=>(c.optionalChecked||[]).map(String).includes(String(i)));
        return `<label style="display:flex;gap:8px;align-items:center;font-weight:500;margin:4px 0"><input type="checkbox" style="width:auto" ${chk?"checked":""} onchange="toggleOptionalUnit('${o.unitIds.join(",")}',this.checked)"> ${esc(o.type)} <small class="muted">(${o.unitIds.length} Fahrzeuge: ${esc(o.unitIds.map(i=>db.units.find(x=>x.id===i)?.type).filter(Boolean).join(", "))})</small> <small class="muted">· ${esc(o.aao)}</small></label>`}
@@ -5658,6 +5686,7 @@ function editAAO(id){
  aaoDraft=src?JSON.parse(JSON.stringify(src)):{id:null,name:"",keyword:"",rules:{event:"Medizinischer Notfall"},units:[{type:"RTW",n:1,org:"Rettungsdienst"}],active:true};
  aaoDraft.units=(aaoDraft.units||[]).map(x=>({type:x.type||"",n:x.n==="pat"?"pat":(Number(x.n)||1),org:x.org||"",opt:!!x.opt}));
  aaoDraft._rules=[...Object.entries(aaoDraft.rules||{}).map(([k,v])=>({k,v:String(v)})),...(Array.isArray(aaoDraft.orRules)?aaoDraft.orRules:[]).filter(r=>r&&r.k).map(r=>({k:r.k,v:String(r.v),or:true}))];
+ aaoDraft.fr=aaoDraft.fr||"auto"; aaoDraft.frMin=aaoDraft.frMin??3;
  aaoDraft.combine=aaoDraft.combine||"nein"; aaoDraft.combineWith=(aaoDraft.combineWith||[]).map(String); aaoDraft.excludeWith=(aaoDraft.excludeWith||[]).map(String);
  render("aao");
 }
@@ -5697,6 +5726,11 @@ function aaoEditor(){
    <p class="muted" style="font-size:12px;margin:4px 0">Diese AAOs werden nie zusammen mit dieser alarmiert – auch wenn eine von beiden „Mit anderen AAOs: Ja“ hat. Passen beide, gilt nur die höhere.</p>
    <div style="max-height:260px;overflow:auto;margin-top:6px">${db.aao.filter(x=>String(x.id)!==String(d.id)).map(x=>`<label style="display:flex;gap:8px;align-items:center;font-weight:500;margin:4px 0"><input type="checkbox" style="width:auto" ${d.excludeWith.includes(String(x.id))?"checked":""} onchange="aaoToggleExclude('${String(x.id)}',this.checked)"> ${esc(x.name)}</label>`).join("")}</div>
   </details>
+  <label>First Responder</label>
+  <div class="row">${[["auto","Standard"],["min","Eigene Zeitersparnis"],["off","Nie"]].map(([v,t])=>`<button class="${d.fr===v?"primary":""}" onclick="aaoDraft.fr='${v}';render('aao')">${t}</button>`).join("")}</div>
+  ${d.fr==="min"?`<div class="row" style="align-items:center;margin-top:6px;flex-wrap:nowrap"><span>First Responder, wenn mehr als</span><input type="number" min="0" max="30" style="width:80px" value="${esc(d.frMin)}" oninput="aaoDraft.frMin=Math.max(0,Number(this.value)||0)"><span>min schneller als das erste Einsatzmittel (0 = sobald schneller)</span></div>`
+   :`<p class="muted" style="margin:4px 0 0;font-size:12px">${d.fr==="off"?"Bei dieser AAO werden keine First Responder gezogen (auch kein NKTW als First Responder, keine Wachtürme oder angemeldeten Besatzungen).":"Reanimation: mehr als 1 min, Verkehrsunfall: mehr als 2 min, sonst: mehr als 3 min schneller als das erste Einsatzmittel."}</p>`}
+  <p class="muted" style="margin:2px 0 0;font-size:12px">Gilt für First Responder aus der AAO (NKTW), besetzte Wachtürme und Fahrzeuge mit angemeldeter Besatzung (ab RS). Bei mehreren passenden AAOs zählt die führende.</p>
   <label>Alarmierung</label>
   <datalist id="aaoTypeList">${types.map(t=>`<option value="${esc(t)}">`).join("")}</datalist>
   ${d.units.map(unitRow).join("")||`<p class="muted">Keine Fahrzeuge.</p>`}
@@ -5747,6 +5781,8 @@ function saveAAO(){
  if(!builtin)entry.active=d.active!==false;
  if(d.rulesEdited)entry.rulesEdited=true;
  entry.combine=d.combine||"nein";
+ if(d.fr==="off")entry.fr="off";
+ else if(d.fr==="min"){entry.fr="min";entry.frMin=Math.max(0,Number(d.frMin)||0)}
  if(entry.combine==="mit")entry.combineWith=(d.combineWith||[]).map(String);
  if((d.excludeWith||[]).length)entry.excludeWith=(d.excludeWith||[]).map(String);
  const idx=db.aao.findIndex(x=>String(x.id)===String(entry.id));
