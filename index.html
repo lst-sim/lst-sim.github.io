@@ -162,7 +162,7 @@ table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:10px 8px
 </head>
 <body>
 <div style="padding:6px 10px;font-size:11px;color:#94a3b8;font-weight:700;display:flex;align-items:center;gap:10px;position:sticky;top:0;z-index:10;background:var(--bg)">
- <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v4.66</span>
+ <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v4.67</span>
  <span id="syncState"></span>
  <a id="homeLink" href="#" onclick="render('leitstelle');return false" class="hidden" style="color:#64748b;text-decoration:underline;font-weight:600">🖥️ Leitstelle</a>
  <a id="monitorLink" href="#" onclick="showMonitorQR();return false" style="color:#64748b;text-decoration:underline;font-weight:600;margin-left:auto">🖥️ Monitor hinzufügen</a>
@@ -1665,7 +1665,11 @@ function incidentOnWangerooge(){
 // Insel Wangerooge: Fahrzeuge der Insel kommen nicht aufs Festland und umgekehrt. Nur
 // Hubschrauber fliegen rüber. Ausnahme: Liegt der Einsatzort auf dem Wasser, dürfen Boote hin.
 function unitOnIsland(u){return u.island==="Wangerooge"||u.location==="Wangerooge"}
+// Nicht alarmierbare Einheiten (z. B. DLRG-Wachtürme): tauchen in keinem Vorschlag, keiner
+// Nachforderung und keinem Vollalarm auf – nur als First Responder, wenn besetzt und nah dran.
+function notAlarmable(u){return !!u&&(!!u.noAlarm||u.type==="Wachturm")}
 function islandReachable(u){
+ if(notAlarmable(u))return false; // zentrale Verfügbarkeitsprüfung aller Auswahl-Pools
  if(u.org==="Luftrettung")return true;
  if(db.currentCall?.locationIsWater&&waterCapable(u))return true;
  return incidentOnWangerooge()===unitOnIsland(u);
@@ -1917,7 +1921,7 @@ function resourcePickerCatsHTML(mode){
  }
  // Alle Fahrzeuge der Kategorie, nach Typ gruppiert – jedes einzeln wählbar, dazu "Nächstes freies".
  const c=db.currentCall; const assigned=new Set([...(c?.alarmedUnits||[]),...(c?.proposedUnitIds||[])].map(String));
- const all=db.units.filter(u=>u.org===pickerCat&&!u.neighborLoan);
+ const all=db.units.filter(u=>u.org===pickerCat&&!u.neighborLoan&&!notAlarmable(u));
  const types=[...new Set(all.map(u=>u.type).filter(Boolean))].sort((a,b)=>a.localeCompare(b,"de"));
  const ordered=pickerCat==="Rettungsdienst"?ktLast(types.map(t=>({type:t}))).map(x=>x.type):types;
  return tabs+ordered.map(t=>{
@@ -1988,6 +1992,7 @@ function addResourceType(type,mode="additional",org=null){
 }
 function addResourceUnitId(id,mode="additional"){
  const u=db.units.find(x=>String(x.id)===String(id));
+ if(notAlarmable(u)){toast("Wachturm – nicht alarmierbar (nur als First Responder im Alarmvorschlag)");return}
  if(u&&!islandReachable(u)){toast(unitOnIsland(u)?"Fahrzeug der Insel Wangerooge – kommt nicht aufs Festland":"Kommt nicht auf die Insel Wangerooge – nur Hubschrauber");return}
  if(!u||!["1","2","8"].includes(String(u.status))){toast("Fahrzeug nicht verfügbar");showResourcePicker(mode);return}
  addResourceUnits([u],mode);
@@ -2355,7 +2360,7 @@ function newKtCall(){
 let notrufDetailsVisible=false;
 function toggleNotrufDetails(){notrufDetailsVisible=!notrufDetailsVisible;notruf();}
 function nearestAvailableUnits(limit=6){
- const avail=db.units.filter(u=>["1","2","8"].includes(String(u.status)));
+ const avail=db.units.filter(u=>["1","2","8"].includes(String(u.status))&&!notAlarmable(u));
  return ktLast(nearestFirst(avail)).slice(0,limit);
 }
 function overrideJurisdiction(){
@@ -3195,6 +3200,20 @@ function evaluate(){
        }
      }
    }
+   // Besetzte DLRG-Wachtürme (Status 1) im Umkreis von 2 km um den Einsatzort als First Responder
+   // anbieten – bei jedem Einsatz, unabhängig vom Einsatzstichwort. Sonst nie alarmierbar.
+   {
+     const ip=incidentPoint();
+     if(ip)for(const u of db.units){
+       if(!notAlarmable(u)||String(u.status)!=="1"||used.has(u.id)||seen.has(u.id))continue;
+       const up=unitPoint(u); if(!up)continue;
+       const m=Math.round(haversine(ip[0],ip[1],up[0],up[1])*1000);
+       if(m>2000)continue;
+       seen.add(u.id);
+       const q=unitQual(u).join(" + ");
+       offer.push({unitId:u.id,type:u.type,aao:`🗼 ${u.type} besetzt · ca. ${m<100?"<100":Math.round(m/50)*50} m vom Einsatzort${q?` · ${q}`:""}`,qual:true,label:`First Responder (${u.type}${q?`, ${q}`:""})`});
+     }
+   }
    c.optionalOffer=offer;
    const ok=new Set(offer.flatMap(o=>o.unitIds||(o.unitId!=null?[o.unitId]:[])).map(String));
    c.optionalChecked=(c.optionalChecked||[]).filter(id=>ok.has(String(id)));
@@ -3325,7 +3344,7 @@ function prepareAlarm(){
    ${stagingSectionHTML(c)}
    <label style="margin-top:12px">Vorgeschlagene Einsatzmittel</label>
    <div class="suggest">${esc(c.suggestion||"—")}</div>
-   ${(c.optionalOffer||[]).length?`<label style="margin-top:12px">➕ Optionale Fahrzeuge${c.optionalOffer.some(o=>o.qual)?" (AAO / angemeldete Qualifikation)":" (AAO)"} – bei Bedarf anhaken</label>
+   ${(c.optionalOffer||[]).length?`<label style="margin-top:12px">➕ Optionale Fahrzeuge${c.optionalOffer.some(o=>o.qual)?" (AAO / First Responder)":" (AAO)"} – bei Bedarf anhaken</label>
    <div class="suggest" style="background:#f8fafc">${c.optionalOffer.map(o=>{
      if(o.unitIds){const chk=o.unitIds.every(i=>(c.optionalChecked||[]).map(String).includes(String(i)));
        return `<label style="display:flex;gap:8px;align-items:center;font-weight:500;margin:4px 0"><input type="checkbox" style="width:auto" ${chk?"checked":""} onchange="toggleOptionalUnit('${o.unitIds.join(",")}',this.checked)"> ${esc(o.type)} <small class="muted">(${o.unitIds.length} Fahrzeuge: ${esc(o.unitIds.map(i=>db.units.find(x=>x.id===i)?.type).filter(Boolean).join(", "))})</small> <small class="muted">· ${esc(o.aao)}</small></label>`}

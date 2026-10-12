@@ -1142,3 +1142,10 @@ Version 4.66:
   später wieder auf 6. Im Einsatz (3/4/7/8) wird nichts automatisch geändert.
 - Repo aufgeräumt: zwei versehentlich mit hochgeladene Test-Screenshots (q_term.png aus v4.64,
   aao_pat.png aus v4.25) entfernt.
+
+Version 4.67:
+- Wachtürme sind nicht alarmierbar: Sie erscheinen in keinem Fahrzeugvorschlag, keiner
+  Nachforderung („Rettungsmittel bearbeiten“), keinem „Nächstes freies“ und keinem Vollalarm.
+- Ausnahme First Responder: Ist ein Wachturm besetzt (Status 1) und liegt der Einsatzort
+  höchstens 2 km entfernt, wird er bei jedem Einsatz unter „Optionale Fahrzeuge“ zum Anhaken
+  angeboten (mit Entfernung und Besetzung). Im Einsatztext steht dann „First Responder (Wachturm)“.
