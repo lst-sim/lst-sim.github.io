@@ -162,7 +162,7 @@ table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:10px 8px
 </head>
 <body>
 <div style="padding:6px 10px;font-size:11px;color:#94a3b8;font-weight:700;display:flex;align-items:center;gap:10px;position:sticky;top:0;z-index:10;background:var(--bg)">
- <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v4.65</span>
+ <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v4.66</span>
  <span id="syncState"></span>
  <a id="homeLink" href="#" onclick="render('leitstelle');return false" class="hidden" style="color:#64748b;text-decoration:underline;font-weight:600">🖥️ Leitstelle</a>
  <a id="monitorLink" href="#" onclick="showMonitorQR();return false" style="color:#64748b;text-decoration:underline;font-weight:600;margin-left:auto">🖥️ Monitor hinzufügen</a>
@@ -210,6 +210,10 @@ const DEFAULTS_FRI_WHV={
   {id:611,name:"75-17-01",opta:"Pelikan Friesland 75/17-01",type:"MTW",org:"DLRG",location:"Schortens",status:"2",crew:"6",skills:"Einsatztauchergruppe (Wasserrettungszug Friesland) – Mannschaftstransport",verified:"Einsatzbericht dlrg.de"},
   {id:604,name:"77-57-01",opta:"Pelikan Friesland 77/57-01",type:"GW Wasserrettung",org:"DLRG",location:"Bockhorn",status:"2",crew:"2",skills:"Fachtrupp Technik/Logistik (Wasserrettungszug Friesland) – Gerätetrupp",vehicle:"Mercedes Sprinter 516 CDI 4x4",verified:"BOS-Fahrzeuge"},
   {id:612,name:"77-77-01",opta:"Pelikan Friesland 77/77-01",type:"MZB",org:"DLRG",location:"Bockhorn",status:"2",crew:"2",skills:"Fachtrupp Technik/Logistik (Wasserrettungszug Friesland) – Motorrettungsboot",boatName:"Freesen Deern",verified:"Einsatzbericht dlrg.de"},
+  // DLRG-Wachtürme Dangast (Strandwache, OG Varel): meist nicht besetzt (Status 6), zwischendurch
+  // zufällig für eine Weile besetzt (Status 1) – siehe applySporadic(). Rufnamen: Nutzerangabe.
+  {id:620,name:"72-00-01",opta:"Pelikan Friesland 72/00-01",type:"Wachturm",org:"DLRG",location:"Dangast",status:"6",crew:"",skills:"Wachturm Dangast – Strandwache (Wasserrettungsdienst), nur zeitweise besetzt",sporadic:{from:"09:00",to:"19:00"},verified:"Nutzerangabe"},
+  {id:621,name:"72-00-02",opta:"Pelikan Friesland 72/00-02",type:"Wachturm",org:"DLRG",location:"Dangast",status:"6",crew:"",skills:"Wachturm Dangast – Strandwache (Wasserrettungsdienst), nur zeitweise besetzt",sporadic:{from:"09:00",to:"19:00"},verified:"Nutzerangabe"},
   {id:613,name:"77-78-01",opta:"Adler Friesland 77/78-01",type:"RTB",org:"DLRG",location:"Bockhorn",status:"2",crew:"2",skills:"Fachtrupp Technik/Logistik (Wasserrettungszug Friesland) – Motorrettungsboot",boatName:"Friesische Wehde",verified:"Einsatzbericht dlrg.de"},
   // DRK Kreisverband Varel - Friesische Wehde e.V.: Schnelleinsatzgruppe (SEG) und
   // Katastrophenschutz, hervorgegangen aus dem früheren Sanitätszug 50. Aufgabenbereiche laut
@@ -884,6 +888,7 @@ async function stagingFromMap(lat,lng){
 function vehicleMapEmoji(u){
  if(u.org==="DGzRS")return"⚓";
  if(u.org==="Feuerwehr")return"🚒";
+ if(u.type==="Wachturm")return"🗼";
  if(u.org==="DLRG")return"🌊";
  if(u.org==="DRK")return"✚";
  if(u.org==="Luftrettung")return"🚁";
@@ -1327,6 +1332,7 @@ function autoReturnToStation(){
  db.units.forEach(u=>{
    if(u.phoneControlled)return;
    if(u.qualNow&&u.status==="1")return; // gesondert angemeldete Besatzung bleibt in Status 1, bis sie sich ummeldet
+   if(u.sporadic)return; // zeitweise besetzte Wachtürme: Status regelt applySporadic()
    if(u.status==="1"){
      if(!u.status2Due){
        u.status1Since=now;
@@ -1377,8 +1383,31 @@ function dutyText(duty){
  const days=Array.isArray(duty.days)&&duty.days.length&&duty.days.length<7?duty.days.map(i=>DUTY_DAYS[i]).join(", "):"täglich";
  return `${days} ${duty.from||"?"}–${duty.to||"?"} Uhr${duty.dateFrom&&duty.dateTo?` (${duty.dateFrom}–${duty.dateTo})`:""}`;
 }
+// Nur zeitweise besetzte Einheiten (z. B. DLRG-Wachtürme): grundsätzlich Status 6; innerhalb des
+// Zeitfensters (u.sporadic.from–to) gehen sie hin und wieder zufällig für 30–120 min auf Status 1.
+// Pause dazwischen zufällig 1–4 h. Im Einsatz (Status 3/4/7/8) wird nichts verändert.
+function applySporadic(now=Date.now()){
+ const rnd=(a,b)=>Math.round((a+Math.random()*(b-a))*60000);
+ for(const u of (db.units||[])){
+   const sp=u.sporadic; if(!sp)continue;
+   const st=String(u.status);
+   const d=new Date(now), m=d.getHours()*60+d.getMinutes();
+   const f=hmToMin(sp.from||"09:00"), t=hmToMin(sp.to||"19:00");
+   const inWin=f==null||t==null||(f<t?(m>=f&&m<t):(m>=f||m<t));
+   if(st==="1"||st==="2"){
+     if(!u.sporadicUntil)u.sporadicUntil=now+rnd(30,120);
+     if(!inWin||now>=u.sporadicUntil){setUnitStatus(u,"6");delete u.sporadicUntil;u.sporadicNext=now+rnd(60,240)}
+   }else if(st==="6"){
+     delete u.sporadicUntil;
+     if(!inWin){delete u.sporadicNext;continue}
+     if(!u.sporadicNext){u.sporadicNext=now+rnd(20,240);continue}
+     if(now>=u.sporadicNext){setUnitStatus(u,"1");delete u.sporadicNext;u.sporadicUntil=now+rnd(30,120)}
+   }
+ }
+}
 function applyDutySchedule(){
  syncLocationFromOpta();
+ applySporadic();
  const now=new Date();
  for(const u of (db.units||[])){
    const duty=unitDuty(u); if(!duty)continue;
@@ -1446,6 +1475,7 @@ const AREA_CENTERS={
 // aus AREA_CENTERS. Schlüssel: "Organisation__Standort" (wie in den Fahrzeugdaten hinterlegt).
 const STATION_OVERRIDE={
  "DLRG__Varel":[53.3833,8.1326], // DLRG-Wache Varel, Am Wasserturm 5 (26316 Varel)
+ "DLRG__Dangast":[53.4470,8.1150], // Strand Dangast – ungefähre Lage (genaue Turmstandorte nicht hinterlegt)
  "Rettungsdienst__Sande":[53.508352,8.008457], // Rettungswache Sande, direkt neben TV Sanderbusch (Tennisplatz)
  "Luftrettung__Sanderbusch (Sande)":[53.50691,8.00901], // Christoph 26, stationiert am Nordwest-Krankenhaus Sanderbusch
  "Feuerwehr__Varel":[53.3984536,8.1353142], // FF Varel OF Varel, Pelzerstraße 5-7, 26316 Varel
@@ -5108,7 +5138,7 @@ function mittel(){
        <thead><tr><th>Fahrzeug</th><th>Status</th><th>Fahrzeugterminal</th><th>Status ändern</th></tr></thead>
        <tbody>
         ${rows.map(u=>`<tr>
-         <td>${vehicleLabelBlock(u)}${u.gpsUpdatedAt&&(Date.now()-new Date(u.gpsUpdatedAt).getTime())<120000?` <span title="Live-GPS aktiv" style="font-size:11px">📍</span>`:""}${unitDuty(u)?`<br><small class="muted" title="Dienstzeiten">🕒 ${esc(dutyText(unitDuty(u)))}</small>`:""}</td>
+         <td>${vehicleLabelBlock(u)}${u.gpsUpdatedAt&&(Date.now()-new Date(u.gpsUpdatedAt).getTime())<120000?` <span title="Live-GPS aktiv" style="font-size:11px">📍</span>`:""}${unitDuty(u)?`<br><small class="muted" title="Dienstzeiten">🕒 ${esc(dutyText(unitDuty(u)))}</small>`:""}${u.sporadic?`<br><small class="muted" title="Meist nicht besetzt (Status 6), zwischendurch zufällig besetzt (Status 1)">🕒 nur zeitweise besetzt (${esc(u.sporadic.from||"09:00")}–${esc(u.sporadic.to||"19:00")} Uhr)</small>`:""}</td>
          <td><span class="status ${statusClass(String(u.status))}">${statusName(String(u.status))}</span></td>
          <td><div class="row"><button onclick="showVehicleQR('${String(u.id)}')">📱 Link / QR</button><button onclick="openVehiclePreview('${String(u.id)}')">👁️ Vorschau</button><button onclick="editUnit('${String(u.id)}')" title="Fahrzeug bearbeiten">✏️</button><button onclick="dispatchQualNow('${String(u.id)}')" title="Besatzung / Qualifikation per Funk angemeldet">🩺</button><button onclick="deleteUnit('${String(u.id)}')" title="Fahrzeug löschen">🗑️</button></div></td>
          <td>${statusOptionsFor(u).map(s=>`<button class="radio-key-mini${String(u.status)===s?" current":""}" onclick="setStatusFromSelect('${String(u.id)}','${s}')" title="${esc(statusName(s))}">${esc(s)}</button>`).join("")}</td>
@@ -5266,7 +5296,7 @@ function vollalarmGroup(type){
 // ─── AAOs / Fahrzeuge als Datei sichern und wieder laden ─────────────────────────────────────
 // Die Datei kann auf dem Gerät/in iCloud abgelegt, auf andere Geräte übertragen oder an Claude
 // geschickt werden, um sie fest als Standard ins Programm zu übernehmen.
-const UNIT_RUNTIME_KEYS=["status1Since","status2Due","status3Since","status4Since","status7Since","status8Due","freeSince","gpsUpdatedAt","lat","lng","phoneControlled","updatedAt","qualNow","qualNowAt"];
+const UNIT_RUNTIME_KEYS=["status1Since","status2Due","status3Since","status4Since","status7Since","status8Due","freeSince","gpsUpdatedAt","lat","lng","phoneControlled","updatedAt","qualNow","qualNowAt","sporadicNext","sporadicUntil"];
 function exportSetup(kind){
  const now=new Date();
  const data={format:"leitstelle.sim",kind,version:(document.getElementById("versionTag")?.textContent||""),scenario:currentScenarioId,exportedAt:now.toISOString()};

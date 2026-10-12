@@ -1131,3 +1131,14 @@ Version 4.64:
 Version 4.65:
 - NEF-Grundbesetzung korrigiert: NA + NFS (vorher NA + RS mit „nicht geprüft“). Fahrzeuge mit
   eigener Eintragung im Editor bleiben unverändert.
+
+Version 4.66:
+- Neu: DLRG-Wachtürme Dangast „Pelikan Friesland 72/00-01“ und „72/00-02“ (Typ Wachturm,
+  Standort Dangast, Grundbesetzung mind. 1× San B). Lage auf der Karte: Strand Dangast,
+  ungefähr – genaue Turmstandorte sind nicht hinterlegt.
+- „Nur zeitweise besetzt“: Die Türme stehen grundsätzlich auf Status 6. Zwischen 9 und 19 Uhr
+  gehen sie hin und wieder zufällig für 30–120 min auf Status 1 (Pause dazwischen 1–4 h,
+  ergibt grob 15 % der Tageszeit). Nach einem Einsatz gehen sie nicht auf 2, sondern
+  später wieder auf 6. Im Einsatz (3/4/7/8) wird nichts automatisch geändert.
+- Repo aufgeräumt: zwei versehentlich mit hochgeladene Test-Screenshots (q_term.png aus v4.64,
+  aao_pat.png aus v4.25) entfernt.
