@@ -1181,3 +1181,10 @@ Version 4.70:
 - AAO-Bearbeitung: neue Einstellung „First Responder“ – Standard (Regel oben), Eigene
   Zeitersparnis (mehr als X min, 0 = sobald schneller) oder Nie. Bei mehreren passenden AAOs gilt
   die führende AAO.
+
+Version 4.71:
+- Wachturm-Standorte Dangast (Nutzerangabe): 72/00-01 am Badestrand bei den Toiletten (Lage
+  ungefähr – Badestrand am DanGastQuellbad, genaue Toiletten-Koordinaten nicht gefunden),
+  72/00-02 am Hafen Dangast (53,4463 N / 8,1081 O laut portmaps.com).
+- Fahrzeug-Editor: neues Feld „📍 Eigener Standort (Breite, Länge)“, z. B. aus Google Maps
+  kopiert. Leer = Standort der Wache bzw. des Orts. Gilt für Karte und Eintreffzeit.

@@ -162,7 +162,7 @@ table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:10px 8px
 </head>
 <body>
 <div style="padding:6px 10px;font-size:11px;color:#94a3b8;font-weight:700;display:flex;align-items:center;gap:10px;position:sticky;top:0;z-index:10;background:var(--bg)">
- <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v4.70</span>
+ <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v4.71</span>
  <span id="syncState"></span>
  <a id="homeLink" href="#" onclick="render('leitstelle');return false" class="hidden" style="color:#64748b;text-decoration:underline;font-weight:600">🖥️ Leitstelle</a>
  <a id="monitorLink" href="#" onclick="showMonitorQR();return false" style="color:#64748b;text-decoration:underline;font-weight:600;margin-left:auto">🖥️ Monitor hinzufügen</a>
@@ -210,10 +210,12 @@ const DEFAULTS_FRI_WHV={
   {id:611,name:"75-17-01",opta:"Pelikan Friesland 75/17-01",type:"MTW",org:"DLRG",location:"Schortens",status:"2",crew:"6",skills:"Einsatztauchergruppe (Wasserrettungszug Friesland) – Mannschaftstransport",verified:"Einsatzbericht dlrg.de"},
   {id:604,name:"77-57-01",opta:"Pelikan Friesland 77/57-01",type:"GW Wasserrettung",org:"DLRG",location:"Bockhorn",status:"2",crew:"2",skills:"Fachtrupp Technik/Logistik (Wasserrettungszug Friesland) – Gerätetrupp",vehicle:"Mercedes Sprinter 516 CDI 4x4",verified:"BOS-Fahrzeuge"},
   {id:612,name:"77-77-01",opta:"Pelikan Friesland 77/77-01",type:"MZB",org:"DLRG",location:"Bockhorn",status:"2",crew:"2",skills:"Fachtrupp Technik/Logistik (Wasserrettungszug Friesland) – Motorrettungsboot",boatName:"Freesen Deern",verified:"Einsatzbericht dlrg.de"},
+  // Standorte (Nutzerangabe): 72/00-01 am Badestrand bei den Toiletten (Lage ungefähr, Badestrand am
+  // DanGastQuellbad), 72/00-02 am Hafen Dangast (53°26'47"N 8°6'29"O laut portmaps.com).
   // DLRG-Wachtürme Dangast (Strandwache, OG Varel): besetzt 1,5 h vor bis 1,5 h nach Hochwasser
   // (Nutzerangabe: „3 Stunden um Hochwasser“), sonst Status 6 – siehe applySporadic(). Rufnamen: Nutzerangabe.
-  {id:620,name:"72-00-01",opta:"Pelikan Friesland 72/00-01",type:"Wachturm",org:"DLRG",location:"Dangast",status:"6",crew:"",skills:"Wachturm Dangast – Strandwache (Wasserrettungsdienst), 3 Stunden um Hochwasser besetzt",sporadic:{from:"09:00",to:"19:00",dateFrom:"01.06.",dateTo:"31.08."},verified:"Nutzerangabe"},
-  {id:621,name:"72-00-02",opta:"Pelikan Friesland 72/00-02",type:"Wachturm",org:"DLRG",location:"Dangast",status:"6",crew:"",skills:"Wachturm Dangast – Strandwache (Wasserrettungsdienst), 3 Stunden um Hochwasser besetzt",sporadic:{from:"09:00",to:"19:00",dateFrom:"01.06.",dateTo:"31.08."},verified:"Nutzerangabe"},
+  {id:620,name:"72-00-01",opta:"Pelikan Friesland 72/00-01",type:"Wachturm",org:"DLRG",location:"Dangast",homeLat:53.4497,homeLng:8.1212,status:"6",crew:"",skills:"Wachturm Dangast – Strandwache (Wasserrettungsdienst), 3 Stunden um Hochwasser besetzt",sporadic:{from:"09:00",to:"19:00",dateFrom:"01.06.",dateTo:"31.08."},verified:"Nutzerangabe"},
+  {id:621,name:"72-00-02",opta:"Pelikan Friesland 72/00-02",type:"Wachturm",org:"DLRG",location:"Dangast",homeLat:53.4463,homeLng:8.1081,status:"6",crew:"",skills:"Wachturm Dangast – Strandwache (Wasserrettungsdienst), 3 Stunden um Hochwasser besetzt",sporadic:{from:"09:00",to:"19:00",dateFrom:"01.06.",dateTo:"31.08."},verified:"Nutzerangabe"},
   // Weitere DLRG-Strandwachen (laut DLRG OG Wangerland: Schillig, Horumersiel, Hooksiel) und Wangerooge.
   // Rufnamen nach dem Schema der Nutzerangabe (Ortskennung/00-laufende Nummer), je Ort durchnummeriert.
   {id:622,name:"76-00-01",opta:"Pelikan Friesland 76/00-01",type:"Wachturm",org:"DLRG",location:"Schillig",status:"6",crew:"",skills:"Wachturm Schillig – Strandwache (Wasserrettungsdienst), 3 Stunden um Hochwasser besetzt (Juni–August)",sporadic:{from:"09:00",to:"19:00",dateFrom:"01.06.",dateTo:"31.08."},verified:"Rufname nach Schema Nutzerangabe"},
@@ -618,6 +620,12 @@ if(!Array.isArray(db.deletedUnitOptas))db.deletedUnitOptas=[];
  const deleted=new Set(db.deletedUnitOptas);
  defaults.units.forEach(u=>{
    if(u.opta && !existingOptas.has(u.opta) && !deleted.has(u.opta)) db.units.push({...u});
+ });
+ // Nachträglich ergänzte Standorte (homeLat/homeLng) übernehmen, solange nicht selbst bearbeitet
+ defaults.units.forEach(d=>{
+   if(d.homeLat==null)return;
+   const u=db.units.find(x=>x.opta===d.opta);
+   if(u&&!u.userEdited&&!u.custom&&u.homeLat==null){u.homeLat=d.homeLat;u.homeLng=d.homeLng}
  });
 }
 if(!Array.isArray(db.aao))db.aao=[];
@@ -1601,8 +1609,10 @@ function incidentArea(){
    haversine(p[0],p[1],a[1][0],a[1][1])-haversine(p[0],p[1],b[1][0],b[1][1])
  )[0][0];
 }
+const numOk=v=>v!==""&&v!=null&&Number.isFinite(Number(v));
 function unitPoint(u){
  if(Number.isFinite(Number(u.lat)) && Number.isFinite(Number(u.lng)))return [Number(u.lat),Number(u.lng)];
+ if(numOk(u.homeLat)&&numOk(u.homeLng))return [Number(u.homeLat),Number(u.homeLng)]; // eigener Standort (Editor)
  const override=STATION_OVERRIDE[`${u.org}__${u.location}`];
  if(override)return override;
  const a=optaAreaName(u);
@@ -3581,7 +3591,7 @@ function unitDutyToggleDay(i,on){const d=unitDraft.duty;d.days=d.days.filter(x=>
 function editUnit(id){
  const u=db.units.find(x=>String(x.id)===String(id)); if(!u)return;
  const du=unitDuty(u);
- unitDraft={id:u.id,org:u.org||"",type:u.type||"",name:u.name||"",opta:u.opta||"",location:u.location||"",crew:String(u.crew??""),skills:u.skills||"",qual:u.qual||"",turnoutMin:u.turnoutMin??"",fachgruppe:u.org==="THW"?thwGroup(u).replace(/^Ohne Fachgruppe$/,""):"",
+ unitDraft={id:u.id,org:u.org||"",type:u.type||"",name:u.name||"",opta:u.opta||"",location:u.location||"",crew:String(u.crew??""),skills:u.skills||"",qual:u.qual||"",pos:numOk(u.homeLat)&&numOk(u.homeLng)?`${u.homeLat}, ${u.homeLng}`:"",turnoutMin:u.turnoutMin??"",fachgruppe:u.org==="THW"?thwGroup(u).replace(/^Ohne Fachgruppe$/,""):"",
    dutyOn:!!du,duty:du?{from:du.from||"07:00",to:du.to||"19:00",days:Array.isArray(du.days)&&du.days.length?[...du.days]:[0,1,2,3,4,5,6],dateFrom:du.dateFrom||"",dateTo:du.dateTo||""}:{from:"07:00",to:"19:00",days:[0,1,2,3,4,5,6],dateFrom:"",dateTo:""}};
  render("mittel");
 }
@@ -3611,6 +3621,8 @@ function unitEditorHTML(){
    return `<label>🩺 Medizinische Qualifikation der Besatzung (mit „+“ trennen; leer = Standard${def?`: ${esc(def)}`:" – keiner hinterlegt"}${qd.unsure?" ⚠️ nicht geprüft":""})</label>
    <input id="unitQualInput" value="${esc(d.qual||"")}" placeholder="${esc(def||"z. B. NFS + RS")}" oninput="unitDraft.qual=this.value">
    <div class="row" style="gap:4px;margin-top:4px">${["NA","NFS","RS","RH","San A","San B","San C"].map(x=>`<button style="padding:3px 8px;font-size:12px" onclick="const i=document.getElementById('unitQualInput');i.value=(i.value.trim()?i.value.trim()+' + ':'')+'${x}';unitDraft.qual=i.value">＋ ${x}</button>`).join("")}</div>`})()}
+  <label>📍 Eigener Standort (Breite, Länge – z. B. aus Google Maps kopiert; leer = Standort der Wache/des Orts)</label>
+  <input value="${esc(d.pos||"")}" placeholder="z. B. 53.4463, 8.1081" oninput="unitDraft.pos=this.value">
   <label>Fähigkeiten / Hinweise (optional)</label><input value="${esc(d.skills)}" oninput="unitDraft.skills=this.value">
   ${d.org==="THW"?`<label>THW-Fachgruppe (für „Nachfordern nach Fachgruppe“)</label><input list="thwGroupList" value="${esc(d.fachgruppe||"")}" placeholder="z. B. Bergungsgruppe (B)" oninput="unitDraft.fachgruppe=this.value"><datalist id="thwGroupList">${[...new Set([...Object.values(THW_GROUP_DEFAULT),...db.units.filter(u=>u.org==="THW").map(thwGroup)])].filter(g=>g!=="Ohne Fachgruppe").map(g=>`<option value="${esc(g)}">`).join("")}</datalist>`:""}
   <label style="margin-top:12px">🕒 Dienstzeiten</label>
@@ -3643,6 +3655,15 @@ function saveUnitDraft(){
  const duty=d.dutyOn?{from:d.duty.from,to:d.duty.to,days:[...d.duty.days],...(d.duty.dateFrom&&d.duty.dateTo?{dateFrom:d.duty.dateFrom,dateTo:d.duty.dateTo}:{})}:{none:true};
  const fields={org:d.org,type,name,opta:String(d.opta||"").trim()||name,location:String(d.location||"").trim(),crew:String(d.crew||"").trim(),skills:String(d.skills||"").trim(),qual:String(d.qual||"").trim(),duty};
  if(d.org==="THW")fields.fachgruppe=String(d.fachgruppe||"").trim();
+ {
+   const raw=String(d.pos||"").trim();
+   if(raw){
+     const m=raw.replace(/[()]/g,"").match(/(-?\d+(?:[.,]\d+)?)\s*[,; ]\s*(-?\d+(?:[.,]\d+)?)/);
+     const la=m&&Number(m[1].replace(",",".")), lo=m&&Number(m[2].replace(",","."));
+     if(!m||!(la>47&&la<56&&lo>5&&lo<16)){toast("Standort bitte als „Breite, Länge“ angeben, z. B. 53.4463, 8.1081");return}
+     fields.homeLat=la;fields.homeLng=lo;
+   }else{fields.homeLat=null;fields.homeLng=null}
+ }
  fields.turnoutMin=String(d.turnoutMin??"").trim()===""?"":Math.max(0,Number(d.turnoutMin)||0);
  if(d.id!=null){
    const u=db.units.find(x=>String(x.id)===String(d.id));
