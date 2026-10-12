@@ -162,7 +162,7 @@ table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:10px 8px
 </head>
 <body>
 <div style="padding:6px 10px;font-size:11px;color:#94a3b8;font-weight:700;display:flex;align-items:center;gap:10px;position:sticky;top:0;z-index:10;background:var(--bg)">
- <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v4.64</span>
+ <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v4.65</span>
  <span id="syncState"></span>
  <a id="homeLink" href="#" onclick="render('leitstelle');return false" class="hidden" style="color:#64748b;text-decoration:underline;font-weight:600">🖥️ Leitstelle</a>
  <a id="monitorLink" href="#" onclick="showMonitorQR();return false" style="color:#64748b;text-decoration:underline;font-weight:600;margin-left:auto">🖥️ Monitor hinzufügen</a>
@@ -1558,7 +1558,7 @@ function unitQualDefault(u){
  if(o==="Rettungsdienst"||o==="DRK"&&t==="RTW"){
    if(t==="RTW")return {q:["NFS","RS"],unsure:false};
    if(t==="KTW")return {q:["RS","RH"],unsure:false};
-   if(t==="NEF")return {q:["NA","RS"],unsure:true};
+   if(t==="NEF")return {q:["NA","NFS"],unsure:false};
    if(/OrgL|LNA/.test(t))return {q:["LNA","OrgL"],unsure:false};
    return {q:[],unsure:true};          // z. B. NKTW: Besetzung nicht hinterlegt
  }

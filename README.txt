@@ -1127,3 +1127,7 @@ Version 4.64:
   an Bord) vorsieht und es mind. 2 min schneller da ist und höchstens 15 min braucht.
   Abrollbehälter und reguläre RTW/NEF/RTH sind ausgenommen.
 - Fahrzeug-Terminal: Schrift in der IVENA-Kurzübersicht war hellgrau auf weiß – jetzt lesbar.
+
+Version 4.65:
+- NEF-Grundbesetzung korrigiert: NA + NFS (vorher NA + RS mit „nicht geprüft“). Fahrzeuge mit
+  eigener Eintragung im Editor bleiben unverändert.
