@@ -162,7 +162,7 @@ table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:10px 8px
 </head>
 <body>
 <div style="padding:6px 10px;font-size:11px;color:#94a3b8;font-weight:700;display:flex;align-items:center;gap:10px;position:sticky;top:0;z-index:10;background:var(--bg)">
- <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v4.67</span>
+ <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v4.68</span>
  <span id="syncState"></span>
  <a id="homeLink" href="#" onclick="render('leitstelle');return false" class="hidden" style="color:#64748b;text-decoration:underline;font-weight:600">🖥️ Leitstelle</a>
  <a id="monitorLink" href="#" onclick="showMonitorQR();return false" style="color:#64748b;text-decoration:underline;font-weight:600;margin-left:auto">🖥️ Monitor hinzufügen</a>
@@ -210,10 +210,10 @@ const DEFAULTS_FRI_WHV={
   {id:611,name:"75-17-01",opta:"Pelikan Friesland 75/17-01",type:"MTW",org:"DLRG",location:"Schortens",status:"2",crew:"6",skills:"Einsatztauchergruppe (Wasserrettungszug Friesland) – Mannschaftstransport",verified:"Einsatzbericht dlrg.de"},
   {id:604,name:"77-57-01",opta:"Pelikan Friesland 77/57-01",type:"GW Wasserrettung",org:"DLRG",location:"Bockhorn",status:"2",crew:"2",skills:"Fachtrupp Technik/Logistik (Wasserrettungszug Friesland) – Gerätetrupp",vehicle:"Mercedes Sprinter 516 CDI 4x4",verified:"BOS-Fahrzeuge"},
   {id:612,name:"77-77-01",opta:"Pelikan Friesland 77/77-01",type:"MZB",org:"DLRG",location:"Bockhorn",status:"2",crew:"2",skills:"Fachtrupp Technik/Logistik (Wasserrettungszug Friesland) – Motorrettungsboot",boatName:"Freesen Deern",verified:"Einsatzbericht dlrg.de"},
-  // DLRG-Wachtürme Dangast (Strandwache, OG Varel): meist nicht besetzt (Status 6), zwischendurch
-  // zufällig für eine Weile besetzt (Status 1) – siehe applySporadic(). Rufnamen: Nutzerangabe.
-  {id:620,name:"72-00-01",opta:"Pelikan Friesland 72/00-01",type:"Wachturm",org:"DLRG",location:"Dangast",status:"6",crew:"",skills:"Wachturm Dangast – Strandwache (Wasserrettungsdienst), nur zeitweise besetzt",sporadic:{from:"09:00",to:"19:00"},verified:"Nutzerangabe"},
-  {id:621,name:"72-00-02",opta:"Pelikan Friesland 72/00-02",type:"Wachturm",org:"DLRG",location:"Dangast",status:"6",crew:"",skills:"Wachturm Dangast – Strandwache (Wasserrettungsdienst), nur zeitweise besetzt",sporadic:{from:"09:00",to:"19:00"},verified:"Nutzerangabe"},
+  // DLRG-Wachtürme Dangast (Strandwache, OG Varel): besetzt 1,5 h vor bis 1,5 h nach Hochwasser
+  // (Nutzerangabe: „3 Stunden um Hochwasser“), sonst Status 6 – siehe applySporadic(). Rufnamen: Nutzerangabe.
+  {id:620,name:"72-00-01",opta:"Pelikan Friesland 72/00-01",type:"Wachturm",org:"DLRG",location:"Dangast",status:"6",crew:"",skills:"Wachturm Dangast – Strandwache (Wasserrettungsdienst), 3 Stunden um Hochwasser besetzt",sporadic:{from:"09:00",to:"19:00"},verified:"Nutzerangabe"},
+  {id:621,name:"72-00-02",opta:"Pelikan Friesland 72/00-02",type:"Wachturm",org:"DLRG",location:"Dangast",status:"6",crew:"",skills:"Wachturm Dangast – Strandwache (Wasserrettungsdienst), 3 Stunden um Hochwasser besetzt",sporadic:{from:"09:00",to:"19:00"},verified:"Nutzerangabe"},
   {id:613,name:"77-78-01",opta:"Adler Friesland 77/78-01",type:"RTB",org:"DLRG",location:"Bockhorn",status:"2",crew:"2",skills:"Fachtrupp Technik/Logistik (Wasserrettungszug Friesland) – Motorrettungsboot",boatName:"Friesische Wehde",verified:"Einsatzbericht dlrg.de"},
   // DRK Kreisverband Varel - Friesische Wehde e.V.: Schnelleinsatzgruppe (SEG) und
   // Katastrophenschutz, hervorgegangen aus dem früheren Sanitätszug 50. Aufgabenbereiche laut
@@ -1383,26 +1383,70 @@ function dutyText(duty){
  const days=Array.isArray(duty.days)&&duty.days.length&&duty.days.length<7?duty.days.map(i=>DUTY_DAYS[i]).join(", "):"täglich";
  return `${days} ${duty.from||"?"}–${duty.to||"?"} Uhr${duty.dateFrom&&duty.dateTo?` (${duty.dateFrom}–${duty.dateTo})`:""}`;
 }
-// Nur zeitweise besetzte Einheiten (z. B. DLRG-Wachtürme): grundsätzlich Status 6; innerhalb des
-// Zeitfensters (u.sporadic.from–to) gehen sie hin und wieder zufällig für 30–120 min auf Status 1.
-// Pause dazwischen zufällig 1–4 h. Im Einsatz (Status 3/4/7/8) wird nichts verändert.
-function applySporadic(now=Date.now()){
- const rnd=(a,b)=>Math.round((a+Math.random()*(b-a))*60000);
- for(const u of (db.units||[])){
-   const sp=u.sporadic; if(!sp)continue;
-   const st=String(u.status);
-   const d=new Date(now), m=d.getHours()*60+d.getMinutes();
-   const f=hmToMin(sp.from||"09:00"), t=hmToMin(sp.to||"19:00");
-   const inWin=f==null||t==null||(f<t?(m>=f&&m<t):(m>=f||m<t));
-   if(st==="1"||st==="2"){
-     if(!u.sporadicUntil)u.sporadicUntil=now+rnd(30,120);
-     if(!inWin||now>=u.sporadicUntil){setUnitStatus(u,"6");delete u.sporadicUntil;u.sporadicNext=now+rnd(60,240)}
-   }else if(st==="6"){
-     delete u.sporadicUntil;
-     if(!inWin){delete u.sporadicNext;continue}
-     if(!u.sporadicNext){u.sporadicNext=now+rnd(20,240);continue}
-     if(now>=u.sporadicNext){setUnitStatus(u,"1");delete u.sporadicNext;u.sporadicUntil=now+rnd(30,120)}
+// ─── Gezeiten (vereinfachtes Gezeitenmodell) ────────────────────────────────────────────────
+// Wasserstand ≈ M2 + S2 + N2 (Mond, Sonne, Mondentfernung) aus den mittleren Mond-/Sonnenbahnen.
+// Phasen an die BSH-Vorhersage (über NLWKN-Sturmflutwarndienst) für Wilhelmshaven 12.–15.10.2026
+// angepasst (Abweichung dort ±10 min, S2-Versatz entspricht ~2,7 Tagen Springverspätung).
+// Amplitudenverhältnisse S2/M2 0,26 und N2/M2 0,19 sind typische Werte der Deutschen Bucht
+// (angenommen). Erwartete Genauigkeit sonst etwa ±20–30 min; Wind/Sturmflut unberücksichtigt.
+// Dangast liegt im Jadebusen etwas später als Wilhelmshaven; ein genauer Versatz ist nicht
+// hinterlegt (TIDE_DANGAST_OFFSET_MIN = 0).
+const TIDE_G={M2:332.5,S2:399,N2:312.5}, TIDE_R={S2:0.26,N2:0.19};
+const TIDE_DANGAST_OFFSET_MIN=0;
+const TIDE_M2_MS=12.4206012*3600000;
+function tideLevel(t){
+ const T=(t-Date.UTC(2000,0,1,12))/86400000/36525;
+ const s=218.3165+481267.8813*T, h=280.4665+36000.7698*T, p=83.3532+4069.0137*T;
+ const tau=((t/3600000)%24)*15+180+h-s, r=Math.PI/180;
+ return Math.cos(r*(2*tau-TIDE_G.M2))+TIDE_R.S2*Math.cos(r*(2*(tau+s-h)-TIDE_G.S2))+TIDE_R.N2*Math.cos(r*(2*tau-s+p-TIDE_G.N2));
+}
+// Alle Hochwasser (lokale Maxima) im Bereich t−14 h … t+14 h, auf die Minute genau
+let tideCache=new Map();
+function highWatersAround(t){
+ const key=Math.round(t/1800000); if(tideCache.has(key))return tideCache.get(key);
+ const c=key*1800000, step=120000, out=[];
+ let prev=tideLevel(c-14*3600000-step), cur=tideLevel(c-14*3600000);
+ for(let x=c-14*3600000;x<=c+14*3600000;x+=step){
+   const next=tideLevel(x+step);
+   if(cur>=prev&&cur>next){
+     let bt=x,bv=cur; for(let k=-120;k<=120;k++){const y=x+k*1000,v=tideLevel(y);if(v>bv){bv=v;bt=y}}
+     out.push(Math.round(bt/60000)*60000);
    }
+   prev=cur;cur=next;
+ }
+ if(tideCache.size>300)tideCache=new Map();
+ tideCache.set(key,out); return out;
+}
+function nearestHighWater(now=Date.now()){
+ const off=TIDE_DANGAST_OFFSET_MIN*60000;
+ const l=highWatersAround(now-off); let b=l[0];
+ for(const h of l)if(Math.abs(h-(now-off))<Math.abs(b-(now-off)))b=h;
+ return b+off;
+}
+function nextHighWater(now=Date.now()){
+ const off=TIDE_DANGAST_OFFSET_MIN*60000;
+ const h=highWatersAround(now-off).find(x=>x+off>=now);
+ return h!=null?h+off:nearestHighWater(now+6*3600000);
+}
+function hmText(ms){return new Date(ms).toLocaleTimeString("de-DE",{hour:"2-digit",minute:"2-digit"})}
+// DLRG-Wachtürme (u.sporadic): besetzt (Status 1) von 1,5 h vor bis 1,5 h nach Hochwasser,
+// aber nur tagsüber (u.sporadic.from–to, Standard 09–19 Uhr); sonst Status 6.
+// Im Einsatz (Status 3/4/7/8) wird nichts verändert.
+const TOWER_HW_HALF_MIN=90;
+function towerStaffed(u,now=Date.now()){
+ const sp=u.sporadic||{};
+ const d=new Date(now), m=d.getHours()*60+d.getMinutes();
+ const f=hmToMin(sp.from||"09:00"), t=hmToMin(sp.to||"19:00");
+ const day=f==null||t==null||(f<t?(m>=f&&m<t):(m>=f||m<t));
+ return day&&Math.abs(now-nearestHighWater(now))<=TOWER_HW_HALF_MIN*60000;
+}
+function applySporadic(now=Date.now()){
+ for(const u of (db.units||[])){
+   if(!u.sporadic)continue;
+   delete u.sporadicNext; delete u.sporadicUntil; // Reste der früheren Zufallslogik (v4.66)
+   const st=String(u.status), on=towerStaffed(u,now);
+   if(on&&st==="6")setUnitStatus(u,"1");
+   else if(!on&&(st==="1"||st==="2"))setUnitStatus(u,"6");
  }
 }
 function applyDutySchedule(){
@@ -5157,7 +5201,7 @@ function mittel(){
        <thead><tr><th>Fahrzeug</th><th>Status</th><th>Fahrzeugterminal</th><th>Status ändern</th></tr></thead>
        <tbody>
         ${rows.map(u=>`<tr>
-         <td>${vehicleLabelBlock(u)}${u.gpsUpdatedAt&&(Date.now()-new Date(u.gpsUpdatedAt).getTime())<120000?` <span title="Live-GPS aktiv" style="font-size:11px">📍</span>`:""}${unitDuty(u)?`<br><small class="muted" title="Dienstzeiten">🕒 ${esc(dutyText(unitDuty(u)))}</small>`:""}${u.sporadic?`<br><small class="muted" title="Meist nicht besetzt (Status 6), zwischendurch zufällig besetzt (Status 1)">🕒 nur zeitweise besetzt (${esc(u.sporadic.from||"09:00")}–${esc(u.sporadic.to||"19:00")} Uhr)</small>`:""}</td>
+         <td>${vehicleLabelBlock(u)}${u.gpsUpdatedAt&&(Date.now()-new Date(u.gpsUpdatedAt).getTime())<120000?` <span title="Live-GPS aktiv" style="font-size:11px">📍</span>`:""}${unitDuty(u)?`<br><small class="muted" title="Dienstzeiten">🕒 ${esc(dutyText(unitDuty(u)))}</small>`:""}${u.sporadic?(()=>{const h=nextHighWater(),near=nearestHighWater();const cur=Math.abs(Date.now()-near)<=TOWER_HW_HALF_MIN*60000;return `<br><small class="muted" title="Besetzt 1,5 h vor bis 1,5 h nach Hochwasser, tagsüber ${esc(u.sporadic.from||"09:00")}–${esc(u.sporadic.to||"19:00")} Uhr. Hochwasser berechnet ab BSH-Vorhersage Wilhelmshaven, ±30 min.">🌊 besetzt ±1,5 h um Hochwasser (tagsüber) · ${cur?`HW ca. ${hmText(near)}`:`nächstes HW ca. ${hmText(h)}`}</small>`})():""}</td>
          <td><span class="status ${statusClass(String(u.status))}">${statusName(String(u.status))}</span></td>
          <td><div class="row"><button onclick="showVehicleQR('${String(u.id)}')">📱 Link / QR</button><button onclick="openVehiclePreview('${String(u.id)}')">👁️ Vorschau</button><button onclick="editUnit('${String(u.id)}')" title="Fahrzeug bearbeiten">✏️</button><button onclick="dispatchQualNow('${String(u.id)}')" title="Besatzung / Qualifikation per Funk angemeldet">🩺</button><button onclick="deleteUnit('${String(u.id)}')" title="Fahrzeug löschen">🗑️</button></div></td>
          <td>${statusOptionsFor(u).map(s=>`<button class="radio-key-mini${String(u.status)===s?" current":""}" onclick="setStatusFromSelect('${String(u.id)}','${s}')" title="${esc(statusName(s))}">${esc(s)}</button>`).join("")}</td>

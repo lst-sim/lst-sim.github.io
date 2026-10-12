@@ -1149,3 +1149,12 @@ Version 4.67:
 - Ausnahme First Responder: Ist ein Wachturm besetzt (Status 1) und liegt der Einsatzort
   höchstens 2 km entfernt, wird er bei jedem Einsatz unter „Optionale Fahrzeuge“ zum Anhaken
   angeboten (mit Entfernung und Besetzung). Im Einsatztext steht dann „First Responder (Wachturm)“.
+
+Version 4.68:
+- DLRG-Wachtürme Dangast: besetzt von 1,5 h vor bis 1,5 h nach Hochwasser (statt zufällig),
+  nur tagsüber 09–19 Uhr (Nachthochwasser bleibt unbesetzt); sonst Status 6. In der
+  Fahrzeugliste steht die (nächste) Hochwasserzeit.
+- Hochwasserzeiten werden in der App aus einem vereinfachten Gezeitenmodell berechnet
+  (Mond, Sonne, Mondentfernung), abgeglichen mit der BSH-Vorhersage für Wilhelmshaven
+  12.–15.10.2026 (Abweichung dort ±10 min). Sonst etwa ±20–30 min; Wind/Sturmflut nicht
+  berücksichtigt. Für Dangast ist kein eigener Zeitversatz zu Wilhelmshaven hinterlegt.
