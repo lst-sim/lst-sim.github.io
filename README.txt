@@ -1105,3 +1105,25 @@ Version 4.63:
     als Plaketten, Anlass, Info, Bearbeiten/Löschen). Gelöschte bleiben durchgestrichen.
   - MANV-Sammelzuweisung: kompaktere Schrift und schmaleres PZC-Feld.
 - Tablet/PC-Ansicht unverändert.
+
+Version 4.64:
+- Medizinische Qualifikation der Besatzung je Fahrzeug (Grundbesetzung). Standard:
+  - RTW (Rettungsdienst und DRK): NFS + RS
+  - KTW: RS + RH
+  - NEF: NA + RS – ⚠️ nicht geprüft (Fahrer evtl. NFS), bitte bei Bedarf anpassen
+  - RTH/ITH: NA + NFS (HEMS-TC); OrgL/LNA: LNA + OrgL
+  - DLRG-Fahrzeuge: mind. 1× San B; übrige DRK-Fahrzeuge: mind. 1× San C
+  - NKTW, KTH, Feuerwehr, THW, DGzRS: keine Grundbesetzung hinterlegt (nicht bekannt) –
+    im Fahrzeug-Editor eintragbar.
+  Im Fahrzeug-Editor frei änderbar (mit „+“ getrennt, Schnellknöpfe NA/NFS/RS/RH/San A–C).
+- Sonder-Anmeldung der Besatzung (z. B. DLRG-MTW mit NFS an Bord):
+  - am Fahrzeug-Terminal unter „🩺 Besatzung / Qualifikation“ → „Mit Status 1 anmelden“, oder
+  - durch den Disponenten über den 🩺-Knopf in der Fahrzeugliste (setzt Status 1).
+  Angemeldete Fahrzeuge zeigen „⭐ angemeldet: …“, bleiben in Status 1 (kein automatisches
+  Zurück auf 2) und fallen bei Status 6 bzw. „Zurück zur Grundbesetzung“ wieder auf die
+  Grundbesetzung zurück.
+- Alarmierung: Ein angemeldetes Fahrzeug wird als qualifizierter Ersthelfer zum Anhaken
+  angeboten (nie automatisch), wenn der Einsatz ein RTW (ab RS an Bord) bzw. NEF/RTH (Notarzt
+  an Bord) vorsieht und es mind. 2 min schneller da ist und höchstens 15 min braucht.
+  Abrollbehälter und reguläre RTW/NEF/RTH sind ausgenommen.
+- Fahrzeug-Terminal: Schrift in der IVENA-Kurzübersicht war hellgrau auf weiß – jetzt lesbar.

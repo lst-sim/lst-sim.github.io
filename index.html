@@ -162,7 +162,7 @@ table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:10px 8px
 </head>
 <body>
 <div style="padding:6px 10px;font-size:11px;color:#94a3b8;font-weight:700;display:flex;align-items:center;gap:10px;position:sticky;top:0;z-index:10;background:var(--bg)">
- <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v4.63</span>
+ <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v4.64</span>
  <span id="syncState"></span>
  <a id="homeLink" href="#" onclick="render('leitstelle');return false" class="hidden" style="color:#64748b;text-decoration:underline;font-weight:600">🖥️ Leitstelle</a>
  <a id="monitorLink" href="#" onclick="showMonitorQR();return false" style="color:#64748b;text-decoration:underline;font-weight:600;margin-left:auto">🖥️ Monitor hinzufügen</a>
@@ -737,7 +737,8 @@ function toast(t){const x=document.getElementById("toast");x.textContent=t;x.sty
 function statusName(s){return {0:"Priorisierter Sprechwunsch",1:"Frei über Funk",2:"Frei auf Wache",3:"Einsatz übernommen",4:"Am Einsatzort",5:"Sprechwunsch",6:"Nicht einsatzbereit",7:"Patient aufgenommen",8:"bed. Verfügbar"}[s]||s}
 function statusClass(s){return "s"+s}
 function vehicleLabelBlock(u){
- return `<b>${esc(u.type||"—")}</b><br><small class="muted">${esc(u.opta||u.name||"—")}</small>`;
+ const q=typeof unitQualText==="function"?unitQualText(u):"";
+ return `<b>${esc(u.type||"—")}</b><br><small class="muted">${esc(u.opta||u.name||"—")}</small>${q&&!u.qualNow?`<br><small title="Medizinische Qualifikation der Besatzung" style="color:#0f766e;font-weight:600">🩺 ${esc(q)}</small>`:""}${u.qualNow?`<br><small title="Besatzung gesondert angemeldet${u.qualNowAt?" um "+new Date(u.qualNowAt).toLocaleTimeString("de-DE",{hour:"2-digit",minute:"2-digit"}):""}" style="color:#c2410c;font-weight:800">⭐ angemeldet: ${esc(qualTokens(u.qualNow).join(" + "))}</small>`:""}`;
 }
 function statusOptionsFor(u){
  // Rettungsdienst-spezifische Status (7 = Patient aufgenommen, 8 = bedingt verfügbar)
@@ -1232,6 +1233,7 @@ function setUnitStatus(u,status){
  const wasFree=["1","2"].includes(String(u.status));
  if(String(status)!=="3")delete u.route;
  if(["1","2","6"].includes(String(status))){delete u.carriesAb; if(isAB(u))delete u.wlfId}
+ if(String(status)==="6"&&u.qualNow){u.qualNow="";delete u.qualNowAt} // nicht einsatzbereit → Sonder-Anmeldung endet
  u.status=String(status);
  if(["1","2"].includes(String(status))){if(!wasFree||!u.freeSince)u.freeSince=Date.now()}else delete u.freeSince;
  delete u.status1Since; delete u.status2Due;
@@ -1324,6 +1326,7 @@ function autoReturnToStation(){
  let changed=false;
  db.units.forEach(u=>{
    if(u.phoneControlled)return;
+   if(u.qualNow&&u.status==="1")return; // gesondert angemeldete Besatzung bleibt in Status 1, bis sie sich ummeldet
    if(u.status==="1"){
      if(!u.status2Due){
        u.status1Since=now;
@@ -1546,6 +1549,41 @@ function unitTurnoutDefault(u){
  if(o==="THW")return 15;
  return 5;
 }
+// ─── Medizinische Qualifikation der Besatzung (Mindestbesetzung) ─────────────────────────────
+// Standard je Organisation/Typ; je Fahrzeug im Editor überschreibbar (u.qual, Text mit „+“ getrennt).
+// unsure = Standard nicht verifiziert → im Editor als „bitte prüfen“ markiert.
+function unitQualDefault(u){
+ if(!u)return {q:[],unsure:false};
+ const o=u.org, t=String(u.type||"");
+ if(o==="Rettungsdienst"||o==="DRK"&&t==="RTW"){
+   if(t==="RTW")return {q:["NFS","RS"],unsure:false};
+   if(t==="KTW")return {q:["RS","RH"],unsure:false};
+   if(t==="NEF")return {q:["NA","RS"],unsure:true};
+   if(/OrgL|LNA/.test(t))return {q:["LNA","OrgL"],unsure:false};
+   return {q:[],unsure:true};          // z. B. NKTW: Besetzung nicht hinterlegt
+ }
+ if(o==="Luftrettung"){
+   if(t==="RTH"||t==="ITH")return {q:["NA","NFS (HEMS-TC)"],unsure:false};
+   return {q:[],unsure:true};
+ }
+ if(o==="DLRG")return {q:["mind. 1× San B"],unsure:false};
+ if(o==="DRK")return {q:["mind. 1× San C"],unsure:false};
+ return {q:[],unsure:false};
+}
+function qualTokens(str){return String(str||"").split(/\s*[+,;]\s*/).map(x=>x.trim()).filter(Boolean)}
+// Grundbesetzung laut Fahrzeugdaten (Editor) bzw. Standard
+function unitQualBase(u){const own=String(u?.qual??"").trim();return own?qualTokens(own):unitQualDefault(u).q}
+// Aktuell gültig: Sonder-Anmeldung der Besatzung (u.qualNow, per Funk/Terminal) vor Grundbesetzung
+function unitQual(u){return u?.qualNow?qualTokens(u.qualNow):unitQualBase(u)}
+function unitQualText(u){const q=unitQualBase(u);return q.length?q.join(" + "):""}
+// Rangfolge für den Abgleich mit dem Einsatz (höchste Qualifikation an Bord zählt)
+const QUAL_RANK=[["LNA",6],["NA",6],["NFS",5],["RS",4],["RH",3],["San C",3],["San B",2],["San A",1]];
+function qualRank(list){
+ let r=0;
+ for(const t of list)for(const [k,v] of QUAL_RANK){if(new RegExp("(^|[^A-Za-zÄÖÜäöü])"+k.replace(" ","\\s*")+"(?![A-Za-zÄÖÜäöü])").test(t))r=Math.max(r,v)}
+ return r;
+}
+function qualRankName(r){return r>=6?"Notarzt":r>=5?"Notfallsanitäter":r>=4?"Rettungssanitäter":r>=3?"RH/San C":r>=2?"San B":r>=1?"San A":"—"}
 function unitTurnoutMin(u){
  if(String(u?.status)==="1")return 0;
  const own=Number(u?.turnoutMin);
@@ -3104,6 +3142,29 @@ function evaluate(){
        for(;got<want;got++)offer.push({unitId:null,type:x.type,aao:aaoName});
      }
    }
+   // Fahrzeuge mit gesondert angemeldeter Besatzung (z. B. DLRG mit NFS an Bord) als qualifizierte
+   // Ersthelfer anbieten – nur wenn sie mind. 2 min schneller da sind als das schnellste vorgeschlagene RTW bzw.
+   // (bei Notarzt an Bord) NEF/RTH. Nur Angebot zum Anhaken, nie automatisch.
+   {
+     const etaOf=x=>x.neighbor?x.neighborEta:estimatedEtaMinutes(x);
+     const minEta=types=>{const l=selected.filter(x=>types.includes(x.type));if(!l.length)return null;const e=l.filter(x=>!x.missing).map(etaOf).filter(Number.isFinite);return e.length?Math.min(...e):Infinity};
+     const rtwEta=minEta(["RTW"]), naEta=minEta(["NEF","RTH","ITH"]);
+     if(rtwEta!=null||naEta!=null){
+       for(const u of db.units){
+         if(!u.qualNow||u.neighborLoan||used.has(u.id)||seen.has(u.id))continue;
+         if(!["1","2"].includes(String(u.status))||!islandReachable(u))continue;
+         if(["RTW","NEF","RTH","ITH"].includes(u.type)||isAB(u))continue; // reguläre Rettungsmittel bzw. Abrollbehälter
+         const r=qualRank(qualTokens(u.qualNow)), e=estimatedEtaMinutes(u);
+         if(!Number.isFinite(e)||e>15)continue;
+         let why=null;
+         if(r>=6&&naEta!=null&&e<=naEta-2)why=`Notarzt an Bord · schneller als ${naEta===Infinity?"kein NEF verfügbar":`NEF/RTH (ca. ${naEta} min)`}`;
+         else if(r>=4&&rtwEta!=null&&e<=rtwEta-2)why=`${qualRankName(r)} an Bord · schneller als ${rtwEta===Infinity?"kein RTW verfügbar":`RTW (ca. ${rtwEta} min)`}`;
+         if(!why)continue;
+         seen.add(u.id);
+         offer.push({unitId:u.id,type:u.type,aao:`🩺 ${why}`,qual:true,label:`qualifizierter Ersthelfer: ${qualTokens(u.qualNow).join(" + ")}`});
+       }
+     }
+   }
    c.optionalOffer=offer;
    const ok=new Set(offer.flatMap(o=>o.unitIds||(o.unitId!=null?[o.unitId]:[])).map(String));
    c.optionalChecked=(c.optionalChecked||[]).filter(id=>ok.has(String(id)));
@@ -3234,7 +3295,7 @@ function prepareAlarm(){
    ${stagingSectionHTML(c)}
    <label style="margin-top:12px">Vorgeschlagene Einsatzmittel</label>
    <div class="suggest">${esc(c.suggestion||"—")}</div>
-   ${(c.optionalOffer||[]).length?`<label style="margin-top:12px">➕ Optionale Fahrzeuge (AAO) – bei Bedarf anhaken</label>
+   ${(c.optionalOffer||[]).length?`<label style="margin-top:12px">➕ Optionale Fahrzeuge${c.optionalOffer.some(o=>o.qual)?" (AAO / angemeldete Qualifikation)":" (AAO)"} – bei Bedarf anhaken</label>
    <div class="suggest" style="background:#f8fafc">${c.optionalOffer.map(o=>{
      if(o.unitIds){const chk=o.unitIds.every(i=>(c.optionalChecked||[]).map(String).includes(String(i)));
        return `<label style="display:flex;gap:8px;align-items:center;font-weight:500;margin:4px 0"><input type="checkbox" style="width:auto" ${chk?"checked":""} onchange="toggleOptionalUnit('${o.unitIds.join(",")}',this.checked)"> ${esc(o.type)} <small class="muted">(${o.unitIds.length} Fahrzeuge: ${esc(o.unitIds.map(i=>db.units.find(x=>x.id===i)?.type).filter(Boolean).join(", "))})</small> <small class="muted">· ${esc(o.aao)}</small></label>`}
@@ -3267,7 +3328,8 @@ function confirmAlarm(){
  // Angehakte optionale AAO-Fahrzeuge mit alarmieren (nur wenn noch frei)
  for(const id of (c.optionalChecked||[])){
    const u=db.units.find(x=>String(x.id)===String(id));
-   if(u&&["1","2","8"].includes(String(u.status)))appendUnitToCall(c,u,"optional");
+   const o=(c.optionalOffer||[]).find(x=>String(x.unitId)===String(id));
+   if(u&&["1","2","8"].includes(String(u.status)))appendUnitToCall(c,u,o?.label||"optional");
  }
  c.optionalChecked=[];
  alarmProposal();
@@ -3383,7 +3445,7 @@ function unitDutyToggleDay(i,on){const d=unitDraft.duty;d.days=d.days.filter(x=>
 function editUnit(id){
  const u=db.units.find(x=>String(x.id)===String(id)); if(!u)return;
  const du=unitDuty(u);
- unitDraft={id:u.id,org:u.org||"",type:u.type||"",name:u.name||"",opta:u.opta||"",location:u.location||"",crew:String(u.crew??""),skills:u.skills||"",turnoutMin:u.turnoutMin??"",fachgruppe:u.org==="THW"?thwGroup(u).replace(/^Ohne Fachgruppe$/,""):"",
+ unitDraft={id:u.id,org:u.org||"",type:u.type||"",name:u.name||"",opta:u.opta||"",location:u.location||"",crew:String(u.crew??""),skills:u.skills||"",qual:u.qual||"",turnoutMin:u.turnoutMin??"",fachgruppe:u.org==="THW"?thwGroup(u).replace(/^Ohne Fachgruppe$/,""):"",
    dutyOn:!!du,duty:du?{from:du.from||"07:00",to:du.to||"19:00",days:Array.isArray(du.days)&&du.days.length?[...du.days]:[0,1,2,3,4,5,6],dateFrom:du.dateFrom||"",dateTo:du.dateTo||""}:{from:"07:00",to:"19:00",days:[0,1,2,3,4,5,6],dateFrom:"",dateTo:""}};
  render("mittel");
 }
@@ -3409,6 +3471,10 @@ function unitEditorHTML(){
    <div><label>Besatzung</label><input type="number" min="0" value="${esc(d.crew)}" oninput="unitDraft.crew=this.value"></div>
    <div><label>Ausrückzeit in min (leer = Standard ${unitTurnoutDefault({org:d.org,type:d.type,skills:d.skills})} min)</label><input type="number" min="0" max="60" value="${esc(d.turnoutMin??"")}" placeholder="${unitTurnoutDefault({org:d.org,type:d.type,skills:d.skills})}" oninput="unitDraft.turnoutMin=this.value"></div>
   </div>
+  ${(()=>{const qd=unitQualDefault({org:d.org,type:d.type});const def=qd.q.join(" + ");
+   return `<label>🩺 Medizinische Qualifikation der Besatzung (mit „+“ trennen; leer = Standard${def?`: ${esc(def)}`:" – keiner hinterlegt"}${qd.unsure?" ⚠️ nicht geprüft":""})</label>
+   <input id="unitQualInput" value="${esc(d.qual||"")}" placeholder="${esc(def||"z. B. NFS + RS")}" oninput="unitDraft.qual=this.value">
+   <div class="row" style="gap:4px;margin-top:4px">${["NA","NFS","RS","RH","San A","San B","San C"].map(x=>`<button style="padding:3px 8px;font-size:12px" onclick="const i=document.getElementById('unitQualInput');i.value=(i.value.trim()?i.value.trim()+' + ':'')+'${x}';unitDraft.qual=i.value">＋ ${x}</button>`).join("")}</div>`})()}
   <label>Fähigkeiten / Hinweise (optional)</label><input value="${esc(d.skills)}" oninput="unitDraft.skills=this.value">
   ${d.org==="THW"?`<label>THW-Fachgruppe (für „Nachfordern nach Fachgruppe“)</label><input list="thwGroupList" value="${esc(d.fachgruppe||"")}" placeholder="z. B. Bergungsgruppe (B)" oninput="unitDraft.fachgruppe=this.value"><datalist id="thwGroupList">${[...new Set([...Object.values(THW_GROUP_DEFAULT),...db.units.filter(u=>u.org==="THW").map(thwGroup)])].filter(g=>g!=="Ohne Fachgruppe").map(g=>`<option value="${esc(g)}">`).join("")}</datalist>`:""}
   <label style="margin-top:12px">🕒 Dienstzeiten</label>
@@ -3439,7 +3505,7 @@ function saveUnitDraft(){
    if((d.duty.dateFrom||d.duty.dateTo)&&(ddmmToNum(d.duty.dateFrom)==null||ddmmToNum(d.duty.dateTo)==null)){toast("Zeitraum bitte als TT.MM. angeben (beide Felder)");return}
  }
  const duty=d.dutyOn?{from:d.duty.from,to:d.duty.to,days:[...d.duty.days],...(d.duty.dateFrom&&d.duty.dateTo?{dateFrom:d.duty.dateFrom,dateTo:d.duty.dateTo}:{})}:{none:true};
- const fields={org:d.org,type,name,opta:String(d.opta||"").trim()||name,location:String(d.location||"").trim(),crew:String(d.crew||"").trim(),skills:String(d.skills||"").trim(),duty};
+ const fields={org:d.org,type,name,opta:String(d.opta||"").trim()||name,location:String(d.location||"").trim(),crew:String(d.crew||"").trim(),skills:String(d.skills||"").trim(),qual:String(d.qual||"").trim(),duty};
  if(d.org==="THW")fields.fachgruppe=String(d.fachgruppe||"").trim();
  fields.turnoutMin=String(d.turnoutMin??"").trim()===""?"":Math.max(0,Number(d.turnoutMin)||0);
  if(d.id!=null){
@@ -3869,6 +3935,7 @@ async function pushUnitCloud(u){
  if(!u || !db.cloud?.enabled)return;
  await cloudRequest(`units/${encodeURIComponent(String(u.id))}`,"PUT",{
   id:u.id,name:u.name,opta:u.opta,type:u.type,org:u.org,location:u.location,status:String(u.status),
+  qualNow:u.qualNow||"",qualNowAt:u.qualNowAt||null,
   updatedAt:new Date().toISOString()
  });
 }
@@ -3936,6 +4003,11 @@ async function pollCloudUnits(){
      }
      if(u && ru.phoneControlled && !u.phoneControlled){
        u.phoneControlled=true;
+       changed=true;
+     }
+     if(u && ru.qualNow!==undefined && String(ru.qualNow||"")!==String(u.qualNow||"")){
+       u.qualNow=String(ru.qualNow||""); if(u.qualNow)u.qualNowAt=ru.qualNowAt||new Date().toISOString(); else delete u.qualNowAt;
+       if(u.qualNow)toast(`🩺 ${u.opta||u.name}: Besatzung angemeldet – ${qualTokens(u.qualNow).join(" + ")}`);
        changed=true;
      }
    }
@@ -4817,16 +4889,56 @@ async function renderVehicleTerminal(unitId,dburl,sid){
        <div class="suggest"><b>Alarmierte Mittel</b><div>${esc(c.suggestion||"—")}</div></div>
        ${Array.isArray(c.nafo)&&c.nafo.length?`<div class="card" style="background:#fff7ed"><b>📟 Nachforderung / Lageänderung</b>${c.nafo.slice(-3).map(n=>`<div>${esc(n.reason||"")}</div>`).join("")}</div>`:""}
      </div>`).join(""):""}
+    ${["1","2"].includes(String(unit?.status))?vehicleQualHTML(local,unit,unitId,dburl,sid):""}
     ${vehicleIvenaCache?renderIvenaMini(vehicleIvenaCache):""}`;
  }
+ vehicleQualDraft=null;
  await refresh();
  clearInterval(vehiclePollTimer);
  vehiclePollTimer=setInterval(refresh,2000);
  terminalRefreshFn=refresh;
 }
+// Fahrzeug-Terminal: Besatzung mit besonderer Qualifikation anmelden (z. B. DLRG-Fahrzeug mit NFS an Bord).
+// Wird mit Status 1 gesendet; die Leitstelle kann das Fahrzeug dann bei passenden Einsätzen als
+// qualifizierten Ersthelfer mitziehen.
+let vehicleQualDraft=null;
+function vehicleQualHTML(local,unit,unitId,dburl,sid){
+ const base=unitQualBase(local||unit||{});
+ const now=String(unit?.qualNow||"");
+ const draft=vehicleQualDraft!=null?vehicleQualDraft:(now?qualTokens(now):[]);
+ const q=x=>String(x).replace(/'/g,"\\'");
+ const a=`'${q(unitId)}','${q(dburl)}','${q(sid)}'`;
+ return `<div class="card" style="margin-top:12px;color:#111827">
+  <h2 style="font-size:16px;margin-bottom:4px;color:#111827">🩺 Besatzung / Qualifikation</h2>
+  <div style="font-size:13px">Grundbesetzung: <b>${esc(base.join(" + ")||"keine hinterlegt")}</b></div>
+  ${now?`<div style="font-size:13px;color:#c2410c;font-weight:800">⭐ Angemeldet: ${esc(qualTokens(now).join(" + "))}</div>`:""}
+  <div style="margin-top:8px;font-size:13px">Heute an Bord: <b>${esc(draft.join(" + ")||"– (Grundbesetzung)")}</b></div>
+  <div class="row" style="gap:4px;margin-top:6px;flex-wrap:wrap">${["NA","NFS","RS","RH","San C","San B","San A"].map(x=>`<button style="padding:6px 10px" onclick="vehicleQualAdd('${x}')">＋ ${x}</button>`).join("")}<button style="padding:6px 10px" onclick="vehicleQualAdd(null)" title="Letzten Eintrag entfernen">⌫</button></div>
+  <div class="row" style="gap:6px;margin-top:8px;flex-wrap:wrap">
+   <button class="primary" ${draft.length?"":"disabled"} onclick="vehicleQualSend(${a},true)">📡 Mit Status 1 anmelden</button>
+   ${now?`<button onclick="vehicleQualSend(${a},false)">↩️ Zurück zur Grundbesetzung</button>`:""}
+  </div>
+  <small class="muted">Mit angemeldeter höherer Qualifikation (ab RS bzw. Notarzt) kann die Leitstelle euch bei passenden Einsätzen als qualifizierten Ersthelfer mitalarmieren.</small>
+ </div>`;
+}
+function vehicleQualAdd(x){
+ const cur=vehicleQualDraft!=null?vehicleQualDraft:[];
+ vehicleQualDraft=x?[...cur,x]:cur.slice(0,-1);
+ if(typeof terminalRefreshFn==="function")terminalRefreshFn();
+}
+async function vehicleQualSend(unitId,dburl,sid,announce){
+ const val=announce?(vehicleQualDraft||[]).join(" + "):"";
+ if(announce&&!val){toast("Bitte Qualifikation(en) wählen");return}
+ const data={qualNow:val,qualNowAt:announce?new Date().toISOString():null,phoneControlled:true,updatedAt:new Date().toISOString()};
+ if(announce)data.status="1";
+ await vehicleFetch(dburl,sid,`units/${encodeURIComponent(unitId)}`,"PATCH",data);
+ vehicleQualDraft=null;
+ toast(announce?`🩺 Status 1 · Besatzung ${val} gemeldet`:"🩺 Grundbesetzung gemeldet");
+ if(typeof terminalRefreshFn==="function")terminalRefreshFn();
+}
 function renderIvenaMini(hospitals){
  if(!hospitals.length)return"";
- return `<div class="card"><h2 style="font-size:16px;margin-bottom:6px">🏥 IVENA – Kurzübersicht</h2>
+ return `<div class="card" style="color:#111827"><h2 style="font-size:16px;margin-bottom:6px;color:#111827">🏥 IVENA – Kurzübersicht</h2>
   <div style="overflow:auto"><table style="font-size:13px">
    <thead><tr><th>Klinik</th><th>Status</th><th>Abmeldungen</th></tr></thead>
    <tbody>${hospitals.map(h=>{
@@ -4998,7 +5110,7 @@ function mittel(){
         ${rows.map(u=>`<tr>
          <td>${vehicleLabelBlock(u)}${u.gpsUpdatedAt&&(Date.now()-new Date(u.gpsUpdatedAt).getTime())<120000?` <span title="Live-GPS aktiv" style="font-size:11px">📍</span>`:""}${unitDuty(u)?`<br><small class="muted" title="Dienstzeiten">🕒 ${esc(dutyText(unitDuty(u)))}</small>`:""}</td>
          <td><span class="status ${statusClass(String(u.status))}">${statusName(String(u.status))}</span></td>
-         <td><div class="row"><button onclick="showVehicleQR('${String(u.id)}')">📱 Link / QR</button><button onclick="openVehiclePreview('${String(u.id)}')">👁️ Vorschau</button><button onclick="editUnit('${String(u.id)}')" title="Fahrzeug bearbeiten">✏️</button><button onclick="deleteUnit('${String(u.id)}')" title="Fahrzeug löschen">🗑️</button></div></td>
+         <td><div class="row"><button onclick="showVehicleQR('${String(u.id)}')">📱 Link / QR</button><button onclick="openVehiclePreview('${String(u.id)}')">👁️ Vorschau</button><button onclick="editUnit('${String(u.id)}')" title="Fahrzeug bearbeiten">✏️</button><button onclick="dispatchQualNow('${String(u.id)}')" title="Besatzung / Qualifikation per Funk angemeldet">🩺</button><button onclick="deleteUnit('${String(u.id)}')" title="Fahrzeug löschen">🗑️</button></div></td>
          <td>${statusOptionsFor(u).map(s=>`<button class="radio-key-mini${String(u.status)===s?" current":""}" onclick="setStatusFromSelect('${String(u.id)}','${s}')" title="${esc(statusName(s))}">${esc(s)}</button>`).join("")}</td>
         </tr>`).join("")}
        </tbody>
@@ -5089,6 +5201,20 @@ function deleteCallerSlot(id){
  render("mittel");
 }
 
+// Disponent trägt eine per Funk gemeldete Sonder-Besatzung ein (z. B. „NFS an Bord“)
+function dispatchQualNow(id){
+ const u=db.units.find(x=>String(x.id)===String(id));if(!u)return;
+ const v=prompt(`Besatzung ${u.opta||u.name} – gesondert angemeldete Qualifikation(en), mit „+“ trennen\n(z. B. NFS + San B · NA · RS)\nLeer lassen = zurück zur Grundbesetzung (${unitQualText(u)||"keine hinterlegt"})`,u.qualNow||"");
+ if(v===null)return;
+ setUnitQualNow(u,v);
+ if(u.qualNow&&String(u.status)==="2")setUnitStatus(u,"1"); // Anmeldung über Funk = Status 1
+ save();pushUnitCloud(u);render("mittel");
+ toast(u.qualNow?`🩺 Angemeldet: ${qualTokens(u.qualNow).join(" + ")}`:"🩺 Grundbesetzung");
+}
+function setUnitQualNow(u,v){
+ const t=qualTokens(v).join(" + ");
+ if(t){u.qualNow=t;u.qualNowAt=new Date().toISOString()}else{u.qualNow="";delete u.qualNowAt}
+}
 function setStatusFromSelect(id,status){
  const u=db.units.find(x=>String(x.id)===String(id));if(!u)return;
  setUnitStatus(u,String(status));save();render("mittel");
@@ -5140,7 +5266,7 @@ function vollalarmGroup(type){
 // ─── AAOs / Fahrzeuge als Datei sichern und wieder laden ─────────────────────────────────────
 // Die Datei kann auf dem Gerät/in iCloud abgelegt, auf andere Geräte übertragen oder an Claude
 // geschickt werden, um sie fest als Standard ins Programm zu übernehmen.
-const UNIT_RUNTIME_KEYS=["status1Since","status2Due","status3Since","status4Since","status7Since","status8Due","freeSince","gpsUpdatedAt","lat","lng","phoneControlled","updatedAt"];
+const UNIT_RUNTIME_KEYS=["status1Since","status2Due","status3Since","status4Since","status7Since","status8Due","freeSince","gpsUpdatedAt","lat","lng","phoneControlled","updatedAt","qualNow","qualNowAt"];
 function exportSetup(kind){
  const now=new Date();
  const data={format:"leitstelle.sim",kind,version:(document.getElementById("versionTag")?.textContent||""),scenario:currentScenarioId,exportedAt:now.toISOString()};
