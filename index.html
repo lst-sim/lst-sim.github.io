@@ -162,7 +162,7 @@ table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:10px 8px
 </head>
 <body>
 <div style="padding:6px 10px;font-size:11px;color:#94a3b8;font-weight:700;display:flex;align-items:center;gap:10px;position:sticky;top:0;z-index:10;background:var(--bg)">
- <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v4.68</span>
+ <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v4.69</span>
  <span id="syncState"></span>
  <a id="homeLink" href="#" onclick="render('leitstelle');return false" class="hidden" style="color:#64748b;text-decoration:underline;font-weight:600">🖥️ Leitstelle</a>
  <a id="monitorLink" href="#" onclick="showMonitorQR();return false" style="color:#64748b;text-decoration:underline;font-weight:600;margin-left:auto">🖥️ Monitor hinzufügen</a>
@@ -212,8 +212,14 @@ const DEFAULTS_FRI_WHV={
   {id:612,name:"77-77-01",opta:"Pelikan Friesland 77/77-01",type:"MZB",org:"DLRG",location:"Bockhorn",status:"2",crew:"2",skills:"Fachtrupp Technik/Logistik (Wasserrettungszug Friesland) – Motorrettungsboot",boatName:"Freesen Deern",verified:"Einsatzbericht dlrg.de"},
   // DLRG-Wachtürme Dangast (Strandwache, OG Varel): besetzt 1,5 h vor bis 1,5 h nach Hochwasser
   // (Nutzerangabe: „3 Stunden um Hochwasser“), sonst Status 6 – siehe applySporadic(). Rufnamen: Nutzerangabe.
-  {id:620,name:"72-00-01",opta:"Pelikan Friesland 72/00-01",type:"Wachturm",org:"DLRG",location:"Dangast",status:"6",crew:"",skills:"Wachturm Dangast – Strandwache (Wasserrettungsdienst), 3 Stunden um Hochwasser besetzt",sporadic:{from:"09:00",to:"19:00"},verified:"Nutzerangabe"},
-  {id:621,name:"72-00-02",opta:"Pelikan Friesland 72/00-02",type:"Wachturm",org:"DLRG",location:"Dangast",status:"6",crew:"",skills:"Wachturm Dangast – Strandwache (Wasserrettungsdienst), 3 Stunden um Hochwasser besetzt",sporadic:{from:"09:00",to:"19:00"},verified:"Nutzerangabe"},
+  {id:620,name:"72-00-01",opta:"Pelikan Friesland 72/00-01",type:"Wachturm",org:"DLRG",location:"Dangast",status:"6",crew:"",skills:"Wachturm Dangast – Strandwache (Wasserrettungsdienst), 3 Stunden um Hochwasser besetzt",sporadic:{from:"09:00",to:"19:00",dateFrom:"01.06.",dateTo:"31.08."},verified:"Nutzerangabe"},
+  {id:621,name:"72-00-02",opta:"Pelikan Friesland 72/00-02",type:"Wachturm",org:"DLRG",location:"Dangast",status:"6",crew:"",skills:"Wachturm Dangast – Strandwache (Wasserrettungsdienst), 3 Stunden um Hochwasser besetzt",sporadic:{from:"09:00",to:"19:00",dateFrom:"01.06.",dateTo:"31.08."},verified:"Nutzerangabe"},
+  // Weitere DLRG-Strandwachen (laut DLRG OG Wangerland: Schillig, Horumersiel, Hooksiel) und Wangerooge.
+  // Rufnamen nach dem Schema der Nutzerangabe (Ortskennung/00-laufende Nummer), je Ort durchnummeriert.
+  {id:622,name:"76-00-01",opta:"Pelikan Friesland 76/00-01",type:"Wachturm",org:"DLRG",location:"Schillig",status:"6",crew:"",skills:"Wachturm Schillig – Strandwache (Wasserrettungsdienst), 3 Stunden um Hochwasser besetzt (Juni–August)",sporadic:{from:"09:00",to:"19:00",dateFrom:"01.06.",dateTo:"31.08."},verified:"Rufname nach Schema Nutzerangabe"},
+  {id:623,name:"76-00-02",opta:"Pelikan Friesland 76/00-02",type:"Wachturm",org:"DLRG",location:"Horumersiel",status:"6",crew:"",skills:"Wachturm Horumersiel – Strandwache (Wasserrettungsdienst), 3 Stunden um Hochwasser besetzt (Juni–August)",sporadic:{from:"09:00",to:"19:00",dateFrom:"01.06.",dateTo:"31.08."},verified:"Rufname nach Schema Nutzerangabe"},
+  {id:624,name:"76-00-03",opta:"Pelikan Friesland 76/00-03",type:"Wachturm",org:"DLRG",location:"Hooksiel",status:"6",crew:"",skills:"Wachturm Hooksiel – Strandwache (Wasserrettungsdienst), 3 Stunden um Hochwasser besetzt (Juni–August)",sporadic:{from:"09:00",to:"19:00",dateFrom:"01.06.",dateTo:"31.08."},verified:"Rufname nach Schema Nutzerangabe"},
+  {id:625,name:"78-00-01",opta:"Pelikan Friesland 78/00-01",type:"Wachturm",org:"DLRG",location:"Wangerooge",status:"6",crew:"",skills:"Wachturm Wangerooge – Strandwache (Wasserrettungsdienst), 3 Stunden um Hochwasser besetzt (Juni–August)",sporadic:{from:"09:00",to:"19:00",dateFrom:"01.06.",dateTo:"31.08."},verified:"Rufname nach Schema Nutzerangabe"},
   {id:613,name:"77-78-01",opta:"Adler Friesland 77/78-01",type:"RTB",org:"DLRG",location:"Bockhorn",status:"2",crew:"2",skills:"Fachtrupp Technik/Logistik (Wasserrettungszug Friesland) – Motorrettungsboot",boatName:"Friesische Wehde",verified:"Einsatzbericht dlrg.de"},
   // DRK Kreisverband Varel - Friesische Wehde e.V.: Schnelleinsatzgruppe (SEG) und
   // Katastrophenschutz, hervorgegangen aus dem früheren Sanitätszug 50. Aufgabenbereiche laut
@@ -1433,9 +1439,13 @@ function hmText(ms){return new Date(ms).toLocaleTimeString("de-DE",{hour:"2-digi
 // aber nur tagsüber (u.sporadic.from–to, Standard 09–19 Uhr); sonst Status 6.
 // Im Einsatz (Status 3/4/7/8) wird nichts verändert.
 const TOWER_HW_HALF_MIN=90;
+// Saison Standard 01.06.–31.08. (Nutzerangabe), außerhalb immer Status 6
+function towerSeason(u){const sp=u.sporadic||{};return {from:sp.dateFrom||"01.06.",to:sp.dateTo||"31.08."}}
 function towerStaffed(u,now=Date.now()){
  const sp=u.sporadic||{};
  const d=new Date(now), m=d.getHours()*60+d.getMinutes();
+ const se=towerSeason(u), a=ddmmToNum(se.from), b=ddmmToNum(se.to), md=(d.getMonth()+1)*100+d.getDate();
+ if(a!=null&&b!=null&&!(a<=b?(md>=a&&md<=b):(md>=a||md<=b)))return false;
  const f=hmToMin(sp.from||"09:00"), t=hmToMin(sp.to||"19:00");
  const day=f==null||t==null||(f<t?(m>=f&&m<t):(m>=f||m<t));
  return day&&Math.abs(now-nearestHighWater(now))<=TOWER_HW_HALF_MIN*60000;
@@ -1520,6 +1530,11 @@ const AREA_CENTERS={
 const STATION_OVERRIDE={
  "DLRG__Varel":[53.3833,8.1326], // DLRG-Wache Varel, Am Wasserturm 5 (26316 Varel)
  "DLRG__Dangast":[53.4470,8.1150], // Strand Dangast – ungefähre Lage (genaue Turmstandorte nicht hinterlegt)
+ // Weitere Strandwachen – jeweils ungefähre Lage am Badestrand, genaue Turmstandorte nicht hinterlegt
+ "DLRG__Schillig":[53.7058,8.0300],
+ "DLRG__Horumersiel":[53.6870,8.0225],
+ "DLRG__Hooksiel":[53.6395,8.0850],
+ "DLRG__Wangerooge":[53.7925,7.8990],
  "Rettungsdienst__Sande":[53.508352,8.008457], // Rettungswache Sande, direkt neben TV Sanderbusch (Tennisplatz)
  "Luftrettung__Sanderbusch (Sande)":[53.50691,8.00901], // Christoph 26, stationiert am Nordwest-Krankenhaus Sanderbusch
  "Feuerwehr__Varel":[53.3984536,8.1353142], // FF Varel OF Varel, Pelzerstraße 5-7, 26316 Varel
@@ -5201,7 +5216,7 @@ function mittel(){
        <thead><tr><th>Fahrzeug</th><th>Status</th><th>Fahrzeugterminal</th><th>Status ändern</th></tr></thead>
        <tbody>
         ${rows.map(u=>`<tr>
-         <td>${vehicleLabelBlock(u)}${u.gpsUpdatedAt&&(Date.now()-new Date(u.gpsUpdatedAt).getTime())<120000?` <span title="Live-GPS aktiv" style="font-size:11px">📍</span>`:""}${unitDuty(u)?`<br><small class="muted" title="Dienstzeiten">🕒 ${esc(dutyText(unitDuty(u)))}</small>`:""}${u.sporadic?(()=>{const h=nextHighWater(),near=nearestHighWater();const cur=Math.abs(Date.now()-near)<=TOWER_HW_HALF_MIN*60000;return `<br><small class="muted" title="Besetzt 1,5 h vor bis 1,5 h nach Hochwasser, tagsüber ${esc(u.sporadic.from||"09:00")}–${esc(u.sporadic.to||"19:00")} Uhr. Hochwasser berechnet ab BSH-Vorhersage Wilhelmshaven, ±30 min.">🌊 besetzt ±1,5 h um Hochwasser (tagsüber) · ${cur?`HW ca. ${hmText(near)}`:`nächstes HW ca. ${hmText(h)}`}</small>`})():""}</td>
+         <td>${vehicleLabelBlock(u)}${u.gpsUpdatedAt&&(Date.now()-new Date(u.gpsUpdatedAt).getTime())<120000?` <span title="Live-GPS aktiv" style="font-size:11px">📍</span>`:""}${unitDuty(u)?`<br><small class="muted" title="Dienstzeiten">🕒 ${esc(dutyText(unitDuty(u)))}</small>`:""}${u.sporadic?(()=>{const h=nextHighWater(),near=nearestHighWater();const cur=Math.abs(Date.now()-near)<=TOWER_HW_HALF_MIN*60000;return `<br><small class="muted" title="Besetzt 1,5 h vor bis 1,5 h nach Hochwasser, tagsüber ${esc(u.sporadic.from||"09:00")}–${esc(u.sporadic.to||"19:00")} Uhr. Hochwasser berechnet ab BSH-Vorhersage Wilhelmshaven, ±30 min.">🌊 besetzt ±1,5 h um Hochwasser (tagsüber, ${esc(towerSeason(u).from)}–${esc(towerSeason(u).to)}) · ${cur?`HW ca. ${hmText(near)}`:`nächstes HW ca. ${hmText(h)}`}</small>`})():""}</td>
          <td><span class="status ${statusClass(String(u.status))}">${statusName(String(u.status))}</span></td>
          <td><div class="row"><button onclick="showVehicleQR('${String(u.id)}')">📱 Link / QR</button><button onclick="openVehiclePreview('${String(u.id)}')">👁️ Vorschau</button><button onclick="editUnit('${String(u.id)}')" title="Fahrzeug bearbeiten">✏️</button><button onclick="dispatchQualNow('${String(u.id)}')" title="Besatzung / Qualifikation per Funk angemeldet">🩺</button><button onclick="deleteUnit('${String(u.id)}')" title="Fahrzeug löschen">🗑️</button></div></td>
          <td>${statusOptionsFor(u).map(s=>`<button class="radio-key-mini${String(u.status)===s?" current":""}" onclick="setStatusFromSelect('${String(u.id)}','${s}')" title="${esc(statusName(s))}">${esc(s)}</button>`).join("")}</td>

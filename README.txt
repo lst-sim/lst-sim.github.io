@@ -1158,3 +1158,13 @@ Version 4.68:
   (Mond, Sonne, Mondentfernung), abgeglichen mit der BSH-Vorhersage für Wilhelmshaven
   12.–15.10.2026 (Abweichung dort ±10 min). Sonst etwa ±20–30 min; Wind/Sturmflut nicht
   berücksichtigt. Für Dangast ist kein eigener Zeitversatz zu Wilhelmshaven hinterlegt.
+
+Version 4.69:
+- Wachtürme nur in der Saison 01.06.–31.08. besetzt (±1,5 h um Hochwasser, tagsüber 09–19 Uhr),
+  außerhalb immer Status 6.
+- Neue Wachtürme, Rufnamen nach dem Schema von Dangast (Ortskennung/00-laufende Nummer):
+  Schillig „Pelikan Friesland 76/00-01“, Horumersiel „76/00-02“, Hooksiel „76/00-03“,
+  Wangerooge „78/00-01“. Strandwachen Schillig/Horumersiel/Hooksiel laut DLRG OG Wangerland
+  (Jahresbericht 2016). Kartenlage je Strand nur ungefähr.
+- Hochwasser für alle Türme nach Wilhelmshaven gerechnet – an Schillig/Hooksiel und besonders
+  Wangerooge kommt es real früher; ein Versatz je Ort ist nicht hinterlegt.
