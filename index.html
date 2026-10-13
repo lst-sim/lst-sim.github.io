@@ -162,7 +162,7 @@ table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:10px 8px
 </head>
 <body>
 <div style="padding:6px 10px;font-size:11px;color:#94a3b8;font-weight:700;display:flex;align-items:center;gap:10px;position:sticky;top:0;z-index:10;background:var(--bg)">
- <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v4.79</span>
+ <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v4.80</span>
  <span id="syncState"></span>
  <a id="homeLink" href="#" onclick="render('leitstelle');return false" class="hidden" style="color:#64748b;text-decoration:underline;font-weight:600">🖥️ Leitstelle</a>
  <a id="monitorLink" href="#" onclick="showMonitorQR();return false" style="color:#64748b;text-decoration:underline;font-weight:600;margin-left:auto">🖥️ Monitor hinzufügen</a>
@@ -334,7 +334,7 @@ const DEFAULTS_FRI_WHV={
   {id:234,name:"17-45-01",opta:"Florian Friesland 17/45-01",type:"LF",org:"Feuerwehr",location:"Bockhorn",status:"2",crew:"9",skills:"Brandbekämpfung",verified:"BOS-Fahrzeuge"},
   {id:235,name:"17-48-01",opta:"Florian Friesland 17/48-01",type:"HLF",org:"Feuerwehr",location:"Bockhorn",status:"2",crew:"9",skills:"Brandbekämpfung, Technische Hilfe, First Responder",verified:"BOS-Fahrzeuge"},
 
-  {id:241,name:"16-11-01",opta:"Florian Friesland 16-11-01",type:"ELW",org:"Feuerwehr",location:"Hohenkirchen",status:"2",crew:"5",skills:"Einsatzleitung",verified:"Feuerwehr Hohenkirchen"},
+  {id:241,name:"16-11-01",opta:"Florian Friesland 16-11-01",type:"ELW",org:"Feuerwehr",location:"Hohenkirchen",fixedLocation:true,status:"2",crew:"5",skills:"Einsatzleitung",verified:"Feuerwehr Hohenkirchen"},
   // FF Wangerooge OF Wangerooge, Straße zum Westen 5, 26486 Wangerooge (bos-fahrzeuge.info, Wache 3873).
   // Nur die dort als aktiv geführten Fahrzeuge; Anhänger nicht aufgenommen. Besatzung nicht belegt.
   {id:251,name:"18-19-01",opta:"Florian Friesland 18/19-01",type:"MZF",org:"Feuerwehr",location:"Wangerooge",island:"Wangerooge",status:"2",crew:"",skills:"Mehrzweckfahrzeug",verified:"BOS-Fahrzeuge"},
@@ -344,6 +344,67 @@ const DEFAULTS_FRI_WHV={
   // aber nicht aufgeführt – auf Nutzerbestätigung aufgenommen.
   {id:254,name:"18-48-01",opta:"Florian Friesland 18/48-01",type:"HLF",org:"Feuerwehr",location:"Wangerooge",island:"Wangerooge",status:"2",crew:"",skills:"Hilfeleistungslöschgruppenfahrzeug (HLF 20)",verified:"BOS-Fahrzeuge (Wachenübersicht) + Nutzerangabe"},
   {id:255,name:"18-64-01",opta:"Florian Friesland 18/64-01",type:"GW-L1",org:"Feuerwehr",location:"Wangerooge",island:"Wangerooge",status:"2",crew:"",skills:"Gerätewagen Logistik 1",verified:"BOS-Fahrzeuge (Wachenübersicht) + Nutzerangabe"},
+  // v4.80: Alle Ortsfeuerwehren im LK Friesland geprüft (bos-fahrzeuge.info, Wehr-/Gemeinde-Websites, NWZ).
+  // Bewusst nicht aufgenommen: 16/41-06 TSF-W Waddewarden (2025 durch LF 10 ersetzt), 16/45-07 LF Wiarden
+  // (nicht auf der eigenen Website), 19/44-02 LF KatS (bei zwei Wachen gelistet, Standort unklar).
+  {id:901,name:"11-19-01",opta:"Florian Friesland 11/19-01",type:"MTW",org:"Feuerwehr",location:"Jever",fixedLocation:true,status:"2",crew:"9",skills:"Mannschaftstransport",verified:"BOS-Fahrzeuge (OF Jever)"},
+  {id:902,name:"19-44-03",opta:"Florian Friesland 19/44-03",type:"LF",org:"Feuerwehr",location:"Jever",fixedLocation:true,status:"2",crew:"9",skills:"LF 20 KatS (Land Niedersachsen) – Brandbekämpfung",verified:"BOS-Fahrzeuge (OF Jever)"},
+  {id:903,name:"19-63-01",opta:"Florian Friesland 19/63-01",type:"MZF",org:"Feuerwehr",location:"Jever",fixedLocation:true,status:"2",crew:"6",skills:"MZF (4. Zug Logistik, FTZ Jever) – Mehrzweckfahrzeug",verified:"BOS-Fahrzeuge (FTZ Jever)"},
+  {id:904,name:"19-65-02",opta:"Florian Friesland 19/65-02",type:"WLF",org:"Feuerwehr",location:"Jever",fixedLocation:true,status:"2",crew:"2",skills:"WLF (4. Zug, mit AB-Küche, FTZ Jever) – Wechselladerfahrzeug – holt Abrollbehälter an der FTZ",verified:"BOS-Fahrzeuge (FTZ Jever)"},
+  {id:905,name:"11-19-02",opta:"Florian Friesland 11/19-02",type:"MTW",org:"Feuerwehr",location:"Cleverns",fixedLocation:true,status:"2",crew:"9",skills:"Mannschaftstransport",verified:"BOS-Fahrzeuge (OF Cleverns)"},
+  {id:906,name:"11-22-02",opta:"Florian Friesland 11/22-02",type:"TLF",org:"Feuerwehr",location:"Cleverns",fixedLocation:true,status:"2",crew:"6",skills:"TLF 8/18 – Brandbekämpfung, Wasser",verified:"BOS-Fahrzeuge (OF Cleverns)"},
+  {id:907,name:"11-45-02",opta:"Florian Friesland 11/45-02",type:"LF",org:"Feuerwehr",location:"Cleverns",fixedLocation:true,status:"2",crew:"9",skills:"LF 10 – Brandbekämpfung",verified:"BOS-Fahrzeuge (OF Cleverns)"},
+  {id:908,name:"13-11-01",opta:"Florian Friesland 13/11-01",type:"ELW",org:"Feuerwehr",location:"Zetel",fixedLocation:true,status:"2",crew:"6",skills:"Einsatzleitung",verified:"BOS-Fahrzeuge (OF Zetel)"},
+  {id:909,name:"13-17-01",opta:"Florian Friesland 13/17-01",type:"MTF",org:"Feuerwehr",location:"Zetel",fixedLocation:true,status:"2",crew:"9",skills:"Mannschaftstransport",verified:"BOS-Fahrzeuge (OF Zetel)"},
+  {id:910,name:"13-23-01",opta:"Florian Friesland 13/23-01",type:"TLF",org:"Feuerwehr",location:"Zetel",fixedLocation:true,status:"2",crew:"6",skills:"TLF 16/25 – Brandbekämpfung, Wasser",verified:"BOS-Fahrzeuge (OF Zetel)"},
+  {id:911,name:"13-47-01",opta:"Florian Friesland 13/47-01",type:"LF",org:"Feuerwehr",location:"Zetel",fixedLocation:true,status:"2",crew:"9",skills:"LF 20 – Brandbekämpfung",verified:"BOS-Fahrzeuge (OF Zetel)"},
+  {id:912,name:"13-48-01",opta:"Florian Friesland 13/48-01",type:"HLF",org:"Feuerwehr",location:"Zetel",fixedLocation:true,status:"2",crew:"9",skills:"HLF 20 – Brandbekämpfung, Technische Hilfe",verified:"BOS-Fahrzeuge (OF Zetel)"},
+  {id:913,name:"13-69-01",opta:"Florian Friesland 13/69-01",type:"MZF",org:"Feuerwehr",location:"Zetel",fixedLocation:true,status:"2",crew:"6",skills:"Mehrzweckfahrzeug",verified:"BOS-Fahrzeuge (OF Zetel)"},
+  {id:914,name:"13-17-02",opta:"Florian Friesland 13/17-02",type:"MTF",org:"Feuerwehr",location:"Neuenburg",fixedLocation:true,status:"2",crew:"9",skills:"Mannschaftstransport",verified:"BOS-Fahrzeuge (OF Neuenburg)"},
+  {id:915,name:"13-43-02",opta:"Florian Friesland 13/43-02",type:"LF",org:"Feuerwehr",location:"Neuenburg",fixedLocation:true,status:"2",crew:"9",skills:"LF 8 – Brandbekämpfung",verified:"BOS-Fahrzeuge (OF Neuenburg)"},
+  {id:916,name:"13-46-02",opta:"Florian Friesland 13/46-02",type:"HLF",org:"Feuerwehr",location:"Neuenburg",fixedLocation:true,status:"2",crew:"9",skills:"HLF 10 – Brandbekämpfung, Technische Hilfe",verified:"BOS-Fahrzeuge (OF Neuenburg)"},
+  {id:917,name:"14-11-01",opta:"Florian Friesland 14/11-01",type:"ELW",org:"Feuerwehr",location:"Sande",fixedLocation:true,status:"2",crew:"6",skills:"Einsatzleitung",verified:"BOS-Fahrzeuge (OF Sande)"},
+  {id:918,name:"14-47-01",opta:"Florian Friesland 14/47-01",type:"LF",org:"Feuerwehr",location:"Sande",fixedLocation:true,status:"2",crew:"9",skills:"LF 20 (2025) – Brandbekämpfung",verified:"BOS-Fahrzeuge (OF Sande)"},
+  {id:919,name:"14-48-01",opta:"Florian Friesland 14/48-01",type:"HLF",org:"Feuerwehr",location:"Sande",fixedLocation:true,status:"2",crew:"9",skills:"HLF 20 (2021) – Brandbekämpfung, Technische Hilfe",verified:"BOS-Fahrzeuge (OF Sande)"},
+  {id:920,name:"14-59-01",opta:"Florian Friesland 14/59-01",type:"GW",org:"Feuerwehr",location:"Sande",fixedLocation:true,status:"2",crew:"3",skills:"GW 2 – Gerätewagen",verified:"BOS-Fahrzeuge (OF Sande)"},
+  {id:921,name:"19-71-01",opta:"Florian Friesland 19/71-01",type:"ErkKW",org:"Feuerwehr",location:"Sande",fixedLocation:true,status:"2",crew:"4",skills:"CBRN-ErkKW (Kreis) – CBRN-Erkundung",verified:"BOS-Fahrzeuge (OF Sande)"},
+  {id:922,name:"14-11-02",opta:"Florian Friesland 14/11-02",type:"ELW",org:"Feuerwehr",location:"Gödens",fixedLocation:true,status:"2",crew:"6",skills:"ELW (nur in der Textliste bei bos-fahrzeuge) – Einsatzleitung",verified:"BOS-Fahrzeuge (OF Gödens)"},
+  {id:923,name:"14-24-02",opta:"Florian Friesland 14/24-02",type:"TLF",org:"Feuerwehr",location:"Gödens",fixedLocation:true,status:"2",crew:"6",skills:"TLF 16/25 TH – Brandbekämpfung, Wasser",verified:"BOS-Fahrzeuge (OF Gödens)"},
+  {id:924,name:"14-45-02",opta:"Florian Friesland 14/45-02",type:"LF",org:"Feuerwehr",location:"Gödens",fixedLocation:true,status:"2",crew:"9",skills:"LF 8/6 – Brandbekämpfung",verified:"BOS-Fahrzeuge (OF Gödens)"},
+  {id:925,name:"15-11-01",opta:"Florian Friesland 15/11-01",type:"ELW",org:"Feuerwehr",location:"Schortens",fixedLocation:true,status:"2",crew:"6",skills:"Einsatzleitung",verified:"BOS-Fahrzeuge (OF Schortens)"},
+  {id:926,name:"15-17-01",opta:"Florian Friesland 15/17-01",type:"MTW",org:"Feuerwehr",location:"Schortens",fixedLocation:true,status:"2",crew:"9",skills:"Mannschaftstransport",verified:"BOS-Fahrzeuge (OF Schortens)"},
+  {id:927,name:"15-23-01",opta:"Florian Friesland 15/23-01",type:"TLF",org:"Feuerwehr",location:"Schortens",fixedLocation:true,status:"2",crew:"6",skills:"TLF 20/25 – Brandbekämpfung, Wasser",verified:"BOS-Fahrzeuge (OF Schortens)"},
+  {id:928,name:"15-47-01",opta:"Florian Friesland 15/47-01",type:"LF",org:"Feuerwehr",location:"Schortens",fixedLocation:true,status:"2",crew:"9",skills:"LF 16 – Brandbekämpfung",verified:"BOS-Fahrzeuge (OF Schortens)"},
+  {id:929,name:"15-48-01",opta:"Florian Friesland 15/48-01",type:"HLF",org:"Feuerwehr",location:"Schortens",fixedLocation:true,status:"2",crew:"9",skills:"HLF 20/16 – Brandbekämpfung, Technische Hilfe",verified:"BOS-Fahrzeuge (OF Schortens)"},
+  {id:930,name:"15-53-01",opta:"Florian Friesland 15/53-01",type:"RW",org:"Feuerwehr",location:"Schortens",fixedLocation:true,status:"2",crew:"3",skills:"RW-Kran – Technische Hilfe",verified:"BOS-Fahrzeuge (OF Schortens)"},
+  {id:931,name:"15-17-02",opta:"Florian Friesland 15/17-02",type:"MTW",org:"Feuerwehr",location:"Accum",fixedLocation:true,status:"2",crew:"9",skills:"Mannschaftstransport",verified:"BOS-Fahrzeuge (OF Accum)"},
+  {id:932,name:"15-20-02",opta:"Florian Friesland 15/20-02",type:"TLF",org:"Feuerwehr",location:"Accum",fixedLocation:true,status:"2",crew:"6",skills:"TLF 8 (Funkrufname laut Fahrzeugliste; Textliste nennt 15/22-02) – Brandbekämpfung, Wasser",verified:"BOS-Fahrzeuge (OF Accum)"},
+  {id:933,name:"15-45-02",opta:"Florian Friesland 15/45-02",type:"LF",org:"Feuerwehr",location:"Accum",fixedLocation:true,status:"2",crew:"9",skills:"LF 10 – Brandbekämpfung",verified:"BOS-Fahrzeuge (OF Accum)"},
+  {id:934,name:"15-17-03",opta:"Florian Friesland 15/17-03",type:"MTW",org:"Feuerwehr",location:"Sillenstede",fixedLocation:true,status:"2",crew:"9",skills:"Mannschaftstransport",verified:"BOS-Fahrzeuge (OF Sillenstede)"},
+  {id:935,name:"15-19-03",opta:"Florian Friesland 15/19-03",type:"MZF",org:"Feuerwehr",location:"Sillenstede",fixedLocation:true,status:"2",crew:"6",skills:"MZF/MTW – Mehrzweckfahrzeug",verified:"BOS-Fahrzeuge (OF Sillenstede)"},
+  {id:936,name:"15-22-03",opta:"Florian Friesland 15/22-03",type:"TLF",org:"Feuerwehr",location:"Sillenstede",fixedLocation:true,status:"2",crew:"6",skills:"TLF 8/18 – Brandbekämpfung, Wasser",verified:"BOS-Fahrzeuge (OF Sillenstede)"},
+  {id:937,name:"15-44-03",opta:"Florian Friesland 15/44-03",type:"LF",org:"Feuerwehr",location:"Sillenstede",fixedLocation:true,status:"2",crew:"9",skills:"LF KatS Nds (2025) – Brandbekämpfung",verified:"BOS-Fahrzeuge (OF Sillenstede)"},
+  {id:938,name:"16-10-01",opta:"Florian Friesland 16/10-01",type:"KdoW",org:"Feuerwehr",location:"Hohenkirchen",fixedLocation:true,status:"2",crew:"2",skills:"KdoW (nur bos-fahrzeuge) – Kommandowagen",verified:"BOS-Fahrzeuge (OF Hohenkirchen)"},
+  {id:939,name:"16-17-01",opta:"Florian Friesland 16/17-01",type:"MTW",org:"Feuerwehr",location:"Hohenkirchen",fixedLocation:true,status:"2",crew:"9",skills:"Mannschaftstransport",verified:"BOS-Fahrzeuge (OF Hohenkirchen)"},
+  {id:940,name:"16-25-01",opta:"Florian Friesland 16/25-01",type:"TLF",org:"Feuerwehr",location:"Hohenkirchen",fixedLocation:true,status:"2",crew:"6",skills:"TLF 20/37 – Brandbekämpfung, Wasser",verified:"BOS-Fahrzeuge (OF Hohenkirchen)"},
+  {id:941,name:"16-48-01",opta:"Florian Friesland 16/48-01",type:"HLF",org:"Feuerwehr",location:"Hohenkirchen",fixedLocation:true,status:"2",crew:"9",skills:"HLF 20 – Brandbekämpfung, Technische Hilfe",verified:"BOS-Fahrzeuge (OF Hohenkirchen)"},
+  {id:942,name:"16-61-01",opta:"Florian Friesland 16/61-01",type:"SW",org:"Feuerwehr",location:"Hohenkirchen",fixedLocation:true,status:"2",crew:"3",skills:"SW 1000 (Funkrufname laut eigener Website; bos-fahrzeuge: 19/61-01) – Wasserversorgung",verified:"BOS-Fahrzeuge (OF Hohenkirchen)"},
+  {id:943,name:"16-78-01",opta:"Florian Friesland 16/78-01",type:"RTB",org:"Feuerwehr",location:"Hohenkirchen",fixedLocation:true,status:"2",crew:"3",skills:"RTB 1 – Rettungsboot",verified:"BOS-Fahrzeuge (OF Hohenkirchen)"},
+  {id:944,name:"16-17-02",opta:"Florian Friesland 16/17-02",type:"MTW",org:"Feuerwehr",location:"Hooksiel",fixedLocation:true,status:"2",crew:"9",skills:"Mannschaftstransport",verified:"BOS-Fahrzeuge (OF Hooksiel)"},
+  {id:945,name:"16-21-02",opta:"Florian Friesland 16/21-02",type:"TLF",org:"Feuerwehr",location:"Hooksiel",fixedLocation:true,status:"2",crew:"6",skills:"TLF 20/24-Tr – Brandbekämpfung, Wasser",verified:"BOS-Fahrzeuge (OF Hooksiel)"},
+  {id:946,name:"16-48-02",opta:"Florian Friesland 16/48-02",type:"HLF",org:"Feuerwehr",location:"Hooksiel",fixedLocation:true,status:"2",crew:"9",skills:"HLF 20 (2018) – Brandbekämpfung, Technische Hilfe",verified:"BOS-Fahrzeuge (OF Hooksiel)"},
+  {id:947,name:"16-19-04",opta:"Florian Friesland 16/19-04",type:"MTW",org:"Feuerwehr",location:"Minsen",fixedLocation:true,status:"2",crew:"9",skills:"MTW / First Responder (Ford Ranger) – Mannschaftstransport",verified:"BOS-Fahrzeuge (OF Minsen)"},
+  {id:948,name:"16-48-04",opta:"Florian Friesland 16/48-04",type:"HLF",org:"Feuerwehr",location:"Minsen",fixedLocation:true,status:"2",crew:"9",skills:"HLF 20 – Brandbekämpfung, Technische Hilfe",verified:"BOS-Fahrzeuge (OF Minsen)"},
+  {id:949,name:"16-41-03",opta:"Florian Friesland 16/41-03",type:"TSF-W",org:"Feuerwehr",location:"Neugarmssiel",fixedLocation:true,status:"2",crew:"6",skills:"Brandbekämpfung (Tragkraftspritze, Wasser)",verified:"BOS-Fahrzeuge (OF Neugarmssiel)"},
+  {id:950,name:"16-17-05",opta:"Florian Friesland 16/17-05",type:"MTW",org:"Feuerwehr",location:"Tettens",fixedLocation:true,status:"2",crew:"9",skills:"Mannschaftstransport",verified:"BOS-Fahrzeuge (OF Tettens)"},
+  {id:951,name:"16-47-05",opta:"Florian Friesland 16/47-05",type:"LF",org:"Feuerwehr",location:"Tettens",fixedLocation:true,status:"2",crew:"9",skills:"LF 20 – Brandbekämpfung",verified:"BOS-Fahrzeuge (OF Tettens)"},
+  {id:952,name:"16-17-06",opta:"Florian Friesland 16/17-06",type:"MTW",org:"Feuerwehr",location:"Waddewarden",fixedLocation:true,status:"2",crew:"9",skills:"Mannschaftstransport",verified:"BOS-Fahrzeuge (OF Waddewarden)"},
+  {id:953,name:"16-45-06",opta:"Florian Friesland 16/45-06",type:"LF",org:"Feuerwehr",location:"Waddewarden",fixedLocation:true,status:"2",crew:"9",skills:"LF 10 (2025) – Brandbekämpfung",verified:"BOS-Fahrzeuge (OF Waddewarden)"},
+  {id:954,name:"16-40-07",opta:"Florian Friesland 16/40-07",type:"TSF",org:"Feuerwehr",location:"Wiarden",fixedLocation:true,status:"2",crew:"6",skills:"TSF (2017) – Brandbekämpfung (Tragkraftspritze)",verified:"BOS-Fahrzeuge (OF Wiarden)"},
+  {id:955,name:"17-17-02",opta:"Florian Friesland 17/17-02",type:"MTW",org:"Feuerwehr",location:"Grabstede",fixedLocation:true,status:"2",crew:"9",skills:"Mannschaftstransport",verified:"BOS-Fahrzeuge (OF Grabstede)"},
+  {id:956,name:"17-43-02",opta:"Florian Friesland 17/43-02",type:"LF",org:"Feuerwehr",location:"Grabstede",fixedLocation:true,status:"2",crew:"9",skills:"LF 8 – Brandbekämpfung",verified:"BOS-Fahrzeuge (OF Grabstede)"},
+  {id:957,name:"17-46-02",opta:"Florian Friesland 17/46-02",type:"HLF",org:"Feuerwehr",location:"Grabstede",fixedLocation:true,status:"2",crew:"9",skills:"HLF 10 – Brandbekämpfung, Technische Hilfe",verified:"BOS-Fahrzeuge (OF Grabstede)"},
+  {id:958,name:"18-32-01",opta:"Florian Friesland 18/32-01",type:"DLK",org:"Feuerwehr",location:"Wangerooge",fixedLocation:true,island:"Wangerooge",status:"2",crew:"3",skills:"DLK 12/9 – Drehleiter, Menschenrettung",verified:"BOS-Fahrzeuge (FF Wangerooge)"},
   {id:260,name:"19-65-01",opta:"Florian Friesland 19/65-01",type:"WLF",org:"Feuerwehr",location:"Jever",status:"2",crew:"2",skills:"Wechselladerfahrzeug – holt Abrollbehälter an der FTZ – FTZ Landkreis Friesland, Jever",verified:"BOS-Fahrzeuge (Wache LK Friesland FTZ Jever)"},
   {id:261,name:"19-66-01",opta:"Florian Friesland 19/66-01",type:"WLF",org:"Feuerwehr",location:"Jever",status:"2",crew:"2",skills:"Wechselladerfahrzeug – holt Abrollbehälter an der FTZ – FTZ Landkreis Friesland, Jever",verified:"BOS-Fahrzeuge (Wache LK Friesland FTZ Jever)"},
   {id:262,name:"19-66-03",opta:"Florian Friesland 19/66-03",type:"WLF",org:"Feuerwehr",location:"Jever",status:"2",crew:"2",skills:"Wechselladerfahrzeug – holt Abrollbehälter an der FTZ – FTZ Landkreis Friesland, Jever",verified:"BOS-Fahrzeuge (Wache LK Friesland FTZ Jever)"},
@@ -1640,6 +1701,24 @@ const STATION_OVERRIDE={
  // FF Varel OF Obenstrohe (Wiefelsteder Straße 45, Neubau 2021) und OF Borgstede-Winkelsheide
  // (Ziegelstraße 1a) – Kartenmitte der bos-fahrzeuge.info-Wachenseiten, nicht weiter geprüft
  "Feuerwehr__Obenstrohe":[53.37893,8.10668],
+ // v4.80: Feuerwehrhäuser der Ortsfeuerwehren – Kartenmitte der bos-fahrzeuge.info-Wachenseiten
+ // (Minsen/Wiarden/Tettens: Adresse dort nicht eindeutig, Lage daher unsicher)
+ "Feuerwehr__Cleverns":[53.5482,7.86061],
+ "Feuerwehr__Schortens":[53.53125,7.95657],
+ "Feuerwehr__Accum":[53.54472,8.01702],
+ "Feuerwehr__Sillenstede":[53.57933,7.99548],
+ "Feuerwehr__Sande":[53.49446,8.02853],
+ "Feuerwehr__Gödens":[53.48058,7.9867],
+ "Feuerwehr__Zetel":[53.41037,7.96106],
+ "Feuerwehr__Neuenburg":[53.38914,7.9455],
+ "Feuerwehr__Grabstede":[53.36494,7.98946],
+ "Feuerwehr__Hohenkirchen":[53.66165,7.91565],
+ "Feuerwehr__Hooksiel":[53.63445,8.02991],
+ "Feuerwehr__Minsen":[53.70578,7.97072],
+ "Feuerwehr__Neugarmssiel":[53.67419,7.86426],
+ "Feuerwehr__Tettens":[53.63804,7.88268],
+ "Feuerwehr__Waddewarden":[53.60987,7.95782],
+ "Feuerwehr__Wiarden":[53.66811,7.95254],
  "Feuerwehr__Borgstede-Winkelsheide":[53.39525,8.09173],
  "Rettungsdienst__Varel":[53.39148,8.13803], // Rettungswache Varel, Menckestraße 6 (Gelände St. Johannes-Hospital)
  "Feuerwehr__Bockhorn":[53.3911,8.01891], // FF Bockhorn OF Bockhorn, Schulstraße 19, 26345 Bockhorn
@@ -5442,7 +5521,7 @@ function mittel(){
   </div>`;
  const orgBlocks=orgs.map(org=>{
    const orgUnits=units.filter(u=>(u.org||"Sonstige")===org);
-   const locs=[...new Set(orgUnits.map(u=>u.location||"Sonstige"))].sort((a,b)=>a.localeCompare(b,"de"));
+   const locs=[...new Set(orgUnits.map(u=>u.location||"Sonstige"))].sort(org==="Feuerwehr"?fwStationSort:(a,b)=>a.localeCompare(b,"de"));
    const locBlocks=locs.map(loc=>{
      const rows=geoSortUnits(orgUnits.filter(u=>(u.location||"Sonstige")===loc));
      // Feuerwehr/Rettungsdienst: jede Wache als einklappbarer Reiter (Stand je Gerät gemerkt)
@@ -5450,7 +5529,7 @@ function mittel(){
      const key=`${org}__${loc}`, open=mittelOpenLocs.has(key);
      const nFree=rows.filter(u=>["1","2"].includes(String(u.status))).length;
      const head=fold
-       ?`<details class="mittel-loc" ${open?"open":""} ontoggle="mittelToggleLoc(${esc(JSON.stringify(key))},this.open)"><summary style="cursor:pointer;font-weight:800;padding:8px 10px;border:1px solid var(--line);border-radius:10px;background:#f8fafc;margin-top:6px">📍 ${esc(loc)} <span class="muted" style="font-weight:600;font-size:12px">· ${rows.length} Fahrzeug${rows.length===1?"":"e"} · ${nFree} frei</span></summary>`
+       ?`<details class="mittel-loc" ${open?"open":""} ontoggle="mittelToggleLoc(${esc(JSON.stringify(key))},this.open)"><summary style="cursor:pointer;font-weight:800;padding:8px 10px;border:1px solid var(--line);border-radius:10px;background:#f8fafc;margin-top:6px;${org==="Feuerwehr"&&FW_STATION_INFO[loc]&&!FW_STATION_INFO[loc].main?"margin-left:22px;font-weight:700":""}">${org==="Feuerwehr"&&FW_STATION_INFO[loc]?(FW_STATION_INFO[loc].main?`📍 ${esc(loc)} <span style="font-size:11px;color:#b91c1c">Hauptwehr FF ${esc(FW_STATION_INFO[loc].gem)}</span>`:`↳ ${esc(loc)} <span style="font-size:11px;color:#64748b">Ortswehr FF ${esc(FW_STATION_INFO[loc].gem)}</span>`):`📍 ${esc(loc)}`} <span class="muted" style="font-weight:600;font-size:12px">· ${rows.length} Fahrzeug${rows.length===1?"":"e"} · ${nFree} frei</span></summary>`
        :`<h3 style="margin-top:14px">📍 ${esc(loc)}</h3>`;
      return `${head}
       <div style="overflow:auto"><table>
@@ -5564,6 +5643,12 @@ function setUnitQualNow(u,v){
  const t=qualTokens(v).join(" + ");
  if(t){u.qualNow=t;u.qualNowAt=new Date().toISOString()}else{u.qualNow="";delete u.qualNowAt}
 }
+// Feuerwehr: je Stadt/Gemeinde zuerst die Hauptwehr, danach ihre Ortswehren (Reihenfolge nach
+// Kennziffer 11 Jever … 18 Wangerooge)
+const FW_STATIONS=[["Jever",["Cleverns"]],["Varel",["Obenstrohe","Borgstede-Winkelsheide"]],["Zetel",["Neuenburg"]],["Sande",["Gödens"]],["Schortens",["Accum","Sillenstede"]],["Hohenkirchen",["Hooksiel","Minsen","Neugarmssiel","Tettens","Waddewarden","Wiarden"]],["Bockhorn",["Grabstede"]],["Wangerooge",[]]];
+const FW_GEMEINDE={"Hohenkirchen":"Wangerland"};
+const FW_STATION_INFO=(()=>{const m={};let i=0;for(const [main,subs] of FW_STATIONS){const g=FW_GEMEINDE[main]||main;m[main]={i:i++,main:true,gem:g};for(const sub of subs)m[sub]={i:i++,main:false,of:main,gem:g}}return m})();
+function fwStationSort(a,b){const x=FW_STATION_INFO[a],y=FW_STATION_INFO[b];if(x&&y)return x.i-y.i;if(x)return -1;if(y)return 1;return a.localeCompare(b,"de")}
 // Rettungsmittel-Übersicht: Wachen von Feuerwehr und Rettungsdienst einklappbar (Standard: zu)
 const MITTEL_FOLD_ORGS=["Feuerwehr","Rettungsdienst"];
 let mittelOpenLocs=(()=>{try{return new Set(JSON.parse(localStorage.getItem("lst-mittel-open")||"[]"))}catch(e){return new Set()}})();

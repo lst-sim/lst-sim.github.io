@@ -1278,3 +1278,24 @@ Version 4.79:
 - Rettungsmittel-Übersicht: Bei Feuerwehr und Rettungsdienst ist jede Wache ein einklappbarer
   Reiter (Standard: eingeklappt) mit Anzahl Fahrzeuge und davon frei. Welche Wachen offen sind,
   merkt sich das Gerät. DLRG, DRK usw. bleiben wie bisher aufgeklappt.
+
+Version 4.80:
+- Alle Feuerwehren im LK Friesland geprüft und ergänzt (Quelle: bos-fahrzeuge.info, Websites der
+  Wehren/Gemeinden, NWZ). 58 Fahrzeuge neu, jetzt 108 Feuerwehr-Fahrzeuge an 22 Standorten:
+  - FF Jever: Jever (+11/19-01 MTW, 19/44-03 LF 20 KatS; FTZ: 19/63-01 MZF, 19/65-02 WLF),
+    Ortswehr Cleverns (MTW, TLF, LF)
+  - FF Zetel (neu): Zetel (ELW, MTF, TLF, LF 20, HLF 20, MZF), Ortswehr Neuenburg (MTF, LF 8, HLF 10)
+  - FF Sande (neu): Sande (ELW, LF 20, HLF 20, GW 2, CBRN-ErkKW), Ortswehr Gödens (ELW, TLF, LF)
+  - FF Schortens (neu): Schortens (ELW, MTW, TLF, LF, HLF, RW-Kran), Ortswehren Accum und
+    Sillenstede
+  - FF Wangerland: Hohenkirchen (+KdoW, MTW, TLF, HLF, SW, RTB), Ortswehren Hooksiel, Minsen,
+    Neugarmssiel, Tettens, Waddewarden, Wiarden (neu)
+  - FF Bockhorn: Ortswehr Grabstede (neu: MTW, LF 8, HLF 10)
+  - FF Wangerooge: + 18/32-01 DLK 12/9
+  Nicht aufgenommen: 16/41-06 TSF-W Waddewarden (durch LF 10 ersetzt), 16/45-07 LF Wiarden
+  (nicht auf eigener Website), 19/44-02 LF KatS (bei zwei Wachen gelistet).
+  Unsicher: Accum TLF 15/20-02 oder 15/22-02; Hohenkirchen SW 16/61-01 (bos: 19/61-01);
+  Lage der Feuerwehrhäuser = Kartenmitte bos-fahrzeuge (Minsen/Wiarden/Tettens Adresse unklar).
+- Rettungsmittel-Übersicht Feuerwehr: je Stadt/Gemeinde zuerst die Hauptwehr, darunter
+  eingerückt ihre Ortswehren (Reihenfolge Jever, Varel, Zetel, Sande, Schortens, Wangerland,
+  Bockhorn, Wangerooge).
