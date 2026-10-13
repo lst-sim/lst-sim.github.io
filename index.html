@@ -162,7 +162,7 @@ table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:10px 8px
 </head>
 <body>
 <div style="padding:6px 10px;font-size:11px;color:#94a3b8;font-weight:700;display:flex;align-items:center;gap:10px;position:sticky;top:0;z-index:10;background:var(--bg)">
- <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v4.77</span>
+ <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v4.78</span>
  <span id="syncState"></span>
  <a id="homeLink" href="#" onclick="render('leitstelle');return false" class="hidden" style="color:#64748b;text-decoration:underline;font-weight:600">🖥️ Leitstelle</a>
  <a id="monitorLink" href="#" onclick="showMonitorQR();return false" style="color:#64748b;text-decoration:underline;font-weight:600;margin-left:auto">🖥️ Monitor hinzufügen</a>
@@ -299,20 +299,27 @@ const DEFAULTS_FRI_WHV={
 
   {id:201,name:"12-11-01",opta:"Florian Friesland 12-11-1",type:"ELW",org:"Feuerwehr",location:"Varel",status:"2",crew:"6",skills:"Einsatzleitung",verified:"Feuerwehr Varel"},
   {id:202,name:"12-17-01",opta:"Florian Friesland 12-17-1",type:"MTW",org:"Feuerwehr",location:"Varel",status:"2",crew:"9",skills:"Mannschaftstransport",verified:"Feuerwehr Varel"},
-  {id:203,name:"12-17-02",opta:"Florian Friesland 12-17-2",type:"MTF",org:"Feuerwehr",location:"Varel",status:"2",crew:"9",skills:"Mannschaftstransport",verified:"Feuerwehr Varel"},
+  {id:203,name:"12-17-02",opta:"Florian Friesland 12-17-2",type:"MTF",org:"Feuerwehr",location:"Borgstede-Winkelsheide",fixedLocation:true,status:"2",crew:"9",skills:"Mannschaftstransport",verified:"BOS-Fahrzeuge (FF Varel OF Borgstede-Winkelsheide)"},
   {id:204,name:"12-30-01",opta:"Florian Friesland 12-30-1",type:"DLK",org:"Feuerwehr",location:"Varel",status:"2",crew:"3",skills:"Drehleiter, Menschenrettung",verified:"Feuerwehr Varel"},
   {id:205,name:"12-48-01",opta:"Florian Friesland 12-48-1",type:"HLF",org:"Feuerwehr",location:"Varel",status:"2",crew:"9",skills:"Brandbekämpfung, Technische Hilfe, First Responder",verified:"Feuerwehr Varel"},
   {id:206,name:"12-45-01",opta:"Florian Friesland 12-45-1",type:"LF",org:"Feuerwehr",location:"Varel",status:"2",crew:"9",skills:"Brandbekämpfung",verified:"Feuerwehr Varel"},
-  {id:207,name:"12-45-03",opta:"Florian Friesland 12-45-3",type:"LF",org:"Feuerwehr",location:"Varel",status:"2",crew:"9",skills:"Brandbekämpfung",verified:"Feuerwehr Varel"},
-  {id:208,name:"12-43-02",opta:"Florian Friesland 12-43-2",type:"LF",org:"Feuerwehr",location:"Varel",status:"2",crew:"9",skills:"Brandbekämpfung",verified:"Feuerwehr Varel"},
+  {id:207,name:"12-45-03",opta:"Florian Friesland 12-45-3",type:"LF",org:"Feuerwehr",location:"Obenstrohe",fixedLocation:true,status:"2",crew:"9",skills:"Brandbekämpfung",verified:"BOS-Fahrzeuge (FF Varel OF Obenstrohe)"},
+  {id:208,name:"12-43-02",opta:"Florian Friesland 12-43-2",type:"LF",org:"Feuerwehr",location:"Borgstede-Winkelsheide",fixedLocation:true,status:"2",crew:"9",skills:"Brandbekämpfung",verified:"BOS-Fahrzeuge (FF Varel OF Borgstede-Winkelsheide)"},
   {id:209,name:"12-51-01",opta:"Florian Friesland 12-51-1",type:"RW",org:"Feuerwehr",location:"Varel",status:"2",crew:"3",skills:"Technische Hilfe",verified:"Feuerwehr Varel"},
   {id:210,name:"12-61-01",opta:"Florian Friesland 12-61-1",type:"SW",org:"Feuerwehr",location:"Varel",status:"2",crew:"3",skills:"Wasserversorgung",verified:"Feuerwehr Varel"},
-  {id:211,name:"19-62-01",opta:"Florian Friesland 19-62-1",type:"SW",org:"Feuerwehr",location:"Varel",status:"2",crew:"3",skills:"Wasserversorgung",verified:"Feuerwehr Varel"},
+  {id:211,name:"19-62-01",opta:"Florian Friesland 19-62-1",type:"SW",org:"Feuerwehr",location:"Obenstrohe",fixedLocation:true,status:"2",crew:"3",skills:"Wasserversorgung",verified:"BOS-Fahrzeuge (FF Varel OF Obenstrohe)"},
   {id:212,name:"12-23-01",opta:"Florian Friesland 12-23-1",type:"TLF",org:"Feuerwehr",location:"Varel",status:"2",crew:"6",skills:"Brandbekämpfung, Wasser",verified:"Feuerwehr Varel"},
-  {id:213,name:"12-24-02",opta:"Florian Friesland 12-24-2",type:"TLF",org:"Feuerwehr",location:"Varel",status:"2",crew:"6",skills:"Brandbekämpfung, Wasser",verified:"Feuerwehr Varel"},
-  {id:214,name:"12-24-03",opta:"Florian Friesland 12-24-3",type:"TLF",org:"Feuerwehr",location:"Varel",status:"2",crew:"6",skills:"Brandbekämpfung, Wasser",verified:"Feuerwehr Varel"},
+  {id:213,name:"12-24-02",opta:"Florian Friesland 12-24-2",type:"TLF",org:"Feuerwehr",location:"Borgstede-Winkelsheide",fixedLocation:true,status:"2",crew:"6",skills:"Brandbekämpfung, Wasser",verified:"BOS-Fahrzeuge (FF Varel OF Borgstede-Winkelsheide)"},
+  {id:214,name:"12-24-03",opta:"Florian Friesland 12-24-3",type:"TLF",org:"Feuerwehr",location:"Obenstrohe",fixedLocation:true,status:"2",crew:"6",skills:"Brandbekämpfung, Wasser",verified:"BOS-Fahrzeuge (FF Varel OF Obenstrohe)"},
   {id:215,name:"12-63-01",opta:"Florian Friesland 12-63-1",type:"MZF",org:"Feuerwehr",location:"Varel",status:"2",crew:"6",skills:"Logistik",verified:"Feuerwehr Varel"},
-  {id:216,name:"12-63-03",opta:"Florian Friesland 12-63-3",type:"MZF",org:"Feuerwehr",location:"Varel",status:"2",crew:"6",skills:"Logistik",verified:"Feuerwehr Varel"},
+  {id:216,name:"12-63-03",opta:"Florian Friesland 12-63-3",type:"MZF",org:"Feuerwehr",location:"Obenstrohe",fixedLocation:true,status:"2",crew:"6",skills:"Logistik",verified:"BOS-Fahrzeuge (FF Varel OF Obenstrohe)"},
+  // v4.78: fehlende Fahrzeuge laut bos-fahrzeuge.info (Wachen FF Varel OF Varel / Obenstrohe /
+  // Borgstede-Winkelsheide). Boote = Rettungsboote auf Anhänger (FwA).
+  {id:217,name:"12-19-01",opta:"Florian Friesland 12-19-1",type:"MTF",org:"Feuerwehr",location:"Varel",status:"2",crew:"9",skills:"Mannschaftstransport",verified:"BOS-Fahrzeuge (FF Varel OF Varel)"},
+  {id:218,name:"12-64-01",opta:"Florian Friesland 12-64-1",type:"GW-L1",org:"Feuerwehr",location:"Varel",status:"2",crew:"3",skills:"Gerätewagen Logistik 1",verified:"BOS-Fahrzeuge (FF Varel OF Varel)"},
+  {id:219,name:"12-78-01",opta:"Florian Friesland 12-78-1",type:"RTB",org:"Feuerwehr",location:"Varel",status:"2",crew:"3",skills:"Rettungsboot (Anhänger)",verified:"BOS-Fahrzeuge (FF Varel OF Varel)"},
+  {id:280,name:"12-78-02",opta:"Florian Friesland 12-78-2",type:"RTB",org:"Feuerwehr",location:"Borgstede-Winkelsheide",fixedLocation:true,status:"2",crew:"3",skills:"Rettungsboot (Anhänger), Lichtmast",verified:"BOS-Fahrzeuge (FF Varel OF Borgstede-Winkelsheide)"},
+  {id:281,name:"12-78-03",opta:"Florian Friesland 12-78-3",type:"RTB",org:"Feuerwehr",location:"Obenstrohe",fixedLocation:true,status:"2",crew:"3",skills:"Rettungsboot (Anhänger)",verified:"BOS-Fahrzeuge (FF Varel OF Obenstrohe)"},
 
   {id:221,name:"11-11-01",opta:"Florian Friesland 11-11-1",type:"ELW",org:"Feuerwehr",location:"Jever",status:"2",crew:"6",skills:"Einsatzleitung",verified:"Feuerwehr Jever"},
   {id:222,name:"11-17-01",opta:"Florian Friesland 11-17-1",type:"MTF",org:"Feuerwehr",location:"Jever",status:"2",crew:"9",skills:"Mannschaftstransport",verified:"Feuerwehr Jever"},
@@ -658,6 +665,13 @@ if(!Array.isArray(db.deletedUnitOptas))db.deletedUnitOptas=[];
  const deleted=new Set(db.deletedUnitOptas);
  defaults.units.forEach(u=>{
    if(u.opta && !existingOptas.has(u.opta) && !deleted.has(u.opta)) db.units.push({...u});
+ });
+ // v4.78: Ortswehren Obenstrohe / Borgstede-Winkelsheide – Standort der mitgelieferten Fahrzeuge
+ // übernehmen (nur wenn nicht selbst bearbeitet)
+ defaults.units.forEach(d=>{
+   if(!d.fixedLocation)return;
+   const u=db.units.find(x=>x.opta===d.opta);
+   if(u&&!u.userEdited&&!u.custom&&!u.fixedLocation){u.location=d.location;u.fixedLocation=true;u.verified=d.verified}
  });
  // Nachträglich ergänzte Standorte (homeLat/homeLng) übernehmen, solange nicht selbst bearbeitet
  defaults.units.forEach(d=>{
@@ -1586,7 +1600,7 @@ function geoSortUnits(arr){
 function syncLocationFromOpta(){
  db.units.forEach(u=>{
    // Selbst angelegte oder selbst bearbeitete Fahrzeuge nie automatisch verändern.
-   if(u.custom||u.userEdited)return;
+   if(u.custom||u.userEdited||u.fixedLocation)return; // fester Standort (z. B. Ortswehr) bleibt
    if(["Feuerwehr","Rettungsdienst"].includes(u.org)){
      const area=OPTA_AREA_ORDER[optaAreaDigit(u)];
      if(area)u.location=area;
@@ -1623,6 +1637,10 @@ const STATION_OVERRIDE={
  "Rettungsdienst__Sande":[53.508352,8.008457], // Rettungswache Sande, direkt neben TV Sanderbusch (Tennisplatz)
  "Luftrettung__Sanderbusch (Sande)":[53.50691,8.00901], // Christoph 26, stationiert am Nordwest-Krankenhaus Sanderbusch
  "Feuerwehr__Varel":[53.3984536,8.1353142], // FF Varel OF Varel, Pelzerstraße 5-7, 26316 Varel
+ // FF Varel OF Obenstrohe (Wiefelsteder Straße 45, Neubau 2021) und OF Borgstede-Winkelsheide
+ // (Ziegelstraße 1a) – Kartenmitte der bos-fahrzeuge.info-Wachenseiten, nicht weiter geprüft
+ "Feuerwehr__Obenstrohe":[53.37893,8.10668],
+ "Feuerwehr__Borgstede-Winkelsheide":[53.39525,8.09173],
  "Rettungsdienst__Varel":[53.39148,8.13803], // Rettungswache Varel, Menckestraße 6 (Gelände St. Johannes-Hospital)
  "Feuerwehr__Bockhorn":[53.3911,8.01891], // FF Bockhorn OF Bockhorn, Schulstraße 19, 26345 Bockhorn
  "Rettungsdienst__Bockhorn":[53.38768,8.00959], // Rettungswache Friesische Wehde, Grabsteder Straße 27, 26345 Bockhorn

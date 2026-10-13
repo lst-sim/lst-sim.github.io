@@ -1262,3 +1262,14 @@ Version 4.77:
 - Kreisalarm DLRG / Kreisalarm DRK: alarmiert alle freien Fahrzeuge der Organisation im ganzen
   Kreis (ohne Wachtürme, Insel-Regel gilt). Im Reiter DLRG bzw. DRK als Knopf neben „Vollalarm“
   (Vollalarm = nächste Ortsgruppe) und in der AAO als Fahrzeugtyp wählbar.
+
+Version 4.78:
+- FF Varel in ihre drei Ortsfeuerwehren aufgeteilt (Quelle: varel.de, bos-fahrzeuge.info,
+  feuerwehr-varel.de, feuerwehrobenstrohe.de):
+  - OF Obenstrohe (Wiefelsteder Straße 45): 12-45-3 LF, 12-24-3 TLF, 12-63-3 MZF,
+    19-62-1 SW (KatS; nur bei bos-fahrzeuge gelistet), neu 12-78-3 RTB
+  - OF Borgstede-Winkelsheide (Ziegelstraße 1a): 12-17-2 MTF, 12-43-2 LF, 12-24-2 TLF,
+    neu 12-78-2 RTB (mit Lichtmast)
+  - OF Varel: wie bisher, neu 12-19-1 MTF, 12-64-1 GW-L1, 12-78-1 RTB
+  Standort-Koordinaten der beiden Ortswehren = Kartenmitte der bos-fahrzeuge-Wachenseiten.
+  Eigene Änderungen an diesen Fahrzeugen bleiben unangetastet.
