@@ -1249,3 +1249,16 @@ Version 4.76:
   Ab- oder Freimeldungen ändern die Farbe nicht mehr. Wird beim Bearbeiten Klinik oder
   Fachrichtung gewechselt, gilt der Stand dieser neuen Anmeldung. Ältere Anmeldungen (vor
   v4.75) ohne gespeicherten Stand zeigen weiter den aktuellen Stand.
+
+Version 4.77:
+- MANV „Gleicher PZC für alle“: übernimmt nur die ersten 3 Ziffern (RMI); Alter und Dringlichkeit
+  werden je Patient dahinter getippt (schon getippte Ziffern bleiben stehen).
+- „Rettungsmittel bearbeiten“: unten werden keine bereits alarmierten Fahrzeuge mehr angezeigt
+  (diesem Einsatz zugeordnet oder im Einsatz: Status 3/4/7). Typen ohne verbleibende Fahrzeuge
+  fallen weg.
+- „Rettungsmittel bearbeiten“: grüner Knopf unten „✅ Jetzt alarmieren“ (vor der Alarmierung –
+  alarmiert direkt wie „Jetzt alarmieren“) bzw. „✅ Fertig“ (bei bereits alarmiertem Einsatz).
+  Der Alarm-Freitext bleibt dabei erhalten.
+- Kreisalarm DLRG / Kreisalarm DRK: alarmiert alle freien Fahrzeuge der Organisation im ganzen
+  Kreis (ohne Wachtürme, Insel-Regel gilt). Im Reiter DLRG bzw. DRK als Knopf neben „Vollalarm“
+  (Vollalarm = nächste Ortsgruppe) und in der AAO als Fahrzeugtyp wählbar.

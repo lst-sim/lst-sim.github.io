@@ -162,7 +162,7 @@ table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:10px 8px
 </head>
 <body>
 <div style="padding:6px 10px;font-size:11px;color:#94a3b8;font-weight:700;display:flex;align-items:center;gap:10px;position:sticky;top:0;z-index:10;background:var(--bg)">
- <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v4.76</span>
+ <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v4.77</span>
  <span id="syncState"></span>
  <a id="homeLink" href="#" onclick="render('leitstelle');return false" class="hidden" style="color:#64748b;text-decoration:underline;font-weight:600">🖥️ Leitstelle</a>
  <a id="monitorLink" href="#" onclick="showMonitorQR();return false" style="color:#64748b;text-decoration:underline;font-weight:600;margin-left:auto">🖥️ Monitor hinzufügen</a>
@@ -2115,7 +2115,7 @@ function resourcePickerCatsHTML(mode){
    const thw=db.units.filter(u=>u.org==="THW"&&!u.neighborLoan);
    const groups=[...new Set(thw.map(thwGroup))];
    return tabs+groups.map(g=>{
-     const us=thw.filter(u=>thwGroup(u)===g);
+     const us=thw.filter(u=>thwGroup(u)===g&&!assigned.has(String(u.id))&&!["3","4","7"].includes(String(u.status)));
      const free=us.filter(u=>["1","2","8"].includes(String(u.status))&&!assigned.has(String(u.id)));
      return `<div style="border:1px solid var(--line);border-radius:10px;padding:8px 10px;margin-bottom:8px">
        <div class="row between" style="flex-wrap:wrap"><b>🛠️ ${esc(g)}</b><button class="primary" ${free.length?"":"disabled"} onclick="addThwGroup(${esc(JSON.stringify(g))},'${mode}')">Ganze Fachgruppe (${free.length})</button></div>
@@ -2128,8 +2128,12 @@ function resourcePickerCatsHTML(mode){
  const all=db.units.filter(u=>u.org===pickerCat&&!u.neighborLoan&&!notAlarmable(u));
  const types=[...new Set(all.map(u=>u.type).filter(Boolean))].sort((a,b)=>a.localeCompare(b,"de"));
  const ordered=pickerCat==="Rettungsdienst"?ktLast(types.map(t=>({type:t}))).map(x=>x.type):types;
- return tabs+ordered.map(t=>{
-   const us=nearestFirst(all.filter(u=>u.type===t));
+ // Bereits alarmierte Fahrzeuge (diesem Einsatz zugeordnet oder anderweitig im Einsatz) nicht anzeigen
+ const busy=u=>assigned.has(String(u.id))||["3","4","7"].includes(String(u.status));
+ const orgBar=["DLRG","DRK"].includes(pickerCat)?orgAlarmBarHTML(pickerCat,mode,assigned):"";
+ return tabs+orgBar+ordered.map(t=>{
+   const us=nearestFirst(all.filter(u=>u.type===t&&!busy(u)));
+   if(!us.length)return "";
    const typeArg=JSON.stringify(t).replace(/"/g,"'");
    const anyFree=us.some(u=>islandReachable(u)&&["1","2","8"].includes(String(u.status))&&!assigned.has(String(u.id)));
    return `<div style="border:1px solid var(--line);border-radius:10px;padding:6px 10px;margin-bottom:6px">
@@ -2158,6 +2162,9 @@ function showResourcePicker(mode="additional"){
   <label style="margin-top:12px">${isNafo?"Rettungsmittel nachfordern":"Rettungsmittel hinzufügen"}</label>
   ${resourcePickerCatsHTML(mode)}
   ${isNafo?`<hr><label>Aktuell dem Einsatz zugeordnet</label><div class="suggest">${esc(c.suggestion||"Noch keine Mittel.")}</div>`:""}
+  ${!isNafo?`<div class="row" style="margin-top:14px;justify-content:flex-end">${c.alarmTime
+    ?`<button class="primary" style="background:#16a34a;border-color:#16a34a;font-size:16px;padding:10px 18px" onclick="render('leitstelle')">✅ Fertig</button>`
+    :`<button class="primary" style="background:#16a34a;border-color:#16a34a;font-size:16px;padding:10px 18px" onclick="confirmAlarm()">✅ Jetzt alarmieren</button>`}</div>`:""}
   <p class="muted">${isNafo?"Das gewählte Mittel wird sofort als Nachforderung alarmiert und auf Status 3 gesetzt.":"Bei bereits alarmiertem Einsatz wird ein neu hinzugefügtes Mittel sofort dem Einsatz zugeordnet und auf Status 3 gesetzt. Ein entferntes Mittel wird sofort wieder freigegeben (Status 1). Vor der Erstalarmierung wirkt sich beides nur auf den Alarmvorschlag aus."}</p>
  </div>`;
 }
@@ -2200,6 +2207,25 @@ function addResourceUnitId(id,mode="additional"){
  if(u&&!islandReachable(u)){toast(unitOnIsland(u)?"Fahrzeug der Insel Wangerooge – kommt nicht aufs Festland":"Kommt nicht auf die Insel Wangerooge – nur Hubschrauber");return}
  if(!u||!["1","2","8"].includes(String(u.status))){toast("Fahrzeug nicht verfügbar");showResourcePicker(mode);return}
  addResourceUnits([u],mode);
+}
+// DLRG/DRK: Vollalarm (nächste Ortsgruppe) und Kreisalarm (alle freien Fahrzeuge im Kreis)
+function orgAlarmBarHTML(org,mode,assigned){
+ const free=l=>l.filter(u=>VA_FREE(u)&&!assigned.has(String(u.id)));
+ const va=vollalarmGroup(`Vollalarm ${org}`), ka=vollalarmGroup(`Kreisalarm ${org}`);
+ const nV=va?.location?free(va.units).length:0, nK=ka?free(ka.units).length:0;
+ const q=esc(JSON.stringify(org));
+ return `<div class="row" style="gap:6px;flex-wrap:wrap;margin-bottom:8px">
+  <button class="primary" ${nV?"":"disabled"} onclick="addOrgAlarm('Vollalarm',${q},'${mode}')">📣 Vollalarm ${esc(org)}${va?.location?` ${esc(va.location)}`:""} (${nV})</button>
+  <button class="primary" style="background:#b91c1c;border-color:#b91c1c" ${nK?"":"disabled"} onclick="addOrgAlarm('Kreisalarm',${q},'${mode}')">🚨 Kreisalarm ${esc(org)} – ganzer Kreis (${nK})</button></div>`;
+}
+function addOrgAlarm(kind,org,mode="additional"){
+ const c=db.currentCall; if(!c)return;
+ const assigned=new Set([...(c.alarmedUnits||[]),...(c.proposedUnitIds||[])].map(String));
+ const g=vollalarmGroup(`${kind} ${org}`);
+ const list=(g?.units||[]).filter(u=>VA_FREE(u)&&!assigned.has(String(u.id)));
+ if(!list.length){toast(`${kind} ${org}: kein freies Fahrzeug`);showResourcePicker(mode);return}
+ if(kind==="Kreisalarm"&&!confirm(`Kreisalarm ${org}: ${list.length} Fahrzeuge im ganzen Kreis alarmieren?`))return;
+ addResourceUnits(list,mode,kind==="Kreisalarm"?`Kreisalarm ${org}`:`Vollalarm ${org} ${g.location}`);
 }
 function addThwGroup(group,mode="additional"){
  const c=db.currentCall; if(!c)return;
@@ -3404,7 +3430,7 @@ function evaluate(){
        if(va){ // Vollalarm als EIN Haken für die ganze Ortsgruppe
          const ids=va.units.filter(VA_FREE).map(u=>u.id).filter(i=>!used.has(i)&&!seen.has(i));
          ids.forEach(i=>seen.add(i));
-         offer.push(ids.length?{unitIds:ids,type:`Vollalarm ${va.org} ${va.location}`,aao:aaoName}:{unitId:null,type:x.type,aao:aaoName});
+         offer.push(ids.length?{unitIds:ids,type:va.kreis?`Kreisalarm ${va.org}`:`Vollalarm ${va.org} ${va.location}`,aao:aaoName}:{unitId:null,type:x.type,aao:aaoName});
          continue;
        }
        const pool=availableUnits(x.type,x.org||null), want=aaoN(x,a);
@@ -3605,7 +3631,7 @@ function toggleOptionalUnit(id,on){
 function confirmAlarm(){
  const c=db.currentCall;
  if(!c)return;
- c.alarmFreeText=document.getElementById("alarmFreeText")?.value||"";
+ const ft=document.getElementById("alarmFreeText"); if(ft)c.alarmFreeText=ft.value||"";
  // Angehakte optionale AAO-Fahrzeuge mit alarmieren (nur wenn noch frei)
  for(const id of (c.optionalChecked||[])){
    const u=db.units.find(x=>String(x.id)===String(id));
@@ -5547,11 +5573,16 @@ const LINKED_AAO_IDS=new Set(["1","2","3","4","5","6","7","8","9","10","11","12"
 // "Vollalarm DLRG" / "Vollalarm DRK": alle freien Fahrzeuge der NÄCHSTEN Ortsgruppe (Standort mit
 // der kürzesten Entfernung zum Einsatzort, mit mindestens einem freien, erreichbaren Fahrzeug).
 // Ältere AAOs mit "Vollalarm DLRG <Ort>" funktionieren weiter (feste Ortsgruppe).
-function vollalarmOptions(){return ["Vollalarm DLRG","Vollalarm DRK"]}
+// "Kreisalarm DLRG" / "Kreisalarm DRK": alle freien Fahrzeuge der Organisation im ganzen Kreis
+// (alle Ortsgruppen/Standorte; Wachtürme und Fahrzeuge der Insel bzw. vom Festland, die nicht
+// hinkommen, ausgenommen).
+function vollalarmOptions(){return ["Vollalarm DLRG","Vollalarm DRK","Kreisalarm DLRG","Kreisalarm DRK"]}
 function VA_FREE(u){return ["1","2","8"].includes(String(u.status))&&islandReachable(u)}
 function vollalarmGroup(type){
+ const k=String(type||"").trim().match(/^Kreisalarm (DLRG|DRK)$/);
+ if(k){const all=(db.units||[]).filter(u=>u.org===k[1]&&!u.neighborLoan&&!notAlarmable(u));return {org:k[1],location:"Kreis",kreis:true,units:all}}
  const m=String(type||"").trim().match(/^Vollalarm (DLRG|DRK)(?: (.+))?$/); if(!m)return null;
- const org=m[1], all=(db.units||[]).filter(u=>u.org===org&&u.location&&u.location!=="Übungsort");
+ const org=m[1], all=(db.units||[]).filter(u=>u.org===org&&u.location&&u.location!=="Übungsort"&&!notAlarmable(u));
  if(m[2])return {org,location:m[2],units:all.filter(u=>u.location===m[2])};
  let best=null,bestKm=Infinity;
  for(const loc of new Set(all.map(u=>u.location))){
@@ -6471,7 +6502,7 @@ function openIvenaManv(){
   <select id="manvHospital" onchange="manvRefresh()">${hospitals.map(h=>`<option value="${h.id}">${esc(h.name)}${h.place?` (${esc(h.place)})`:""}</option>`).join("")}</select>
   <label style="margin-top:10px">Fahrzeuge</label>
   <div class="row" style="margin-bottom:6px"><button onclick="document.querySelectorAll('.manvChk').forEach(x=>x.checked=true);manvRefresh()">Alle wählen</button><button onclick="document.querySelectorAll('.manvChk').forEach(x=>x.checked=false);manvRefresh()">Keine</button></div>
-  <div class="row" style="margin-bottom:6px;flex-wrap:nowrap;align-items:center"><input id="manvPzcAll" inputmode="numeric" maxlength="6" placeholder="PZC für alle" style="width:130px;flex:0 0 130px" oninput="this.value=this.value.replace(/\D/g,'').slice(0,6)"><button onclick="manvPzcForAll()">📋 Gleicher PZC für alle</button></div>
+  <div class="row" style="margin-bottom:6px;flex-wrap:nowrap;align-items:center"><input id="manvPzcAll" inputmode="numeric" maxlength="3" placeholder="RMI (3 Ziffern)" style="width:130px;flex:0 0 130px" oninput="this.value=this.value.replace(/\D/g,'').slice(0,3)"><button onclick="manvPzcForAll()">📋 Gleicher PZC für alle</button><small class="muted">Nur die ersten 3 Ziffern – Alter und Dringlichkeit je Patient dahinter tippen.</small></div>
   <div style="border:1px solid var(--line);border-radius:10px">
    ${units.map(u=>`<div class="row" style="flex-wrap:nowrap;padding:8px 10px 4px">
      <input type="checkbox" class="manvChk" data-id="${u.id}" style="width:auto" onchange="manvRefresh()">
@@ -6517,14 +6548,16 @@ function manvRefresh(){
  if(first){const u=db.units.find(x=>String(x.id)===String(first.dataset.id));ivenaSetAutoEta("manv",u,manvHospitalFor(first.dataset.id),null,"")}
 }
 function manvPzcForAll(){
- const v=String(document.getElementById("manvPzcAll")?.value||"").trim();
- const f=v.length>=3?pzcFind(v.slice(0,3)):null;
- if(!(v.length===6&&f&&f.allowed.includes(v[5]))){toast("Bitte einen vollständigen, gültigen PZC (6-stellig) eingeben");return}
+ // Nur die RMI (erste 3 Ziffern) für alle – Alter und Dringlichkeit sind je Patient verschieden.
+ const v=String(document.getElementById("manvPzcAll")?.value||"").replace(/\D/g,"").slice(0,3);
+ const f=v.length===3?pzcFind(v):null;
+ if(!f){toast("Bitte die ersten 3 Ziffern (RMI) eines gültigen PZC eingeben");return}
  const rows=[...document.querySelectorAll(".manvChk")];
  const target=rows.some(c=>c.checked)?rows.filter(c=>c.checked):rows;
- target.forEach(c=>{c.checked=true;const el=document.querySelector(`.manvPzc[data-id="${c.dataset.id}"]`);if(el){el.value=v;manvPzcHint(el)}});
+ target.forEach(c=>{c.checked=true;const el=document.querySelector(`.manvPzc[data-id="${c.dataset.id}"]`);if(el){const rest=/^\d{3,6}$/.test(el.value)?el.value.slice(3):"";el.value=v+rest;manvPzcHint(el)}});
  manvRefresh();
- toast(`PZC ${v} für ${target.length} Fahrzeug(e) übernommen`);
+ const first=document.querySelector(`.manvPzc[data-id="${target[0]?.dataset.id}"]`); if(first)first.focus();
+ toast(`RMI ${v} (${f.label}) für ${target.length} Fahrzeug(e) übernommen – Alter und Dringlichkeit je Patient ergänzen`);
 }
 function manvHospPick(el){if(el.value||el.checked){const c=document.querySelector(`.manvChk[data-id="${el.dataset.id}"]`);if(c)c.checked=true}}
 function manvPzcHint(el){
