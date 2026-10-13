@@ -1214,3 +1214,17 @@ Version 4.73:
   kein Akutkrankenhaus), Krankenhaus Groß-Sand (Notaufnahme 2025 geschlossen), Zentralklinik
   Georgsheil (noch nicht eröffnet).
 - Kartenlage: für 11 Kliniken geprüft, für die übrigen nur Ortsmitte (ungefähr).
+
+Version 4.74:
+- IVENA-Versorgungsbereiche = zuständige Leitstellen (Quelle: Landtag Niedersachsen Drs. 19/6425,
+  vdek Bremen): LST Friesland-Wilhelmshaven, KRLS Ostfriesland (Aurich, Leer, Wittmund),
+  LST Emden, GOL Oldenburger Land (Oldenburg, Delmenhorst, LK Oldenburg, Ammerland, Wesermarsch,
+  Cloppenburg), LST Bremen, IRLS Unterweser-Elbe (Bremerhaven), LST Hamburg. Bereichsfilter
+  einmalig auf alle Bereiche gesetzt.
+- Kartenlage aller Kliniken jetzt aus den OpenStreetMap-Kartenlinks der Klinikseiten
+  (klinikbewertungen.de) statt Ortsmitte – auch für die bisherigen 9 Kliniken. Google Maps war
+  von hier aus nicht erreichbar. Die Punkte liegen auf der Klinikadresse, nicht zwingend an der
+  Notaufnahme.
+- Szenario „Übung Bremen“: dieselbe Klinikliste wie Friesland/Wilhelmshaven. Die alten Bremer
+  Einträge (u. a. Roland-Klinik, Paracelsus, AMEOS Dr. Heines ohne Notaufnahme) werden ersetzt,
+  offene Zuweisungen auf die neuen Einträge umgehängt, selbst angelegte Kliniken bleiben.
