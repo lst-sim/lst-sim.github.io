@@ -162,7 +162,7 @@ table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:10px 8px
 </head>
 <body>
 <div style="padding:6px 10px;font-size:11px;color:#94a3b8;font-weight:700;display:flex;align-items:center;gap:10px;position:sticky;top:0;z-index:10;background:var(--bg)">
- <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v4.72</span>
+ <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v4.73</span>
  <span id="syncState"></span>
  <a id="homeLink" href="#" onclick="render('leitstelle');return false" class="hidden" style="color:#64748b;text-decoration:underline;font-weight:600">🖥️ Leitstelle</a>
  <a id="monitorLink" href="#" onclick="showMonitorQR();return false" style="color:#64748b;text-decoration:underline;font-weight:600;margin-left:auto">🖥️ Monitor hinzufügen</a>
@@ -416,7 +416,55 @@ const DEFAULTS_FRI_WHV={
   {id:6,name:"Ammerland-Klinik Westerstede",place:"Westerstede",area:"Ammerland",status:"grün",note:"Übungsstatus – manuell pflegen",closures:[],fachrichtungen:["Chirurgie","Innere Medizin","Neurologie / Stroke Unit","Kardiologie / Chest Pain Unit","Gynäkologie/Geburtshilfe","Urologie","HNO","Intensivmedizin"]},
   {id:7,name:"Evangelisches Krankenhaus Oldenburg (EV Oldenburg)",place:"Oldenburg",area:"Oldenburg",status:"grün",note:"Übungsstatus – manuell pflegen",closures:[],fachrichtungen:["Chirurgie","Innere Medizin","Neurologie / Stroke Unit","Gynäkologie/Geburtshilfe","HNO","Intensivmedizin","Schockraum"]},
   {id:8,name:"Helios Klinik Wesermarsch (früher „Helios Klinikum Nordenham“)",place:"Nordenham",area:"Wesermarsch",status:"grün",note:"Übungsstatus – manuell pflegen",closures:[],fachrichtungen:["Chirurgie","Innere Medizin","Urologie","Intensivmedizin"]},
-  {id:9,name:"St. Johannes-Hospital Varel",place:"Varel",area:"Friesland",status:"grün",note:"Übungsstatus – manuell pflegen – auf Wunsch nur mit Gynäkologie/Geburtshilfe hinterlegt",closures:[],fachrichtungen:["Gynäkologie/Geburtshilfe"]}
+  {id:9,name:"St. Johannes-Hospital Varel",place:"Varel",area:"Friesland",status:"grün",note:"Übungsstatus – manuell pflegen – auf Wunsch nur mit Gynäkologie/Geburtshilfe hinterlegt",closures:[],fachrichtungen:["Gynäkologie/Geburtshilfe"]},
+  // ── Weitere Kliniken (v4.73): Ostfriesland, Gebiet der Großleitstelle Oldenburger Land (inkl.
+  // Delmenhorst und LK Cloppenburg), Bremen/Bremerhaven, Hamburg. Fachrichtungen nur, wenn belegt
+  // (Qualitätsberichte 2024 im Deutschen Krankenhaus-Verzeichnis, Klinik-Websites, Zertifikate).
+  // Kardiologie = Herzkatheterlabor oder DGK-CPU; Schockraum = DGU-TraumaNetzwerk; Neurologie =
+  // Neurologie oder Stroke Unit. Nicht Belegtes fehlt bewusst (in note genannt) und kann über 🏷️
+  // ergänzt werden. Nicht aufgenommen: St. Bernhard-Hospital Brake (geschlossen 14.08.2026), UEK
+  // Norden (seit 2023 kein Akutkrankenhaus), Krankenhaus Groß-Sand Hamburg (Notaufnahme 2025
+  // geschlossen), Zentralklinik Georgsheil (noch nicht eröffnet, geplant 2028/29).
+  {id:30,name:"Ubbo-Emmius-Klinik Aurich (Zentralklinik Ostfriesische Meere)",place:"Aurich",area:"Aurich",status:"grün",note:"Recherche 10/2026 – Lokales Traumazentrum; HNO Beleg; Kardiologie = Herzkatheterlabor (keine DGK-CPU gefunden)",closures:[],fachrichtungen:["Chirurgie", "Innere Medizin", "Pädiatrie", "Gynäkologie/Geburtshilfe", "Kardiologie / Chest Pain Unit", "Intensivmedizin", "Schockraum", "HNO"]},
+  {id:31,name:"Klinikum Emden (Zentralklinik Ostfriesische Meere)",place:"Emden",area:"Emden",status:"grün",note:"Recherche 10/2026 – Regionales Traumazentrum; Stroke Unit; kein Herzkatheter (Kooperation Aurich); HNO Beleg",closures:[],fachrichtungen:["Chirurgie", "Innere Medizin", "Neurologie / Stroke Unit", "Intensivmedizin", "Schockraum", "Psychiatrie", "HNO"]},
+  {id:32,name:"Klinikum Leer",place:"Leer",area:"Leer",status:"grün",note:"Recherche 10/2026 – Herzkatheter 24 h; Augen Beleg; kein Traumazentrum gefunden",closures:[],fachrichtungen:["Chirurgie", "Innere Medizin", "Pädiatrie", "Gynäkologie/Geburtshilfe", "Kardiologie / Chest Pain Unit", "Intensivmedizin", "Augenheilkunde"]},
+  {id:33,name:"Borromäus Hospital Leer",place:"Leer",area:"Leer",status:"grün",note:"Recherche 10/2026 – Lokales Traumazentrum (Stand 2020, nicht neu bestätigt); HNO Beleg",closures:[],fachrichtungen:["Chirurgie", "Innere Medizin", "Gynäkologie/Geburtshilfe", "Intensivmedizin", "Schockraum", "HNO", "Urologie"]},
+  {id:34,name:"Inselkrankenhaus Borkum",place:"Borkum",area:"Leer",status:"grün",note:"Recherche 10/2026 – Nur Innere Medizin, keine Intensivstation; schwere Fälle per Hubschrauber aufs Festland",closures:[],fachrichtungen:["Innere Medizin"]},
+  {id:35,name:"Delme Klinikum Delmenhorst",place:"Delmenhorst",area:"Delmenhorst",status:"grün",note:"Recherche 10/2026 – Lokales Traumazentrum; HNO Beleg; kein Herzkatheter gefunden",closures:[],fachrichtungen:["Chirurgie", "Innere Medizin", "Pädiatrie", "Gynäkologie/Geburtshilfe", "Intensivmedizin", "Schockraum", "HNO", "Urologie"]},
+  {id:36,name:"Krankenhaus Johanneum Wildeshausen",place:"Wildeshausen",area:"LK Oldenburg",status:"grün",note:"Recherche 10/2026 – Lokales Traumazentrum; Gyn/Geb, HNO und Urologie Beleg (Urologie sehr klein)",closures:[],fachrichtungen:["Chirurgie", "Innere Medizin", "Gynäkologie/Geburtshilfe", "Intensivmedizin", "Schockraum", "HNO", "Urologie"]},
+  {id:37,name:"Karl-Jaspers-Klinik",place:"Bad Zwischenahn",area:"Ammerland",status:"grün",note:"Recherche 10/2026 – Psychiatrie (Pflichtversorgung u. a. Ammerland, Oldenburg, Wesermarsch, Wittmund, Delmenhorst)",closures:[],fachrichtungen:["Psychiatrie"]},
+  {id:38,name:"St. Josefs-Hospital Cloppenburg",place:"Cloppenburg",area:"Cloppenburg",status:"grün",note:"Recherche 10/2026 – Traumazentrum (Stufe nicht genannt); Herzkatheter 24 h; HNO und Augen Beleg",closures:[],fachrichtungen:["Chirurgie", "Innere Medizin", "Gynäkologie/Geburtshilfe", "Kardiologie / Chest Pain Unit", "Intensivmedizin", "Schockraum", "HNO", "Augenheilkunde"]},
+  {id:39,name:"St.-Marien-Hospital Friesoythe",place:"Friesoythe",area:"Cloppenburg",status:"grün",note:"Recherche 10/2026 – HNO Beleg; kein Traumazentrum gefunden; Intensivstation nur indirekt belegt",closures:[],fachrichtungen:["Chirurgie", "Innere Medizin", "Intensivmedizin", "HNO"]},
+  {id:40,name:"Klinikum Bremen-Mitte",place:"Bremen",area:"Bremen",status:"grün",note:"Recherche 10/2026 – Überregionales Traumazentrum; keine Kardiologie (Herzzentrum noch am Klinikum Links der Weser)",closures:[],fachrichtungen:["Chirurgie", "Innere Medizin", "Pädiatrie", "Gynäkologie/Geburtshilfe", "Neurologie / Stroke Unit", "Intensivmedizin", "Schockraum", "HNO", "Augenheilkunde", "Urologie"]},
+  {id:41,name:"Klinikum Bremen-Ost",place:"Bremen",area:"Bremen",status:"grün",note:"Recherche 10/2026 – Traumazentrum-Status aktuell nicht belegt",closures:[],fachrichtungen:["Chirurgie", "Innere Medizin", "Neurologie / Stroke Unit", "Intensivmedizin", "Psychiatrie"]},
+  {id:42,name:"Klinikum Bremen-Nord",place:"Bremen",area:"Bremen",status:"grün",note:"Recherche 10/2026 – Kein eigener Herzkatheter; Traumazentrum-Stufe nicht gefunden",closures:[],fachrichtungen:["Chirurgie", "Innere Medizin", "Pädiatrie", "Gynäkologie/Geburtshilfe", "Neurologie / Stroke Unit", "Intensivmedizin", "Psychiatrie"]},
+  {id:43,name:"Klinikum Links der Weser",place:"Bremen",area:"Bremen",status:"grün",note:"Recherche 10/2026 – Herzzentrum mit DGK-CPU; Regionales Traumazentrum; Schließung für 2028 geplant; Lage = Hubschrauberlandeplatz",closures:[],fachrichtungen:["Chirurgie", "Innere Medizin", "Kardiologie / Chest Pain Unit", "Intensivmedizin", "Schockraum"]},
+  {id:44,name:"Rotes Kreuz Krankenhaus Bremen",place:"Bremen",area:"Bremen",status:"grün",note:"Recherche 10/2026 – Herzkatheter 24 h; Traumazentrum (Stufe nicht genannt)",closures:[],fachrichtungen:["Chirurgie", "Innere Medizin", "Kardiologie / Chest Pain Unit", "Intensivmedizin", "Schockraum"]},
+  {id:45,name:"St. Joseph-Stift Bremen",place:"Bremen",area:"Bremen",status:"grün",note:"Recherche 10/2026 – Lokales Traumazentrum (Zertifizierung 2020, Folgezertifizierung nicht geprüft)",closures:[],fachrichtungen:["Chirurgie", "Innere Medizin", "Gynäkologie/Geburtshilfe", "Intensivmedizin", "Schockraum", "HNO", "Augenheilkunde"]},
+  {id:46,name:"DIAKO Ev. Diakonie-Krankenhaus Bremen",place:"Bremen",area:"Bremen",status:"grün",note:"Recherche 10/2026 – Lokales Traumazentrum",closures:[],fachrichtungen:["Chirurgie", "Innere Medizin", "Gynäkologie/Geburtshilfe", "Intensivmedizin", "Schockraum", "HNO", "Urologie"]},
+  {id:47,name:"Klinikum Bremerhaven-Reinkenheide",place:"Bremerhaven",area:"Bremerhaven",status:"grün",note:"Recherche 10/2026 – Regionales Traumazentrum; Stroke Unit; Herzkatheter",closures:[],fachrichtungen:["Chirurgie", "Innere Medizin", "Pädiatrie", "Gynäkologie/Geburtshilfe", "Neurologie / Stroke Unit", "Kardiologie / Chest Pain Unit", "Intensivmedizin", "Schockraum", "Psychiatrie", "HNO"]},
+  {id:48,name:"AMEOS Klinikum Bremerhaven",place:"Bremerhaven",area:"Bremerhaven",status:"grün",note:"Recherche 10/2026 – Lokales Traumazentrum (2024); keine Kardiologie",closures:[],fachrichtungen:["Chirurgie", "Innere Medizin", "Intensivmedizin", "Schockraum", "Urologie"]},
+  {id:49,name:"Universitätsklinikum Hamburg-Eppendorf (UKE)",place:"Hamburg",area:"Hamburg",status:"grün",note:"Recherche 10/2026 – Universitäres Herz- und Gefäßzentrum; Traumazentrum-Stufe nicht gefunden",closures:[],fachrichtungen:["Chirurgie", "Innere Medizin", "Pädiatrie", "Gynäkologie/Geburtshilfe", "Neurologie / Stroke Unit", "Kardiologie / Chest Pain Unit", "Intensivmedizin", "Schockraum", "Psychiatrie", "HNO", "Augenheilkunde", "Urologie"]},
+  {id:50,name:"Asklepios Klinik Altona",place:"Hamburg",area:"Hamburg",status:"grün",note:"Recherche 10/2026 – Überregionales Traumazentrum; DGK-CPU",closures:[],fachrichtungen:["Chirurgie", "Innere Medizin", "Gynäkologie/Geburtshilfe", "Neurologie / Stroke Unit", "Kardiologie / Chest Pain Unit", "Intensivmedizin", "Schockraum", "HNO", "Augenheilkunde", "Urologie"]},
+  {id:51,name:"Asklepios Klinik Barmbek",place:"Hamburg",area:"Hamburg",status:"grün",note:"Recherche 10/2026 – Herzkatheter 24 h; Traumazentrum-Stufe nicht gefunden",closures:[],fachrichtungen:["Chirurgie", "Innere Medizin", "Gynäkologie/Geburtshilfe", "Neurologie / Stroke Unit", "Kardiologie / Chest Pain Unit", "Intensivmedizin", "Schockraum", "Augenheilkunde", "Urologie"]},
+  {id:52,name:"Asklepios Klinikum Harburg",place:"Hamburg",area:"Hamburg",status:"grün",note:"Recherche 10/2026 – Herzkatheter; Traumazentrum-Stufe nicht gefunden",closures:[],fachrichtungen:["Chirurgie", "Innere Medizin", "Neurologie / Stroke Unit", "Kardiologie / Chest Pain Unit", "Intensivmedizin", "Schockraum", "Psychiatrie", "HNO", "Urologie"]},
+  {id:53,name:"Asklepios Klinik Nord – Heidberg",place:"Hamburg",area:"Hamburg",status:"grün",note:"Recherche 10/2026 – Überregionales Traumazentrum; DGK-CPU; überregionale Stroke Unit",closures:[],fachrichtungen:["Chirurgie", "Innere Medizin", "Pädiatrie", "Gynäkologie/Geburtshilfe", "Neurologie / Stroke Unit", "Kardiologie / Chest Pain Unit", "Intensivmedizin", "Schockraum", "HNO", "Augenheilkunde"]},
+  {id:54,name:"Asklepios Klinik St. Georg",place:"Hamburg",area:"Hamburg",status:"grün",note:"Recherche 10/2026 – Überregionales Traumazentrum; DGK-CPU",closures:[],fachrichtungen:["Chirurgie", "Innere Medizin", "Neurologie / Stroke Unit", "Kardiologie / Chest Pain Unit", "Intensivmedizin", "Schockraum", "HNO"]},
+  {id:55,name:"Asklepios Klinik Wandsbek",place:"Hamburg",area:"Hamburg",status:"grün",note:"Recherche 10/2026 – Regionales Traumazentrum; Kardiologie und Intensivstation nicht geprüft",closures:[],fachrichtungen:["Chirurgie", "Innere Medizin", "Gynäkologie/Geburtshilfe", "Neurologie / Stroke Unit", "Schockraum", "Urologie"]},
+  {id:56,name:"Asklepios Westklinikum Hamburg",place:"Hamburg",area:"Hamburg",status:"grün",note:"Recherche 10/2026 – CPU-Zertifikat (Stelle nicht genannt); Intensivstation nicht geprüft",closures:[],fachrichtungen:["Chirurgie", "Innere Medizin", "Kardiologie / Chest Pain Unit", "Psychiatrie", "Urologie"]},
+  {id:57,name:"Albertinen Krankenhaus",place:"Hamburg",area:"Hamburg",status:"grün",note:"Recherche 10/2026 – Herzzentrum; Traumazentrum-Stufe nicht gefunden",closures:[],fachrichtungen:["Chirurgie", "Innere Medizin", "Gynäkologie/Geburtshilfe", "Neurologie / Stroke Unit", "Kardiologie / Chest Pain Unit", "Intensivmedizin", "Schockraum", "Psychiatrie", "Urologie"]},
+  {id:58,name:"AGAPLESION Diakonieklinikum Hamburg",place:"Hamburg",area:"Hamburg",status:"grün",note:"Recherche 10/2026 – Lokales Traumazentrum (Stand 2020); Intensivstation nicht geprüft",closures:[],fachrichtungen:["Chirurgie", "Innere Medizin", "Gynäkologie/Geburtshilfe", "Schockraum"]},
+  {id:59,name:"Kath. Marienkrankenhaus Hamburg",place:"Hamburg",area:"Hamburg",status:"grün",note:"Recherche 10/2026 – Lokales Traumazentrum; DGK-CPU; Stroke Unit",closures:[],fachrichtungen:["Chirurgie", "Innere Medizin", "Gynäkologie/Geburtshilfe", "Neurologie / Stroke Unit", "Kardiologie / Chest Pain Unit", "Intensivmedizin", "Schockraum", "HNO", "Urologie"]},
+  {id:60,name:"Israelitisches Krankenhaus Hamburg",place:"Hamburg",area:"Hamburg",status:"grün",note:"Recherche 10/2026 – Kleines Haus, nur 3 Fachabteilungen",closures:[],fachrichtungen:["Chirurgie", "Innere Medizin", "Intensivmedizin"]},
+  {id:61,name:"Bundeswehrkrankenhaus Hamburg",place:"Hamburg",area:"Hamburg",status:"grün",note:"Recherche 10/2026 – Regionales Traumazentrum; keine Kardiologie gefunden",closures:[],fachrichtungen:["Chirurgie", "Innere Medizin", "Neurologie / Stroke Unit", "Intensivmedizin", "Schockraum", "Psychiatrie", "HNO", "Augenheilkunde", "Urologie"]},
+  {id:62,name:"BG Klinikum Hamburg",place:"Hamburg",area:"Hamburg",status:"grün",note:"Recherche 10/2026 – Überregionales Traumazentrum; Schwerbrandverletzte, Querschnitt",closures:[],fachrichtungen:["Chirurgie", "Neurologie / Stroke Unit", "Intensivmedizin", "Schockraum"]},
+  {id:63,name:"AGAPLESION Bethesda Krankenhaus Bergedorf",place:"Hamburg",area:"Hamburg",status:"grün",note:"Recherche 10/2026 – Stroke Unit; CPU; Traumazentrum-Stufe nicht gefunden",closures:[],fachrichtungen:["Chirurgie", "Innere Medizin", "Gynäkologie/Geburtshilfe", "Neurologie / Stroke Unit", "Kardiologie / Chest Pain Unit", "Intensivmedizin", "Schockraum", "Psychiatrie"]},
+  {id:64,name:"Evangelisches Amalie Sieveking Krankenhaus",place:"Hamburg",area:"Hamburg",status:"grün",note:"Recherche 10/2026 – Herzkatheter; Neurologie (Stroke Unit nicht genannt)",closures:[],fachrichtungen:["Chirurgie", "Innere Medizin", "Gynäkologie/Geburtshilfe", "Neurologie / Stroke Unit", "Kardiologie / Chest Pain Unit", "Intensivmedizin"]},
+  {id:65,name:"Schön Klinik Hamburg Eilbek",place:"Hamburg",area:"Hamburg",status:"grün",note:"Recherche 10/2026 – DGK-CPU; Herzkatheter 24 h",closures:[],fachrichtungen:["Chirurgie", "Innere Medizin", "Neurologie / Stroke Unit", "Kardiologie / Chest Pain Unit", "Intensivmedizin", "Psychiatrie"]},
+  {id:66,name:"Helios Mariahilf Klinik Hamburg",place:"Hamburg",area:"Hamburg",status:"grün",note:"Recherche 10/2026 – Kein Herzkatheter belegt",closures:[],fachrichtungen:["Chirurgie", "Innere Medizin", "Pädiatrie", "Gynäkologie/Geburtshilfe", "Intensivmedizin"]},
+  {id:67,name:"Altonaer Kinderkrankenhaus",place:"Hamburg",area:"Hamburg",status:"grün",note:"Recherche 10/2026 – Nur Kinder (Kinderchirurgie, Kinder-HNO, Kinderurologie)",closures:[],fachrichtungen:["Chirurgie", "Pädiatrie", "Intensivmedizin", "HNO", "Urologie"]},
+  {id:68,name:"Kath. Kinderkrankenhaus Wilhelmstift",place:"Hamburg",area:"Hamburg",status:"grün",note:"Recherche 10/2026 – Nur Kinder",closures:[],fachrichtungen:["Chirurgie", "Pädiatrie", "Intensivmedizin"]},
+  {id:69,name:"Asklepios Klinik Nord – Ochsenzoll",place:"Hamburg",area:"Hamburg",status:"grün",note:"Recherche 10/2026 – Nur Psychiatrie",closures:[],fachrichtungen:["Psychiatrie"]}
  ],
  // Rettungsmittel der Nachbarlandkreise, rein zur Übersicht/Anfrage im Reiter "Nachbar LKs".
  // Getrennt von db.units gehalten, damit sie nie für lokale Friesland-Alarmierungen/AAO/Karte
@@ -966,7 +1014,7 @@ function renderHospitalMarkersOnMap(){
 function hospitalPoint(hospitalId){
  const h=(db.ivena||[]).find(x=>String(x.id)===String(hospitalId));
  if(!h)return null;
- return HOSPITAL_OVERRIDE[h.name]||AREA_CENTERS[h.place]||null;
+ return HOSPITAL_OVERRIDE[h.name]||AREA_CENTERS[h.place]||HOSPITAL_TOWN_CENTERS[h.place]||null;
 }
 // Bereitstellungsort bei Einsätzen auf dem Wasser: Landfahrzeuge fahren dorthin, nur Boote und
 // Hubschrauber (sowie DGzRS) direkt zur Einsatzstelle auf dem Wasser.
@@ -1595,7 +1643,27 @@ const STATION_OVERRIDE={
 // Präzise Koordinaten für einzelne Kliniken (überschreibt die grobe Orts-Koordinate aus
 // AREA_CENTERS für genau diese Klinik).
 const HOSPITAL_OVERRIDE={
- "Nordwest-Krankenhaus Sanderbusch":[53.50691,8.00901]
+ "Nordwest-Krankenhaus Sanderbusch":[53.50691,8.00901],
+ // v4.73 – Lage aus OpenStreetMap-Links (klinikbewertungen.de) bzw. Wikipedia; Links der Weser = Landeplatz
+ "Ubbo-Emmius-Klinik Aurich (Zentralklinik Ostfriesische Meere)":[53.46848,7.49668],
+ "Klinikum Emden (Zentralklinik Ostfriesische Meere)":[53.376,7.21206],
+ "Klinikum Leer":[53.23591,7.45852],
+ "Borromäus Hospital Leer":[53.22931,7.44502],
+ "Inselkrankenhaus Borkum":[53.58486,6.67125],
+ "Delme Klinikum Delmenhorst":[53.04425,8.59353],
+ "Karl-Jaspers-Klinik":[53.17001,8.13731],
+ "Klinikum Bremen-Mitte":[53.072988,8.839427],
+ "Klinikum Bremen-Nord":[53.183973,8.593959],
+ "Klinikum Links der Weser":[53.035852,8.817424],
+ "Rotes Kreuz Krankenhaus Bremen":[53.068665,8.804528]
+};
+// Ortsmitte als Ersatz, wenn für eine Klinik keine geprüfte Lage vorliegt (nur grob – ungefähre
+// Ortsmitten, nicht geprüft). Getrennt von AREA_CENTERS, damit Ortsnamen wie "Leer" nicht in
+// Einsatzort-Texten gesucht werden.
+const HOSPITAL_TOWN_CENTERS={
+ "Bremen":[53.0758,8.8072],"Bremerhaven":[53.5396,8.5809],"Hamburg":[53.5503,9.9930],
+ "Wildeshausen":[52.8936,8.4329],"Cloppenburg":[52.8470,8.0455],"Friesoythe":[53.0207,7.8586],
+ "Nordenham":[53.4870,8.4810],"Aurich":[53.4710,7.4836],"Emden":[53.3669,7.2061],"Leer":[53.2309,7.4605],"Delmenhorst":[53.0511,8.6310]
 };
 function haversine(lat1,lon1,lat2,lon2){
  const R=6371,toRad=x=>x*Math.PI/180;

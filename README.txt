@@ -1196,3 +1196,21 @@ Version 4.72:
   nächsten Ende einer Besetzungszeit bzw. bis er von Hand auf 6 gesetzt wird. In der Fahrzeugliste
   steht dann „jetzt manuell besetzt“. Endet die Besetzungszeit während eines Einsatzes, geht der
   Turm nach dem Einsatz auf 6.
+
+Version 4.73:
+- IVENA: 40 weitere Kliniken mit recherchierten Fachrichtungen (Stand 10/2026; Qualitätsberichte
+  2024 im Deutschen Krankenhaus-Verzeichnis, Klinik-Websites, Zertifikate):
+  - Ostfriesland: Ubbo-Emmius-Klinik Aurich, Klinikum Emden, Klinikum Leer, Borromäus Hospital
+    Leer, Inselkrankenhaus Borkum
+  - GOL-Gebiet (inkl. Delmenhorst, LK Oldenburg, LK Cloppenburg): Delme Klinikum Delmenhorst,
+    Krankenhaus Johanneum Wildeshausen, Karl-Jaspers-Klinik, St. Josefs-Hospital Cloppenburg,
+    St.-Marien-Hospital Friesoythe
+  - Bremen/Bremerhaven: 9 Kliniken
+  - Hamburg: 21 Kliniken (inkl. 2 Kinderkrankenhäuser und Psychiatrie Ochsenzoll)
+- Regeln: Kardiologie nur mit Herzkatheterlabor oder DGK-CPU, Schockraum nur bei DGU-
+  TraumaNetzwerk, Neurologie bei Neurologie oder Stroke Unit. Nicht Belegtes fehlt bewusst und
+  steht in der Klinik-Notiz („nicht geprüft“); über 🏷️ ergänzbar.
+- Nicht aufgenommen: St. Bernhard-Hospital Brake (geschlossen 14.08.2026), UEK Norden (seit 2023
+  kein Akutkrankenhaus), Krankenhaus Groß-Sand (Notaufnahme 2025 geschlossen), Zentralklinik
+  Georgsheil (noch nicht eröffnet).
+- Kartenlage: für 11 Kliniken geprüft, für die übrigen nur Ortsmitte (ungefähr).
