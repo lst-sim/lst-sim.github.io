@@ -162,7 +162,7 @@ table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:10px 8px
 </head>
 <body>
 <div style="padding:6px 10px;font-size:11px;color:#94a3b8;font-weight:700;display:flex;align-items:center;gap:10px;position:sticky;top:0;z-index:10;background:var(--bg)">
- <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v4.78</span>
+ <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v4.79</span>
  <span id="syncState"></span>
  <a id="homeLink" href="#" onclick="render('leitstelle');return false" class="hidden" style="color:#64748b;text-decoration:underline;font-weight:600">🖥️ Leitstelle</a>
  <a id="monitorLink" href="#" onclick="showMonitorQR();return false" style="color:#64748b;text-decoration:underline;font-weight:600;margin-left:auto">🖥️ Monitor hinzufügen</a>
@@ -5445,7 +5445,14 @@ function mittel(){
    const locs=[...new Set(orgUnits.map(u=>u.location||"Sonstige"))].sort((a,b)=>a.localeCompare(b,"de"));
    const locBlocks=locs.map(loc=>{
      const rows=geoSortUnits(orgUnits.filter(u=>(u.location||"Sonstige")===loc));
-     return `<h3 style="margin-top:14px">📍 ${esc(loc)}</h3>
+     // Feuerwehr/Rettungsdienst: jede Wache als einklappbarer Reiter (Stand je Gerät gemerkt)
+     const fold=MITTEL_FOLD_ORGS.includes(org);
+     const key=`${org}__${loc}`, open=mittelOpenLocs.has(key);
+     const nFree=rows.filter(u=>["1","2"].includes(String(u.status))).length;
+     const head=fold
+       ?`<details class="mittel-loc" ${open?"open":""} ontoggle="mittelToggleLoc(${esc(JSON.stringify(key))},this.open)"><summary style="cursor:pointer;font-weight:800;padding:8px 10px;border:1px solid var(--line);border-radius:10px;background:#f8fafc;margin-top:6px">📍 ${esc(loc)} <span class="muted" style="font-weight:600;font-size:12px">· ${rows.length} Fahrzeug${rows.length===1?"":"e"} · ${nFree} frei</span></summary>`
+       :`<h3 style="margin-top:14px">📍 ${esc(loc)}</h3>`;
+     return `${head}
       <div style="overflow:auto"><table>
        <thead><tr><th>Fahrzeug</th><th>Status</th><th>Fahrzeugterminal</th><th>Status ändern</th></tr></thead>
        <tbody>
@@ -5456,7 +5463,7 @@ function mittel(){
          <td>${statusOptionsFor(u).map(s=>`<button class="radio-key-mini${String(u.status)===s?" current":""}" onclick="setStatusFromSelect('${String(u.id)}','${s}')" title="${esc(statusName(s))}">${esc(s)}</button>`).join("")}</td>
         </tr>`).join("")}
        </tbody>
-      </table></div>`;
+      </table></div>${fold?"</details>":""}`;
    }).join("");
    return `<div class="card" style="margin-top:16px">
      <h2>${ORG_ICON[org]||"🚗"} ${esc(org)}</h2>
@@ -5556,6 +5563,13 @@ function dispatchQualNow(id){
 function setUnitQualNow(u,v){
  const t=qualTokens(v).join(" + ");
  if(t){u.qualNow=t;u.qualNowAt=new Date().toISOString()}else{u.qualNow="";delete u.qualNowAt}
+}
+// Rettungsmittel-Übersicht: Wachen von Feuerwehr und Rettungsdienst einklappbar (Standard: zu)
+const MITTEL_FOLD_ORGS=["Feuerwehr","Rettungsdienst"];
+let mittelOpenLocs=(()=>{try{return new Set(JSON.parse(localStorage.getItem("lst-mittel-open")||"[]"))}catch(e){return new Set()}})();
+function mittelToggleLoc(key,open){
+ if(open)mittelOpenLocs.add(key); else mittelOpenLocs.delete(key);
+ try{localStorage.setItem("lst-mittel-open",JSON.stringify([...mittelOpenLocs]))}catch(e){}
 }
 function setStatusFromSelect(id,status){
  const u=db.units.find(x=>String(x.id)===String(id));if(!u)return;

@@ -1273,3 +1273,8 @@ Version 4.78:
   - OF Varel: wie bisher, neu 12-19-1 MTF, 12-64-1 GW-L1, 12-78-1 RTB
   Standort-Koordinaten der beiden Ortswehren = Kartenmitte der bos-fahrzeuge-Wachenseiten.
   Eigene Änderungen an diesen Fahrzeugen bleiben unangetastet.
+
+Version 4.79:
+- Rettungsmittel-Übersicht: Bei Feuerwehr und Rettungsdienst ist jede Wache ein einklappbarer
+  Reiter (Standard: eingeklappt) mit Anzahl Fahrzeuge und davon frei. Welche Wachen offen sind,
+  merkt sich das Gerät. DLRG, DRK usw. bleiben wie bisher aufgeklappt.
