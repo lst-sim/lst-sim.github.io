@@ -162,7 +162,7 @@ table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:10px 8px
 </head>
 <body>
 <div style="padding:6px 10px;font-size:11px;color:#94a3b8;font-weight:700;display:flex;align-items:center;gap:10px;position:sticky;top:0;z-index:10;background:var(--bg)">
- <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v4.71</span>
+ <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v4.72</span>
  <span id="syncState"></span>
  <a id="homeLink" href="#" onclick="render('leitstelle');return false" class="hidden" style="color:#64748b;text-decoration:underline;font-weight:600">🖥️ Leitstelle</a>
  <a id="monitorLink" href="#" onclick="showMonitorQR();return false" style="color:#64748b;text-decoration:underline;font-weight:600;margin-left:auto">🖥️ Monitor hinzufügen</a>
@@ -1458,13 +1458,24 @@ function towerStaffed(u,now=Date.now()){
  const day=f==null||t==null||(f<t?(m>=f&&m<t):(m>=f||m<t));
  return day&&Math.abs(now-nearestHighWater(now))<=TOWER_HW_HALF_MIN*60000;
 }
+// Umgeschaltet wird nur beim Wechsel der Besetzungszeit (Beginn → 1, Ende → 6), wie bei den
+// Dienstzeiten. Dazwischen bleibt ein von Hand gesetzter Status stehen (z. B. Turm außerhalb der
+// Zeiten manuell auf 1). Endet die Besetzungszeit während eines Einsatzes, geht der Turm nach
+// dem Einsatz (Status 1/2) auf 6.
 function applySporadic(now=Date.now()){
  for(const u of (db.units||[])){
    if(!u.sporadic)continue;
    delete u.sporadicNext; delete u.sporadicUntil; // Reste der früheren Zufallslogik (v4.66)
    const st=String(u.status), on=towerStaffed(u,now);
-   if(on&&st==="6")setUnitStatus(u,"1");
-   else if(!on&&(st==="1"||st==="2"))setUnitStatus(u,"6");
+   if(st==="6")delete u.sporadicPendingOff;
+   if(u.sporadicLast===undefined||on!==u.sporadicLast){
+     u.sporadicLast=on;
+     if(on){delete u.sporadicPendingOff;if(st==="6")setUnitStatus(u,"1")}
+     else if(st==="1"||st==="2")setUnitStatus(u,"6");
+     else if(st!=="6")u.sporadicPendingOff=true;
+   }else if(!on&&u.sporadicPendingOff&&(st==="1"||st==="2")){
+     delete u.sporadicPendingOff;setUnitStatus(u,"6");
+   }
  }
 }
 function applyDutySchedule(){
@@ -5265,7 +5276,7 @@ function mittel(){
        <thead><tr><th>Fahrzeug</th><th>Status</th><th>Fahrzeugterminal</th><th>Status ändern</th></tr></thead>
        <tbody>
         ${rows.map(u=>`<tr>
-         <td>${vehicleLabelBlock(u)}${u.gpsUpdatedAt&&(Date.now()-new Date(u.gpsUpdatedAt).getTime())<120000?` <span title="Live-GPS aktiv" style="font-size:11px">📍</span>`:""}${unitDuty(u)?`<br><small class="muted" title="Dienstzeiten">🕒 ${esc(dutyText(unitDuty(u)))}</small>`:""}${u.sporadic?(()=>{const h=nextHighWater(),near=nearestHighWater();const cur=Math.abs(Date.now()-near)<=TOWER_HW_HALF_MIN*60000;return `<br><small class="muted" title="Besetzt 1,5 h vor bis 1,5 h nach Hochwasser, tagsüber ${esc(u.sporadic.from||"09:00")}–${esc(u.sporadic.to||"19:00")} Uhr. Hochwasser berechnet ab BSH-Vorhersage Wilhelmshaven, ±30 min.">🌊 besetzt ±1,5 h um Hochwasser (tagsüber, ${esc(towerSeason(u).from)}–${esc(towerSeason(u).to)}) · ${cur?`HW ca. ${hmText(near)}`:`nächstes HW ca. ${hmText(h)}`}</small>`})():""}</td>
+         <td>${vehicleLabelBlock(u)}${u.gpsUpdatedAt&&(Date.now()-new Date(u.gpsUpdatedAt).getTime())<120000?` <span title="Live-GPS aktiv" style="font-size:11px">📍</span>`:""}${unitDuty(u)?`<br><small class="muted" title="Dienstzeiten">🕒 ${esc(dutyText(unitDuty(u)))}</small>`:""}${u.sporadic?(()=>{const h=nextHighWater(),near=nearestHighWater();const cur=Math.abs(Date.now()-near)<=TOWER_HW_HALF_MIN*60000;return `<br><small class="muted" title="Besetzt 1,5 h vor bis 1,5 h nach Hochwasser, tagsüber ${esc(u.sporadic.from||"09:00")}–${esc(u.sporadic.to||"19:00")} Uhr. Hochwasser berechnet ab BSH-Vorhersage Wilhelmshaven, ±30 min.">🌊 besetzt ±1,5 h um Hochwasser (tagsüber, ${esc(towerSeason(u).from)}–${esc(towerSeason(u).to)}${!towerStaffed(u)&&["1","2"].includes(String(u.status))?", jetzt manuell besetzt":""}) · ${cur?`HW ca. ${hmText(near)}`:`nächstes HW ca. ${hmText(h)}`}</small>`})():""}</td>
          <td><span class="status ${statusClass(String(u.status))}">${statusName(String(u.status))}</span></td>
          <td><div class="row"><button onclick="showVehicleQR('${String(u.id)}')">📱 Link / QR</button><button onclick="openVehiclePreview('${String(u.id)}')">👁️ Vorschau</button><button onclick="editUnit('${String(u.id)}')" title="Fahrzeug bearbeiten">✏️</button><button onclick="dispatchQualNow('${String(u.id)}')" title="Besatzung / Qualifikation per Funk angemeldet">🩺</button><button onclick="deleteUnit('${String(u.id)}')" title="Fahrzeug löschen">🗑️</button></div></td>
          <td>${statusOptionsFor(u).map(s=>`<button class="radio-key-mini${String(u.status)===s?" current":""}" onclick="setStatusFromSelect('${String(u.id)}','${s}')" title="${esc(statusName(s))}">${esc(s)}</button>`).join("")}</td>
@@ -5423,7 +5434,7 @@ function vollalarmGroup(type){
 // ─── AAOs / Fahrzeuge als Datei sichern und wieder laden ─────────────────────────────────────
 // Die Datei kann auf dem Gerät/in iCloud abgelegt, auf andere Geräte übertragen oder an Claude
 // geschickt werden, um sie fest als Standard ins Programm zu übernehmen.
-const UNIT_RUNTIME_KEYS=["status1Since","status2Due","status3Since","status4Since","status7Since","status8Due","freeSince","gpsUpdatedAt","lat","lng","phoneControlled","updatedAt","qualNow","qualNowAt","sporadicNext","sporadicUntil"];
+const UNIT_RUNTIME_KEYS=["status1Since","status2Due","status3Since","status4Since","status7Since","status8Due","freeSince","gpsUpdatedAt","lat","lng","phoneControlled","updatedAt","qualNow","qualNowAt","sporadicNext","sporadicUntil","sporadicLast","sporadicPendingOff"];
 function exportSetup(kind){
  const now=new Date();
  const data={format:"leitstelle.sim",kind,version:(document.getElementById("versionTag")?.textContent||""),scenario:currentScenarioId,exportedAt:now.toISOString()};

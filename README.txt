@@ -1188,3 +1188,11 @@ Version 4.71:
   72/00-02 am Hafen Dangast (53,4463 N / 8,1081 O laut portmaps.com).
 - Fahrzeug-Editor: neues Feld „📍 Eigener Standort (Breite, Länge)“, z. B. aus Google Maps
   kopiert. Leer = Standort der Wache bzw. des Orts. Gilt für Karte und Eintreffzeit.
+
+Version 4.72:
+- Wachtürme lassen sich jederzeit von Hand auf 1 (oder 6) setzen, auch außerhalb der Saison bzw.
+  der Hochwasserzeiten. Die Automatik schaltet nur noch beim Beginn (→ 1) und Ende (→ 6) der
+  Besetzungszeit um – wie bei den Dienstzeiten. Ein von Hand besetzter Turm bleibt also bis zum
+  nächsten Ende einer Besetzungszeit bzw. bis er von Hand auf 6 gesetzt wird. In der Fahrzeugliste
+  steht dann „jetzt manuell besetzt“. Endet die Besetzungszeit während eines Einsatzes, geht der
+  Turm nach dem Einsatz auf 6.
