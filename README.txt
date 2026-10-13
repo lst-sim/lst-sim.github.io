@@ -1228,3 +1228,17 @@ Version 4.74:
 - Szenario „Übung Bremen“: dieselbe Klinikliste wie Friesland/Wilhelmshaven. Die alten Bremer
   Einträge (u. a. Roland-Klinik, Paracelsus, AMEOS Dr. Heines ohne Notaufnahme) werden ersetzt,
   offene Zuweisungen auf die neuen Einträge umgehängt, selbst angelegte Kliniken bleiben.
+
+Version 4.75:
+- IVENA-Anmeldung (Leitstelle, Fahrzeug-Terminal, MANV): Eintreffzeit wird automatisch
+  eingetragen = jetzt + Fahrzeit vom Fahrzeug (GPS bzw. Einsatzort) zur Zielklinik; mit
+  Sonderrechten bei Dringlichkeit 1, sonst ohne. Aktualisiert sich bei Wechsel von Klinik,
+  Fahrzeug oder PZC; von Hand geänderte Zeit bleibt stehen. MANV: Zeit des ersten gewählten
+  Fahrzeugs zur Standard-Zielklinik.
+- MANV: Feld „PZC für alle“ + Knopf „Gleicher PZC für alle“ (für alle angehakten Fahrzeuge,
+  ist keins angehakt: für alle).
+- IVENA-Übersicht: Knopf „✅ Alle KHs frei melden“ – löscht alle Abmeldungen, alle Kliniken grün.
+- Zwangszuweisung: Ist die Zielklinik für die Fachrichtung des PZC abgemeldet (oder komplett
+  rot), geht die Anmeldung nur mit Haken „Zwangszuweisung“ (Einzel, Bearbeiten, Terminal; MANV
+  ein Haken für alle betroffenen Patienten). Zwangszuweisungen sind in der Zuweisungsliste mit
+  „ZW“ (rot) markiert.
