@@ -1242,3 +1242,10 @@ Version 4.75:
   rot), geht die Anmeldung nur mit Haken „Zwangszuweisung“ (Einzel, Bearbeiten, Terminal; MANV
   ein Haken für alle betroffenen Patienten). Zwangszuweisungen sind in der Zuweisungsliste mit
   „ZW“ (rot) markiert.
+
+Version 4.76:
+- IVENA-Zuweisungsliste: Der Fachbereich jeder Anmeldung bleibt in der Farbe, die bei der
+  Anmeldung galt (rot = damals abgemeldet/Zwangszuweisung, grün = damals frei) – spätere
+  Ab- oder Freimeldungen ändern die Farbe nicht mehr. Wird beim Bearbeiten Klinik oder
+  Fachrichtung gewechselt, gilt der Stand dieser neuen Anmeldung. Ältere Anmeldungen (vor
+  v4.75) ohne gespeicherten Stand zeigen weiter den aktuellen Stand.

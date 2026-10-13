@@ -162,7 +162,7 @@ table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:10px 8px
 </head>
 <body>
 <div style="padding:6px 10px;font-size:11px;color:#94a3b8;font-weight:700;display:flex;align-items:center;gap:10px;position:sticky;top:0;z-index:10;background:var(--bg)">
- <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v4.75</span>
+ <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v4.76</span>
  <span id="syncState"></span>
  <a id="homeLink" href="#" onclick="render('leitstelle');return false" class="hidden" style="color:#64748b;text-decoration:underline;font-weight:600">🖥️ Leitstelle</a>
  <a id="monitorLink" href="#" onclick="showMonitorQR();return false" style="color:#64748b;text-decoration:underline;font-weight:600;margin-left:auto">🖥️ Monitor hinzufügen</a>
@@ -5367,7 +5367,7 @@ async function saveVehicleIvenaAssignment(unitId,dburl,sid){
    rmi:pz.rmi, dringlichkeit:pz.dringlichkeit, pzc:pz.pzc, flags:zus.flags, info:zus.info,
    vehicleIds, vehicleLabels,
    eta, anlass:ivenaAnlassRead("vAsg"),
-   ...(zw.zwang?{zwang:true}:{}),
+   ...(zw.zwang?{zwang:true}:{}), wasClosed:!!zw.zwang,
    createdAt:new Date().toISOString(),
    source:"vehicle"
  };
@@ -6201,6 +6201,7 @@ function saveEditedIvenaAssignment(id,back){
  const pz=pzcRead("edA"); if(!pz.pzc){toast("Bitte PZC vollständig angeben");return}
  const eta=etaRead("edA"); if(!eta){toast("Bitte die Uhrzeit der Eintreffzeit wählen");return}
  const zw=ivenaZwangCheck("edA",hospital,pzcFachrichtung(pz.rmi)); if(!zw)return;
+ const oldFach=a.fach||"";
  const zus=ivenaFlagsRead("edA");
  const oldFlags=a.flags||{s:!!a.schockraum,n:!!a.na};
  const hospitalChanged=String(hospital.id)!==String(a.hospitalId);
@@ -6220,6 +6221,8 @@ function saveEditedIvenaAssignment(id,back){
    eta, updatedAt:new Date().toISOString()
  });
  if(zw.zwang)a.zwang=true; else delete a.zwang;
+ // Farbe = Stand bei der (neuen) Anmeldung: nur neu bewerten, wenn Klinik oder Fachrichtung wechselt
+ if(hospitalChanged||a.wasClosed===undefined||pzcFachrichtung(pz.rmi)!==oldFach)a.wasClosed=!!zw.zwang;
  // Neue Klinik = neue Anmeldung dort: keine blauen Markierungen.
  if(hospitalChanged){a.edited={};a.createdAt=new Date().toISOString()}
  else a.edited=ed;
@@ -6577,7 +6580,7 @@ function saveIvenaManv(){
      fach:valid?pzcFachrichtung(f.code):"",schockraum:sPlus,geschlecht:"",alter:valid?String(Number(raw.slice(3,5))):"",na:nPlus,
      rmi:valid?f.code:"",dringlichkeit:valid?raw[5]:"",pzc:valid?raw:"",flags:{s:sPlus,n:nPlus},info:[rowInfo,info,"MANV"].filter(Boolean).join(" · "),
      vehicleIds:vehicles.map(v=>v.id),vehicleLabels:vehicles.map(v=>`${v.opta||v.name} (${v.type})`),eta,anlass,createdAt:new Date().toISOString(),source:"leitstelle-manv",
-     ...(ivenaClosedInfo(hospital,valid?pzcFachrichtung(f.code):"")?{zwang:true}:{})};
+     ...(ivenaClosedInfo(hospital,valid?pzcFachrichtung(f.code):"")?{zwang:true,wasClosed:true}:{wasClosed:false})};
    db.ivenaAssignments.unshift(a);
    if(db.cloud?.enabled)cloudRequest(`ivenaAssignments/${encodeURIComponent(String(a.id))}`,"PUT",a);
    n++;
@@ -6619,7 +6622,7 @@ function saveIvenaAssignment(){
    vehicleIds:vehicles.map(u=>u.id),
    vehicleLabels:vehicles.map(u=>`${u.opta||u.name} (${u.type})`),
    eta, anlass:ivenaAnlassRead("asg"),
-   ...(zw.zwang?{zwang:true}:{}),
+   ...(zw.zwang?{zwang:true}:{}), wasClosed:!!zw.zwang,
    createdAt:new Date().toISOString(),
    source:"leitstelle"
  };
@@ -6739,7 +6742,8 @@ function ivenaIncomingHTML(){
    const us=(a.vehicleIds||[]).map(id=>db.units.find(u=>String(u.id)===String(id))).filter(Boolean);
    const tType=us[0]?.type||((a.vehicleLabels||[])[0]||"").match(/\(([^)]+)\)\s*$/)?.[1]||"–";
    const optas=(a.vehicleLabels||[]).map(l=>esc(l.replace(/\s*\([^)]*\)\s*$/,""))).join("<br>");
-   const closed=a.fach&&closures.some(c=>c.fach===a.fach);
+   // Fachbereich-Farbe = Stand bei der Anmeldung (ältere Anmeldungen ohne Angabe: aktueller Stand)
+   const closed=a.wasClosed!==undefined?a.wasClosed:(a.fach&&closures.some(c=>c.fach===a.fach));
    const big="font-size:15px;font-weight:700;line-height:1.15";
    return `<tr style="${a.deleted?IVENA_DEL_STYLE:""}">
     ${td("<b>Notauf&shy;nahme</b>",`background:${IVENA_Y};text-align:left;font-size:11px`)}
@@ -6767,7 +6771,7 @@ function ivenaIncomingHTML(){
      const us=(a.vehicleIds||[]).map(id=>db.units.find(u=>String(u.id)===String(id))).filter(Boolean);
      const tType=us[0]?.type||((a.vehicleLabels||[])[0]||"").match(/\(([^)]+)\)\s*$/)?.[1]||"–";
      const optas=(a.vehicleLabels||[]).map(l=>esc(l.replace(/\s*\([^)]*\)\s*$/,""))).join(", ");
-     const closed=a.fach&&closures.some(c=>c.fach===a.fach);
+     const closed=a.wasClosed!==undefined?a.wasClosed:(a.fach&&closures.some(c=>c.fach===a.fach));
      const sk=a.dringlichkeit?`SK${esc(a.dringlichkeit)}`:"–";
      const alt=(a.alter!==""&&a.alter!=null)?esc(a.alter):"–";
      return `<div class="ivz-card" style="${a.deleted?IVENA_DEL_STYLE+";border-left-color:#cbd5e1":""}">
