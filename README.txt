@@ -1299,3 +1299,14 @@ Version 4.80:
 - Rettungsmittel-Übersicht Feuerwehr: je Stadt/Gemeinde zuerst die Hauptwehr, darunter
   eingerückt ihre Ortswehren (Reihenfolge Jever, Varel, Zetel, Sande, Schortens, Wangerland,
   Bockhorn, Wangerooge).
+
+Version 4.81:
+- Fehler behoben (seit v4.78/v4.80): Ortswehren Obenstrohe und Borgstede-Winkelsheide zeigten
+  nur die Boote, neue Feuerwehrfahrzeuge fehlten. Ursache: Der gemeinsame Live-Stand bzw. der
+  dauerhaft gespeicherte Fahrzeugstand (älter) hat beim Verbinden die Korrekturen überschrieben
+  (beim Laden gelten dort alle Fahrzeuge als „bearbeitet“). Jetzt werden Umzüge und neue
+  Standardfahrzeuge auch nach dem Live-Abgleich und nach dem Laden eines gespeicherten Stands
+  angewendet und wieder gespeichert. Fahrzeuge, die selbst an einen anderen Ort verlegt wurden,
+  bleiben unangetastet.
+- Auf Wunsch „wie es sein könnte“ ergänzt (nur bos-fahrzeuge, nicht bestätigt): 16/45-07 LF 10/6
+  Wiarden, 19/44-02 LF 20 KatS in Hooksiel (bos listet es auch bei Minsen).

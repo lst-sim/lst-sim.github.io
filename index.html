@@ -162,7 +162,7 @@ table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:10px 8px
 </head>
 <body>
 <div style="padding:6px 10px;font-size:11px;color:#94a3b8;font-weight:700;display:flex;align-items:center;gap:10px;position:sticky;top:0;z-index:10;background:var(--bg)">
- <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v4.80</span>
+ <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v4.81</span>
  <span id="syncState"></span>
  <a id="homeLink" href="#" onclick="render('leitstelle');return false" class="hidden" style="color:#64748b;text-decoration:underline;font-weight:600">🖥️ Leitstelle</a>
  <a id="monitorLink" href="#" onclick="showMonitorQR();return false" style="color:#64748b;text-decoration:underline;font-weight:600;margin-left:auto">🖥️ Monitor hinzufügen</a>
@@ -345,8 +345,7 @@ const DEFAULTS_FRI_WHV={
   {id:254,name:"18-48-01",opta:"Florian Friesland 18/48-01",type:"HLF",org:"Feuerwehr",location:"Wangerooge",island:"Wangerooge",status:"2",crew:"",skills:"Hilfeleistungslöschgruppenfahrzeug (HLF 20)",verified:"BOS-Fahrzeuge (Wachenübersicht) + Nutzerangabe"},
   {id:255,name:"18-64-01",opta:"Florian Friesland 18/64-01",type:"GW-L1",org:"Feuerwehr",location:"Wangerooge",island:"Wangerooge",status:"2",crew:"",skills:"Gerätewagen Logistik 1",verified:"BOS-Fahrzeuge (Wachenübersicht) + Nutzerangabe"},
   // v4.80: Alle Ortsfeuerwehren im LK Friesland geprüft (bos-fahrzeuge.info, Wehr-/Gemeinde-Websites, NWZ).
-  // Bewusst nicht aufgenommen: 16/41-06 TSF-W Waddewarden (2025 durch LF 10 ersetzt), 16/45-07 LF Wiarden
-  // (nicht auf der eigenen Website), 19/44-02 LF KatS (bei zwei Wachen gelistet, Standort unklar).
+  // Bewusst nicht aufgenommen: 16/41-06 TSF-W Waddewarden (laut NWZ 2025 durch LF 10 ersetzt).
   {id:901,name:"11-19-01",opta:"Florian Friesland 11/19-01",type:"MTW",org:"Feuerwehr",location:"Jever",fixedLocation:true,status:"2",crew:"9",skills:"Mannschaftstransport",verified:"BOS-Fahrzeuge (OF Jever)"},
   {id:902,name:"19-44-03",opta:"Florian Friesland 19/44-03",type:"LF",org:"Feuerwehr",location:"Jever",fixedLocation:true,status:"2",crew:"9",skills:"LF 20 KatS (Land Niedersachsen) – Brandbekämpfung",verified:"BOS-Fahrzeuge (OF Jever)"},
   {id:903,name:"19-63-01",opta:"Florian Friesland 19/63-01",type:"MZF",org:"Feuerwehr",location:"Jever",fixedLocation:true,status:"2",crew:"6",skills:"MZF (4. Zug Logistik, FTZ Jever) – Mehrzweckfahrzeug",verified:"BOS-Fahrzeuge (FTZ Jever)"},
@@ -405,6 +404,9 @@ const DEFAULTS_FRI_WHV={
   {id:956,name:"17-43-02",opta:"Florian Friesland 17/43-02",type:"LF",org:"Feuerwehr",location:"Grabstede",fixedLocation:true,status:"2",crew:"9",skills:"LF 8 – Brandbekämpfung",verified:"BOS-Fahrzeuge (OF Grabstede)"},
   {id:957,name:"17-46-02",opta:"Florian Friesland 17/46-02",type:"HLF",org:"Feuerwehr",location:"Grabstede",fixedLocation:true,status:"2",crew:"9",skills:"HLF 10 – Brandbekämpfung, Technische Hilfe",verified:"BOS-Fahrzeuge (OF Grabstede)"},
   {id:958,name:"18-32-01",opta:"Florian Friesland 18/32-01",type:"DLK",org:"Feuerwehr",location:"Wangerooge",fixedLocation:true,island:"Wangerooge",status:"2",crew:"3",skills:"DLK 12/9 – Drehleiter, Menschenrettung",verified:"BOS-Fahrzeuge (FF Wangerooge)"},
+  // v4.81 (auf Wunsch „wie es sein könnte“): nur bei bos-fahrzeuge gelistet, Stand nicht bestätigt
+  {id:959,name:"16-45-07",opta:"Florian Friesland 16/45-07",type:"LF",org:"Feuerwehr",location:"Wiarden",fixedLocation:true,status:"2",crew:"9",skills:"LF 10/6 – Brandbekämpfung (nur bos-fahrzeuge, nicht bestätigt)",verified:"BOS-Fahrzeuge (OF Wiarden) – unbestätigt"},
+  {id:960,name:"19-44-02",opta:"Florian Friesland 19/44-02",type:"LF",org:"Feuerwehr",location:"Hooksiel",fixedLocation:true,status:"2",crew:"9",skills:"LF 20 KatS (Land Niedersachsen) – Standort Hooksiel angenommen (bos-fahrzeuge listet auch Minsen)",verified:"BOS-Fahrzeuge (OF Hooksiel/Minsen) – Standort unbestätigt"},
   {id:260,name:"19-65-01",opta:"Florian Friesland 19/65-01",type:"WLF",org:"Feuerwehr",location:"Jever",status:"2",crew:"2",skills:"Wechselladerfahrzeug – holt Abrollbehälter an der FTZ – FTZ Landkreis Friesland, Jever",verified:"BOS-Fahrzeuge (Wache LK Friesland FTZ Jever)"},
   {id:261,name:"19-66-01",opta:"Florian Friesland 19/66-01",type:"WLF",org:"Feuerwehr",location:"Jever",status:"2",crew:"2",skills:"Wechselladerfahrzeug – holt Abrollbehälter an der FTZ – FTZ Landkreis Friesland, Jever",verified:"BOS-Fahrzeuge (Wache LK Friesland FTZ Jever)"},
   {id:262,name:"19-66-03",opta:"Florian Friesland 19/66-03",type:"WLF",org:"Feuerwehr",location:"Jever",status:"2",crew:"2",skills:"Wechselladerfahrzeug – holt Abrollbehälter an der FTZ – FTZ Landkreis Friesland, Jever",verified:"BOS-Fahrzeuge (Wache LK Friesland FTZ Jever)"},
@@ -729,11 +731,7 @@ if(!Array.isArray(db.deletedUnitOptas))db.deletedUnitOptas=[];
  });
  // v4.78: Ortswehren Obenstrohe / Borgstede-Winkelsheide – Standort der mitgelieferten Fahrzeuge
  // übernehmen (nur wenn nicht selbst bearbeitet)
- defaults.units.forEach(d=>{
-   if(!d.fixedLocation)return;
-   const u=db.units.find(x=>x.opta===d.opta);
-   if(u&&!u.userEdited&&!u.custom&&!u.fixedLocation){u.location=d.location;u.fixedLocation=true;u.verified=d.verified}
- });
+ applyDefaultUnitCorrections();
  // Nachträglich ergänzte Standorte (homeLat/homeLng) übernehmen, solange nicht selbst bearbeitet
  defaults.units.forEach(d=>{
    if(d.homeLat==null)return;
@@ -4255,6 +4253,9 @@ function syncApplyRemote(keys,full,written){
    changed=true;
  }
  if(!changed)return;
+ // Fahrzeug-Korrekturen der neuen Version auch auf den gemeinsamen Live-Stand anwenden
+ // (sonst würde ein älterer gemeinsamer Stand Umzüge und neue Standardfahrzeuge zurückdrehen).
+ if(!IS_MONITOR&&(full||(keys||[]).includes("units"))&&applyDefaultUnitCorrections()){db.cfgDirty_units=true;setTimeout(()=>{try{cfgPut("units")}catch(e){}},1500)}
  localStorage.setItem(KEY,JSON.stringify(db));
  // Lokale Änderungen, die zwischenzeitlich entstanden sind, trotzdem hochladen.
  scheduleStateSync();
@@ -5739,6 +5740,28 @@ function importSetupPick(kind){
  inp.onchange=()=>{const f=inp.files&&inp.files[0];if(!f)return;const r=new FileReader();r.onload=()=>importSetup(kind,String(r.result||""));r.readAsText(f)};
  inp.click();
 }
+// Korrekturen an mitgelieferten Fahrzeugen (Standort-Umzüge, fehlende neue Standardfahrzeuge) auch
+// auf gespeicherte Stände anwenden. Ein geladener Stand markiert ALLE Fahrzeuge als „bearbeitet“ –
+// deshalb gilt: Steht ein Fahrzeug noch am früheren Standard-Standort, ist es nicht selbst
+// umgezogen worden und darf korrigiert werden. Gibt true zurück, wenn sich etwas geändert hat.
+function applyDefaultUnitCorrections(){
+ const UNIT_OLD_DEFAULT_LOCATION={
+  "Florian Friesland 12-17-2":"Varel","Florian Friesland 12-43-2":"Varel","Florian Friesland 12-24-2":"Varel",
+  "Florian Friesland 12-45-3":"Varel","Florian Friesland 19-62-1":"Varel","Florian Friesland 12-24-3":"Varel","Florian Friesland 12-63-3":"Varel",
+  "Florian Friesland 16-11-01":"Wangerland"
+ };
+ let changed=false;
+ const deleted=new Set(db.deletedUnitOptas||[]);
+ const have=new Set(db.units.map(u=>u.opta));
+ (defaults.units||[]).forEach(d=>{
+   if(d.opta&&!have.has(d.opta)&&!deleted.has(d.opta)){db.units.push({...d});have.add(d.opta);changed=true;return}
+   if(!d.fixedLocation)return;
+   const u=db.units.find(x=>x.opta===d.opta); if(!u||u.custom)return;
+   const untouched=!u.userEdited||u.location===d.location||u.location===UNIT_OLD_DEFAULT_LOCATION[d.opta];
+   if(untouched&&(u.location!==d.location||!u.fixedLocation)){u.location=d.location;u.fixedLocation=true;u.userEdited=true;if(d.verified)u.verified=d.verified;changed=true}
+ });
+ return changed;
+}
 function applySetupData(kind,d){
  if(kind==="aao"){
    db.aao=d.aao; db.deletedAaoIds=Array.isArray(d.deletedAaoIds)?d.deletedAaoIds:(db.deletedAaoIds||[]);
@@ -5747,6 +5770,8 @@ function applySetupData(kind,d){
    const loans=(db.units||[]).filter(u=>u.neighborLoan);
    db.units=[...d.units.map(u=>{const o=old.get(String(u.id));const x={...u,userEdited:true};if(o){UNIT_RUNTIME_KEYS.forEach(k=>{if(o[k]!==undefined)x[k]=o[k]});x.status=o.status}else if(!x.status)x.status="2";return x}),...loans];
    if(Array.isArray(d.deletedUnitOptas))db.deletedUnitOptas=d.deletedUnitOptas;
+   // Korrekturen/neue Standardfahrzeuge auch auf den geladenen Stand anwenden und wieder speichern
+   if(applyDefaultUnitCorrections()){db.cfgDirty_units=true;setTimeout(()=>{try{cfgPut("units")}catch(e){}},1500)}
  }
 }
 function importSetup(kind,text){
