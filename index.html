@@ -162,7 +162,7 @@ table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:10px 8px
 </head>
 <body>
 <div style="padding:6px 10px;font-size:11px;color:#94a3b8;font-weight:700;display:flex;align-items:center;gap:10px;position:sticky;top:0;z-index:10;background:var(--bg)">
- <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v4.81</span>
+ <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v4.82</span>
  <span id="syncState"></span>
  <a id="homeLink" href="#" onclick="render('leitstelle');return false" class="hidden" style="color:#64748b;text-decoration:underline;font-weight:600">🖥️ Leitstelle</a>
  <a id="monitorLink" href="#" onclick="showMonitorQR();return false" style="color:#64748b;text-decoration:underline;font-weight:600;margin-left:auto">🖥️ Monitor hinzufügen</a>
@@ -2182,6 +2182,107 @@ function addManualUnit(){
  toast("Fahrzeug hinzugefügt");
  manageProposal();
 }
+// ─── Notruf nachträglich ändern ──────────────────────────────────────────────────────────────
+// Jeder beantwortete Abfragepunkt ist änderbar. Danach wird die AAO neu bewertet; bei bereits
+// alarmierten Einsätzen geht es direkt in „Rettungsmittel bearbeiten“ (zusätzlich nötige Mittel
+// zum Anhaken, Mittel entfernen/hinzufügen) und von dort mit einem Knopf „Alarm erneut senden“
+// an alle Fahrzeuge (Fahrzeug-Terminals klingeln erneut).
+const CALL_EDIT_OPTIONS={
+ calltype:["112","116117","110"],
+ event112:["Medizinischer Notfall","Reanimation","Feuer / Rauchentwicklung","Verkehrsunfall","Technische Hilfeleistung","Person im Wasser","Vermisste Person","Sonstiger Notfall"],
+ xyn:["Nein","Ja","Unklar"], xairway:["Frei","Gefährdet","Verlegt","Unklar"], xbreathing:["Normal","Auffällig","Keine normale Atmung","Unklar"],
+ xcirc:["Unauffällig","Auffällig","Schockzeichen","Relevante Blutung","Sonstiges","Unklar"],
+ xdisability:["Wach / orientiert","Bewusstseinsgetrübt","Bewusstlos","Krampfanfall","Neurologisch auffällig","Unklar"],
+ ynPsy:["Ja","Nein"], ynQ:["Ja","Nein","?"], gender:["M","W","Divers","Unbekannt"], waterState:["Lebenszeichen","Vermisst","Bergung"], yn:["ja","nein","unbekannt"]
+};
+function openCallEdit(id){
+ const c=activateCallById(id); if(!c){toast("Einsatz nicht gefunden");return}
+ uiLocked=true;
+ const QS=callQs(c);
+ const rows=QS.filter(([k])=>k in (c.answers||{})||(k==="location"&&c.location)).map(([k,label,type])=>{
+   const cur=k==="location"?(c.location||c.answers.location||""):String(c.answers[k]??"");
+   const opts=CALL_EDIT_OPTIONS[type];
+   let ctl;
+   if(opts){const all=opts.includes(cur)||cur===""?opts:[cur,...opts];ctl=`<select data-k="${esc(k)}" class="ceField">${all.map(o=>`<option ${o===cur?"selected":""}>${esc(o)}</option>`).join("")}</select>`}
+   else if(type==="textarea")ctl=`<textarea data-k="${esc(k)}" class="ceField" rows="3" style="width:100%;box-sizing:border-box">${esc(cur)}</textarea>`;
+   else ctl=`<input data-k="${esc(k)}" class="ceField" value="${esc(cur)}" ${["count","ynTech","ynFire","ynPersonDanger"].includes(type)&&/^\d*$/.test(cur)?'inputmode="numeric"':""}>`;
+   return `<div style="padding:6px 0;border-bottom:1px solid var(--line)"><label style="margin:0 0 4px">${esc(label)}</label>${ctl}</div>`;
+ }).join("");
+ document.getElementById("app").innerHTML=`<div class="card call">
+  <div class="row between"><div><h2>📝 Notruf #${esc(c.id)} ändern</h2><div class="muted">${esc(c.keyword||"—")} · ${esc(c.location||"Ort unbekannt")}</div></div><button onclick="uiLocked=false;render('leitstelle')">Abbrechen</button></div>
+  <p class="muted">Jeden Abfragepunkt nachträglich ändern. Danach wird das Stichwort neu bewertet${c.alarmTime?" und du kannst im selben Schritt die Rettungsmittel anpassen und den Alarm erneut an alle Fahrzeuge senden":""}.${c.location?" Bei geändertem Einsatzort bleibt die Kartenposition unverändert.":""}</p>
+  ${rows||`<p class="muted">Noch keine Antworten.</p>`}
+  <div class="row" style="margin-top:14px;justify-content:flex-end">
+   <button onclick="uiLocked=false;render('leitstelle')">Abbrechen</button>
+   <button class="primary" onclick="saveCallEdit()">${c.alarmTime?"➡️ Übernehmen & Rettungsmittel prüfen":"✅ Übernehmen"}</button>
+  </div>
+ </div>`;
+}
+function saveCallEdit(){
+ const c=db.currentCall; if(!c)return;
+ const QS=callQs(c), lab=k=>(QS.find(q=>q[0]===k)||[k,k])[1];
+ const changes=[];
+ document.querySelectorAll(".ceField").forEach(el=>{
+   const k=el.dataset.k, v=String(el.value??"").trim();
+   const old=k==="location"?(c.location||c.answers.location||""):String(c.answers[k]??"");
+   if(v===old)return;
+   const short=/^[XABCDE] – /.test(lab(k))?lab(k).slice(0,1):lab(k).replace(/^[^A-Za-zÄÖÜäöü]+/,"").replace(/\?$/,"");
+   changes.push(`${short}: ${old||"—"} → ${v||"—"}`);
+   if(k==="location"){c.location=v;if("location" in c.answers)c.answers.location=v}else c.answers[k]=v;
+   if(k==="count")c.count=v;
+ });
+ uiLocked=false;
+ if(!changes.length){toast("Keine Änderung");if(c.alarmTime){showResourcePicker("additional")}else render("notruf");return}
+ c.history=c.history||[];
+ c.history.push({q:"📝 Notruf geändert",a:changes.join(" · ")});
+ const oldKw=c.keyword||"";
+ if(!c.alarmTime){evaluate();save();toast("Notruf geändert – neu bewertet");prepareAlarm();return}
+ // Bereits alarmiert: neu bewerten, aber Alarmstand behalten; zusätzlich nötige Mittel ermitteln
+ const keep={proposal:c.proposal,proposedUnitIds:c.proposedUnitIds,neighborProposal:c.neighborProposal,suggestion:c.suggestion,abPlans:c.abPlans};
+ evaluate();
+ const fresh=(c.proposal||[]).filter(x=>!x.missing&&!x.neighbor&&!x.firstResponder);
+ Object.assign(c,keep);
+ const have={};
+ for(const id of (c.alarmedUnits||[])){const u=db.units.find(x=>String(x.id)===String(id));if(u)have[u.type]=(have[u.type]||0)+1}
+ const extras=[];
+ for(const x of fresh){if(have[x.type]>0){have[x.type]--;continue}if(!(c.alarmedUnits||[]).map(String).includes(String(x.id)))extras.push(String(x.id))}
+ c.realarmPending={oldKw,changes,extras,checked:[...extras]};
+ save();
+ toast(oldKw!==c.keyword?`Neues Stichwort: ${c.keyword}`:"Notruf geändert");
+ showResourcePicker("additional");
+}
+function realarmBannerHTML(c){
+ const r=c.realarmPending; if(!r)return "";
+ const ex=(r.extras||[]).map(id=>db.units.find(u=>String(u.id)===String(id))).filter(Boolean);
+ return `<div class="suggest" style="background:#fff7ed;border-color:#fdba74;margin:8px 0">
+  <b>📝 Notruf geändert</b>${r.oldKw!==c.keyword?` – Stichwort <s>${esc(r.oldKw||"—")}</s> → <b>${esc(c.keyword||"—")}</b>`:` – Stichwort bleibt <b>${esc(c.keyword||"—")}</b>`}
+  <div style="font-size:12px;margin-top:4px">${(r.changes||[]).map(esc).join("<br>")}</div>
+  ${ex.length?`<div style="margin-top:8px"><b>Laut neuer Bewertung zusätzlich:</b>${ex.map(u=>`<label style="display:flex;gap:8px;align-items:center;font-weight:500;margin:4px 0"><input type="checkbox" style="width:auto" ${(r.checked||[]).includes(String(u.id))?"checked":""} onchange="realarmToggleExtra('${String(u.id)}',this.checked)"> ${esc(u.opta||u.name)} – ${esc(u.type)} <small class="muted">(ca. ${estimatedEtaMinutes(u)??"?"} min)</small></label>`).join("")}</div>`:`<div class="muted" style="margin-top:6px">Laut neuer Bewertung keine zusätzlichen Mittel nötig.</div>`}
+  <div class="muted" style="font-size:12px;margin-top:6px">Unten kannst du weitere Mittel hinzufügen oder entfernen. „📢 Alarm erneut senden“ alarmiert die angehakten Mittel und schickt den geänderten Alarm an alle Fahrzeuge des Einsatzes.</div>
+ </div>`;
+}
+function realarmToggleExtra(id,on){
+ const r=db.currentCall?.realarmPending; if(!r)return;
+ const set=new Set(r.checked||[]); if(on)set.add(String(id)); else set.delete(String(id)); r.checked=[...set]; save();
+}
+function resendAlarm(){
+ const c=db.currentCall; if(!c)return;
+ const r=c.realarmPending||{};
+ const add=(r.checked||[]).map(id=>db.units.find(u=>String(u.id)===String(id))).filter(u=>u&&["1","2","8"].includes(String(u.status))&&!(c.alarmedUnits||[]).map(String).includes(String(u.id)));
+ for(const u of add){
+   appendUnitToCall(c,u,"nach Änderung");
+   if(!u.phoneAssigned)setUnitStatus(u,"3");
+   c.alarmedUnits=c.alarmedUnits||[]; c.alarmedUnits.push(u.id);
+ }
+ c.alarmVersion=(c.alarmVersion||0)+1; c.realarmAt=new Date().toISOString();
+ const n=(c.alarmedUnits||[]).length;
+ c.history.push({q:"📢 Alarm erneut gesendet",a:`${c.keyword||"—"} – an ${n} Fahrzeug${n===1?"":"e"}${add.length?` (neu: ${add.map(unitLabel).join(", ")})`:""}`});
+ delete c.realarmPending;
+ save();
+ if(db.cloud?.enabled)setTimeout(()=>pushCallCloud(c),0);
+ toast(`📢 Alarm erneut an ${n} Fahrzeug${n===1?"":"e"} gesendet`);
+ render("leitstelle");
+}
 function openAdditionalResources(id){
  const c=activateCallById(id);
  if(!c){toast("Einsatz nicht gefunden");return}
@@ -2251,6 +2352,7 @@ function showResourcePicker(mode="additional"){
   </div>
   ${isNafo?`<label>Nachforderungsgrund / Lageänderung</label>
     <textarea id="nafoReason" rows="4" placeholder="z. B. weiterer Patient, Zustand verschlechtert, zusätzliche technische Rettung erforderlich …">${esc(c.pendingNafoReason||"")}</textarea>`:""}
+  ${!isNafo?realarmBannerHTML(c):""}
   ${!isNafo?`<label>Aktuell zugeordnete Rettungsmittel</label>
   ${assignedUnits.length?assignedUnits.map(u=>`<div class="row between" style="padding:8px 0;border-bottom:1px solid var(--line)"><span>${vehicleLabelBlock(u)}</span><button onclick="removeCallUnit('${esc(String(u.id))}')">🗑️ Entfernen</button></div>`).join(""):`<p class="muted">Noch keine Mittel zugeordnet.</p>`}
   <hr>`:""}
@@ -2258,7 +2360,8 @@ function showResourcePicker(mode="additional"){
   ${resourcePickerCatsHTML(mode)}
   ${isNafo?`<hr><label>Aktuell dem Einsatz zugeordnet</label><div class="suggest">${esc(c.suggestion||"Noch keine Mittel.")}</div>`:""}
   ${!isNafo?`<div class="row" style="margin-top:14px;justify-content:flex-end">${c.alarmTime
-    ?`<button class="primary" style="background:#16a34a;border-color:#16a34a;font-size:16px;padding:10px 18px" onclick="render('leitstelle')">✅ Fertig</button>`
+    ?(c.realarmPending?`<button onclick="delete db.currentCall.realarmPending;save();render('leitstelle')" title="Änderung behalten, aber keinen neuen Alarm senden">Ohne neuen Alarm</button><button class="primary" style="background:#ea580c;border-color:#ea580c;font-size:16px;padding:10px 18px" onclick="resendAlarm()">📢 Alarm erneut senden</button>`
+      :`<button onclick="resendAlarm()" title="Alarm erneut an alle Fahrzeuge des Einsatzes senden">📢 Alarm erneut senden</button><button class="primary" style="background:#16a34a;border-color:#16a34a;font-size:16px;padding:10px 18px" onclick="render('leitstelle')">✅ Fertig</button>`)
     :`<button class="primary" style="background:#16a34a;border-color:#16a34a;font-size:16px;padding:10px 18px" onclick="confirmAlarm()">✅ Jetzt alarmieren</button>`}</div>`:""}
   <p class="muted">${isNafo?"Das gewählte Mittel wird sofort als Nachforderung alarmiert und auf Status 3 gesetzt.":"Bei bereits alarmiertem Einsatz wird ein neu hinzugefügtes Mittel sofort dem Einsatz zugeordnet und auf Status 3 gesetzt. Ein entferntes Mittel wird sofort wieder freigegeben (Status 1). Vor der Erstalarmierung wirkt sich beides nur auf den Alarmvorschlag aus."}</p>
  </div>`;
@@ -2487,6 +2590,7 @@ function incidentCard(c,isSelected){
     <button onclick="selectCall('${esc(c.id)}','karte')">🗺️ Karte</button>
     ${!c.alarmTime?`<button class="primary" onclick="selectCall('${esc(c.id)}','notruf')">Weiter bearbeiten</button>`:""}
     <button onclick="openAdditionalResources('${esc(c.id)}')">✏️ Rettungsmittel bearbeiten</button>
+    <button onclick="openCallEdit('${esc(c.id)}')" title="Abfragepunkte nachträglich ändern, Rettungsmittel anpassen und Alarm erneut senden">📝 Notruf ändern</button>
     ${c.alarmTime?`<button class="btn blue" onclick="openNachforderung('${esc(c.id)}')">📟 Nachforderung</button>`:""}
     <button onclick="activateCallById('${esc(c.id)}');stagingPickMode=true;render('karte')" title="Bereitstellungsort für Landfahrzeuge auf der Karte wählen">🅿️ ${c.staging?esc(c.staging.name):"Bereitstellungsort"}</button>
     <button class="primary" onclick="finishCall('${esc(c.id)}')">✅ Einsatz abschließen</button>
@@ -2718,6 +2822,7 @@ function notruf(){
     </div>
     <div class="row">
      ${(c.history.some(h=>!h.auto) && !c.alarmTime)?`<button onclick="goBackNotruf()" title="Letzte Antwort zurücknehmen">⬅️ Zurück</button>`:""}
+     ${Object.keys(c.answers||{}).length?`<button onclick="openCallEdit('${esc(c.id)}')" title="Jeden Abfragepunkt nachträglich ändern">📝 Notruf ändern</button>`:""}
      <button onclick="render('leitstelle')">Zur Übersicht</button>
     </div>
    </div>
@@ -2941,6 +3046,7 @@ function questionHTML(q){
    <button onclick="answer('${id}','Auffällig')">Auffällig</button>
    <button onclick="answer('${id}','Schockzeichen')">Schockzeichen</button>
    <button onclick="answer('${id}','Relevante Blutung')">Relevante Blutung</button>
+   <button onclick="answer('${id}','Sonstiges')">Sonstiges</button>
    <button onclick="answer('${id}','Unklar')">Unklar</button></div>`;
  if(type==="xdisability") return `<label>${label}</label><div class="answer">
    <button onclick="answer('${id}','Wach / orientiert')">Wach / orientiert</button>
@@ -4364,7 +4470,7 @@ async function pushCallCloud(c){
  await cloudRequest(`calls/${encodeURIComponent(String(c.id))}`,"PUT",{
    id:c.id,location:c.location||"",keyword:c.keyword||"",count:c.count||"",staging:c.staging||null,
    suggestion:c.suggestion||"",alarmFreeText:c.alarmFreeText||"",
-   alarmTime:c.alarmTime||null,endTime:c.endTime||null,
+   alarmTime:c.alarmTime||null,endTime:c.endTime||null,alarmVersion:c.alarmVersion||0,realarmAt:c.realarmAt||null,
    unitIds,units,history:c.history||[],nafo:c.nafo||[],
    updatedAt:new Date().toISOString()
  });
@@ -4990,7 +5096,7 @@ async function vehicleLoadScenarioIvena(dburl,sid){
  if(remoteIvena&&typeof remoteIvena==="object")return Object.values(remoteIvena).filter(Boolean);
  return null;
 }
-let vehiclePollTimer=null, vehicleIvenaCache=null, vehicleUnitsCache=null, vehicleKnownCallIds=null, vehicleKnownSdsIds=null;
+let vehiclePollTimer=null, vehicleIvenaCache=null, vehicleUnitsCache=null, vehicleKnownCallIds=null, vehicleKnownSdsIds=null, vehicleKnownVersions={};
 // Liegt ein Fahrzeug-/Nachbar-/Anrufer-Terminal mit gesperrtem Bildschirm oder im Hintergrund-Tab,
 // drosseln Browser (v. a. mobil) das 2–3-Sekunden-Poll-Intervall stark oder pausieren es ganz –
 // neue SDS-Nachrichten, Einsätze oder Notruf-Anfragen (und damit auch der Alarmton) werden dann
@@ -5263,8 +5369,11 @@ async function renderVehicleTerminal(unitId,dburl,sid){
    const newIds=new Set(calls.map(c=>String(c.id)));
    if(vehicleKnownCallIds!==null){
      const brandNew=[...newIds].some(id=>!vehicleKnownCallIds.has(id));
+     const realarm=calls.find(c=>vehicleKnownCallIds.has(String(c.id))&&Number(c.alarmVersion||0)>Number(vehicleKnownVersions[String(c.id)]||0));
      if(brandNew){playAlarmTone();vibrateAlarm();showVehicleNotification(calls.find(c=>!vehicleKnownCallIds.has(String(c.id))))}
+     else if(realarm){playAlarmTone();vibrateAlarm();showVehicleNotification({...realarm,keyword:`📢 Alarm geändert: ${realarm.keyword||"Einsatz"}`})}
    }
+   calls.forEach(c=>{vehicleKnownVersions[String(c.id)]=Number(c.alarmVersion||0)});
    vehicleKnownCallIds=newIds;
    const remoteSds=await vehicleFetch(dburl,sid,`sds/${encodeURIComponent(unitId)}`)||{};
    const sdsList=Object.values(remoteSds).filter(Boolean).sort((a,b)=>new Date(b.time)-new Date(a.time));
@@ -5681,7 +5790,7 @@ const AAO_RULE_FIELDS={
  x_massive:{label:"X – kritische Blutung",values:["Nein","Ja","Unklar"]},
  a_airway:{label:"A – Atemweg",values:["Frei","Gefährdet","Verlegt","Unklar"]},
  b_breath:{label:"B – Atmung",values:["Normal","Auffällig","Keine normale Atmung","Unklar"]},
- c_circ:{label:"C – Kreislauf",values:["Unauffällig","Auffällig","Schockzeichen","Relevante Blutung","Unklar"]},
+ c_circ:{label:"C – Kreislauf",values:["Unauffällig","Auffällig","Schockzeichen","Relevante Blutung","Sonstiges","Unklar"]},
  d_disability:{label:"D – Bewusstsein",values:["Wach / orientiert","Bewusstseinsgetrübt","Bewusstlos","Krampfanfall","Neurologisch auffällig","Unklar"]},
  e_exposure:{label:"E – weitere Befunde (Text)",free:true,placeholder:"exakter Text"},
  locationIsWater:{label:"Einsatzort auf dem Wasser",values:["ja","nein"]},

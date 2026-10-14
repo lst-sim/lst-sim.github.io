@@ -1310,3 +1310,16 @@ Version 4.81:
   bleiben unangetastet.
 - Auf Wunsch „wie es sein könnte“ ergänzt (nur bos-fahrzeuge, nicht bestätigt): 16/45-07 LF 10/6
   Wiarden, 19/44-02 LF 20 KatS in Hooksiel (bos listet es auch bei Minsen).
+
+Version 4.82:
+- Notruf nachträglich ändern („📝 Notruf ändern“ an jedem Einsatz in der Leitstellen-Übersicht und
+  im Notruf): jeder beantwortete Abfragepunkt ist änderbar (Auswahl bzw. Textfeld). Danach wird
+  das Stichwort neu bewertet.
+  - Noch nicht alarmiert: zurück zu „Alarmierung vorbereiten“ mit neuem Vorschlag.
+  - Bereits alarmiert: im selben Schritt „Rettungsmittel bearbeiten“ mit Hinweis (altes → neues
+    Stichwort, geänderte Punkte) und den laut neuer Bewertung zusätzlich nötigen Mitteln zum
+    Anhaken; Mittel entfernen/hinzufügen wie gewohnt. „📢 Alarm erneut senden“ alarmiert die
+    angehakten Mittel und schickt den geänderten Alarm an alle Fahrzeuge des Einsatzes – die
+    Fahrzeug-Terminals klingeln erneut („Alarm geändert“). „Ohne neuen Alarm“ behält die Änderung.
+  - Änderungen und erneuter Alarm stehen im Einsatzverlauf.
+- Abfragepunkt C: neue Antwort „Sonstiges“ (auch als AAO-Bedingung wählbar).
