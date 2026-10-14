@@ -1323,3 +1323,12 @@ Version 4.82:
     Fahrzeug-Terminals klingeln erneut („Alarm geändert“). „Ohne neuen Alarm“ behält die Änderung.
   - Änderungen und erneuter Alarm stehen im Einsatzverlauf.
 - Abfragepunkt C: neue Antwort „Sonstiges“ (auch als AAO-Bedingung wählbar).
+
+Version 4.83:
+- Luftrettung: je Hubschrauber „Anzahl Piloten“ und „Rettungswinde ja/nein“ (Fahrzeug-Editor,
+  Anzeige in der Fahrzeugliste). Standard: Christoph 26 mit Winde (laut ADAC seit 2003) und
+  Northern 06 mit Winde (laut Fahrzeugdaten), Christoph 6, Lifeliner 4 und Christoph Niedersachsen
+  ohne Winde (für Bremen nennt die DRF keine Winde; Lifeliner 4 nicht geprüft). Pilotenzahl je
+  Einsatz ist nicht veröffentlicht – angenommen 2 bei Winde/Offshore, sonst 1.
+- Einsätze auf dem Wasser: Nur Hubschrauber MIT Rettungswinde fliegen direkt zum Patienten; alle
+  anderen fliegen – wie die Landfahrzeuge – zum Bereitstellungsraum (falls festgelegt).

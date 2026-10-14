@@ -162,7 +162,7 @@ table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:10px 8px
 </head>
 <body>
 <div style="padding:6px 10px;font-size:11px;color:#94a3b8;font-weight:700;display:flex;align-items:center;gap:10px;position:sticky;top:0;z-index:10;background:var(--bg)">
- <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v4.82</span>
+ <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v4.83</span>
  <span id="syncState"></span>
  <a id="homeLink" href="#" onclick="render('leitstelle');return false" class="hidden" style="color:#64748b;text-decoration:underline;font-weight:600">🖥️ Leitstelle</a>
  <a id="monitorLink" href="#" onclick="showMonitorQR();return false" style="color:#64748b;text-decoration:underline;font-weight:600;margin-left:auto">🖥️ Monitor hinzufügen</a>
@@ -427,17 +427,17 @@ const DEFAULTS_FRI_WHV={
   {id:305,name:"32/NEA",opta:"Heros Jever 32/NEA",type:"NEA 68 kVA",org:"THW",location:"Jever",status:"2",crew:"0",skills:"Stromversorgung",verified:"THW/BOS-Fahrzeuge"},
   {id:306,name:"86/25",opta:"Heros Jever 86/25",type:"MTW OV",org:"THW",location:"Jever",status:"2",crew:"9",skills:"Mannschaftstransport",verified:"THW/BOS-Fahrzeuge"},
 
-  {id:501,name:"Christoph 26",opta:"Christoph 26",type:"RTH",org:"Luftrettung",location:"Sanderbusch (Sande)",status:"2",crew:"3",skills:"Notarzt, Luftrettung, Windenrettung, Intensivtransport",verified:"ADAC Luftrettung",schedule:"24h"},
-  {id:502,name:"Lifeliner 4",opta:"Lifeliner 4",type:"RTH",org:"Luftrettung",location:"Groningen (Eelde)",status:"2",crew:"3",skills:"Notarzt (MMT-Arzt), Luftrettung, Intensivtransport",verified:"ANWB Medical Air Assistance"},
-  {id:503,name:"Christoph 6",opta:"Christoph 6",type:"RTH",org:"Luftrettung",location:"Bremen (Klinikum Links der Weser)",status:"2",crew:"3",skills:"Notarzt, Luftrettung, Intensivtransport",verified:"ADAC Luftrettung"},
+  {id:501,name:"Christoph 26",opta:"Christoph 26",type:"RTH",org:"Luftrettung",location:"Sanderbusch (Sande)",winch:true,pilots:"2",status:"2",crew:"3",skills:"Notarzt, Luftrettung, Windenrettung, Intensivtransport",verified:"ADAC Luftrettung",schedule:"24h"},
+  {id:502,name:"Lifeliner 4",opta:"Lifeliner 4",type:"RTH",org:"Luftrettung",location:"Groningen (Eelde)",winch:false,pilots:"1",status:"2",crew:"3",skills:"Notarzt (MMT-Arzt), Luftrettung, Intensivtransport",verified:"ANWB Medical Air Assistance"},
+  {id:503,name:"Christoph 6",opta:"Christoph 6",type:"RTH",org:"Luftrettung",location:"Bremen (Klinikum Links der Weser)",winch:false,pilots:"1",status:"2",crew:"3",skills:"Notarzt, Luftrettung, Intensivtransport",verified:"ADAC Luftrettung"},
   // Ambulanz-/Krankentransporthubschrauber für die Ostfriesischen Inseln (Northern Helicopter),
   // Flugplatz Norden-Norddeich (EDWS), früher "Rettung Wittmund 79/99-1" in Emden.
   // Tagbereitschaft 08–20 Uhr (rth.info, Stand 08/2024). Besatzungsstärke nicht belegt.
-  {id:504,name:"Northern 06",opta:"Northern 06",type:"KTH",org:"Luftrettung",location:"Norden-Norddeich",status:"2",crew:"",skills:"Ambulanz-/Krankentransporthubschrauber Ostfriesische Inseln ↔ Festland, Rettungswinde",verified:"rth.info (Northern Helicopter)",schedule:"day_8_20"},
+  {id:504,name:"Northern 06",opta:"Northern 06",type:"KTH",org:"Luftrettung",location:"Norden-Norddeich",winch:true,pilots:"2",status:"2",crew:"",skills:"Ambulanz-/Krankentransporthubschrauber Ostfriesische Inseln ↔ Festland, Rettungswinde",verified:"rth.info (Northern Helicopter)",schedule:"day_8_20"},
   // Einziger Intensivtransporthubschrauber (ITH) Niedersachsens (Nds. Innenministerium,
   // intensivverlegung-niedersachsen.de). DRF Luftrettung, Flughafen Hannover-Langenhagen, 24 h,
   // Alarmierung über die ITH-Koordinierungsstelle (KOST) Niedersachsen (rth.info, Stand 04/2026).
-  {id:505,name:"Christoph Niedersachsen",opta:"Christoph Niedersachsen",type:"ITH",org:"Luftrettung",location:"Hannover-Langenhagen",status:"2",crew:"",skills:"Intensivtransport (Verlegung), nachts mit Notarzt und HEMS-TC, Rufname auch Christoph 86",verified:"DRF Luftrettung / rth.info",schedule:"24h"}
+  {id:505,name:"Christoph Niedersachsen",opta:"Christoph Niedersachsen",type:"ITH",org:"Luftrettung",location:"Hannover-Langenhagen",winch:false,pilots:"1",status:"2",crew:"",skills:"Intensivtransport (Verlegung), nachts mit Notarzt und HEMS-TC, Rufname auch Christoph 86",verified:"DRF Luftrettung / rth.info",schedule:"24h"}
 
  ],
  aao:[
@@ -895,7 +895,7 @@ function statusName(s){return {0:"Priorisierter Sprechwunsch",1:"Frei über Funk
 function statusClass(s){return "s"+s}
 function vehicleLabelBlock(u){
  const q=typeof unitQualText==="function"?unitQualText(u):"";
- return `<b>${esc(u.type||"—")}</b><br><small class="muted">${esc(u.opta||u.name||"—")}</small>${q&&!u.qualNow?`<br><small title="Medizinische Qualifikation der Besatzung" style="color:#0f766e;font-weight:600">🩺 ${esc(q)}</small>`:""}${u.qualNow?`<br><small title="Besatzung gesondert angemeldet${u.qualNowAt?" um "+new Date(u.qualNowAt).toLocaleTimeString("de-DE",{hour:"2-digit",minute:"2-digit"}):""}" style="color:#c2410c;font-weight:800">⭐ angemeldet: ${esc(qualTokens(u.qualNow).join(" + "))}</small>`:""}`;
+ return `<b>${esc(u.type||"—")}</b><br><small class="muted">${esc(u.opta||u.name||"—")}</small>${u.org==="Luftrettung"?`<br><small style="color:#334155;font-weight:600">${heliHasWinch(u)?"🪝 Rettungswinde":"ohne Winde"}${heliPilots(u)?` · ✈️ ${esc(heliPilots(u))} Pilot${heliPilots(u)==="1"?"":"en"}`:""}</small>`:""}${q&&!u.qualNow?`<br><small title="Medizinische Qualifikation der Besatzung" style="color:#0f766e;font-weight:600">🩺 ${esc(q)}</small>`:""}${u.qualNow?`<br><small title="Besatzung gesondert angemeldet${u.qualNowAt?" um "+new Date(u.qualNowAt).toLocaleTimeString("de-DE",{hour:"2-digit",minute:"2-digit"}):""}" style="color:#c2410c;font-weight:800">⭐ angemeldet: ${esc(qualTokens(u.qualNow).join(" + "))}</small>`:""}`;
 }
 function statusOptionsFor(u){
  // Rettungsdienst-spezifische Status (7 = Patient aufgenommen, 8 = bedingt verfügbar)
@@ -1109,9 +1109,18 @@ function hospitalPoint(hospitalId){
 }
 // Bereitstellungsort bei Einsätzen auf dem Wasser: Landfahrzeuge fahren dorthin, nur Boote und
 // Hubschrauber (sowie DGzRS) direkt zur Einsatzstelle auf dem Wasser.
+// Luftrettung: Rettungswinde und Pilotenzahl je Hubschrauber (im Fahrzeug-Editor änderbar).
+// Christoph 26: Winde laut ADAC seit 2003; Northern 06: Winde laut Fahrzeugdaten. Pilotenzahl je
+// Einsatz ist nirgends veröffentlicht – Standard angenommen (Winde/Offshore 2, sonst 1).
+const HELI_DEFAULTS={"Christoph 26":{winch:true,pilots:"2"},"Northern 06":{winch:true,pilots:"2"},"Lifeliner 4":{winch:false,pilots:"1"},"Christoph 6":{winch:false,pilots:"1"},"Christoph Niedersachsen":{winch:false,pilots:"1"}};
+function heliHasWinch(u){if(!u||u.org!=="Luftrettung")return false;if(typeof u.winch==="boolean")return u.winch;const d=HELI_DEFAULTS[u.opta];return d?d.winch:/winde/i.test(String(u.skills||""))}
+function heliPilots(u){if(!u||u.org!=="Luftrettung")return "";return String(u.pilots??HELI_DEFAULTS[u.opta]?.pilots??"")}
 function waterCapable(u){
  if(!u)return false;
- if(u.org==="Luftrettung"||u.org==="DGzRS")return true;
+ // Über Wasser zum Patienten: Boote, Seenotretter und nur Hubschrauber MIT Rettungswinde.
+ // Hubschrauber ohne Winde fliegen (wie Landfahrzeuge) zum Bereitstellungsraum.
+ if(u.org==="Luftrettung")return heliHasWinch(u);
+ if(u.org==="DGzRS")return true;
  return ["RTB","MZB","SRB","SRK","Boot"].includes(u.type)||/boot/i.test(String(u.type||""));
 }
 function stagingFor(call,u){
@@ -3953,7 +3962,7 @@ function unitDutyToggleDay(i,on){const d=unitDraft.duty;d.days=d.days.filter(x=>
 function editUnit(id){
  const u=db.units.find(x=>String(x.id)===String(id)); if(!u)return;
  const du=unitDuty(u);
- unitDraft={id:u.id,org:u.org||"",type:u.type||"",name:u.name||"",opta:u.opta||"",location:u.location||"",crew:String(u.crew??""),skills:u.skills||"",qual:u.qual||"",pos:numOk(u.homeLat)&&numOk(u.homeLng)?`${u.homeLat}, ${u.homeLng}`:"",turnoutMin:u.turnoutMin??"",fachgruppe:u.org==="THW"?thwGroup(u).replace(/^Ohne Fachgruppe$/,""):"",
+ unitDraft={id:u.id,org:u.org||"",type:u.type||"",name:u.name||"",opta:u.opta||"",location:u.location||"",crew:String(u.crew??""),skills:u.skills||"",qual:u.qual||"",winch:heliHasWinch(u),pilots:heliPilots(u),pos:numOk(u.homeLat)&&numOk(u.homeLng)?`${u.homeLat}, ${u.homeLng}`:"",turnoutMin:u.turnoutMin??"",fachgruppe:u.org==="THW"?thwGroup(u).replace(/^Ohne Fachgruppe$/,""):"",
    dutyOn:!!du,duty:du?{from:du.from||"07:00",to:du.to||"19:00",days:Array.isArray(du.days)&&du.days.length?[...du.days]:[0,1,2,3,4,5,6],dateFrom:du.dateFrom||"",dateTo:du.dateTo||""}:{from:"07:00",to:"19:00",days:[0,1,2,3,4,5,6],dateFrom:"",dateTo:""}};
  render("mittel");
 }
@@ -3983,6 +3992,8 @@ function unitEditorHTML(){
    return `<label>🩺 Medizinische Qualifikation der Besatzung (mit „+“ trennen; leer = Standard${def?`: ${esc(def)}`:" – keiner hinterlegt"}${qd.unsure?" ⚠️ nicht geprüft":""})</label>
    <input id="unitQualInput" value="${esc(d.qual||"")}" placeholder="${esc(def||"z. B. NFS + RS")}" oninput="unitDraft.qual=this.value">
    <div class="row" style="gap:4px;margin-top:4px">${["NA","NFS","RS","RH","San A","San B","San C"].map(x=>`<button style="padding:3px 8px;font-size:12px" onclick="const i=document.getElementById('unitQualInput');i.value=(i.value.trim()?i.value.trim()+' + ':'')+'${x}';unitDraft.qual=i.value">＋ ${x}</button>`).join("")}</div>`})()}
+  ${d.org==="Luftrettung"?`<div class="formgrid"><div><label>✈️ Anzahl Piloten</label><input type="number" min="1" max="3" value="${esc(d.pilots||"")}" placeholder="z. B. 1 oder 2" oninput="unitDraft.pilots=this.value"></div>
+   <div><label>🪝 Rettungswinde</label><label style="display:flex;gap:8px;align-items:center;font-weight:600;margin-top:8px"><input type="checkbox" style="width:auto" ${d.winch?"checked":""} onchange="unitDraft.winch=this.checked"> Hubschrauber hat eine Rettungswinde</label><small class="muted">Nur mit Winde fliegt er bei Einsätzen auf dem Wasser direkt zum Patienten, sonst zum Bereitstellungsraum.</small></div></div>`:""}
   <label>📍 Eigener Standort (Breite, Länge – z. B. aus Google Maps kopiert; leer = Standort der Wache/des Orts)</label>
   <input value="${esc(d.pos||"")}" placeholder="z. B. 53.4463, 8.1081" oninput="unitDraft.pos=this.value">
   <label>Fähigkeiten / Hinweise (optional)</label><input value="${esc(d.skills)}" oninput="unitDraft.skills=this.value">
@@ -4017,6 +4028,7 @@ function saveUnitDraft(){
  const duty=d.dutyOn?{from:d.duty.from,to:d.duty.to,days:[...d.duty.days],...(d.duty.dateFrom&&d.duty.dateTo?{dateFrom:d.duty.dateFrom,dateTo:d.duty.dateTo}:{})}:{none:true};
  const fields={org:d.org,type,name,opta:String(d.opta||"").trim()||name,location:String(d.location||"").trim(),crew:String(d.crew||"").trim(),skills:String(d.skills||"").trim(),qual:String(d.qual||"").trim(),duty};
  if(d.org==="THW")fields.fachgruppe=String(d.fachgruppe||"").trim();
+ if(d.org==="Luftrettung"){fields.winch=!!d.winch;fields.pilots=String(d.pilots??"").trim()}
  {
    const raw=String(d.pos||"").trim();
    if(raw){
