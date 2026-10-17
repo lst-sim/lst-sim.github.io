@@ -162,7 +162,7 @@ table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:10px 8px
 </head>
 <body>
 <div style="padding:6px 10px;font-size:11px;color:#94a3b8;font-weight:700;display:flex;align-items:center;gap:10px;position:sticky;top:0;z-index:10;background:var(--bg)">
- <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v4.83</span>
+ <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v4.84</span>
  <span id="syncState"></span>
  <a id="homeLink" href="#" onclick="render('leitstelle');return false" class="hidden" style="color:#64748b;text-decoration:underline;font-weight:600">🖥️ Leitstelle</a>
  <a id="monitorLink" href="#" onclick="showMonitorQR();return false" style="color:#64748b;text-decoration:underline;font-weight:600;margin-left:auto">🖥️ Monitor hinzufügen</a>
@@ -1976,9 +1976,19 @@ function unitOnIsland(u){return u.island==="Wangerooge"||u.location==="Wangeroog
 // Nicht alarmierbare Einheiten (z. B. DLRG-Wachtürme): tauchen in keinem Vorschlag, keiner
 // Nachforderung und keinem Vollalarm auf – nur als First Responder, wenn besetzt und nah dran.
 function notAlarmable(u){return !!u&&(!!u.noAlarm||u.type==="Wachturm")}
+// Boote von DRK und DLRG auf Wangerooge bleiben an der Insel: nur Einsätze auf der Insel oder auf
+// dem Wasser rund um Wangerooge (bis 8 km von der Inselmitte). Der Seenotrettungskreuzer/-boot der
+// DGzRS fährt dagegen überall hin.
+function islandBoundBoat(u){return unitOnIsland(u)&&["DRK","DLRG"].includes(u.org)}
+function incidentNearWangerooge(){
+ if(incidentOnWangerooge())return true;
+ const p=incidentPoint(), c=AREA_CENTERS["Wangerooge"];
+ return !!(p&&c&&db.currentCall?.locationIsWater&&haversine(p[0],p[1],c[0],c[1])<=8);
+}
 function islandReachable(u){
  if(notAlarmable(u))return false; // zentrale Verfügbarkeitsprüfung aller Auswahl-Pools
  if(u.org==="Luftrettung")return true;
+ if(islandBoundBoat(u))return incidentNearWangerooge();
  if(db.currentCall?.locationIsWater&&waterCapable(u))return true;
  return incidentOnWangerooge()===unitOnIsland(u);
 }

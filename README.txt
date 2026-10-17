@@ -1332,3 +1332,8 @@ Version 4.83:
   Einsatz ist nicht veröffentlicht – angenommen 2 bei Winde/Offshore, sonst 1.
 - Einsätze auf dem Wasser: Nur Hubschrauber MIT Rettungswinde fliegen direkt zum Patienten; alle
   anderen fliegen – wie die Landfahrzeuge – zum Bereitstellungsraum (falls festgelegt).
+
+Version 4.84:
+- Wangerooge: Die Boote von DRK (Wasserwacht) und DLRG („Olli“) bleiben an der Insel – nur
+  Einsätze auf der Insel oder auf dem Wasser rund um Wangerooge (bis 8 km von der Inselmitte).
+  Das DGzRS-Seenotrettungsboot FRITZ THIEME fährt weiterhin zu allen Einsätzen auf dem Wasser.
