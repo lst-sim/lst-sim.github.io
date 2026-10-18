@@ -1479,3 +1479,8 @@ Version 4.94:
 - Übungsanrufe: Bei Unfällen und Bränden gibt es jetzt auch mehrere Betroffene:
   Unfall gegen Baum 1–4 Insassen (manchmal 2 eingeklemmt), Kreuzungsunfall 2–4 Verletzte,
   Wohnungsbrand 1–3 Personen im Gebäude, neu: Unfall Kleinbus/Auto mit 5–8 Verletzten.
+
+Version 4.95:
+- „Psy Problem?“ ist optional: In der Patienten-Maske kann man es leer lassen (wird als
+  „nicht erhoben“ gespeichert). Name, Alter und Geschlecht sind dort ebenfalls als optional
+  gekennzeichnet.

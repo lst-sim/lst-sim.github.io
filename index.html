@@ -170,7 +170,7 @@ html[data-device="handy"] #floatDock{left:8px;right:8px;width:auto;top:auto;bott
 </head>
 <body>
 <div style="padding:6px 10px;font-size:11px;color:#94a3b8;font-weight:700;display:flex;flex-wrap:wrap;align-items:center;gap:10px;position:sticky;top:0;z-index:10;background:var(--bg)">
- <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v4.94</span>
+ <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v4.95</span>
  <span id="syncState"></span>
  <span id="simCtl" style="position:absolute;left:50%;transform:translateX(-50%);display:flex;gap:6px;align-items:center"></span>
  <a id="homeLink" href="#" onclick="render('leitstelle');return false" class="hidden" style="color:#64748b;text-decoration:underline;font-weight:600">🖥️ Leitstelle</a>
@@ -3272,7 +3272,7 @@ function qsMaskHTML(c,m){
  const vis=mem.filter(id=>qsMaskSkip(c,id)==null);
  if(!vis.length){setTimeout(()=>qsMaskSubmit(m.key),0);return `<span class="muted">Nicht zutreffend – wird übersprungen …</span>`}
  const field=id=>{
-   const L=`<label style="margin-top:10px">${esc(labels[id]||id)}</label>`;
+   const L=`<label style="margin-top:10px">${esc(labels[id]||id)}${["psy","patientName","patientAge","patientGender"].includes(id)?` <span class="muted" style="font-weight:500">(optional)</span>`:""}</label>`;
    if(QS_MASK_CHOICES[id])return `${L}<input type="hidden" id="mk_${id}"><div style="display:flex;flex-wrap:wrap;gap:6px">${QS_MASK_CHOICES[id].map(v=>`<button type="button" style="flex:1 1 0;min-width:84px" data-mk="${id}" onclick="qsMaskPick(this,'${id}',${esc(JSON.stringify(v))})">${esc(v)}</button>`).join("")}</div>`;
    if(id==="patientName")return `${L}<input id="mk_${id}" type="text" placeholder="falls bekannt">`;
    const quick=id==="patientAge"?"":["0","1","2","3"].filter(n=>!(id==="count"&&n==="0")).map(n=>`<button type="button" onclick="document.getElementById('mk_${id}').value='${n}'">${n}</button>`).join("");
@@ -3292,6 +3292,7 @@ async function qsMaskSubmit(key){
    if(!v){
      if(id==="patientName"||id==="patientAge")v="unbekannt";
      else if(id==="patientGender")v="Unbekannt";
+     else if(id==="psy")v="nicht erhoben"; // optional
      else missing.push(String(labels[id]||id).replace(/^[^A-Za-zÄÖÜäöü]+/,""));
    }
    vals[id]=v;
@@ -3448,9 +3449,10 @@ function questionHTML(q){
    <button onclick="answer('event','Vermisste Person')">🛸 Vermisste Person (Suche)</button>
    <button onclick="answer('event','Sonstiger Notfall')">❓ Sonstiger Notfall</button>
  </div>`;
- if(type==="ynPsy") return `<label>${label}</label><div class="answer">
+ if(type==="ynPsy") return `<label>${label} <span class="muted" style="font-weight:500">(optional)</span></label><div class="answer">
    <button onclick="answer('${id}','Ja')">Ja</button>
-   <button onclick="answer('${id}','Nein')">Nein</button></div>`;
+   <button onclick="answer('${id}','Nein')">Nein</button>
+   <button onclick="answer('${id}','nicht erhoben')">Überspringen</button></div>`;
  if(type==="ynQ") return `<label>${label}</label><div class="answer">
    <button onclick="answer('${id}','Ja')">Ja</button>
    <button onclick="answer('${id}','Nein')">Nein</button>
