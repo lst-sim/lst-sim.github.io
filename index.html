@@ -157,13 +157,19 @@ table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:10px 8px
  .radio-kbd-row{display:flex;gap:4px;margin-bottom:4px;justify-content:center}
  .radio-kbd button{background:#33363b;color:#eee;border:1px solid #202226;border-radius:5px;min-width:26px;padding:7px 0;font-size:12px;font-weight:700}
  .radio-kbd input{width:100%;background:#151a13;color:#c9e6b0;border:2px solid #0a0d09;border-radius:6px;font-family:'Courier New',monospace;font-size:15px;padding:8px;margin-bottom:8px;box-sizing:border-box}
+#floatDock{position:fixed;right:12px;top:84px;width:min(390px,calc(100vw - 24px));max-height:calc(100vh - 170px);overflow:auto;z-index:25;display:flex;flex-direction:column;gap:8px}
+#floatDock:empty{display:none}
+#floatDock .card{margin:0;box-shadow:0 8px 24px rgba(0,0,0,.25)}
+html[data-device="handy"] #floatDock{left:8px;right:8px;width:auto;top:auto;bottom:74px;max-height:55vh}
+@keyframes reaPulse{0%{transform:scale(1.3);opacity:1}35%{transform:scale(1);opacity:.5}100%{transform:scale(1);opacity:.5}}
+.reaDot{display:inline-block;width:16px;height:16px;border-radius:50%;background:#dc2626;animation:reaPulse .5s infinite}
 @media (max-width:700px){#simCtl{position:static!important;transform:none!important;order:-1;width:100%;justify-content:center}#simCtl .simLbl{display:none}}
 </style>
 <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
 </head>
 <body>
 <div style="padding:6px 10px;font-size:11px;color:#94a3b8;font-weight:700;display:flex;flex-wrap:wrap;align-items:center;gap:10px;position:sticky;top:0;z-index:10;background:var(--bg)">
- <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v4.86</span>
+ <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v4.87</span>
  <span id="syncState"></span>
  <span id="simCtl" style="position:absolute;left:50%;transform:translateX(-50%);display:flex;gap:6px;align-items:center"></span>
  <a id="homeLink" href="#" onclick="render('leitstelle');return false" class="hidden" style="color:#64748b;text-decoration:underline;font-weight:600">🖥️ Leitstelle</a>
@@ -2924,7 +2930,6 @@ function notruf(){
  const answeredCount=QS.filter(x=>x[0] in c.answers || (x[0]==="location"&&c.location)).length;
  const nearest=nearestAvailableUnits();
  document.getElementById("app").innerHTML=`<div class="grid"><section>
-  ${c.sim?`<div id="simChatBox">${simChatHTML(c)}</div>`:""}
   <div class="card call" style="border-left-width:6px">
    <div class="row between">
     <div class="row" style="gap:12px">
@@ -2934,6 +2939,7 @@ function notruf(){
     <div class="row">
      ${(c.history.some(h=>!h.auto) && !c.alarmTime)?`<button onclick="goBackNotruf()" title="Letzte Antwort zurücknehmen">⬅️ Zurück</button>`:""}
      ${Object.keys(c.answers||{}).length?`<button onclick="openCallEdit('${esc(c.id)}')" title="Jeden Abfragepunkt nachträglich ändern">📝 Notruf ändern</button>`:""}
+     ${!c.kt&&!(c.rea&&c.rea.open)?`<button onclick="reaOpen('${esc(c.id)}')" title="Telefonreanimation: Anleitung und Metronom" style="color:#b91c1c;border-color:#fca5a5">🫀 Reanimation</button>`:""}
      <button onclick="render('leitstelle')">Zur Übersicht</button>
     </div>
    </div>
@@ -2942,6 +2948,7 @@ function notruf(){
    <div style="height:6px;background:#eef2f6;border-radius:999px;margin-top:4px;overflow:hidden"><div style="height:100%;width:${Math.round(100*answeredCount/QS.length)}%;background:#e30613"></div></div>`:""}
    <div style="margin-top:15px">${outOfArea?`<div class="suggest" style="background:#fff8e1;border-color:#f0c419"><h2>⚠️ Vermutlich nicht zuständig</h2><p>Der Einsatzort scheint auf dem Gebiet der Stadt Wilhelmshaven oder außerhalb des Landkreises Friesland zu liegen (${esc(c.geocodedAddress||c.location)}).</p><div class="row" style="margin:10px 0"><button class="primary" onclick="weiterverbindenCall()">📞 Weiterverbinden</button><button onclick="overrideJurisdiction()">Trotzdem hier bearbeiten</button></div></div>`:(q?questionHTML(q):(c.answers.callType&&c.answers.callType!=="112"?`<div class="suggest"><h2>☎️ Weiterleitung</h2><p>${esc(c.suggestion)}</p><p class="muted">Kein Fall für diese Rettungsleitstelle – kein Alarmvorschlag, keine weiteren Fragen nötig.</p><button onclick="render('leitstelle')">Zur Übersicht</button></div>`:`<div class="suggest"><h2>✅ Abfrage abgeschlossen</h2><p>${c.suggestion||"Kein Alarmvorschlag verfügbar."}</p><div class="row" style="margin:10px 0"><button class="primary" onclick="prepareAlarm()">🚨 Vorschlag alarmieren</button><button onclick="render('karte')">🗺️ Notfallort prüfen</button></div><button onclick="toggleNotrufDetails()">🔍 ${notrufDetailsVisible?"Details verbergen":"Interne Codes & Rohdaten anzeigen"}</button><div class="${notrufDetailsVisible?"":"hidden"}" style="margin-top:10px"><hr><b>Einsatzstichwort (intern)</b><div class="big">${esc(c.keyword)}</div><b>Antworten (Rohdaten)</b><pre style="white-space:pre-wrap">${esc(JSON.stringify(c.answers,null,2))}</pre></div></div>`))}</div>
   </div>
+  ${c.sim?`<div id="simChatBox">${simChatHTML(c)}</div>`:""}
   <div class="card"><h3>Abfrageverlauf</h3>${c.history.length?c.history.map(x=>`<div style="padding:7px 0;border-bottom:1px solid var(--line)"><b>${esc(x.q)}</b><br>${esc(x.a)}</div>`).join(""):"<span class='muted'>Noch keine Antworten.</span>"}</div>
  </section>
  <aside>
@@ -4013,7 +4020,8 @@ function hangUpCall(id,byCaller=false){
  const c=[db.currentCall,...(db.activeCalls||[])].find(x=>x&&String(x.id)===String(id));
  if(!c||c.phoneEnd)return;
  c.phoneEnd=Date.now();
- if(c.sim){try{speechSynthesis.cancel()}catch(e){}if(typeof simRec!=="undefined"&&simRec)try{simRec.stop()}catch(e){}}
+ if(c.sim){try{speechSynthesis.cancel()}catch(e){}if(typeof simRec!=="undefined"&&simRec)try{simRec.stop()}catch(e){}try{simMaybeFollow(c)}catch(e){}}
+ if(typeof reaMetroCall!=="undefined"&&reaMetroCall===String(c.id))reaStopMetro();
  c.history=c.history||[];
  c.history.push({q:byCaller?"📵 Anrufer hat aufgelegt":"📵 Telefonat beendet",a:`Dauer ${fmtDur(c.phoneEnd-c.phoneStart)}`});
  save();
@@ -5077,7 +5085,23 @@ async function callerHangUp(callerId,dburl,sid){
  }
  callerShowEnded(callerId,dburl,sid);
 }
+// Reanimations-Metronom auf dem Anrufer-Handy (von der Leitstelle gestartet, 120/min)
+let callerMetroTimer=null;
+function callerMetroSet(on){
+ try{
+   if(on&&!callerMetroTimer){if(!vehicleAudioCtx)vehicleAudioCtx=new (window.AudioContext||window.webkitAudioContext)();if(vehicleAudioCtx.state==="suspended")vehicleAudioCtx.resume();callerMetroTimer=metroScheduler(vehicleAudioCtx)}
+   if(!on&&callerMetroTimer){clearInterval(callerMetroTimer);callerMetroTimer=null}
+ }catch(e){}
+ const box=document.getElementById("callerMetro"); if(!box)return;
+ const need=on&&vehicleAudioCtx&&vehicleAudioCtx.state!=="running";
+ const html=on?`<div style="margin-top:16px;padding:14px;border-radius:16px;background:#dc2626;color:#fff">
+   <div style="display:flex;align-items:center;justify-content:center;gap:10px;font-size:22px;font-weight:900"><span class="reaDot" style="background:#fff"></span> Drücken Sie im Takt!</div>
+   <div style="opacity:.95;margin-top:6px">Mitte der Brust · 5–6 cm tief · 120 pro Minute<br>Nicht aufhören, bis der Rettungsdienst übernimmt.</div>
+   ${need?`<button onclick="vehicleAudioCtx.resume();callerMetroSet(true)" style="margin-top:10px;background:#fff;color:#dc2626;font-weight:900">🔊 Ton einschalten</button>`:""}</div>`:"";
+ if(box.dataset.h!==html){box.innerHTML=html;box.dataset.h=html}
+}
 function callerShowEnded(callerId,dburl,sid,dur){
+ callerMetroSet(false);
  stopRingback(); callerStopTick(); clearInterval(vehiclePollTimer);
  const gen=++callerGen;
  document.getElementById("app").innerHTML=callerCallHTML(callerCurrentNum,"Anruf beendet",null,dur?`<div style="opacity:.8">Dauer ${esc(dur)}</div>`:"");
@@ -5091,7 +5115,8 @@ async function renderCallerStatus(callerId,callId,dburl,sid,num){
  document.getElementById("app").innerHTML=callerCallHTML(callerCurrentNum,"Verbunden – Leitstelle",args,`
    <div id="callerStatusIcon" style="font-size:54px">⏳</div>
    <div id="callerStatusText" style="font-size:18px;font-weight:800;margin-top:6px">Verbinde …</div>
-   <div id="callerStatusSub" style="opacity:.75;margin-top:6px;font-size:14px"></div>`);
+   <div id="callerStatusSub" style="opacity:.75;margin-top:6px;font-size:14px"></div>
+   <div id="callerMetro"></div>`);
  const start=Date.now();
  callerStopTick();
  callerCallTick=setInterval(()=>{const t=document.getElementById("callerCallTimer");if(t)t.textContent=fmtDur(Date.now()-start)},1000);
@@ -5107,6 +5132,7 @@ async function renderCallerStatus(callerId,callId,dburl,sid,num){
    }
    const req=await vehicleFetch(dburl,sid,`callRequests/${encodeURIComponent(callerId)}`);
    if(gen!==callerGen)return;
+   callerMetroSet(!!(req&&req.status==="accepted"&&req.metronome));
    if(req&&req.status==="ended"&&String(req.callId)===String(callId)){
      callerShowEnded(callerId,dburl,sid,fmtDur(Date.now()-start));
      return;
@@ -7352,7 +7378,7 @@ function nachbarLks(){
 // Die Automatik (Dienstzeiten, Rückkehr zur Wache, Statusfortschritt) läuft nur am Hauptplatz –
 // Monitore bekommen die Ergebnisse per Live-Sync, sonst würden mehrere Geräte gleichzeitig
 // dieselben Fahrzeuge weiterschalten.
-// ═══ Übungsnotruf-Generator (v4.86) ═══════════════════════════════════════════════════════════
+// ═══ Übungsnotruf-Generator (v4.86, erweitert v4.87: Selbst-Anrufer, Folgeanrufe, KI-Brücke, Reanimationsprotokoll) ═══════════════════════════════════════════════════════════
 // Erzeugt zufällig realistische Notrufe (112) und Krankentransport-Anrufe (19222), die wie echte
 // Anrufe klingeln/aufleuchten und angenommen werden. Der Anrufer antwortet REGELBASIERT (keine KI):
 // Er erkennt typische Leitstellenfragen an Stichworten und antwortet aus seinem Fall. Modus je
@@ -7534,18 +7560,96 @@ const SIM_CASES=[
  {id:"kt_home",w:4,num:"19222",loc:"home",kt:true,mk:()=>{const p=simPerson(),age=rint(60,90);return {caller:simPerson("w"),patient:p,age,clinicCaller:true,
    open:["Hallo, hier ist die Station 3 vom Klinikum Wilhelmshaven, wir bräuchten einen Rücktransport."],
    ktType:"KT-Entlassung",dest:"nach Hause",mode:"sitzend im Tragestuhl",time:"heute um 14 Uhr",doc:"Der Transportschein ist ausgefüllt.",
-   event:"Ein Patient wird entlassen und muss nach Hause gebracht werden.",extra:["Der Patient hat zwei Taschen dabei."]}}}
+   event:"Ein Patient wird entlassen und muss nach Hause gebracht werden.",extra:["Der Patient hat zwei Taschen dabei."]}}},
+ {id:"cut",w:3,num:"112",loc:"home",mk:()=>{const p=simPerson("m"),age=rint(30,75);return {rel:"mein Mann",caller:simPerson("w"),patient:p,age,
+   open:["Hallo, mein Mann hat sich ganz schlimm geschnitten, das blutet wie verrückt!"],
+   event:"Er ist beim Holzmachen mit der Säge abgerutscht, am Unterarm. Das blutet total, ich drück ein Handtuch drauf.",
+   f:{count:"1",x:"Ja",a:"Frei",b:"Normal",c:"Auffällig",d:"Wach / orientiert",e:"tiefe Schnittwunde Unterarm, starke Blutung",psy:"Nein",danger:"nein"},
+   onset:"Vor zwei, drei Minuten.",hist:"Er nimmt Blutverdünner, wegen dem Herzen.",
+   extra:["Das Handtuch ist schon ganz durch!","Er ist ganz blass."]}}}
 ];
+
+// Anrufer ruft für sich selbst an (statt für jemand anderen): erste Person, eigener Wortlaut
+const SIM_SELF={
+ acs:d=>({open:["Hallo… ich hab so starke Schmerzen in der Brust, ich glaub, ich brauch einen Arzt.","Ja hallo, mir geht's ganz schlecht, ich hab so einen Druck auf der Brust…"],
+   event:"Ich hab seit zwanzig Minuten so einen Druck auf der Brust, das zieht in den linken Arm. Mir ist ganz übel.",hist:"Ich hab Bluthochdruck, dafür nehm ich Tabletten.",
+   pain:"Druck auf der Brust, wie so ein Ring. Das zieht bis in den linken Arm.",extra:["Ich schwitz total…","Ich bin allein zu Hause. Soll ich die Tür aufschließen?"]}),
+ dyspnoe:d=>({open:["Ich… krieg… kaum Luft…"],event:"Ich krieg seit heute Morgen immer schlechter Luft… das Spray hilft nicht…",hist:"COPD… ich rauch leider noch.",
+   pain:"Keine Schmerzen… nur die Luft…",extra:["Ich muss… beim Reden… immer Pause machen…"]}),
+ fall:d=>({open:["Hallo… ich bin hingefallen und komm nicht mehr hoch.","Ja, hallo, ich lieg hier im Flur, ich bin gestürzt…"],
+   event:"Ich bin im Flur über den Teppich gestolpert. Meine rechte Hüfte tut so weh, ich komm nicht mehr hoch.",hist:"Osteoporose hab ich, sonst bin ich noch ganz fit.",
+   pain:"Die rechte Hüfte, ganz schlimm, wenn ich mich bewege.",extra:["Die Haustür ist abgeschlossen, meine Nachbarin hat einen Schlüssel.","Mir ist kalt hier auf dem Boden."]}),
+ anaph:d=>({open:["Hallo, ich bin am Strand von einer Wespe gestochen worden und krieg schlecht Luft!"],event:"Ich bin in den Hals gestochen worden, das schwillt total an und juckt überall.",
+   hist:"Ich bin allergisch, aber mein Notfallset liegt zu Hause.",pain:"Der Hals wird so eng und es juckt überall.",extra:["Meine Stimme wird ganz komisch…"]}),
+ vu_light:d=>({open:["Hallo, mir ist gerade einer reingefahren, an der Kreuzung."],event:"Mir ist an der Kreuzung einer hinten reingefahren. Mein Nacken tut weh. Der andere Fahrer ist okay.",
+   f:{count:"1"},hist:"Nee, ich bin eigentlich gesund.",pain:"Mein Nacken tut weh, so ein Ziehen bis in die Schulter.",extra:["Soll ich das Auto wegfahren?"]}),
+ cut:d=>({open:["Hallo, ich hab mich ganz schlimm geschnitten, das blutet wie verrückt!"],event:"Ich bin beim Holzmachen mit der Säge abgerutscht, am Unterarm. Das blutet total, ich drück ein Handtuch drauf.",
+   hist:"Ich nehm Blutverdünner, wegen dem Herzen.",pain:"Der Unterarm, das pocht richtig.",extra:["Das Handtuch ist schon ganz durch…"]})
+};
+// Folgeanrufe: Anrufer ruft erneut an, weil es schlimmer wird oder sich etwas ändert
+const SIM_FOLLOW={
+ acs:d=>d.isSelf?{open:["Ich hab eben angerufen… es wird schlimmer… mir wird schwarz vor Augen…"],event:"Der Druck wird immer schlimmer und mir wird ganz schwindelig…",f:{c:"Schockzeichen",d:"Bewusstseinsgetrübt"},why:"Zustand verschlechtert"}
+   :{open:["Ich hab eben schon angerufen! Mein Mann ist umgekippt, er atmet nicht mehr richtig!"],event:"Er ist vom Stuhl gerutscht und reagiert nicht mehr, er atmet nur noch so komisch.",f:{a:"Gefährdet",b:"Keine normale Atmung",c:"Unklar",d:"Bewusstlos"},panic:true,cpr:true,extra:["Oh Gott, bitte!","Er wird ganz blau!"],why:"Patient bewusstlos, keine normale Atmung"},
+ stroke:d=>({open:[`Ich hatte vorhin schon angerufen – ${d.rel} reagiert jetzt kaum noch!`],event:"Er ist jetzt ganz schläfrig, macht die Augen kaum noch auf.",f:{d:"Bewusstseinsgetrübt"},why:"Bewusstsein verschlechtert"}),
+ fall:d=>d.isSelf?{open:["Ich hab vorhin angerufen… kommt noch jemand? Ich lieg hier immer noch."],why:"Nachfrage"}:{open:["Ja, ich hatte vorhin wegen meiner Nachbarin angerufen – wann kommt denn jemand? Sie hat solche Schmerzen."],event:"Sie liegt immer noch im Flur und jammert vor Schmerzen.",why:"Nachfrage"},
+ dyspnoe:d=>d.isSelf?{open:["Ich… hab… eben angerufen… es geht… gar nicht mehr…"],event:"Ich… krieg… keine Luft… mir ist so komisch…",f:{d:"Bewusstseinsgetrübt"},why:"Zustand verschlechtert"}
+   :{open:["Ich hab eben angerufen, meinem Mann geht's immer schlechter, er wird ganz müde und blau!"],event:"Er kriegt kaum noch Luft, die Lippen sind blau und er wird ganz schläfrig.",f:{c:"Auffällig",d:"Bewusstseinsgetrübt"},panic:true,why:"Zustand verschlechtert"},
+ hypo:d=>({open:[`Ich hatte gerade angerufen – jetzt krampft ${d.rel}!`],event:"Er zuckt jetzt am ganzen Körper!",f:{d:"Krampfanfall"},panic:true,why:"Krampfanfall"}),
+ seizure:d=>({open:["Ich hab eben angerufen – er krampft schon wieder!"],event:"Er krampft schon wieder, das hört gar nicht auf!",f:{d:"Krampfanfall"},panic:true,why:"erneuter Krampfanfall"}),
+ anaph:d=>d.isSelf?null:{open:["Ich hab eben vom Strand angerufen! Meine Freundin kippt weg!"],event:"Sie ist zusammengesackt und reagiert kaum noch, sie ist ganz blass.",f:{a:"Gefährdet",c:"Schockzeichen",d:"Bewusstseinsgetrübt"},panic:true,why:"Schock, Bewusstsein getrübt"},
+ childfever:d=>({open:["Ich hab vorhin wegen meinem Kind angerufen – jetzt krampft er!"],event:"Er zuckt am ganzen Körper und die Augen sind verdreht!",f:{d:"Krampfanfall"},panic:true,why:"Fieberkrampf"}),
+ psych:d=>({open:["Ich hab vorhin schon wegen meinem Nachbarn angerufen – jetzt wirft er Sachen aus dem Fenster!"],event:"Er wirft Flaschen aus dem Fenster auf den Gehweg und schreit rum.",f:{danger:"ja"},danger:"Da laufen Leute auf dem Gehweg, der wirft mit Flaschen!",why:"Gefahr für andere"}),
+ unconscious:d=>({open:["Ich hab eben wegen dem Mann auf dem Gehweg angerufen – der hat sich übergeben und röchelt jetzt!"],event:"Er hat sich übergeben und jetzt röchelt er so, er reagiert gar nicht mehr.",f:{a:"Gefährdet",d:"Bewusstlos"},why:"Atemweg gefährdet, bewusstlos"}),
+ vu_trapped:d=>({open:["Ich hab eben wegen dem Unfall angerufen – jetzt brennt es im Motorraum!"],event:"Aus dem Motorraum kommen jetzt Flammen, der Fahrer sitzt immer noch drin!",f:{danger:"ja"},fire:true,panic:true,danger:"Das brennt jetzt richtig vorne am Auto!",why:"Fahrzeugbrand mit eingeklemmter Person"}),
+ vu_light:d=>d.isSelf?{open:["Ich hab eben wegen dem Unfall angerufen – mir ist jetzt ganz schwindelig und übel."],event:"Mir ist schwindelig und übel, und der Kopf tut weh.",f:{c:"Auffällig"},why:"Zustand verschlechtert"}
+   :{open:["Ich hatte eben wegen dem Unfall angerufen – die andere Fahrerin ist gerade zusammengesackt!"],event:"Sie saß am Straßenrand und ist einfach umgekippt, sie redet nur noch ganz komisch.",f:{c:"Auffällig",d:"Bewusstseinsgetrübt"},why:"Patientin kollabiert"},
+ fire_kitchen:d=>({open:["Ich hab eben wegen dem Brand angerufen – die Frau steht jetzt am Fenster im ersten Stock und ruft um Hilfe!"],event:"Die Frau steht am Fenster, hinter ihr ist alles voller Rauch!",f:{firePeople:"1"},panic:true,inside:"Ja! Die steht am Fenster, erster Stock!",why:"Person am Fenster"}),
+ fire_roof:d=>({open:["Ich hab vorhin wegen dem Dachstuhl angerufen – das greift jetzt aufs Nachbarhaus über!"],event:"Die Flammen schlagen jetzt rüber aufs Dach vom Nachbarhaus, da wohnt eine Familie!",inside:"Die Familie nebenan ist rausgerannt, ich glaub, die sind alle draußen.",why:"Ausbreitung auf Nachbarhaus"}),
+ fire_bin:d=>({open:["Ich hab eben wegen dem Container angerufen – jetzt brennt der Carport daneben!"],event:"Das Feuer ist auf den Carport übergesprungen, da steht ein Auto drunter!",why:"Ausbreitung auf Carport"}),
+ tree:d=>({open:["Ich hab vorhin wegen dem Baum angerufen – jetzt ist ein Auto reingefahren!"],event:"Ein Auto ist gegen den Baum gefahren, die Fahrerin sitzt noch drin und blutet am Kopf.",f:{event:"Verkehrsunfall",count:"1",trapped:"0",x:"Nein",a:"Frei",b:"Normal",c:"Unauffällig",d:"Wach / orientiert",e:"Kopfplatzwunde"},patientW:true,why:"Verkehrsunfall am Hindernis"}),
+ swimmer:d=>({open:["Ich hab eben wegen dem Schwimmer angerufen – wir sehen ihn nicht mehr! Er ist weg!"],event:"Er ist untergegangen, wir sehen ihn seit einer Minute nicht mehr!",f:{waterState:"Vermisst"},panic:true,why:"Person untergegangen"}),
+ boat:d=>({open:["Wir hatten eben vom Segelboot angerufen – mein Freund ist über Bord gegangen!"],event:"Eine Welle hat ihn rausgespült, er treibt im Wasser, er hat aber eine Schwimmweste an!",f:{event:"Person im Wasser",waterState:"Lebenszeichen",count:"1"},panic:true,why:"Person über Bord"}),
+ kt_dis:d=>({open:["Guten Tag, ich hatte vorhin einen Krankentransport bestellt – wann kommt der denn?"],event:"Wir warten schon die ganze Zeit, meine Mutter liegt fertig angezogen im Bett.",why:"Nachfrage"}),
+ kt_home:d=>({open:["Hallo, hier noch mal die Station 3 vom Klinikum Wilhelmshaven – der Rücktransport kann erst um 15 Uhr, die Papiere sind noch nicht fertig."],time:"jetzt erst um 15 Uhr",event:"Die Entlassungspapiere sind noch nicht fertig, der Transport muss auf 15 Uhr verschoben werden.",why:"Termin verschoben"}),
+ cut:d=>d.isSelf?{open:["Ich hab eben angerufen… das hört nicht auf zu bluten… mir wird schwarz vor Augen…"],f:{c:"Schockzeichen"},why:"Blutung, Schockzeichen"}
+   :{open:["Ich hab eben angerufen – das blutet trotz Handtuch immer weiter, er wird ganz blass!"],f:{c:"Schockzeichen"},panic:true,why:"Blutung, Schockzeichen"}
+};
+const SIM_SELF_RATE={acs:.4,dyspnoe:.35,fall:.35,anaph:.4,vu_light:.5,cut:.6};
+const SIM_FOLLOW_RATE=0.4;
+let simFollowQueue=[];
 
 function simMakeCall(){
  const tot=SIM_CASES.reduce((a,c)=>a+c.w,0); let r=Math.random()*tot, cs=SIM_CASES[0];
  for(const c of SIM_CASES){r-=c.w;if(r<=0){cs=c;break}}
  const d=cs.mk();
+ if(SIM_SELF[cs.id]&&Math.random()<(SIM_SELF_RATE[cs.id]||0.4)){
+   const v=SIM_SELF[cs.id](d);
+   d.isSelf=true; d.caller=d.patient; d.rel="ich selbst"; d.passerby=false;
+   Object.assign(d,{open:v.open,event:v.event,hist:v.hist||d.hist,pain:v.pain,extra:v.extra||[]});
+   if(v.f)d.f={...d.f,...v.f};
+ }
  const loc=cs.loc==="water"?simWaterLoc():cs.loc==="road"?simRoadLoc():simHomeLoc();
  const id="sim"+Date.now().toString(36)+Math.floor(Math.random()*1000);
  const sim={id,caseId:cs.id,num:cs.num,kt:!!cs.kt,loc,d,phone:"01"+pick(["51","52","60","70","76"])+" "+rint(1000000,9999999),log:[],lastAt:0,spontIdx:0,created:Date.now()};
  if(loc.geo)simGeocode(sim);
  return sim;
+}
+function simMakeFollow(c){
+ const base=c.sim, fn=SIM_FOLLOW[base.caseId]; if(!fn)return null;
+ const d=JSON.parse(JSON.stringify(base.d)); const v=fn(d); if(!v)return null;
+ d.open=v.open; if(v.event)d.event=v.event; if(v.f)d.f={...d.f,...v.f};
+ ["panic","cpr","fire","danger","inside","time"].forEach(k=>{if(v[k]!==undefined)d[k]=v[k]});
+ d.extra=v.extra||d.extra||[];
+ if(v.patientW){d.patient=simPerson("w");d.age=rint(25,70);d.passerby=true}
+ return {id:"sim"+Date.now().toString(36)+Math.floor(Math.random()*1000),caseId:base.caseId,num:base.num,kt:base.kt,loc:base.loc,d,phone:base.phone,
+   log:[],lastAt:0,spontIdx:0,created:Date.now(),isFollow:true,refCallId:String(c.id),why:v.why||""};
+}
+// beim Auflegen: manchmal ruft der Anrufer später noch einmal an
+function simMaybeFollow(c,force){
+ if(!c||!c.sim||c.sim.isFollow||!SIM_FOLLOW[c.sim.caseId])return;
+ if(!force&&Math.random()>=SIM_FOLLOW_RATE)return;
+ const f=simMakeFollow(c); if(!f)return;
+ simFollowQueue.push({at:Date.now()+(force?0:rnd(70,240)*1000),sim:f});
 }
 async function simGeocode(sim){
  try{
@@ -7562,6 +7666,8 @@ function simSchedule(first){simNextAt=Date.now()+(first?rnd(15,45):rnd(150,480))
 function simTick(){
  if(!simOn||IS_MONITOR||isTerminalLink)return;
  const now=Date.now();
+ const due=simFollowQueue.filter(x=>now>=x.at); simFollowQueue=simFollowQueue.filter(x=>now<x.at);
+ due.forEach(x=>simRing(x.sim));
  if(simQueue.length&&now>=simQueue[0]){simQueue.shift();simRing()}
  if(!simNextAt){simSchedule(true);return}
  if(now<simNextAt)return;
@@ -7572,24 +7678,25 @@ function simTick(){
  else{simRing();simRing()}
  simSchedule(false);
 }
-function simRing(){
- if(simPending.length>=4)return;
- const s=simMakeCall(); simPending.push(s);
+function simRing(pre){
+ if(simPending.length>=4&&!pre)return;
+ const s=pre||simMakeCall(); simPending.push(s);
  renderCallerBanner();
- toast(s.num==="19222"?"📞 Übungsanruf 19222 – Krankentransport":"📞 Übungsnotruf 112 eingegangen");
+ toast(s.isFollow?`🔁 Erneuter Anruf – Rufnummer bekannt aus Einsatz #${s.refCallId}`:s.num==="19222"?"📞 Übungsanruf 19222 – Krankentransport":"📞 Übungsnotruf 112 eingegangen");
  if(simVoice)simRingTone();
 }
 let simAudio=null;
+function simCtx(){simAudio=simAudio||new (window.AudioContext||window.webkitAudioContext)();if(simAudio.state==="suspended")simAudio.resume();return simAudio}
 function simRingTone(){
- try{simAudio=simAudio||new (window.AudioContext||window.webkitAudioContext)();const a=simAudio;
+ try{const a=simCtx();
    [0,0.45].forEach(o=>{const os=a.createOscillator(),g=a.createGain();os.frequency.value=440;g.gain.value=0.08;os.connect(g);g.connect(a.destination);os.start(a.currentTime+o);os.stop(a.currentTime+o+0.35)});
  }catch(e){}
 }
 function simBannerHTML(){
- return simPending.map(s=>`<div class="card" style="background:${s.num==="19222"?"#1d4ed8":"#e30613"};color:#fff;border:none;margin-bottom:8px;display:flex;align-items:center;justify-content:space-between;gap:12px">
-   <div class="row" style="gap:10px"><span style="font-size:26px">📞</span><div><b>${s.num==="19222"?"🚑 19222 – Krankentransport":"🚨 Notruf 112"} – Übungsanruf</b><br><span style="opacity:.9">Mobilfunk · Standort wird übermittelt</span></div></div>
-   <button class="primary" style="background:#fff;color:${s.num==="19222"?"#1d4ed8":"#e30613"}" onclick="simAccept('${s.id}')">✅ Annehmen</button>
- </div>`).join("");
+ return simPending.map(s=>{const col=s.num==="19222"?"#1d4ed8":"#e30613";return `<div class="card" style="background:${col};color:#fff;border:none;margin-bottom:8px;display:flex;align-items:center;justify-content:space-between;gap:12px">
+   <div class="row" style="gap:10px"><span style="font-size:26px">${s.isFollow?"🔁":"📞"}</span><div><b>${s.num==="19222"?"🚑 19222 – Krankentransport":"🚨 Notruf 112"} – Übungsanruf</b><br><span style="opacity:.9">${s.isFollow?`Erneuter Anruf · Rufnummer ${esc(s.phone)} bekannt aus Einsatz #${esc(s.refCallId)}`:"Mobilfunk · Standort wird übermittelt"}</span></div></div>
+   <button class="primary" style="background:#fff;color:${col}" onclick="simAccept('${s.id}')">✅ Annehmen</button>
+ </div>`}).join("");
 }
 function simAccept(simId){
  const i=simPending.findIndex(s=>s.id===simId); if(i<0)return;
@@ -7601,14 +7708,37 @@ function simAccept(simId){
  else db.currentCall={id:stamp.slice(-6),location:"",count:"",answers:{callType:"112"},history:[{q:"☎️ Über welche Nummer ist der Anruf eingegangen?",a:CALLER_NUMBERS["112"].label}],keyword:"",suggestion:"",createdAt:new Date().toISOString()};
  const c=db.currentCall;
  c.phoneStart=Date.now(); c.callerNumber=s.num; c.sim=s;
+ if(s.isFollow){c.followOf=s.refCallId;c.history.push({q:"🔁 Erneuter Anruf",a:`Rufnummer ${s.phone} – bekannt aus Einsatz #${s.refCallId}`})}
  c.callerGps={lat:s.loc.lat,lng:s.loc.lng,address:s.loc.kind==="home"?s.loc.addr:s.loc.text.replace(/^(am|auf der|auf dem) /,""),water:!!s.loc.water,sim:true};
  c.callerGpsPending=true;
  simSay(c,pick(s.d.open));
  save(); renderCallerBanner(); render("notruf");
 }
+// Folgeanruf dem ursprünglichen Einsatz zuordnen: Gespräch läuft dort weiter, Abfragepunkte ändern
+function simMergeFollow(id){
+ const c=allOpenCalls().find(x=>String(x.id)===String(id)); if(!c||!c.sim)return;
+ const ref=allOpenCalls().find(x=>String(x.id)===String(c.sim.refCallId));
+ if(!ref){toast(`Einsatz #${c.sim.refCallId} ist schon abgeschlossen – bitte als neuen Einsatz abfragen`);return}
+ const said=c.sim.log.filter(m=>m.who==="caller").map(m=>m.text).join(" / ");
+ ref.history=ref.history||[];
+ ref.history.push({q:`🔁 Erneuter Anruf (${new Date().toLocaleTimeString("de-DE",{hour:"2-digit",minute:"2-digit"})})`,a:said||"—"});
+ ref.sim=c.sim; ref.phoneStart=c.phoneStart; delete ref.phoneEnd; ref.callerNumber=c.callerNumber;
+ if(db.currentCall&&String(db.currentCall.id)===String(c.id))db.currentCall=null;
+ else db.activeCalls=(db.activeCalls||[]).filter(x=>String(x.id)!==String(c.id));
+ save(); renderCallTimerBar();
+ toast(`Gespräch an Einsatz #${ref.id} übergeben – Abfragepunkte jetzt anpassen`);
+ openCallEdit(ref.id);
+}
 
-// ─── Antwortlogik ─────────────────────────────────────────────────────────────────────────────
+// ─── Antwortlogik (regelbasiert) ───────────────────────────────────────────────────────────────
 const SIM_INTENTS=[
+ ["listen",/h(ö|oe)ren sie (mir )?(genau )?zu|ich helfe ihnen/],
+ ["speaker",/lautsprecher/],
+ ["aed",/defibrillator|\baed\b|\bdefi\b/],
+ ["flat",/auf den r(ü|ue)cken|flach (hin)?legen|auf den boden/],
+ ["chest",/oberk(ö|oe)rper frei|frei machen|ausziehen|kleidung/],
+ ["hands",/handballen|h(ä|ae)nde (auf|in)/],
+ ["keep",/nicht aufh(ö|oe)ren|weiter ?machen|machen sie weiter/],
  ["cpr",/dr(ü|ue)ck|herzdruck|reanim|brustkorb|mitte der brust|hundert|zählen/],
  ["side",/seitenlage|auf die seite/],
  ["calm",/ruhig|beruhig|keine sorge/],
@@ -7616,20 +7746,21 @@ const SIM_INTENTS=[
  ["stay",/bleiben sie|nicht auflegen|dran bleiben|am telefon/],
  ["door",/t(ü|ue)r (auf|öffnen|offen)|licht an|einweisen|an die stra(ss|ß)e|winken/],
  ["loc",/\bwo\b|adresse|stra(ss|ß)e|hausnummer|welche(r|m)? (stadt|ort)|wo genau|standort|ortsteil|stockwerk|etage/],
- ["event",/was (ist|genau|ist denn|ist da)? ?(passiert|los)|was passiert|worum geht|schildern|erz(ä|ae)hlen sie/],
+ ["event",/was (ist |genau |denn |jetzt |da |nun )*(passiert|los)|worum geht|schildern|erz(ä|ae)hlen sie|was hat sich (ver)?(ä|ae)ndert/],
+ ["who",/f(ü|ue)r wen|wer ist (betroffen|der patient|krank|verletzt)|sind sie selbst|sie selbst betroffen|um wen geht/],
  ["count",/wie ?viele|anzahl|weitere (person|verletzte)|noch jemand verletzt|mehrere|betroffen/],
  ["trapped",/eingeklemmt|eingeschlossen|raus ?kommen|aussteigen/],
  ["inside",/noch (jemand|personen|leute)|alle (raus|drau(ss|ß)en)|im haus|in der wohnung/],
  ["fire",/brennt|brand|feuer(?!wehr)|flamm|rauch|qualm/],
  ["conscious",/ansprechbar|reagier|bewusst|wach|bei sich|redet|spricht|antwortet/],
  ["breath",/atm|luft|atem/],
- ["airway",/verschluck|erbroch|atemweg/],
+ ["airway",/verschluck|erbroch|atemweg|schlucken/],
  ["bleed",/blut/],
  ["circ",/puls|blass|kaltschwei|schwei(ß|ss)|kreislauf|schwindel|hautfarbe|farbe/],
  ["pain",/schmerz|weh\b|tut .*weh|beschwerden/],
  ["age",/wie alt|alter|jahre alt|geburts/],
  ["name",/wie hei(ss|ß)|ihr name|name/],
- ["phone",/telefon|r(ü|ue)ckruf|nummer/],
+ ["phone",/r(ü|ue)ckruf|telefonnummer|handynummer|ihre nummer|welcher nummer|nummer f(ü|ue)r r/],
  ["danger",/gefahr|gef(ä|ae)hrlich|strom|gas|benzin|verkehr|absichern|sicher/],
  ["water",/wasser|schwimm|untergegangen|ertrink|treibt|boot|strömung/],
  ["hist",/vorerkrank|krankheit|medikament|zucker|diabet|herz|tabletten|allerg|vorgeschichte|bekannt/],
@@ -7642,45 +7773,58 @@ const SIM_INTENTS=[
  ["greet",/^(notruf|feuerwehr|rettungsdienst|leitstelle|hallo|guten|moin|ja bitte)/]
 ];
 function simIntents(text){const t=String(text||"").toLowerCase();return SIM_INTENTS.filter(([,re])=>re.test(t)).map(([k])=>k)}
-const SIM_D={"Wach / orientiert":["Ja, er redet ganz normal mit mir.","Ja, ansprechbar ist er."],"Bewusstseinsgetrübt":["Er ist so komisch, ganz schläfrig, antwortet kaum.","Nur so halb, er murmelt nur."],"Bewusstlos":["Nein! Er reagiert überhaupt nicht!","Nein, gar nicht, auch nicht wenn ich ihn rüttel!"],"Krampfanfall":["Jetzt so halb, er ist total müde nach dem Krampf."],"Neurologisch auffällig":["Ja, aber er redet ganz verwaschen, man versteht ihn kaum."]};
+const SIM_D={"Wach / orientiert":["Ja, er redet ganz normal mit mir.","Ja, ansprechbar ist er."],"Bewusstseinsgetrübt":["Er ist so komisch, ganz schläfrig, antwortet kaum.","Nur so halb, er murmelt nur."],"Bewusstlos":["Nein! Er reagiert überhaupt nicht!","Nein, gar nicht, auch nicht wenn ich ihn rüttel!"],"Krampfanfall":["Jetzt so halb, er ist total müde nach dem Krampf.","Er zuckt! Er reagiert nicht!"],"Neurologisch auffällig":["Ja, aber er redet ganz verwaschen, man versteht ihn kaum."]};
 const SIM_B={"Normal":["Ja, ganz normal.","Atmen tut er normal, ja."],"Auffällig":["Ganz schwer und schnell, das hört man richtig.","Ja, aber er ringt total nach Luft."],"Keine normale Atmung":["Ich… ich weiß nicht, er schnappt nur so ab und zu!","Nein, ich glaub nicht! Nur so ein Röcheln!"]};
 const SIM_C={"Unauffällig":["Normal eigentlich, nicht besonders blass."],"Auffällig":["Er ist ganz blass und kaltschweißig.","Total blass, und die Haut ist ganz kalt und nass."],"Schockzeichen":["Ganz grau, eiskalt, das sieht gar nicht gut aus."],"Unklar":["Das kann ich nicht sagen!"]};
 const SIM_A={"Frei":["Ja, da ist nichts im Mund."],"Gefährdet":["Das klingt so gurgelig…","Da ist irgendwie Spucke, das röchelt."],"Verlegt":["Da ist was im Mund, er kriegt nichts durch!"]};
+// Anrufer ist selbst der Patient
+const SIM_D_SELF={"Wach / orientiert":["Ja, ich bin ja wach, ich red ja mit Ihnen."],"Bewusstseinsgetrübt":["Mir ist so… komisch… alles dreht sich…"]};
+const SIM_B_SELF={"Normal":["Ja, Luft krieg ich."],"Auffällig":["Nein… ich krieg ganz schlecht Luft…","Schwer… ganz schwer…"]};
+const SIM_C_SELF={"Unauffällig":["Geht so, ein bisschen schwindelig vielleicht."],"Auffällig":["Mir ist schwindelig und ich bin total nass geschwitzt."],"Schockzeichen":["Mir wird ganz schwarz vor Augen…","Mir ist so kalt… und schwindelig…"]};
+const SIM_A_SELF={"Frei":["Schlucken geht."],"Gefährdet":["Der Hals wird immer enger…"]};
 function simHe(s){return s.d.patient&&s.d.patient.g==="w"?["Sie","sie","ihr"]:["Er","er","ihm"]}
 function simFix(s,t){const [He,he]=simHe(s);if(he==="er")return String(t);return String(t).replace(/\bEr\b/g,"Sie").replace(/(^|[^A-Za-zÄÖÜäöüß])er\b/g,"$1sie").replace(/\bihn\b/g,"sie").replace(/\bihm\b/g,"ihr").replace(/\bEin Mann\b/g,"Eine Frau")}
 function simAnswerFor(c,text){
- const s=c.sim, d=s.d, f=d.f||{}, ints=simIntents(text), out=[];
- const [He,he]=simHe(s), age=d.age;
+ const s=c.sim, d=s.d, f=d.f||{}, ints=simIntents(text), out=[], me=!!d.isSelf;
+ const [He,he]=simHe(s), age=d.age, him=he==="sie"?"sie":"ihn";
  const panic=d.panic?pick(["Bitte schnell! ","Oh Gott… ","",""]):"";
  for(const k of ints){
    if(out.length>=2)break;
    switch(k){
-    case "cpr":if(d.cpr){out.push(pick(["Okay… okay, ich drück! Eins, zwei, drei, vier…","Ich drücke! So fest? Eins, zwei, drei…","Mitte der Brust… okay, ich mach das! Zwanzig, einundzwanzig…"]));s.cprStarted=true}else out.push("Muss ich das wirklich? "+He+" atmet doch.");break;
-    case "side":out.push(pick(["Okay, ich dreh "+(he==="sie"?"sie":"ihn")+" auf die Seite.","Mach ich, Moment… so?"]));break;
+    case "listen":out.push(pick(["Ja… ja, ich höre.","Ja! Was soll ich machen?"]));break;
+    case "speaker":out.push(me?"Ist auf laut.":pick(["Okay, ist auf laut, das Handy liegt neben ihm.","Moment… so, ist auf Lautsprecher."]));break;
+    case "aed":out.push(pick(["Hier ist keiner, ich bin allein!","Mein Nachbar läuft los, der weiß, wo einer hängt!","Ich weiß nicht, wo hier so ein Ding ist!"]));break;
+    case "flat":out.push(me?"Ich lieg ja schon.":`Okay… ${he} liegt jetzt flach auf dem Rücken.`);break;
+    case "chest":out.push(pick(["Okay, das Hemd ist offen.","Hab ich, der Oberkörper ist frei."]));break;
+    case "hands":out.push("Okay, die Hände sind in der Mitte der Brust.");break;
+    case "keep":out.push(pick(["Ich mach weiter… vierundzwanzig, fünfundzwanzig…","Ja… ich drück weiter…"]));s.cprStarted=d.cpr?true:s.cprStarted;break;
+    case "cpr":if(me)out.push("Wie, bei mir?");else if(d.cpr){out.push(pick(["Okay… okay, ich drück! Eins, zwei, drei, vier…","Ich drücke! So fest? Eins, zwei, drei…","Mitte der Brust… okay, ich mach das! Zwanzig, einundzwanzig…"]));s.cprStarted=true}else out.push("Muss ich das wirklich? "+He+" atmet doch.");break;
+    case "side":out.push(me?"Ich lieg schon, ja.":pick(["Okay, ich dreh "+him+" auf die Seite.","Mach ich, Moment… so?"]));break;
     case "calm":out.push(pick(["Ich versuch's ja!","Ja… okay. Okay.","Das sagen Sie so leicht!"]));break;
     case "help":out.push(pick(["Danke, danke!","Wie lange dauert das denn?","Okay, gut. Beeilen Sie sich bitte."]));break;
     case "stay":out.push(pick(["Ja, ich bleib dran.","Ja, ich bin hier."]));break;
-    case "door":out.push(pick(["Okay, ich mach die Haustür auf.","Ja, ich mach draußen Licht an.","Ich schick meinen Sohn raus zum Winken."]));break;
+    case "door":out.push(me?pick(["Ich versuch zur Tür zu kommen… okay, ist auf.","Ich komm hier nicht hoch, die Nachbarin hat einen Schlüssel."]):pick(["Okay, ich mach die Haustür auf.","Ja, ich mach draußen Licht an.","Ich schick meinen Sohn raus zum Winken."]));break;
     case "loc":out.push((s.loc.kind==="home"?`${s.loc.text}`:`Wir sind ${s.loc.text}`)+(s.loc.kind==="home"?pick(["."," – im Erdgeschoss."," – erster Stock, rechts."," – das gelbe Haus."]):"."));break;
-    case "event":out.push(simFix(s,d.event));break;
-    case "count":out.push(d.kt?"Nur ein Patient.":f.count==="0"?"Verletzt ist niemand.":f.count==="1"?pick(["Nur "+(he==="sie"?"sie":"er")+".","Eine Person."]):`${f.count} Personen.`);break;
+    case "event":out.push(me?d.event:simFix(s,d.event));break;
+    case "who":out.push(me?"Um mich! Ich bin das selbst.":d.passerby?"Ich kenn die Person nicht, ich bin nur vorbeigekommen.":d.rel?`Um ${d.rel.replace(/^mein /,"meinen ").replace(/^ein /,"einen ").replace(/^der /,"den ")}.`:"Ich bin nur der Anrufer.");break;
+    case "count":out.push(d.kt?"Nur ein Patient.":me?"Nur ich.":f.count==="0"?"Verletzt ist niemand.":f.count==="1"?pick(["Nur "+he+".","Eine Person."]):`${f.count} Personen.`);break;
     case "trapped":out.push(f.trapped&&f.trapped!=="0"?"Ja, der kommt nicht raus, die Tür klemmt und die Beine stecken fest!":"Nein, eingeklemmt ist keiner.");break;
     case "inside":out.push(d.inside||"Nein, ich glaube nicht.");break;
     case "fire":out.push(d.fire?simFix(s,d.event):"Nein, brennen tut nichts.");break;
-    case "conscious":out.push(simFix(s,pick(SIM_D[f.d]||["Ich weiß nicht genau."])));break;
-    case "breath":out.push(simFix(s,pick(SIM_B[f.b]||["Ich glaube schon."])));break;
-    case "airway":out.push(simFix(s,pick(SIM_A[f.a]||["Ich glaube, da ist nichts."])));break;
-    case "bleed":out.push(f.x==="Ja"||/blut|platzwunde/i.test(f.e||"")?pick(["Ein bisschen, am Kopf.","Ja, da läuft Blut, aber nicht so viel."]):"Nein, Blut seh ich keins.");break;
-    case "circ":out.push(simFix(s,pick(SIM_C[f.c]||["Weiß ich nicht."])));break;
-    case "pain":out.push(f.e?simFix(s,`${He} sagt: ${f.e}.`):"Das kann ich nicht sagen.");break;
-    case "age":out.push(age!=null?pick([`${age}.`,`${He} ist ${age} Jahre alt.`,`Ähm… ${age}.`]):"Weiß ich nicht.");break;
-    case "name":out.push(/anrufer|sie selbst|ihr name/.test(text.toLowerCase())||d.passerby||d.fire?`${d.caller.first} ${d.caller.last}.`:`${d.patient.first} ${d.patient.last}.`);break;
+    case "conscious":out.push(me?pick(SIM_D_SELF[f.d]||["Ja… ich bin da."]):simFix(s,pick(SIM_D[f.d]||["Ich weiß nicht genau."])));break;
+    case "breath":out.push(me?pick(SIM_B_SELF[f.b]||["Geht so."]):simFix(s,pick(SIM_B[f.b]||["Ich glaube schon."])));break;
+    case "airway":out.push(me?pick(SIM_A_SELF[f.a]||["Ja, geht."]):simFix(s,pick(SIM_A[f.a]||["Ich glaube, da ist nichts."])));break;
+    case "bleed":out.push(f.x==="Ja"?(me?"Ja, das blutet total, das hört nicht auf!":"Ja, das blutet ganz stark!"):/blut|platzwunde/i.test(f.e||"")?pick(["Ein bisschen, am Kopf.","Ja, da läuft Blut, aber nicht so viel."]):"Nein, Blut seh ich keins.");break;
+    case "circ":out.push(me?pick(SIM_C_SELF[f.c]||["Weiß nicht…"]):simFix(s,pick(SIM_C[f.c]||["Weiß ich nicht."])));break;
+    case "pain":out.push(me?(d.pain||"Weiß nicht genau."):f.e?simFix(s,`${He} sagt: ${f.e}.`):"Das kann ich nicht sagen.");break;
+    case "age":out.push(age!=null?(me?pick([`Ich bin ${age}.`,`${age}.`]):pick([`${age}.`,`${He} ist ${age} Jahre alt.`,`Ähm… ${age}.`])):"Weiß ich nicht.");break;
+    case "name":out.push(me?`${d.caller.first} ${d.caller.last}.`:/anrufer|sie selbst|ihr name/.test(text.toLowerCase())||d.passerby||d.fire?`${d.caller.first} ${d.caller.last}.`:`${d.patient.first} ${d.patient.last}.`);break;
     case "phone":out.push(`Meine Nummer ist ${s.phone}.`);break;
     case "danger":out.push(d.danger||(f.danger==="ja"?"Ja, das ist hier nicht ungefährlich.":"Nein, Gefahren seh ich keine."));break;
     case "water":out.push(s.loc.water?simFix(s,d.event):"Nein, mit Wasser hat das nichts zu tun.");break;
-    case "hist":out.push(simFix(s,d.hist||"Weiß ich nicht."));break;
+    case "hist":out.push(me?(d.hist||"Nein, eigentlich nicht."):simFix(s,d.hist||"Weiß ich nicht."));break;
     case "onset":out.push(d.onset||"Gerade eben.");break;
-    case "gender":out.push(d.patient.g==="w"?"Eine Frau.":"Ein Mann.");break;
+    case "gender":out.push(me?(d.patient.g==="w"?"Ich bin eine Frau.":"Ich bin ein Mann."):d.patient.g==="w"?"Eine Frau.":"Ein Mann.");break;
     case "dest":out.push(d.dest?`${d.dest.charAt(0).toUpperCase()+d.dest.slice(1)}.`:"Ins Krankenhaus natürlich!");break;
     case "mode":out.push(d.mode?`${d.mode.charAt(0).toUpperCase()+d.mode.slice(1)}.`:"Laufen kann "+he+" nicht.");break;
     case "time":out.push(d.time?d.time.charAt(0).toUpperCase()+d.time.slice(1)+".":(d.onset||"Jetzt gerade."));break;
@@ -7691,31 +7835,88 @@ function simAnswerFor(c,text){
  if(!out.length)out.push(pick(d.panic?["Was?! Bitte, helfen Sie mir einfach!","Was meinen Sie? Ich versteh das nicht!"]:["Wie bitte?","Das hab ich nicht verstanden.","Äh… was meinen Sie genau?","Das weiß ich nicht."]));
  return panic+out.join(" ");
 }
+
+// ─── KI-Anrufer (Brücke zu Claude, eigener API-Schlüssel nur auf diesem Gerät) ────────────────
+const SIM_AI_KEY="lst-sim-ai";
+const SIM_AI_MODELS=[["claude-haiku-4-5-20251001","Claude Haiku 4.5 – schnell & günstig (empfohlen)"],["claude-sonnet-5-5","Claude Sonnet 5.5 – natürlicher, teurer"]];
+let simAi=(()=>{try{return Object.assign({on:false,key:"",model:SIM_AI_MODELS[0][0]},JSON.parse(localStorage.getItem(SIM_AI_KEY)||"{}"))}catch(e){return {on:false,key:"",model:SIM_AI_MODELS[0][0]}}})();
+function simAiReady(){return !!(simAi.on&&simAi.key)}
+function simAiSave(){try{localStorage.setItem(SIM_AI_KEY,JSON.stringify(simAi))}catch(e){}}
+const SIM_LAY={x:{Ja:"es blutet stark"},a:{Gefährdet:"Atmung klingt gurgelig/röchelnd",Verlegt:"etwas steckt im Mund/Hals"},b:{Normal:"atmet normal",Auffällig:"atmet schwer und schnell, Atemnot","Keine normale Atmung":"atmet nicht normal, nur ab und zu ein Schnappen"},
+ c:{Unauffällig:"Hautfarbe normal",Auffällig:"blass, kaltschweißig",Schockzeichen:"grau, eiskalt, sehr schwach",Unklar:"kann man nicht beurteilen"},
+ d:{"Wach / orientiert":"wach und klar","Bewusstseinsgetrübt":"schläfrig, verwirrt, antwortet kaum","Bewusstlos":"bewusstlos, reagiert auf nichts","Krampfanfall":"krampft bzw. hat gekrampft","Neurologisch auffällig":"spricht verwaschen, eine Seite gelähmt"}};
+function simAiSystem(c){
+ const s=c.sim,d=s.d,f=d.f||{},P=d.patient||{},C=d.caller||{};
+ const lay=["x","a","b","c","d"].map(k=>SIM_LAY[k]&&SIM_LAY[k][f[k]]).filter(Boolean).join("; ");
+ const alarmMin=c.alarmTime?Math.round((Date.now()-new Date(c.alarmTime).getTime())/60000):null;
+ return `Du spielst in einem Übungssimulator für Disponenten einer Integrierten Leitstelle (Landkreis Friesland, Niedersachsen) einen ANRUFER am Telefon (${s.num==="19222"?"Krankentransport-Nummer 19222":"Notruf 112"}).
+REGELN:
+- Bleib immer in der Rolle. Antworte NUR mit dem, was der Anrufer ins Telefon sagt: Deutsch, umgangssprachlich, kurz (meist 1–2 Sätze). Keine Regieanweisungen, keine Sternchen, keine Anführungszeichen, keine Erklärungen.
+- Du bist medizinischer Laie: keine Fachbegriffe, keine Diagnosen. Du weißt nur, was du siehst, hörst und weißt.
+- Beantworte genau die gestellte Frage. Nur manchmal eine kleine ungefragte Info oder Gefühlsäußerung.
+- Anweisungen des Disponenten (z. B. Herzdruckmassage, Seitenlage, Tür öffnen) führst du aus und sagst kurz, was du gerade tust.
+- Wenn du etwas nicht weißt, sag das. Erfinde keine neuen dramatischen Wendungen. Was unten nicht steht, darfst du unauffällig und plausibel ergänzen.
+- Stimmung: ${d.panic?"sehr aufgeregt, teils panisch, du unterbrichst dich":"besorgt, aber einigermaßen gefasst"}.
+DEIN FALL:
+- Du: ${C.first||""} ${C.last||""} (${C.g==="w"?"Frau":"Mann"}), Rückrufnummer ${s.phone}.
+- ${d.isSelf?"Du rufst für DICH SELBST an – du bist der Patient. Sprich in der Ich-Form.":d.passerby?"Du bist zufällig vorbeigekommen und kennst den Betroffenen nicht.":d.clinicCaller?"Du bist Pflegekraft auf Station 3 im Klinikum Wilhelmshaven.":d.rel?`Du rufst an für: ${d.rel}.`:"Du meldest ein Ereignis, das du beobachtest."}
+${P.first&&!d.isSelf&&!d.fire?`- Betroffene Person: ${P.first} ${P.last}, ${P.g==="w"?"weiblich":"männlich"}${d.age!=null?`, ${d.age} Jahre`:""}.\n`:d.isSelf?`- Du bist ${d.age} Jahre alt.\n`:""}- Ort: ${s.loc.text}.
+- Was los ist: ${d.event}
+${lay?`- Zustand (in Laiensprache beschreiben): ${lay}${f.e?`; außerdem: ${f.e}`:""}.\n`:""}${d.pain?`- Beschwerden: ${d.pain}\n`:""}${d.onset?`- Seit wann: ${d.onset}\n`:""}${d.hist?`- Vorerkrankungen/Medikamente: ${d.hist}\n`:""}${d.danger?`- Gefahr vor Ort: ${d.danger}\n`:""}${d.inside?`- Personen im Gebäude: ${d.inside}\n`:""}${d.kt?`- Krankentransport: Ziel ${d.dest||"?"}, Transport ${d.mode||"?"}, Zeit ${d.time||"?"}, Unterlagen: ${d.doc||"?"}\n`:""}${s.isFollow?`- Du hast vorhin schon einmal angerufen. Jetzt rufst du ERNEUT an, weil: ${s.why||"sich etwas verändert hat"}.\n`:""}${d.extra&&d.extra.length?`- Typische Sätze von dir: ${d.extra.join(" | ")}\n`:""}${alarmMin!=null?`- Die Leitstelle hat vor ${alarmMin} Minuten Hilfe losgeschickt.\n`:""}${c.rea&&c.rea.open&&reaMetroCall===String(c.id)?"- Ein Metronom piept im Takt; du drückst auf die Brust und zählst mit.\n":""}${s.cprStarted?"- Du machst gerade Herzdruckmassage.\n":""}`;
+}
+function simAiMessages(c){
+ const msgs=[{role:"user",content:"(Die Leitstelle nimmt den Anruf an.)"}];
+ for(const m of c.sim.log){const role=m.who==="lst"?"user":"assistant";const last=msgs[msgs.length-1];if(last.role===role)last.content+="\n"+m.text;else msgs.push({role,content:m.text})}
+ if(msgs[msgs.length-1].role!=="user")msgs.push({role:"user",content:"(kurze Pause)"});
+ return msgs;
+}
+async function simAiCall(system,messages,maxTokens=200){
+ const ctl=new AbortController(); const to=setTimeout(()=>ctl.abort(),20000);
+ try{
+   const r=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",signal:ctl.signal,headers:{"content-type":"application/json","x-api-key":simAi.key,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},
+     body:JSON.stringify({model:simAi.model,max_tokens:maxTokens,system,messages})});
+   if(!r.ok){let m="";try{m=(await r.json())?.error?.message||""}catch(e){}throw new Error(`${r.status}${m?" – "+m:""}`)}
+   const j=await r.json();
+   return (j.content||[]).filter(b=>b.type==="text").map(b=>b.text).join(" ").replace(/\*[^*]{0,80}\*/g,"").replace(/^\s*["„“]|["“”]\s*$/g,"").replace(/\s+/g," ").trim();
+ }finally{clearTimeout(to)}
+}
+async function simReply(c,text){
+ if(simAiReady()){
+   try{const t=await simAiCall(simAiSystem(c),simAiMessages(c));if(t){simIntents(text).forEach(k=>{if((k==="cpr"||k==="keep")&&c.sim.d.cpr)c.sim.cprStarted=true});return t}}
+   catch(e){toast("🤖 KI nicht erreichbar ("+String(e.message||e).slice(0,60)+") – Antwort regelbasiert")}
+ }
+ return simAnswerFor(c,text);
+}
+
+// ─── Gespräch ─────────────────────────────────────────────────────────────────────────────────
 function simSay(c,text){
  c.sim.log.push({who:"caller",text,t:Date.now()}); c.sim.lastAt=Date.now();
  if(simVoice)simSpeak(c,text);
 }
-function simSend(){
- const c=db.currentCall; if(!c||!c.sim||c.phoneEnd)return;
- const el=document.getElementById("simInput"); const text=String(el?.value||"").trim(); if(!text)return;
- c.sim.log.push({who:"lst",text,t:Date.now()}); el.value="";
- const ans=simAnswerFor(c,text);
- save(); simRenderChat();
- setTimeout(()=>{if(c.phoneEnd)return;simSay(c,ans);save();simRenderChat()},rnd(500,1300));
+function simCallById(id){return allOpenCalls().find(x=>String(x.id)===String(id))}
+async function simSendFrom(callId,inputId,preset){
+ const c=simCallById(callId); if(!c||!c.sim||c.phoneEnd)return;
+ const el=inputId?document.getElementById(inputId):null;
+ const text=String(preset!=null?preset:(el?.value||"")).trim(); if(!text)return;
+ if(el&&preset==null)el.value="";
+ c.sim.log.push({who:"lst",text,t:Date.now()}); c.sim.lastAt=Date.now(); c.sim.typing=true;
+ save(); simRefresh();
+ const t0=Date.now(); const ans=await simReply(c,text);
+ const wait=Math.max(0,rnd(500,1200)-(Date.now()-t0));
+ setTimeout(()=>{c.sim.typing=false;if(c.phoneEnd){simRefresh();return}simSay(c,ans);save();simRefresh()},wait);
 }
+function simSend(){const c=db.currentCall;if(c)simSendFrom(c.id,"simInput")}
 // spontane Sätze, wenn länger nichts gesagt wurde
 function simSpontaneous(){
- if(!simOn&&!allOpenCalls().some(c=>c.sim))return;
  for(const c of allOpenCalls()){
-   if(!c.sim||c.phoneEnd)continue;
+   if(!c.sim||c.phoneEnd||c.sim.typing)continue;
    const s=c.sim; if(Date.now()-s.lastAt<rnd(28,45)*1000)continue;
    const pool=[...(s.d.extra||[])];
    if(c.alarmTime&&Date.now()-new Date(c.alarmTime).getTime()>120000&&!s.kt)pool.push("Ich glaub, ich hör schon das Martinshorn!","Wann sind die denn da?");
-   if(s.d.cpr&&s.cprStarted)pool.push("Ich kann bald nicht mehr… zweiundzwanzig, dreiundzwanzig…");
+   if(s.d.cpr&&s.cprStarted)pool.push("Ich kann bald nicht mehr… zweiundzwanzig, dreiundzwanzig…","Ich drück die ganze Zeit… kommt denn keiner?");
    if(!pool.length){s.lastAt=Date.now();continue}
    const t=pool[s.spontIdx%pool.length]; s.spontIdx++;
-   simSay(c,simFix(s,t)); save();
-   if(db.currentCall&&String(db.currentCall.id)===String(c.id))simRenderChat();
+   simSay(c,s.d.isSelf?t:simFix(s,t)); save(); simRefresh();
  }
 }
 
@@ -7728,67 +7929,295 @@ function simSpeak(c,text){
    const fem=c.sim.d.caller.g==="w";
    const v=voices.find(v=>fem?/anna|petra|helena|katja|hedda|marlene|vicki|female|frau/i.test(v.name):/markus|yannick|conrad|stefan|hans|male|mann/i.test(v.name))||voices[0];
    if(v)u.voice=v;
-   u.pitch=fem?1.15:0.85; u.rate=c.sim.d.panic?1.15:1.0;
+   u.pitch=fem?1.15:0.85; u.rate=c.sim.d.panic?1.15:1.0; u.onend=()=>{simSpeakEnd=Date.now()};
    speechSynthesis.speak(u);
  }catch(e){}
 }
-let simRec=null;
-function simListen(){
+// Sprachmodus: Mikrofon hört dauerhaft zu, solange ein Übungsanruf läuft – man kann jederzeit
+// sprechen (auch dazwischen: der Anrufer verstummt dann). Alles Gesagte landet im Gesprächsprotokoll.
+const SIM_KEY_MIC="lst-sim-mic";
+let simMicOn=(()=>{try{return localStorage.getItem(SIM_KEY_MIC)!=="0"}catch(e){return true}})();
+let simMic=null, simMicBlocked=false, simMicInterim="", simMicStartAt=0;
+let simRec=null, simRecFor=null; // (alt, für Kompatibilität)
+function simMicTarget(){
+ const cur=db.currentCall;
+ if(cur&&cur.sim&&!cur.phoneEnd)return cur;
+ const live=allOpenCalls().filter(c=>c.sim&&!c.phoneEnd);
+ return live.length?live[live.length-1]:null;
+}
+function simNorm(t){return String(t||"").toLowerCase().replace(/[^a-zäöüß0-9 ]/g," ").split(/\s+/).filter(w=>w.length>2)}
+let simSpeakEnd=0;
+function simIsEcho(c,text){
+ if(!c||!c.sim)return false;
+ const flat=x=>String(x||"").toLowerCase().replace(/[^a-zäöüß0-9]/g,"");
+ const lastC=c.sim.log.filter(m=>m.who==="caller").slice(-1)[0];
+ const recent=(()=>{try{if(speechSynthesis.speaking)return true}catch(e){}return Date.now()-simSpeakEnd<4000})();
+ const f=flat(text);
+ if(recent&&lastC&&f.length>=2&&flat(lastC.text).includes(f))return true;
+ const w=simNorm(text); if(w.length<2)return false;
+ const said=new Set(c.sim.log.filter(m=>m.who==="caller").slice(-2).flatMap(m=>simNorm(m.text)));
+ const hit=w.filter(x=>said.has(x)).length;
+ return hit/w.length>=0.6;
+}
+function simMicSet(on){
+ simMicOn=on; simMicBlocked=false; try{localStorage.setItem(SIM_KEY_MIC,on?"1":"0")}catch(e){}
+ if(on)simMicEnsure(); else simMicStop();
+ simRefresh();
+}
+function simMicStop(){if(simMic){const m=simMic;simMic=null;try{m.onend=null;m.abort()}catch(e){}}simMicInterim="";simMicLiveUpdate()}
+function simMicLiveUpdate(){document.querySelectorAll(".simMicLive").forEach(el=>{el.textContent=simMicInterim?("🎙️ "+simMicInterim):(simMic?"🎙️ hört zu …":"")})}
+function simMicEnsure(){
  const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
- if(!SR){toast("Spracherkennung wird von diesem Browser nicht unterstützt – bitte eintippen");return}
- if(simRec){try{simRec.stop()}catch(e){}simRec=null;simRenderChat();return}
- try{speechSynthesis.cancel()}catch(e){}
- simRec=new SR(); simRec.lang="de-DE"; simRec.interimResults=false; simRec.maxAlternatives=1;
- simRec.onresult=e=>{const t=e.results[0][0].transcript;const el=document.getElementById("simInput");if(el){el.value=t;simSend()}};
- simRec.onend=()=>{simRec=null;simRenderChat()};
- simRec.onerror=()=>{simRec=null;simRenderChat()};
- simRec.start(); simRenderChat();
+ const want=simVoice&&simMicOn&&!simMicBlocked&&!!SR&&!!simMicTarget()&&!IS_MONITOR&&!isTerminalLink;
+ if(!want){if(simMic)simMicStop();return}
+ if(simMic||Date.now()-simMicStartAt<1500)return;
+ const rec=new SR(); rec.lang="de-DE"; rec.continuous=true; rec.interimResults=true; rec.maxAlternatives=1;
+ rec.onresult=e=>{
+   let interim="";
+   for(let i=e.resultIndex;i<e.results.length;i++){
+     const t=e.results[i][0].transcript.trim(); if(!t)continue;
+     const c=simMicTarget();
+     if(e.results[i].isFinal){
+       simMicInterim="";
+       if(c&&!simIsEcho(c,t)){try{speechSynthesis.cancel()}catch(x){}simSendFrom(c.id,null,t)}
+     }else{
+       interim+=t+" ";
+       // dazwischen sprechen: Anrufer verstummt (aber nicht durch das eigene Echo der Sprachausgabe)
+       if(c&&simNorm(t).length>=2&&!simIsEcho(c,t))try{if(speechSynthesis.speaking)speechSynthesis.cancel()}catch(x){}
+     }
+   }
+   simMicInterim=interim.trim(); simMicLiveUpdate();
+ };
+ rec.onerror=ev=>{if(ev&&(ev.error==="not-allowed"||ev.error==="service-not-allowed")){simMicBlocked=true;toast("🎙️ Mikrofon nicht erlaubt – bitte in den Browser-Einstellungen freigeben oder eintippen")}};
+ rec.onend=()=>{if(simMic===rec)simMic=null;simMicInterim="";simMicLiveUpdate()}; // startet beim nächsten Takt neu
+ try{rec.start();simMic=rec;simMicStartAt=Date.now();simMicLiveUpdate()}catch(e){simMicStartAt=Date.now()}
+}
+function simListen(){simMicSet(!simMicOn)}
+function simLogHTML(c,max){
+ const s=c.sim; const list=max?s.log.slice(-max):s.log;
+ return list.map(m=>`<div style="margin:4px 0;display:flex;${m.who==="lst"?"justify-content:flex-end":""}"><div style="max-width:85%;padding:6px 10px;border-radius:12px;${m.who==="lst"?"background:#dbeafe;color:#1e3a8a":"background:#fee2e2;color:#7f1d1d"}"><small style="opacity:.7;font-weight:700">${m.who==="lst"?"Sie":"Anrufer"}</small><br>${esc(m.text)}</div></div>`).join("")
+  +(s.typing?`<div class="muted" style="margin:4px 0;font-style:italic">Anrufer spricht …</div>`:"");
+}
+function simInputRowHTML(c,inputId){
+ const id=esc(String(c.id));
+ return `<div class="row" style="margin-top:6px;flex-wrap:nowrap">
+   <input id="${inputId}" placeholder="${simVoice?"Einfach sprechen – oder eintippen …":"Was sagen Sie dem Anrufer?"}" style="flex:1;min-width:0" onkeydown="if(event.key==='Enter'){event.preventDefault();simSendFrom('${id}','${inputId}')}">
+   ${simVoice?`<button onclick="simMicSet(!simMicOn)" title="Mikrofon dauerhaft an/aus" style="white-space:nowrap;${simMicOn&&!simMicBlocked?"background:#dc2626;color:#fff;border-color:#dc2626":""}">${simMicOn&&!simMicBlocked?"🎙️ an":"🎙️ aus"}</button>`:""}
+   <button class="primary" onclick="simSendFrom('${id}','${inputId}')">Senden</button></div>
+   ${simVoice?`<div class="simMicLive muted" style="font-size:13px;min-height:16px;margin-top:4px;font-style:italic"></div>`:""}`;
 }
 function simChatHTML(c){
  if(!c||!c.sim)return "";
  const s=c.sim;
- setTimeout(()=>{const lg=document.getElementById("simLog");if(lg)lg.scrollTop=lg.scrollHeight},0);
- const log=s.log.map(m=>`<div style="margin:4px 0;display:flex;${m.who==="lst"?"justify-content:flex-end":""}"><div style="max-width:85%;padding:6px 10px;border-radius:12px;${m.who==="lst"?"background:#dbeafe;color:#1e3a8a":"background:#fee2e2;color:#7f1d1d"}"><small style="opacity:.7;font-weight:700">${m.who==="lst"?"Sie":"Anrufer"}</small><br>${esc(m.text)}</div></div>`).join("");
+ setTimeout(()=>{const lg=document.getElementById("simLog");if(lg)lg.scrollTop=lg.scrollHeight;simMicLiveUpdate()},0);
+ const ref=s.isFollow&&String(s.refCallId)!==String(c.id)?simCallById(s.refCallId):null;
  return `<div class="card" style="border:2px solid ${s.num==="19222"?"#1d4ed8":"#e30613"}">
-  <div class="row between"><h3 style="margin:0">🗣️ Übungsanruf ${s.num==="19222"?"19222":"112"} ${simVoice?"– 🔊 Sprachmodus":"– 🔇 Textmodus"}</h3><small class="muted">Anrufer antwortet auf typische Fragen (Stichworte)</small></div>
-  <div id="simLog" style="max-height:${simVoice?"140":"260"}px;overflow:auto;margin-top:6px;padding:4px;background:#f8fafc;border-radius:8px">${log}</div>
-  ${c.phoneEnd?`<div class="muted" style="margin-top:6px">📵 Aufgelegt.</div>`:`<div class="row" style="margin-top:6px;flex-wrap:nowrap">
-   <input id="simInput" placeholder="${simVoice?"Sprechen (🎤) oder eintippen …":"Was sagen Sie dem Anrufer? z. B. „Wo genau ist der Notfallort?“"}" style="flex:1" onkeydown="if(event.key==='Enter'){event.preventDefault();simSend()}">
-   ${simVoice?`<button onclick="simListen()" title="Frage sprechen" style="${simRec?"background:#dc2626;color:#fff":""}">${simRec?"⏹":"🎤"}</button>`:""}
-   <button class="primary" onclick="simSend()">Senden</button></div>`}
+  <div class="row between"><h3 style="margin:0">🗣️ Übungsanruf ${s.num==="19222"?"19222":"112"} ${simVoice?"– 🔊 Sprachmodus":"– 🔇 Textmodus"}</h3><small class="muted">${simAiReady()?"🤖 KI-Anrufer":"Anrufer antwortet auf typische Fragen (Stichworte)"}</small></div>
+  ${s.isFollow?`<div style="margin-top:6px;padding:6px 10px;border-radius:8px;background:#fef3c7;color:#92400e;font-weight:700">🔁 Erneuter Anruf – Rufnummer bekannt aus Einsatz #${esc(s.refCallId)}${ref?` (${esc(ref.keyword||"—")}, ${esc(ref.location||"")})`:" (Einsatz bereits abgeschlossen)"}
+    ${ref?`<button style="margin-left:8px" onclick="simMergeFollow('${esc(String(c.id))}')">↩️ Zu Einsatz #${esc(String(ref.id))} übernehmen</button>`:""}</div>`:""}
+  <div id="simLog" style="max-height:${simVoice?"140":"260"}px;overflow:auto;margin-top:6px;padding:4px;background:#f8fafc;border-radius:8px">${simLogHTML(c)}</div>
+  ${c.phoneEnd?`<div class="muted" style="margin-top:6px">📵 Aufgelegt.</div>`:simInputRowHTML(c,"simInput")}
  </div>`;
 }
-function simRenderChat(){
+function simRefresh(){
  const box=document.getElementById("simChatBox"), c=db.currentCall;
- if(!box||!c||!c.sim)return;
- const keep=document.getElementById("simInput")?.value||"";
- box.innerHTML=simChatHTML(c);
- const inp=document.getElementById("simInput"); if(inp){inp.value=keep;}
- const lg=document.getElementById("simLog"); if(lg)lg.scrollTop=lg.scrollHeight;
+ if(box&&c&&c.sim){
+   const act=document.activeElement&&document.activeElement.id==="simInput";
+   const keep=document.getElementById("simInput")?.value||"";
+   box.innerHTML=simChatHTML(c);
+   const inp=document.getElementById("simInput"); if(inp){inp.value=keep;if(act)inp.focus()}
+   const lg=document.getElementById("simLog"); if(lg)lg.scrollTop=lg.scrollHeight;
+ }
+ floatSig=""; renderFloat();
 }
+const simRenderChat=simRefresh;
 
-// ─── Kopfleiste: 🔇/🔊 (Text/Stimme) und 🎲 Übungsnotrufe an/aus ──────────────────────────────
+// ─── Kopfleiste: 🔇/🔊 (Text/Stimme), 🎲 Übungsnotrufe an/aus, 🤖 KI ─────────────────────────────
 function simCtlHTML(){
  return `<button onclick="simToggleVoice()" title="${simVoice?"Sprachmodus – antippen für Textmodus":"Textmodus – antippen für Sprachmodus"}" style="font-size:20px;padding:2px 8px;background:none;border:1px solid var(--line);border-radius:8px">${simVoice?"🔊":"🔇"}</button>
-  <button onclick="simToggleOn()" title="Automatische Übungsnotrufe ${simOn?"ausschalten":"einschalten"}" style="font-size:12px;padding:4px 10px;border-radius:8px;font-weight:800;${simOn?"background:#16a34a;color:#fff;border:1px solid #16a34a":"background:#fff;color:#334155;border:1px solid var(--line)"}">🎲 <span class="simLbl">Übungsnotrufe </span>${simOn?"AN":"AUS"}</button>`;
+  <button onclick="simToggleOn()" title="Automatische Übungsnotrufe ${simOn?"ausschalten":"einschalten"}" style="font-size:12px;padding:4px 10px;border-radius:8px;font-weight:800;${simOn?"background:#16a34a;color:#fff;border:1px solid #16a34a":"background:#fff;color:#334155;border:1px solid var(--line)"}">🎲 <span class="simLbl">Übungsnotrufe </span>${simOn?"AN":"AUS"}</button>
+  <button onclick="simAiDialog()" title="KI-Anrufer einrichten" style="font-size:16px;padding:2px 8px;border-radius:8px;${simAiReady()?"background:#ede9fe;border:1px solid #7c3aed":"background:none;border:1px solid var(--line)"}">🤖</button>`;
 }
-function renderSimCtl(){const el=document.getElementById("simCtl");if(!el)return;if(IS_MONITOR||isTerminalLink){el.innerHTML="";return}el.innerHTML=simCtlHTML()}
+function renderSimCtl(){
+ const el=document.getElementById("simCtl");if(!el)return;
+ if(IS_MONITOR||isTerminalLink){el.innerHTML="";return}
+ el.innerHTML=simCtlHTML();
+ if(!document.getElementById("floatDock")){const d=document.createElement("div");d.id="floatDock";document.body.appendChild(d)}
+}
 function simToggleVoice(){
  simVoice=!simVoice; try{localStorage.setItem(SIM_KEY_VOICE,simVoice?"1":"0")}catch(e){}
- if(!simVoice)try{speechSynthesis.cancel()}catch(e){}
+ if(!simVoice){try{speechSynthesis.cancel()}catch(e){}simMicStop()}
  else try{speechSynthesis.getVoices();const u=new SpeechSynthesisUtterance("");speechSynthesis.speak(u)}catch(e){} // Ton auf iOS freischalten
- renderSimCtl(); simRenderChat();
+ renderSimCtl(); simRefresh();
  toast(simVoice?"🔊 Übungsanrufe mit Stimme":"🔇 Übungsanrufe als Text");
 }
 function simToggleOn(){
  simOn=!simOn; try{localStorage.setItem(SIM_KEY_ON,simOn?"1":"0")}catch(e){}
  simNextAt=0; simQueue=[];
- if(simOn)simSchedule(true);
+ if(simOn)simSchedule(true); else simFollowQueue=[];
  renderSimCtl();
  toast(simOn?"🎲 Übungsnotrufe AN – kommen ab jetzt zufällig":"🎲 Übungsnotrufe AUS");
 }
+function simAiDialog(){
+ document.getElementById("simAiDlg")?.remove();
+ const d=document.createElement("div"); d.id="simAiDlg";
+ d.style.cssText="position:fixed;inset:0;background:rgba(15,23,42,.55);z-index:2000;display:flex;align-items:center;justify-content:center;padding:16px";
+ d.innerHTML=`<div class="card" style="max-width:520px;width:100%;max-height:90vh;overflow:auto;margin:0">
+  <h2 style="margin-top:0">🤖 KI-Anrufer</h2>
+  <p>Mit KI antwortet der Anrufer frei auf alles, was du fragst oder sagst – nicht nur auf Stichworte. Der Fall (Ort, Zustand, Vorgeschichte) bleibt derselbe.</p>
+  <p class="muted" style="font-size:13px">Dafür brauchst du einen eigenen API-Schlüssel von Anthropic (Claude Console, console.anthropic.com). Jede Antwort kostet einen kleinen Betrag, mit Haiku meist deutlich unter 1 Cent. Der Schlüssel wird <b>nur auf diesem Gerät</b> gespeichert und nur an Anthropic geschickt – nicht in die Cloud-Sitzung, nicht an andere Geräte. Ohne Schlüssel oder bei Fehlern antwortet der Anrufer wie bisher nach Stichworten.</p>
+  <label style="display:flex;gap:8px;align-items:center;margin:10px 0"><input type="checkbox" id="simAiOn" ${simAi.on?"checked":""} style="width:auto"> KI-Anrufer verwenden</label>
+  <label>Modell</label><select id="simAiModel">${SIM_AI_MODELS.map(([v,l])=>`<option value="${v}" ${simAi.model===v?"selected":""}>${l}</option>`).join("")}</select>
+  <label style="margin-top:8px">API-Schlüssel</label><input id="simAiKeyIn" type="password" autocomplete="off" placeholder="sk-ant-…" value="${esc(simAi.key||"")}">
+  <div id="simAiMsg" class="muted" style="margin-top:8px;min-height:18px"></div>
+  <div class="row" style="justify-content:flex-end;margin-top:10px">
+   <button onclick="document.getElementById('simAiDlg').remove()">Schließen</button>
+   <button onclick="simAiTest()">🔌 Testen</button>
+   <button class="primary" onclick="simAiStore()">💾 Speichern</button>
+  </div></div>`;
+ document.body.appendChild(d);
+}
+function simAiRead(){simAi.on=!!document.getElementById("simAiOn")?.checked;simAi.model=document.getElementById("simAiModel")?.value||simAi.model;simAi.key=String(document.getElementById("simAiKeyIn")?.value||"").trim()}
+function simAiStore(){simAiRead();simAiSave();renderSimCtl();simRefresh();document.getElementById("simAiDlg")?.remove();toast(simAiReady()?"🤖 KI-Anrufer aktiv":"KI-Anrufer aus – Anrufer antwortet nach Stichworten")}
+async function simAiTest(){
+ simAiRead(); const m=document.getElementById("simAiMsg");
+ if(!simAi.key){if(m)m.textContent="Bitte zuerst einen API-Schlüssel eintragen.";return}
+ if(m)m.textContent="Teste Verbindung …";
+ try{const t=await simAiCall("Du bist ein Anrufer am Notruf. Antworte mit genau einem kurzen Satz auf Deutsch.",[{role:"user",content:"Notruf Feuerwehr und Rettungsdienst, wo genau ist der Notfallort?"}],60);if(m)m.innerHTML=`✅ Verbindung steht. Testantwort: „${esc(t)}“`}
+ catch(e){if(m)m.textContent="❌ Fehler: "+String(e.message||e)}
+}
 
-setInterval(()=>{renderCallTimerBar();const clock=document.getElementById("clock");if(clock)clock.textContent=new Date().toLocaleTimeString("de-DE");if(IS_MONITOR)return;applyDutySchedule();autoReturnToStation();autoAdvanceEnRoute();updateWaitTimers();simTick();simSpontaneous()},1000);
+// ─── Reanimation: Telefonreanimations-Protokoll mit Metronom (für alle Notrufe) ────────────────
+const REA_STEPS=["Hören Sie mir genau zu, ich helfe Ihnen jetzt.",
+ "Stellen Sie das Telefon auf Lautsprecher und legen Sie es neben die Person.",
+ "Legen Sie die Person flach auf den Rücken, auf den Boden.",
+ "Machen Sie den Oberkörper frei.",
+ "Legen Sie einen Handballen in die Mitte der Brust, die andere Hand obendrauf.",
+ "Drücken Sie mit gestreckten Armen fest, 5 bis 6 Zentimeter tief, im Takt des Piepens. Zählen Sie laut mit.",
+ "Hören Sie nicht auf, bis der Rettungsdienst übernimmt.",
+ "Ist noch jemand da? Dann Haustür öffnen und, wenn vorhanden, einen Defibrillator holen. Wechseln Sie sich alle 2 Minuten ab."];
+let reaMetroTimer=null, reaMetroCall=null, floatSig="", floatCollapsed={};
+function reaOpen(id){
+ const c=simCallById(id); if(!c)return;
+ if(!c.rea||!c.rea.open){c.rea={open:true,start:Date.now(),steps:[]};c.history=c.history||[];c.history.push({q:"🫀 Reanimationsprotokoll",a:"geöffnet "+new Date().toLocaleTimeString("de-DE")})}
+ delete floatCollapsed["rea"+c.id]; save(); floatSig=""; renderFloat();
+}
+function reaAutoCheck(){
+ for(const c of allOpenCalls()){
+   if(c.rea||c.kt)continue;
+   if(reaShortcutActive(c)){c.rea={open:true,start:Date.now(),steps:[],auto:true};c.history=c.history||[];c.history.push({q:"🫀 Reanimationsprotokoll",a:"automatisch geöffnet "+new Date().toLocaleTimeString("de-DE")});save();toast("🫀 Reanimation – Protokoll geöffnet");floatSig=""}
+ }
+}
+function metroClick(ctx,t){const o=ctx.createOscillator(),g=ctx.createGain();o.frequency.value=1000;g.gain.setValueAtTime(0.0001,t);g.gain.exponentialRampToValueAtTime(0.5,t+0.005);g.gain.exponentialRampToValueAtTime(0.0001,t+0.06);o.connect(g);g.connect(ctx.destination);o.start(t);o.stop(t+0.07)}
+function metroScheduler(ctx,bpm=120){
+ const step=60/bpm; let next=ctx.currentTime+0.05;
+ return setInterval(()=>{if(ctx.state!=="running")return;if(next<ctx.currentTime)next=ctx.currentTime+0.02;while(next<ctx.currentTime+0.15){metroClick(ctx,next);next+=step}},25);
+}
+function reaCloudMetro(c,on){if(c&&c.callerId&&db.cloud?.enabled)cloudRequest(`callRequests/${encodeURIComponent(String(c.callerId))}`,"PATCH",{metronome:!!on,metroAt:new Date().toISOString()})}
+function reaMetro(id){
+ const c=simCallById(id); if(!c)return;
+ if(reaMetroCall===String(id)){reaStopMetro();return}
+ reaStopMetro();
+ try{reaMetroTimer=metroScheduler(simCtx());reaMetroCall=String(id)}catch(e){toast("Ton konnte nicht gestartet werden");return}
+ c.rea=c.rea||{open:true,start:Date.now(),steps:[]}; c.rea.metroUsed=true; c.rea.metroStart=Date.now();
+ reaCloudMetro(c,true);
+ if(c.sim&&!c.phoneEnd){if(c.sim.d.cpr){c.sim.cprStarted=true;setTimeout(()=>{if(!c.phoneEnd){simSay(c,pick(["Okay, ich hör das Piepen… ich drück im Takt… eins, zwei, drei, vier…","Im Takt… okay… eins, zwei, drei…"]));save();simRefresh()}},900)}}
+ save(); floatSig=""; renderFloat();
+}
+function reaStopMetro(){
+ if(reaMetroTimer){clearInterval(reaMetroTimer);reaMetroTimer=null}
+ if(reaMetroCall){const c=simCallById(reaMetroCall);if(c)reaCloudMetro(c,false)}
+ reaMetroCall=null; floatSig="";
+}
+function reaStep(id,i){
+ const c=simCallById(id); if(!c||!c.rea)return;
+ c.rea.steps=c.rea.steps||[]; if(!c.rea.steps.includes(i))c.rea.steps.push(i);
+ save();
+ if(c.sim&&!c.phoneEnd)simSendFrom(id,null,REA_STEPS[i]); else {floatSig="";renderFloat()}
+}
+function reaUnitsOf(c,re){return (c.alarmedUnits||[]).map(id=>db.units.find(u=>String(u.id)===String(id))).filter(u=>u&&re.test(String(u.type||"")))}
+function reaArrive(id,kind){
+ const c=simCallById(id); if(!c||!c.rea)return;
+ const list=reaUnitsOf(c,kind==="NEF"?/NEF/:/RTW/);
+ if(!list.length){toast(`Kein ${kind} alarmiert`);return}
+ const u=list.find(x=>String(x.status)!=="4")||list[0];
+ if(String(u.status)!=="4")setUnitStatus(u,"4");
+ reaClose(c,`${kind} angekommen (${u.opta||u.name}) – Status 4`);
+ if(c.sim&&!c.phoneEnd){simSay(c,pick(["Da sind sie! Gott sei Dank!","Ich hör sie an der Tür – die sind da!"]));simRefresh()}
+ toast(`🫀 ${u.opta||u.name}: Status 4 – Protokoll geschlossen`);
+}
+function reaDismiss(id){
+ const c=simCallById(id); if(!c||!c.rea)return;
+ if(!confirm("Reanimationsprotokoll ohne Eintreffen schließen (z. B. Fehleinschätzung)?"))return;
+ reaClose(c,"ohne Eintreffen geschlossen");
+}
+function reaClose(c,how){
+ if(reaMetroCall===String(c.id))reaStopMetro();
+ const dur=fmtDur(Date.now()-c.rea.start);
+ c.rea.open=false; c.rea.closedAt=Date.now();
+ c.history=c.history||[];
+ c.history.push({q:"🫀 Reanimationsprotokoll beendet",a:`${how} · Dauer ${dur} · Metronom ${c.rea.metroUsed?"genutzt":"nicht genutzt"} · Anleitung ${(c.rea.steps||[]).length}/${REA_STEPS.length} Schritte`});
+ save(); if(db.cloud?.enabled&&c.alarmTime)setTimeout(()=>pushCallCloud(c),0);
+ floatSig=""; renderFloat(); if(!uiLocked&&currentPage!=="notruf")render(currentPage);
+}
+function floatToggle(k){floatCollapsed[k]=!floatCollapsed[k];floatSig="";renderFloat()}
+function reaPanelHTML(c){
+ const k="rea"+c.id, col=!!floatCollapsed[k], metro=reaMetroCall===String(c.id), id=esc(String(c.id));
+ const rtw=reaUnitsOf(c,/RTW/), nef=reaUnitsOf(c,/NEF/);
+ const ub=(list,kind)=>`<button ${list.length?"":"disabled"} onclick="reaArrive('${id}','${kind}')" style="flex:1;font-weight:900;${list.length?"background:#16a34a;color:#fff;border-color:#16a34a":"opacity:.5"}">🚑 ${kind} angekommen</button>`;
+ const head=`<div class="row between" style="flex-wrap:nowrap"><b style="color:#b91c1c">🫀 Reanimation · #${id}</b><span style="display:flex;gap:6px;align-items:center">${metro?`<span class="reaDot"></span>`:""}<span class="liveTimer" data-start="${c.rea.start}" style="font-variant-numeric:tabular-nums;font-weight:800">${fmtDur(Date.now()-c.rea.start)}</span><button style="padding:2px 8px" onclick="floatToggle('${k}')">${col?"▴":"▾"}</button></span></div>`;
+ const arrive=`<div class="row" style="margin-top:8px;flex-wrap:nowrap;gap:6px">${ub(rtw,"RTW")}${ub(nef,"NEF")}</div>`;
+ if(col)return `<div class="card" style="border:2px solid #dc2626">${head}<div class="row" style="margin-top:6px"><button onclick="reaMetro('${id}')" style="flex:1;${metro?"background:#dc2626;color:#fff;border-color:#dc2626":""}">${metro?"⏸ Metronom stoppen":"▶ Metronom 120/min"}</button></div>${arrive}</div>`;
+ const steps=REA_STEPS.map((t,i)=>{const done=(c.rea.steps||[]).includes(i);return `<div onclick="reaStep('${id}',${i})" style="cursor:pointer;display:flex;gap:8px;padding:5px 6px;border-radius:8px;margin:2px 0;${done?"background:#dcfce7;color:#166534":"background:#f8fafc"}"><b>${done?"✓":i+1}</b><span>${esc(t)}</span></div>`}).join("");
+ const unitRows=[...rtw,...nef].map(u=>`<div style="font-size:13px">${esc(u.opta||u.name)} <span class="muted">(${esc(u.type)})</span> – Status <b>${esc(String(u.status))}</b>${String(u.status)==="4"?" ✅ meldet vor Ort":""}</div>`).join("")||`<div class="muted" style="font-size:13px">Noch kein RTW/NEF alarmiert.</div>`;
+ const chat=c.sim&&!c.phoneEnd?`<div style="margin-top:8px;border-top:1px solid var(--line);padding-top:6px"><b style="font-size:13px">🗣️ Anrufer</b><div class="floatLog" style="max-height:120px;overflow:auto">${simLogHTML(c,4)}</div>${simInputRowHTML(c,"reaIn_"+c.id)}</div>`:"";
+ return `<div class="card" style="border:2px solid #dc2626">${head}
+  <div class="muted" style="font-size:13px;margin-top:2px">${esc(c.location||"Ort noch offen")}${c.keyword?" · "+esc(c.keyword):""}${c.callerId?" · Anrufer-Handy verbunden":""}</div>
+  <button onclick="reaMetro('${id}')" style="width:100%;margin-top:8px;padding:12px;font-size:16px;font-weight:900;${metro?"background:#dc2626;color:#fff;border-color:#dc2626":"background:#fee2e2;color:#991b1b;border-color:#fca5a5"}">${metro?`<span class="reaDot" style="background:#fff;vertical-align:middle"></span> Metronom läuft (120/min) – stoppen`:"▶ Metronom 120/min starten"}</button>
+  <div class="muted" style="font-size:12px;margin-top:4px">${c.callerId?"Der Takt wird auch auf dem Handy des Anrufers ausgegeben.":c.sim?"Der Übungsanrufer drückt im Takt mit.":"Takt läuft auf diesem Gerät (ins Telefon halten)."}</div>
+  <div style="margin-top:8px;font-size:13px"><b>Anleitung (antippen = gesagt${c.sim&&!c.phoneEnd?" und an den Anrufer gesendet":""}):</b>${steps}</div>
+  <div style="margin-top:8px">${unitRows}</div>
+  ${chat}${arrive}
+  <div style="text-align:right;margin-top:6px"><a href="#" onclick="reaDismiss('${id}');return false" class="muted" style="font-size:12px">ohne Eintreffen schließen</a></div>
+ </div>`;
+}
+function simDockHTML(c){
+ const k="sim"+c.id, col=!!floatCollapsed[k], id=esc(String(c.id));
+ return `<div class="card" style="border:2px solid ${c.sim.num==="19222"?"#1d4ed8":"#e30613"}">
+  <div class="row between" style="flex-wrap:nowrap"><b>📞 Anrufer · #${id}${c.keyword?` <span class="muted" style="font-weight:600">${esc(c.keyword)}</span>`:""}</b><span style="display:flex;gap:6px"><button style="padding:2px 8px" onclick="activateCallById('${id}');render('notruf')">Öffnen</button><button style="padding:2px 8px" onclick="floatToggle('${k}')">${col?"▴":"▾"}</button></span></div>
+  ${col?"":`<div class="floatLog" style="max-height:130px;overflow:auto">${simLogHTML(c,4)}</div>${simInputRowHTML(c,"dockIn_"+c.id)}`}
+ </div>`;
+}
+function renderFloat(){
+ const el=document.getElementById("floatDock"); if(!el)return;
+ if(IS_MONITOR||isTerminalLink){el.innerHTML="";return}
+ if(!isHandyMode()){const bn=document.getElementById("callerRequestBanner"),tb=document.getElementById("callTimerBar");const top=Math.max(84,(tb?tb.getBoundingClientRect().bottom:0)+8,bn&&bn.innerHTML?bn.getBoundingClientRect().bottom+8:0);el.style.top=Math.min(top,window.innerHeight-260)+"px";el.style.maxHeight=`calc(100vh - ${Math.min(top,window.innerHeight-260)+90}px)`}else{el.style.top="";el.style.maxHeight=""}
+ const shown=document.getElementById("simChatBox")&&db.currentCall?String(db.currentCall.id):null;
+ const calls=allOpenCalls();
+ const reas=calls.filter(c=>c.rea&&c.rea.open);
+ const docks=calls.filter(c=>c.sim&&!c.phoneEnd&&String(c.id)!==shown&&!(c.rea&&c.rea.open));
+ const sig=JSON.stringify([shown,reaMetroCall,simMicOn,simMicBlocked,simVoice,floatCollapsed,reas.map(c=>[c.id,c.rea.steps,c.location,c.keyword,(c.alarmedUnits||[]).map(i=>{const u=db.units.find(x=>String(x.id)===String(i));return u?u.status:""}),c.sim?[c.sim.log.length,c.sim.typing,c.phoneEnd]:0]),docks.map(c=>[c.id,c.keyword,c.sim.log.length,c.sim.typing])]);
+ if(sig===floatSig){el.querySelectorAll(".liveTimer").forEach(t=>{t.textContent=fmtDur(Date.now()-Number(t.dataset.start))});return}
+ floatSig=sig;
+ const ae=document.activeElement, aeId=ae&&el.contains(ae)?ae.id:null;
+ const vals={}; el.querySelectorAll("input[id]").forEach(i=>{vals[i.id]=i.value});
+ el.innerHTML=reas.map(reaPanelHTML).join("")+docks.map(simDockHTML).join("");
+ // Tablet/PC: Seiteninhalt rückt nach links, damit das Fenster nichts verdeckt
+ const pad=!isHandyMode()&&el.innerHTML?"414px":"", appEl=document.getElementById("app"); if(appEl&&appEl.style.paddingRight!==pad)appEl.style.paddingRight=pad;
+ Object.entries(vals).forEach(([k,v])=>{const i=document.getElementById(k);if(i)i.value=v});
+ if(aeId){const i=document.getElementById(aeId);if(i){i.focus();try{i.setSelectionRange(i.value.length,i.value.length)}catch(e){}}}
+ el.querySelectorAll(".floatLog").forEach(l=>{l.scrollTop=l.scrollHeight});
+ simMicLiveUpdate();
+}
+function floatTick(){
+ if(IS_MONITOR||isTerminalLink)return;
+ reaAutoCheck();
+ try{simMicEnsure()}catch(e){}
+ if(reaMetroCall&&!simCallById(reaMetroCall))reaStopMetro();
+ renderFloat();
+}
+
+setInterval(()=>{renderCallTimerBar();const clock=document.getElementById("clock");if(clock)clock.textContent=new Date().toLocaleTimeString("de-DE");if(IS_MONITOR)return;applyDutySchedule();autoReturnToStation();autoAdvanceEnRoute();updateWaitTimers();simTick();simSpontaneous();floatTick()},1000);
 renderSimCtl();
 // Läuft der Hauptplatz in einem Hintergrund-Tab oder mit gesperrtem Bildschirm, drosseln Browser
 // (v. a. mobil/iOS) genau dieses 1-Sekunden-Intervall stark oder pausieren es ganz – der 07:00/

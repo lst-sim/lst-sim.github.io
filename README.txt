@@ -1374,3 +1374,33 @@ Version 4.86:
 - Wichtig: Der Anrufer ist keine KI. Er erkennt typische Fragen an Stichworten (wo, was ist
   passiert, ansprechbar, atmet, wie alt, Vorerkrankungen, eingeklemmt, Rauch, wohin, liegend …)
   und antwortet aus seinem Fall. Freie Gespräche versteht er nicht („Das hab ich nicht verstanden“).
+
+Version 4.87:
+- Übungsanrufe Sprachmodus: Das Mikrofon hört jetzt dauerhaft zu, solange ein Übungsanruf läuft.
+  Man kann jederzeit einfach sprechen, auch dazwischen (der Anrufer verstummt dann). Alles wird
+  weiter im Gesprächsprotokoll aufgezeichnet. Knopf „🎙️ an/aus“ zum Stummschalten. Die eigene
+  Sprachausgabe des Anrufers wird möglichst herausgefiltert (Echo), ganz sicher klappt das nur mit
+  Kopfhörer. Funktioniert nur in Browsern mit Spracherkennung (z. B. Chrome, Safari).
+- Der Gesprächsverlauf steht jetzt unter der Notrufabfrage (über dem Abfrageverlauf).
+- Anrufer rufen jetzt manchmal für sich selbst an (Ich-Form, z. B. Brustschmerz, Atemnot, Sturz,
+  Wespenstich, Auffahrunfall, Schnittverletzung) und sonst für andere. Neuer Fall: Schnittverletzung.
+- Folgeanrufe: Nach dem Auflegen ruft der Anrufer manchmal (ca. 40 %) nach 1–4 Minuten erneut an,
+  weil es schlimmer wird oder sich etwas ändert (z. B. Brustschmerz → bewusstlos, Schwimmer
+  untergegangen, Feuer greift über, KT verschoben). Die Leiste zeigt „Rufnummer bekannt aus Einsatz
+  #…“. Mit „↩️ Zu Einsatz #… übernehmen“ läuft das Gespräch im alten Einsatz weiter und man kann
+  dort direkt die Abfragepunkte ändern und neu alarmieren.
+- 🤖 KI-Anrufer (optional, oben neben 🎲): Brücke zu Claude (Anthropic) mit eigenem API-Schlüssel.
+  Dann antwortet der Anrufer frei auf alles, der Fall bleibt derselbe. Der Schlüssel bleibt nur auf
+  dem Gerät. Kostet pro Antwort einen kleinen Betrag beim eigenen Anthropic-Konto. Bei Fehlern oder
+  ohne Schlüssel antwortet er wie bisher nach Stichworten.
+- 🫀 Reanimationsprotokoll (für alle Notrufe, simuliert oder echt): öffnet sich automatisch bei
+  „Reanimation“ bzw. „Keine normale Atmung“, sonst über den Knopf „🫀 Reanimation“ im Notruf.
+  Enthält die Telefonreanimations-Anleitung zum Abhaken (bei Übungsanrufen wird der Satz direkt an
+  den Anrufer gesagt) und ein Metronom mit 120/min. Das Metronom läuft auch auf dem Handy des
+  Anrufers (Anrufer-Terminal), mit Hinweis „Drücken Sie im Takt!“.
+- Das Fenster bleibt nach der Alarmierung offen und schließt nur über „🚑 RTW angekommen“ oder
+  „🚑 NEF angekommen“ – das jeweils alarmierte Fahrzeug geht dabei direkt auf Status 4. (Notfalls
+  „ohne Eintreffen schließen“, mit Rückfrage.) Dauer, Metronom und Anleitung kommen in den Verlauf.
+- Läuft ein Übungsgespräch weiter, während man woanders ist, erscheint es als kleines Fenster
+  rechts (Tablet) bzw. unten (Handy) zum Weitersprechen. Auf dem Tablet rückt der Inhalt dafür
+  nach links, damit nichts verdeckt wird.
