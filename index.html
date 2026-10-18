@@ -170,7 +170,7 @@ html[data-device="handy"] #floatDock{left:8px;right:8px;width:auto;top:auto;bott
 </head>
 <body>
 <div style="padding:6px 10px;font-size:11px;color:#94a3b8;font-weight:700;display:flex;flex-wrap:wrap;align-items:center;gap:10px;position:sticky;top:0;z-index:10;background:var(--bg)">
- <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v4.97</span>
+ <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v4.98</span>
  <span id="syncState"></span> <a id="deskTag" href="#" onclick="renameDesk();return false" title="Name dieses Platzes (für „offen an …“) – antippen zum Ändern" style="color:#64748b;font-weight:700;text-decoration:none"></a>
  <span id="simCtl" style="position:absolute;left:50%;transform:translateX(-50%);display:flex;gap:6px;align-items:center"></span>
  <a id="homeLink" href="#" onclick="render('leitstelle');return false" class="hidden" style="color:#64748b;text-decoration:underline;font-weight:600">🖥️ Leitstelle</a>
@@ -960,11 +960,11 @@ function karte(){
     <section>
       <div class="card">
         <div class="row between">
-          <div><h2>🗺️ Einsatzkarte</h2><div class="muted">${stagingPickMode?"🅿️ <b>Bereitstellungsort wählen:</b> auf die Karte tippen.":"Adresse suchen oder den Marker direkt auf der Karte setzen."}</div></div>
+          <div><h2>🗺️ Einsatzkarte</h2><div class="muted">${stagingPickMode?"🅿️ <b>Bereitstellungsort wählen:</b> auf die Karte tippen.":"Alle Notfallorte der offenen Einsätze. Der Einsatzort selbst wird in der Notrufabfrage festgelegt."}</div></div>
           ${c?`<span class="status s2">Einsatz #${c.id}</span>`:`<span class="pill">Kein laufender Einsatz</span>`}
         </div>
         <div class="mapSearch" style="margin-top:12px">
-          <input id="mapQuery" placeholder="z. B. Edo-Wiemken-Straße 61, Varel oder Dangast Strand">
+          <input id="mapQuery" placeholder="Ort auf der Karte suchen (nur ansehen), z. B. Dangast Strand">
           <button class="primary" onclick="searchMap()">🔎 Suchen</button>
         </div>
         <div id="mapResults" style="margin:8px 0"></div>
@@ -974,20 +974,13 @@ function karte(){
     </section>
     <aside>
       <div class="card">
-        <h2>📍 Gewählter Notfallort</h2>
-        <label>Adresse / Ortsbeschreibung</label>
-        <textarea id="mapAddress" rows="4" placeholder="Noch kein Ort gewählt">${esc(c?.location||"")}</textarea>
-        <label>Koordinaten</label>
-        <div id="mapCoords" class="coords">${c?.lat&&c?.lng?`${Number(c.lat).toFixed(6)}, ${Number(c.lng).toFixed(6)}`:"–"}</div>
-        <div class="row" style="margin-top:12px">
-          <button class="primary" onclick="applyMapLocation()">✅ In Einsatz übernehmen</button>
-          <button onclick="useMyLocation()">◎ Aktueller Standort</button>
-        </div>
-        <p class="muted" style="margin-top:12px">Tippe auf die Karte, um den Einsatzort exakt zu setzen. Der Marker lässt sich anschließend verschieben.</p>
-      </div>
-      <div class="card">
-        <h3>Hinweis</h3>
-        <p class="muted">Kartendarstellung über OpenStreetMap. Für Karte und Adresssuche wird eine Internetverbindung benötigt.</p>
+        <h2>📍 Notfallorte</h2>
+        ${(()=>{const list=allOpenCalls().filter(x=>Number.isFinite(Number(x.lat))&&Number.isFinite(Number(x.lng))&&x.lat!==""&&x.lng!=="");
+          const none=allOpenCalls().filter(x=>!list.includes(x));
+          return (list.length?list.map(x=>`<div class="row between" style="padding:7px 0;border-bottom:1px solid var(--line);flex-wrap:nowrap;gap:8px;cursor:pointer" onclick="mapFocusCall('${esc(String(x.id))}')">
+            <div style="min-width:0"><b>${x.alarmTime?"🚨":"📞"} #${esc(x.id)}</b> <span class="muted">${esc(x.keyword||"in Abfrage")}</span>${deskBadgeHTML(x)}<br><small class="muted">${esc(x.location||"")}</small></div>
+            <button style="padding:4px 10px;flex:0 0 auto" onclick="event.stopPropagation();selectCall('${esc(String(x.id))}','notruf')">Öffnen</button></div>`).join(""):`<p class="muted">Kein offener Einsatz mit bekanntem Ort.</p>`)
+           +(none.length?`<p class="muted" style="margin-top:8px;font-size:13px">Ohne Ort: ${none.map(x=>"#"+esc(x.id)).join(", ")}</p>`:"");})()}
       </div>
     </aside>
   </div>`;
@@ -1007,16 +1000,15 @@ function initMap(){
     attribution:'&copy; OpenStreetMap-Mitwirkende'
   }).addTo(leafletMap);
 
-  if(c?.lat&&c?.lng) setIncidentMarker(Number(c.lat),Number(c.lng),false);
+  renderIncidentMarkersOnMap();
   renderStationMarkersOnMap();
   renderHospitalMarkersOnMap();
   renderVehiclePositionsOnMap();
 
   renderStagingMarkerOnMap();
+  // Notfallorte werden nur angezeigt – übernommen wird der Ort in der Notrufabfrage (v4.98).
   leafletMap.on("click", async e=>{
     if(stagingPickMode&&db.currentCall){await stagingFromMap(e.latlng.lat,e.latlng.lng);return}
-    setIncidentMarker(e.latlng.lat,e.latlng.lng,true);
-    await reverseGeocode(e.latlng.lat,e.latlng.lng);
   });
   setTimeout(()=>leafletMap.invalidateSize(),150);
 }
@@ -1346,12 +1338,27 @@ async function searchMap(){
 function chooseMapResult(i){
   const r=window._mapSearchResults[i];
   const lat=Number(r.lat),lng=Number(r.lon);
-  selectedMapLocation={lat,lng,address:r.display_name,isWater:nominatimLooksLikeWater(r,lat,lng),outOfJurisdiction:isOutOfJurisdiction(r)};
-  document.getElementById("mapAddress").value=r.display_name;
-  document.getElementById("mapCoords").textContent=`${lat.toFixed(6)}, ${lng.toFixed(6)}`;
   leafletMap.setView([lat,lng],17);
-  setIncidentMarker(lat,lng,false);
+  if(window._searchPin)leafletMap.removeLayer(window._searchPin);
+  window._searchPin=L.circleMarker([lat,lng],{radius:9,color:"#475569",weight:2,fillColor:"#94a3b8",fillOpacity:.6}).addTo(leafletMap).bindPopup(`🔎 ${esc(r.display_name)}<br><small>nur Suchergebnis</small>`).openPopup();
   document.getElementById("mapResults").innerHTML="";
+}
+let incidentMarkersById={};
+function renderIncidentMarkersOnMap(){
+ if(!leafletMap||typeof L==="undefined")return;
+ Object.values(incidentMarkersById).forEach(m=>{try{leafletMap.removeLayer(m)}catch(e){}}); incidentMarkersById={};
+ for(const x of allOpenCalls()){
+   const lat=Number(x.lat),lng=Number(x.lng); if(!Number.isFinite(lat)||!Number.isFinite(lng)||x.lat===""||x.lat==null)continue;
+   const mine=db.currentCall&&String(db.currentCall.id)===String(x.id);
+   const bg=x.alarmTime?"#dc2626":"#f59e0b";
+   const icon=L.divIcon({html:`<div style="background:${bg};color:#fff;border-radius:8px;padding:2px 7px;font-weight:900;font-size:13px;border:${mine?"3px solid #1d4ed8":"2px solid #fff"};box-shadow:0 1px 5px rgba(0,0,0,.45);white-space:nowrap">${x.alarmTime?"🚨":"📞"} #${esc(x.id)}</div>`,className:"",iconAnchor:[30,12]});
+   incidentMarkersById[String(x.id)]=L.marker([lat,lng],{icon,zIndexOffset:1000}).addTo(leafletMap)
+     .bindPopup(`<b>${x.alarmTime?"🚨 Alarmiert":"📞 In Abfrage"} – Einsatz #${esc(x.id)}</b><br>${esc(x.keyword||"noch kein Stichwort")}<br><small>${esc(x.location||"")}</small>${x.deskId&&x.deskId!==DEVICE_ID&&!mine?`<br><small>🎧 offen an ${esc(x.deskName||"anderem Platz")}</small>`:""}<br><button style="margin-top:6px" onclick="selectCall('${esc(String(x.id))}','notruf')">Einsatz öffnen</button>`);
+ }
+}
+function mapFocusCall(id){
+ const m=incidentMarkersById[String(id)]; if(!m||!leafletMap)return;
+ leafletMap.setView(m.getLatLng(),16); m.openPopup();
 }
 
 async function reverseGeocode(lat,lng){

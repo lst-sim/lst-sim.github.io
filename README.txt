@@ -1505,3 +1505,13 @@ Version 4.97:
   Ein Übungsanruf gehört dem Platz, der ihn angenommen hat (nur dort spricht der Anrufer).
 - Die Telefonat-Leiste oben zeigt nur die eigenen Gespräche.
 - Wichtig: Nach dem Update alle Geräte (Hauptplatz und Monitore) einmal neu laden.
+
+Version 4.98:
+- Einsatzkarte zeigt jetzt alle Notfallorte der offenen Einsätze als Marker (📞 orange = in
+  Abfrage, 🚨 rot = alarmiert, blauer Rand = der eigene offene Notruf). Antippen zeigt Stichwort,
+  Ort und ggf. „offen an …“ mit „Einsatz öffnen“. Rechts eine Liste aller Notfallorte
+  (antippen = auf der Karte hinspringen); Einsätze ohne Ort stehen darunter.
+- Über die Karte kann kein Einsatzort mehr übernommen werden (kein Setzen per Antippen, kein
+  „In Einsatz übernehmen“, kein „Aktueller Standort“). Der Ort wird nur noch in der
+  Notrufabfrage festgelegt. Die Suche auf der Karte springt nur noch hin (graues Suchergebnis).
+  Bereitstellungsort per Karte wählen geht weiterhin.
