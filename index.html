@@ -169,7 +169,7 @@ html[data-device="handy"] #floatDock{left:8px;right:8px;width:auto;top:auto;bott
 </head>
 <body>
 <div style="padding:6px 10px;font-size:11px;color:#94a3b8;font-weight:700;display:flex;flex-wrap:wrap;align-items:center;gap:10px;position:sticky;top:0;z-index:10;background:var(--bg)">
- <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v4.87</span>
+ <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v4.88</span>
  <span id="syncState"></span>
  <span id="simCtl" style="position:absolute;left:50%;transform:translateX(-50%);display:flex;gap:6px;align-items:center"></span>
  <a id="homeLink" href="#" onclick="render('leitstelle');return false" class="hidden" style="color:#64748b;text-decoration:underline;font-weight:600">🖥️ Leitstelle</a>
@@ -2232,7 +2232,7 @@ function openCallEdit(id){
  const QS=callQs(c);
  const rows=QS.filter(([k])=>k in (c.answers||{})||(k==="location"&&c.location)).map(([k,label,type])=>{
    const cur=k==="location"?(c.location||c.answers.location||""):String(c.answers[k]??"");
-   const opts=CALL_EDIT_OPTIONS[type];
+   const opts=type==="custom"?(qsCustom(k)?qsCustomOptions(qsCustom(k)):null):CALL_EDIT_OPTIONS[type];
    let ctl;
    if(opts){const all=opts.includes(cur)||cur===""?opts:[cur,...opts];ctl=`<select data-k="${esc(k)}" class="ceField">${all.map(o=>`<option ${o===cur?"selected":""}>${esc(o)}</option>`).join("")}</select>`}
    else if(type==="textarea")ctl=`<textarea data-k="${esc(k)}" class="ceField" rows="3" style="width:100%;box-sizing:border-box">${esc(cur)}</textarea>`;
@@ -2864,7 +2864,7 @@ function newCall(pref={}){
  db.currentCall={id:stamp.slice(-6),location:pref.location||"",count:pref.count||"",answers:{},history:[],keyword:"",suggestion:"",createdAt:new Date().toISOString(),phoneStart:Date.now()};
  save();render("notruf");
 }
-const qs=[
+const QS_BASE=[
  ["callType","☎️ Über welche Nummer ist der Anruf eingegangen?","calltype"],
  ["location","📍 Wo genau ist der Notfallort?","text"],
  ["event","❓ Was ist passiert?","event112"],
@@ -2894,7 +2894,150 @@ const KT_QS=[
  ["location","📍 Abholort – wo wird der Patient abgeholt?","text"],
  ["freeText","📝 Freitext – weitere Angaben (Ziel, Uhrzeit, Besonderheiten …)","textarea"]
 ];
-function callQs(c){return c?.kt?KT_QS:qs}
+// ─── Notrufabfrage bearbeiten (v4.88) ─────────────────────────────────────────────────────────
+// db.qsConfig = { "112":{order,labels,hidden,custom}, "kt":{…} }. Standardfragen: Text, Reihenfolge
+// und Ausblenden änderbar – ihre Antwortknöpfe bleiben fest, weil Stichwort/AAO darauf aufbauen.
+// Eigene Fragen: Kurztext, Langtext, Zahl, Ja/Nein, Auswahl; optional nur bei bestimmten Ereignissen.
+// Eigene Fragen erscheinen im Verlauf/Protokoll und können als AAO-Bedingung genutzt werden.
+const QS_LOCKED=new Set(["callType","location","event","ktType"]);
+const QS_DEP_EVENT=new Set(["fireKind","trapped","firePeople","water","waterState","personDanger","x_massive","a_airway","b_breath","c_circ","d_disability","e_exposure","psy","patientName","patientAge","patientGender"]);
+const QS_KINDS={text:"Kurzer Text",textarea:"Langer Text",number:"Zahl",yesno:"Ja / Nein / Unbekannt",choice:"Auswahl (eigene Antwortknöpfe)"};
+const QS_EVENTS=["Medizinischer Notfall","Reanimation","Feuer / Rauchentwicklung","Verkehrsunfall","Technische Hilfeleistung","Person im Wasser","Vermisste Person","Sonstiger Notfall"];
+const QS_ANSWER_INFO={calltype:"112 / 116117 / 110",event112:"Ereignis-Knöpfe",fireDetail:"Feuer: was zu sehen / was brennt",count:"Zahl",ynTech:"Zahl",ynFire:"Zahl",ynQ:"Ja / Nein / ?",waterState:"Lebenszeichen / Vermisst / Bergung",ynPersonDanger:"Zahl",
+ xyn:"Nein / Ja / Unklar",xairway:"Frei / Gefährdet / Verlegt / Unklar",xbreathing:"Normal / Auffällig / Keine normale Atmung / Unklar",xcirc:"Unauffällig / Auffällig / Schock / Blutung / Sonstiges / Unklar",
+ xdisability:"Wach … Bewusstlos …",textarea:"Freitext",text:"Text",ynPsy:"Ja / Nein",yn:"ja / nein / unbekannt",gender:"M / W / Divers / Unbekannt",ktType:"Entlassung / Verlegung / Einweisung"};
+let qsTab="112", qsNewDraft=null;
+function qsCfg(key){db.qsConfig=db.qsConfig||{};const c=db.qsConfig[key]=db.qsConfig[key]||{};c.labels=c.labels||{};c.hidden=c.hidden||{};c.custom=c.custom||[];c.order=c.order||[];return c}
+function qsBase(key){return key==="kt"?KT_QS:QS_BASE}
+function qsEffective(key){
+ const base=qsBase(key), cfg=(db.qsConfig||{})[key]||{};
+ const map=new Map();
+ base.forEach(q=>map.set(q[0],[q[0],(cfg.labels||{})[q[0]]||q[1],q[2]]));
+ (cfg.custom||[]).forEach(cq=>map.set(cq.id,[cq.id,cq.label,"custom"]));
+ const order=(cfg.order||[]).filter((id,i,a)=>map.has(id)&&a.indexOf(id)===i);
+ // neue/fehlende Fragen an ihrer natürlichen Stelle einfügen
+ base.forEach((q,i)=>{if(order.includes(q[0]))return;let pos=0;for(let j=i-1;j>=0;j--){const k=order.indexOf(base[j][0]);if(k>=0){pos=k+1;break}}order.splice(pos,0,q[0])});
+ (cfg.custom||[]).forEach(cq=>{if(!order.includes(cq.id)){const f=order.indexOf("freeText");order.splice(f>=0?f:order.length,0,cq.id)}});
+ if(key==="112"){const i=order.indexOf("callType");if(i>0){order.splice(i,1);order.unshift("callType")}}
+ return order.map(id=>map.get(id));
+}
+function callQs(c){return qsEffective(c?.kt?"kt":"112")}
+function qsCustom(id){for(const k of ["112","kt"]){const cq=((db.qsConfig||{})[k]?.custom||[]).find(x=>x.id===id);if(cq)return cq}return null}
+function qsIsHidden(c,id){return !QS_LOCKED.has(id)&&!!(((db.qsConfig||{})[c?.kt?"kt":"112"]||{}).hidden||{})[id]}
+function qsCustomOptions(cq){return cq.kind==="yesno"?["Ja","Nein","Unbekannt"]:cq.kind==="choice"?(cq.options||[]):null}
+function qsCustomHTML(q,c){
+ const [id,label]=q, cq=qsCustom(id); if(!cq)return `<span class="muted">Frage nicht gefunden</span>`;
+ const e=c?.answers?.event||"";
+ if(Array.isArray(cq.events)&&cq.events.length&&!c?.kt&&!cq.events.includes(e)){setTimeout(()=>answer(id,"nicht zutreffend",true),0);return `<span class="muted">Nicht zutreffend – wird übersprungen …</span>`}
+ const opts=qsCustomOptions(cq);
+ if(opts)return `<label>${esc(label)}</label><div class="answer">${opts.map(v=>`<button onclick="answer('${id}',${esc(JSON.stringify(v))})">${esc(v)}</button>`).join("")}</div>`;
+ if(cq.kind==="textarea")return `<label>${esc(label)}</label><textarea id="ans" rows="4" style="width:100%;box-sizing:border-box"></textarea><div class="row" style="margin-top:8px"><button class="primary" onclick="answer('${id}',document.getElementById('ans').value)">Antwort übernehmen</button><button onclick="answer('${id}','keine Angabe')">Keine Angabe</button></div>`;
+ const num=cq.kind==="number";
+ return `<label>${esc(label)}</label><div class="row"><input id="ans" type="${num?"number":"text"}" autofocus style="flex:1"><button class="primary" onclick="answer('${id}',document.getElementById('ans').value)">Antwort übernehmen</button>${num?["0","1","2"].map(n=>`<button onclick="answer('${id}','${n}')">${n}</button>`).join(""):`<button onclick="answer('${id}','keine Angabe')">Keine Angabe</button>`}</div>`;
+}
+// eigene Fragen auch als AAO-Bedingung anbieten
+function qsSyncRuleFields(){
+ Object.keys(AAO_RULE_FIELDS).forEach(k=>{if(k.startsWith("cq_"))delete AAO_RULE_FIELDS[k]});
+ ["112","kt"].forEach(key=>(((db.qsConfig||{})[key]||{}).custom||[]).forEach(cq=>{
+   const o=qsCustomOptions(cq);
+   AAO_RULE_FIELDS[cq.id]=o?{label:`Eigene Frage: ${cq.label}`,values:o}:{label:`Eigene Frage: ${cq.label}`,free:true,placeholder:cq.kind==="number"?"z. B. >2, 1, <=5":"enthält … (a, b = a ODER b)"};
+ }));
+}
+function qsChanged(msg){qsSyncRuleFields();save();try{ghAutoSave("aao")}catch(e){}render("aao");if(msg)toast(msg)}
+function qsOrderNow(key){return qsEffective(key).map(q=>q[0])}
+function qsDepOk(key,order){
+ const ev=order.indexOf("event"); if(key!=="112"||ev<0)return true;
+ return order.every((id,i)=>{const dep=QS_DEP_EVENT.has(id)||((qsCustom(id)?.events||[]).length>0);return !dep||i>ev});
+}
+function qsMove(key,id,dir){
+ const order=qsOrderNow(key), i=order.indexOf(id), j=i+dir;
+ if(i<0||j<0||j>=order.length)return;
+ if(order[j]==="callType"||id==="callType"){toast("„Über welche Nummer“ bleibt immer die erste Frage");return}
+ [order[i],order[j]]=[order[j],order[i]];
+ if(!qsDepOk(key,order)){toast("Diese Frage hängt von „Was ist passiert?“ ab und muss danach kommen");return}
+ qsCfg(key).order=order; qsChanged();
+}
+function qsSetLabel(key,id,v){
+ const cfg=qsCfg(key), t=String(v||"").trim(), cq=cfg.custom.find(x=>x.id===id);
+ if(cq){if(!t){toast("Fragetext darf nicht leer sein");render("aao");return}cq.label=t}
+ else{const base=qsBase(key).find(q=>q[0]===id);if(!t||(base&&base[1]===t))delete cfg.labels[id];else cfg.labels[id]=t}
+ qsChanged("Fragetext gespeichert");
+}
+function qsToggleHidden(key,id){
+ if(QS_LOCKED.has(id))return;
+ const cfg=qsCfg(key);
+ if(cfg.hidden[id])delete cfg.hidden[id];
+ else{
+   if(QS_DEP_EVENT.has(id)&&/^[xabcde]_/.test(id)&&!confirm("Diese XABCDE-Frage steuert das Rettungsdienst-Stichwort. Wird sie ausgeblendet, wird sie als „nicht erhoben“ übernommen und passende AAOs greifen nicht mehr. Trotzdem ausblenden?"))return;
+   cfg.hidden[id]=true;
+ }
+ qsChanged(cfg.hidden[id]?"Frage ausgeblendet":"Frage wird wieder gefragt");
+}
+function qsSetCustom(key,id,field,val){
+ const cq=qsCfg(key).custom.find(x=>x.id===id); if(!cq)return;
+ if(field==="options")cq.options=String(val||"").split(/[\n,;]/).map(s=>s.trim()).filter(Boolean);
+ else if(field==="event"){cq.events=cq.events||[];const [ev,on]=val;cq.events=on?[...new Set([...cq.events,ev])]:cq.events.filter(x=>x!==ev);
+   if(on){const order=qsOrderNow(key);if(!qsDepOk(key,order)){const i=order.indexOf(id);order.splice(i,1);order.splice(order.indexOf("event")+1,0,id);qsCfg(key).order=order;toast("Frage hinter „Was ist passiert?“ verschoben")}}}
+ else cq[field]=val;
+ if(cq.kind==="choice"&&!(cq.options||[]).length)cq.options=["Ja","Nein"];
+ qsChanged();
+}
+function qsDeleteCustom(key,id){
+ const cfg=qsCfg(key), cq=cfg.custom.find(x=>x.id===id); if(!cq)return;
+ if(!confirm(`Eigene Frage „${cq.label}“ löschen?${(db.aao||[]).some(a=>a.rules&&id in a.rules||(a.orRules||[]).some(r=>r.k===id))?"\n\nAchtung: Sie wird in einer AAO-Bedingung verwendet.":""}`))return;
+ cfg.custom=cfg.custom.filter(x=>x.id!==id); cfg.order=cfg.order.filter(x=>x!==id); delete cfg.hidden[id];
+ qsChanged("Frage gelöscht");
+}
+function qsAddCustom(key){
+ const d=qsNewDraft||{}; const label=String(d.label||"").trim();
+ if(!label){toast("Bitte einen Fragetext eingeben");return}
+ const cq={id:"cq_"+Date.now().toString(36),label,kind:d.kind||"text"};
+ if(cq.kind==="choice"){cq.options=String(d.options||"").split(/[\n,;]/).map(s=>s.trim()).filter(Boolean);if(!cq.options.length){toast("Bitte Antworten für die Auswahl eintragen (mit Komma getrennt)");return}}
+ if(key==="112"&&(d.events||[]).length)cq.events=[...d.events];
+ const cfg=qsCfg(key); cfg.custom.push(cq);
+ const order=qsOrderNow(key); // steht jetzt vor „Freitext“
+ cfg.order=order; qsNewDraft=null;
+ qsChanged("Eigene Frage hinzugefügt");
+}
+function qsReset(key){
+ if(!confirm(`${key==="kt"?"Krankentransport-Abfrage":"Notrufabfrage"} komplett auf Standard zurücksetzen? Eigene Fragen werden gelöscht.`))return;
+ db.qsConfig=db.qsConfig||{}; delete db.qsConfig[key]; qsChanged("Abfrage zurückgesetzt");
+}
+function qsEditorHTML(){
+ const key=qsTab, list=qsEffective(key), cfg=(db.qsConfig||{})[key]||{};
+ const d=qsNewDraft||(qsNewDraft={label:"",kind:"text",options:"",events:[]});
+ const rows=list.map(([id,label,type],i)=>{
+   const cq=type==="custom"?qsCustom(id):null, locked=QS_LOCKED.has(id), hidden=!locked&&!!(cfg.hidden||{})[id];
+   const base=qsBase(key).find(q=>q[0]===id), changed=base&&(cfg.labels||{})[id];
+   const kAttr=`'${key}','${id}'`;
+   const info=cq?`<span class="pill" style="background:#ede9fe;color:#5b21b6">eigene Frage · ${esc(QS_KINDS[cq.kind]||cq.kind)}</span>${cq.events&&cq.events.length?` <small class="muted">nur bei: ${esc(cq.events.join(", "))}</small>`:""}`
+     :`<small class="muted">Standard · Antworten: ${esc(QS_ANSWER_INFO[type]||type)}${locked?" · 🔒 immer gefragt":""}</small>`;
+   const extra=cq?`<div style="margin-top:6px;display:flex;flex-wrap:wrap;gap:6px;align-items:center">
+      <select onchange="qsSetCustom(${kAttr},'kind',this.value)" style="width:auto">${Object.entries(QS_KINDS).map(([v,l])=>`<option value="${v}" ${cq.kind===v?"selected":""}>${l}</option>`).join("")}</select>
+      ${cq.kind==="choice"?`<input style="flex:1;min-width:160px" value="${esc((cq.options||[]).join(", "))}" placeholder="Antworten, mit Komma getrennt" onchange="qsSetCustom(${kAttr},'options',this.value)">`:""}
+      ${key==="112"?`<details style="width:100%"><summary style="cursor:pointer;font-size:13px">Nur bei bestimmten Ereignissen fragen${cq.events&&cq.events.length?` (${cq.events.length})`:" (immer)"}</summary><div style="display:flex;flex-wrap:wrap;gap:4px 12px;margin-top:4px">${QS_EVENTS.map(ev=>`<label style="display:flex;gap:4px;align-items:center;font-weight:500;margin:0;font-size:13px"><input type="checkbox" style="width:auto" ${(cq.events||[]).includes(ev)?"checked":""} onchange="qsSetCustom(${kAttr},'event',[${esc(JSON.stringify(ev))},this.checked])">${esc(ev)}</label>`).join("")}</div></details>`:""}
+     </div>`:"";
+   return `<div style="display:flex;gap:8px;align-items:flex-start;padding:8px 0;border-bottom:1px solid var(--line);${hidden?"opacity:.5":""}">
+     <div style="display:flex;flex-direction:column;gap:2px"><button style="padding:2px 8px" title="nach oben" onclick="qsMove(${kAttr},-1)" ${i===0?"disabled":""}>▲</button><button style="padding:2px 8px" title="nach unten" onclick="qsMove(${kAttr},1)" ${i===list.length-1?"disabled":""}>▼</button></div>
+     <div style="flex:1;min-width:0"><div class="row" style="flex-wrap:nowrap;gap:6px"><b style="width:22px;text-align:right">${i+1}.</b><input style="flex:1;min-width:0" value="${esc(label)}" onchange="qsSetLabel(${kAttr},this.value)">${changed?`<button title="Standardtext wiederherstellen" onclick="qsSetLabel(${kAttr},'')">↺</button>`:""}</div>
+      <div style="margin:4px 0 0 28px">${info}${hidden?` <span class="pill" style="background:#fee2e2;color:#991b1b">ausgeblendet – wird als „nicht erhoben“ übersprungen</span>`:""}</div>${extra?`<div style="margin-left:28px">${extra}</div>`:""}</div>
+     <div style="display:flex;gap:4px">${locked?"":`<button title="${hidden?"wieder fragen":"ausblenden"}" onclick="qsToggleHidden(${kAttr})">${hidden?"🚫":"👁️"}</button>`}${cq?`<button title="löschen" onclick="qsDeleteCustom(${kAttr})">🗑️</button>`:""}</div>
+   </div>`;
+ }).join("");
+ return `<div class="card"><div class="row between"><div><h2>📋 Notrufabfrage bearbeiten</h2><p class="muted">Fragen umbenennen, mit ▲▼ verschieben, mit 👁️ ausblenden und eigene Fragen hinzufügen. Die Antwortknöpfe der Standardfragen bleiben fest, weil Stichwort und AAO darauf aufbauen. Eigene Fragen landen im Abfrageverlauf und können als AAO-Bedingung genutzt werden. Gilt für neue Notrufe.</p></div>
+   <button onclick="qsReset('${key}')">↺ Auf Standard</button></div>
+  <div class="row" style="gap:6px;margin-bottom:6px"><button class="${key==="112"?"primary":""}" onclick="qsTab='112';qsNewDraft=null;render('aao')">🚨 Notruf 112</button><button class="${key==="kt"?"primary":""}" onclick="qsTab='kt';qsNewDraft=null;render('aao')">🚑 Krankentransport</button></div>
+  ${rows}
+  <div style="margin-top:12px;padding:10px;border:1px dashed var(--line);border-radius:10px">
+   <b>＋ Eigene Frage hinzufügen</b>
+   <input style="margin-top:6px" placeholder="Fragetext, z. B. „🐕 Sind Tiere vor Ort?“" value="${esc(d.label)}" oninput="qsNewDraft.label=this.value">
+   <div class="row" style="margin-top:6px;flex-wrap:wrap;gap:6px"><select style="width:auto" onchange="qsNewDraft.kind=this.value;render('aao')">${Object.entries(QS_KINDS).map(([v,l])=>`<option value="${v}" ${d.kind===v?"selected":""}>${l}</option>`).join("")}</select>
+   ${d.kind==="choice"?`<input style="flex:1;min-width:180px" placeholder="Antworten, mit Komma getrennt" value="${esc(d.options)}" oninput="qsNewDraft.options=this.value">`:""}</div>
+   ${key==="112"?`<div style="margin-top:6px;font-size:13px">Nur fragen bei (leer = immer):<div style="display:flex;flex-wrap:wrap;gap:4px 12px;margin-top:4px">${QS_EVENTS.map(ev=>`<label style="display:flex;gap:4px;align-items:center;font-weight:500;margin:0"><input type="checkbox" style="width:auto" ${(d.events||[]).includes(ev)?"checked":""} onchange="qsNewDraft.events=this.checked?[...new Set([...(qsNewDraft.events||[]),${esc(JSON.stringify(ev))}])]:(qsNewDraft.events||[]).filter(x=>x!==${esc(JSON.stringify(ev))})">${esc(ev)}</label>`).join("")}</div></div>`:""}
+   <div class="row" style="justify-content:flex-end;margin-top:8px"><button class="primary" onclick="qsAddCustom('${key}')">＋ Hinzufügen</button></div>
+  </div></div>`;
+}
+
 function newKtCall(){
  if(db.currentCall)parkCurrentCall();
  notrufDetailsVisible=false;
@@ -3032,6 +3175,7 @@ function reaShortcutActive(c=db.currentCall){
 const REA_SHORTCUT_DEFAULTS={x_massive:"Nein",a_airway:"Gefährdet",b_breath:"Keine normale Atmung",c_circ:"Unklar",d_disability:"Bewusstlos",e_exposure:"Nicht einzeln erhoben – Reanimations-Kurzabfrage"};
 function questionHTML(q){
  const [id,label,type]=q;
+ if(qsIsHidden(db.currentCall,id)&&!(id!=="callType"&&db.currentCall?.answers?.callType&&db.currentCall.answers.callType!=="112")){setTimeout(()=>answer(id,"nicht erhoben",true),0);return `<span class="muted">Ausgeblendete Frage – wird übersprungen …</span>`}
  if(type==="ktType")return `<label>${label}</label><div class="answer">${["KT-Entlassung","KT-Verlegung","KT-Einweisung"].map(v=>`<button onclick="answer('ktType','${v}')">🚑 ${v}</button>`).join("")}</div>`;
  const c=db.currentCall, e=c?.answers?.event||"";
  const fire=e==="Feuer / Rauchentwicklung";
@@ -3047,6 +3191,7 @@ function questionHTML(q){
  const callType=c?.answers?.callType;
  if(id!=="callType" && callType && callType!=="112")
    return skip("entfällt – Weiterleitung");
+ if(type==="custom")return qsCustomHTML(q,c);
 
  if(type==="calltype") return `<label>${label}</label><div class="answer">
    <button onclick="answer('${id}','112')">🚨 112 – Feuerwehr/Rettungsdienst-Notruf</button>
@@ -5971,7 +6116,7 @@ const UNIT_RUNTIME_KEYS=["status1Since","status2Due","status3Since","status4Sinc
 function exportSetup(kind){
  const now=new Date();
  const data={format:"leitstelle.sim",kind,version:(document.getElementById("versionTag")?.textContent||""),scenario:currentScenarioId,exportedAt:now.toISOString()};
- if(kind==="aao"){data.aao=JSON.parse(JSON.stringify(db.aao||[]));data.deletedAaoIds=db.deletedAaoIds||[]}
+ if(kind==="aao"){data.aao=JSON.parse(JSON.stringify(db.aao||[]));data.deletedAaoIds=db.deletedAaoIds||[];data.qsConfig=JSON.parse(JSON.stringify(db.qsConfig||{}))}
  else{
    data.units=(db.units||[]).filter(u=>!u.neighborLoan).map(u=>{const x=JSON.parse(JSON.stringify(u));UNIT_RUNTIME_KEYS.forEach(k=>delete x[k]);return x});
    data.deletedUnitOptas=db.deletedUnitOptas||[];
@@ -6019,6 +6164,7 @@ function applyDefaultUnitCorrections(){
 function applySetupData(kind,d){
  if(kind==="aao"){
    db.aao=d.aao; db.deletedAaoIds=Array.isArray(d.deletedAaoIds)?d.deletedAaoIds:(db.deletedAaoIds||[]);
+   if(d.qsConfig&&typeof d.qsConfig==="object"){db.qsConfig=d.qsConfig;try{qsSyncRuleFields()}catch(e){}}
  }else{
    const old=new Map((db.units||[]).map(u=>[String(u.id),u]));
    const loans=(db.units||[]).filter(u=>u.neighborLoan);
@@ -6075,7 +6221,7 @@ function ghSaveToken(kind){
 function b64utf8(str){const bytes=new TextEncoder().encode(str);let bin="";for(let i=0;i<bytes.length;i+=0x8000)bin+=String.fromCharCode.apply(null,bytes.subarray(i,i+0x8000));return btoa(bin)}
 function setupData(kind){
  const data={format:"leitstelle.sim",kind,version:(document.getElementById("versionTag")?.textContent||""),scenario:currentScenarioId,exportedAt:new Date().toISOString()};
- if(kind==="aao"){data.aao=JSON.parse(JSON.stringify(db.aao||[]));data.deletedAaoIds=db.deletedAaoIds||[]}
+ if(kind==="aao"){data.aao=JSON.parse(JSON.stringify(db.aao||[]));data.deletedAaoIds=db.deletedAaoIds||[];data.qsConfig=JSON.parse(JSON.stringify(db.qsConfig||{}))}
  else{data.units=(db.units||[]).filter(u=>!u.neighborLoan).map(u=>{const x=JSON.parse(JSON.stringify(u));UNIT_RUNTIME_KEYS.forEach(k=>delete x[k]);delete x.status;return x});data.deletedUnitOptas=db.deletedUnitOptas||[]}
  return data;
 }
@@ -6107,9 +6253,9 @@ async function cfgPut(kind,manual=false){
    return true;
  }catch(e){if(manual)toast("Speichern fehlgeschlagen – Internetverbindung prüfen");return false}
 }
-function setupListJSON(kind,d){const x=JSON.parse(JSON.stringify(kind==="aao"?(d.aao||[]):(d.units||[])));return JSON.stringify(x)}
+function setupListJSON(kind,d){const x=JSON.parse(JSON.stringify(kind==="aao"?(d.aao||[]):(d.units||[])));return JSON.stringify(x)+(kind==="aao"?JSON.stringify(d.qsConfig||{}):"")}
 function hasOwnEdits(kind){
- if(kind==="aao")return JSON.stringify(db.aao||[])!==JSON.stringify(defaults.aao||[])||(db.deletedAaoIds||[]).length>0;
+ if(kind==="aao")return JSON.stringify(db.aao||[])!==JSON.stringify(defaults.aao||[])||(db.deletedAaoIds||[]).length>0||Object.keys(db.qsConfig||{}).length>0;
  return (db.units||[]).some(u=>u.custom||u.userEdited||u.duty)||(db.deletedUnitOptas||[]).length>0;
 }
 async function cfgSync(kind,manual=false){
@@ -6224,7 +6370,7 @@ function aaoRuleMatches(val,rule,key){
    if(r==="unbekannt")return false;
    return r==="ja"?answerYes(val):(String(val??"").trim()!==""&&!answerYes(val));
  }
- if(key==="freeText"){
+ if(key==="freeText"||(String(key).startsWith("cq_")&&!qsCustomOptions(qsCustom(key)||{kind:"text"})&&(qsCustom(key)||{}).kind!=="number")){
    // Enthält-Suche, Groß-/Kleinschreibung egal; "a, b" = a ODER b
    const t=String(val||"").toLowerCase();
    return String(rule).split(",").map(x=>x.trim().toLowerCase()).filter(Boolean).some(w=>t.includes(w));
@@ -6268,7 +6414,7 @@ function aao(){
  <table><thead><tr><th>Stichwort</th><th>Bedingungen</th><th>Alarmierung</th><th>Mit anderen AAOs</th><th></th></tr></thead><tbody>${db.aao.map(a=>{
    const builtin=isBuiltinAao(a.id);
    return `<tr style="${a.active===false?"opacity:.5":""}"><td><b>${esc(a.name)}</b>${a.keyword?`<br><small class="muted">${esc(a.keyword)}</small>`:""}${builtin&&!a.rulesEdited?"":`<br><span class="pill">${builtin?"Bedingungen geändert":"eigene"}${a.active===false?" · inaktiv":""}</span>`}</td><td>${aaoRulesText(a)}</td><td>${(a.units||[]).map(x=>`${x.n==="pat"?`${esc(x.type)} je Patient`:`${aaoNText(x)}× ${esc(x.type)}`}${x.org?` <small class="muted">(${esc(x.org)})</small>`:""}${x.opt?` <span class="pill">optional</span>`:""}`).join(", ")||`<span class="muted">keine</span>`}</td><td><small>${aaoCombineText(a)}</small></td><td style="white-space:nowrap"><button onclick="editAAO(${JSON.stringify(a.id)})">✏️ Bearbeiten</button><button onclick="deleteAAO(${JSON.stringify(a.id)})">Löschen</button></td></tr>`;
- }).join("")}</tbody></table></div>`;
+ }).join("")}</tbody></table></div>${qsEditorHTML()}`;
 }
 function editAAO(id){
  const src=id==null?null:db.aao.find(x=>String(x.id)===String(id));
@@ -7646,7 +7792,7 @@ function simMakeFollow(c){
 }
 // beim Auflegen: manchmal ruft der Anrufer später noch einmal an
 function simMaybeFollow(c,force){
- if(!c||!c.sim||c.sim.isFollow||!SIM_FOLLOW[c.sim.caseId])return;
+ if(!c||!c.sim||c.sim.isFollow||c.sim.noFollow||c.sim.dropped||!SIM_FOLLOW[c.sim.caseId])return;
  if(!force&&Math.random()>=SIM_FOLLOW_RATE)return;
  const f=simMakeFollow(c); if(!f)return;
  simFollowQueue.push({at:Date.now()+(force?0:rnd(70,240)*1000),sim:f});
@@ -7711,6 +7857,8 @@ function simAccept(simId){
  if(s.isFollow){c.followOf=s.refCallId;c.history.push({q:"🔁 Erneuter Anruf",a:`Rufnummer ${s.phone} – bekannt aus Einsatz #${s.refCallId}`})}
  c.callerGps={lat:s.loc.lat,lng:s.loc.lng,address:s.loc.kind==="home"?s.loc.addr:s.loc.text.replace(/^(am|auf der|auf dem) /,""),water:!!s.loc.water,sim:true};
  c.callerGpsPending=true;
+ // selten bricht die Verbindung ab (Funkloch/Akku) – der Anrufer ruft dann gleich wieder an
+ if(!s.isFollow&&!s.kt&&Math.random()<0.07)s.dropAt=Date.now()+rnd(60,200)*1000;
  simSay(c,pick(s.d.open));
  save(); renderCallerBanner(); render("notruf");
 }
@@ -7719,7 +7867,7 @@ function simMergeFollow(id){
  const c=allOpenCalls().find(x=>String(x.id)===String(id)); if(!c||!c.sim)return;
  const ref=allOpenCalls().find(x=>String(x.id)===String(c.sim.refCallId));
  if(!ref){toast(`Einsatz #${c.sim.refCallId} ist schon abgeschlossen – bitte als neuen Einsatz abfragen`);return}
- const said=c.sim.log.filter(m=>m.who==="caller").map(m=>m.text).join(" / ");
+ const said=c.sim.log.filter(m=>m.who!=="lst").map(m=>m.text).join(" / ");
  ref.history=ref.history||[];
  ref.history.push({q:`🔁 Erneuter Anruf (${new Date().toLocaleTimeString("de-DE",{hour:"2-digit",minute:"2-digit"})})`,a:said||"—"});
  ref.sim=c.sim; ref.phoneStart=c.phoneStart; delete ref.phoneEnd; ref.callerNumber=c.callerNumber;
@@ -7732,6 +7880,8 @@ function simMergeFollow(id){
 
 // ─── Antwortlogik (regelbasiert) ───────────────────────────────────────────────────────────────
 const SIM_INTENTS=[
+ ["toPatient",/(patient(in|en)?|betroffene[nr]?|ihr(en|e)? (mann|frau|vater|mutter|nachbarin|nachbarn|freundin|freund|mitbewohner(in)?)) .{0,25}(geben|ans telefon|sprechen|reden)|(geben|reichen) sie (mir )?(mal |bitte )*(den patienten|die patientin|ihn|sie)\b(?! (auf|in|zu|im|mit|eine?n?|etwas|was))|kann (er|sie) (selbst )?ans telefon/],
+ ["toCaller",/(den|die) anrufer(in)?\b|(geben|reichen) sie (mir )?(bitte |mal )*wieder/],
  ["listen",/h(ö|oe)ren sie (mir )?(genau )?zu|ich helfe ihnen/],
  ["speaker",/lautsprecher/],
  ["aed",/defibrillator|\baed\b|\bdefi\b/],
@@ -7745,7 +7895,7 @@ const SIM_INTENTS=[
  ["help",/hilfe (ist|kommt)|unterwegs|schicke|kommen gleich|ist alarmiert|rettungsdienst kommt|rettungswagen kommt|feuerwehr kommt/],
  ["stay",/bleiben sie|nicht auflegen|dran bleiben|am telefon/],
  ["door",/t(ü|ue)r (auf|öffnen|offen)|licht an|einweisen|an die stra(ss|ß)e|winken/],
- ["loc",/\bwo\b|adresse|stra(ss|ß)e|hausnummer|welche(r|m)? (stadt|ort)|wo genau|standort|ortsteil|stockwerk|etage/],
+ ["loc",/\bwo\b(?!.*(schmerz|weh|blut))|adresse|stra(ss|ß)e|hausnummer|welche(r|m)? (stadt|ort)|wo genau|standort|ortsteil|stockwerk|etage/],
  ["event",/was (ist |genau |denn |jetzt |da |nun )*(passiert|los)|worum geht|schildern|erz(ä|ae)hlen sie|was hat sich (ver)?(ä|ae)ndert/],
  ["who",/f(ü|ue)r wen|wer ist (betroffen|der patient|krank|verletzt)|sind sie selbst|sie selbst betroffen|um wen geht/],
  ["count",/wie ?viele|anzahl|weitere (person|verletzte)|noch jemand verletzt|mehrere|betroffen/],
@@ -7785,7 +7935,19 @@ const SIM_A_SELF={"Frei":["Schlucken geht."],"Gefährdet":["Der Hals wird immer 
 function simHe(s){return s.d.patient&&s.d.patient.g==="w"?["Sie","sie","ihr"]:["Er","er","ihm"]}
 function simFix(s,t){const [He,he]=simHe(s);if(he==="er")return String(t);return String(t).replace(/\bEr\b/g,"Sie").replace(/(^|[^A-Za-zÄÖÜäöüß])er\b/g,"$1sie").replace(/\bihn\b/g,"sie").replace(/\bihm\b/g,"ihr").replace(/\bEin Mann\b/g,"Eine Frau")}
 function simAnswerFor(c,text){
- const s=c.sim, d=s.d, f=d.f||{}, ints=simIntents(text), out=[], me=!!d.isSelf;
+ const s=c.sim, d=s.d, f=d.f||{}, ints=simIntents(text), out=[];
+ if(ints.includes("toCaller")&&s.speaker==="patient"){s.speaker="caller";return pick(["Ja, hier bin ich wieder.","Ja? Ich bin wieder dran."])}
+ if(ints.includes("toPatient")&&!d.isSelf&&s.speaker!=="patient"){
+   const [He]=simHe(s);
+   if(d.fire||d.kt&&d.clinicCaller||!d.patient)return "Das geht nicht, da ist niemand, dem ich das Telefon geben kann.";
+   if(f.d==="Bewusstlos"||f.b==="Keine normale Atmung")return `${He} kann doch nicht reden, ${He.toLowerCase()==="sie"?"sie":"er"} reagiert ja nicht!`;
+   if(f.d==="Krampfanfall"||f.d==="Bewusstseinsgetrübt")return simFix(s,"Er ist gar nicht richtig da, der kann nicht telefonieren.");
+   if(d.age!=null&&d.age<6)return "Das ist doch ein kleines Kind!";
+   if(d.passerby&&f.trapped&&f.trapped!=="0")return "Ich komm da nicht ran, der sitzt eingeklemmt im Auto!";
+   s.speaker="patient";
+   return f.d==="Neurologisch auffällig"?"Moment, ich geb ihn Ihnen … – Ja… hal…lo…? Ich… kann… nicht so gut…":simFix(s,pick(["Moment, ich geb ihn Ihnen … – Ja, hallo?","Warten Sie … – Ja? Hier ist "+((d.patient||{}).first||"")+"."]));
+ }
+ const me=!!d.isSelf||s.speaker==="patient";
  const [He,he]=simHe(s), age=d.age, him=he==="sie"?"sie":"ihn";
  const panic=d.panic?pick(["Bitte schnell! ","Oh Gott… ","",""]):"";
  for(const k of ints){
@@ -7805,7 +7967,7 @@ function simAnswerFor(c,text){
     case "stay":out.push(pick(["Ja, ich bleib dran.","Ja, ich bin hier."]));break;
     case "door":out.push(me?pick(["Ich versuch zur Tür zu kommen… okay, ist auf.","Ich komm hier nicht hoch, die Nachbarin hat einen Schlüssel."]):pick(["Okay, ich mach die Haustür auf.","Ja, ich mach draußen Licht an.","Ich schick meinen Sohn raus zum Winken."]));break;
     case "loc":out.push((s.loc.kind==="home"?`${s.loc.text}`:`Wir sind ${s.loc.text}`)+(s.loc.kind==="home"?pick(["."," – im Erdgeschoss."," – erster Stock, rechts."," – das gelbe Haus."]):"."));break;
-    case "event":out.push(me?d.event:simFix(s,d.event));break;
+    case "event":out.push(me?(d.isSelf?d.event:(d.pain?d.pain:`Mir geht's nicht gut… ${f.e?f.e.split(",")[0]:"ich weiß auch nicht"}.`)):simFix(s,d.event));break;
     case "who":out.push(me?"Um mich! Ich bin das selbst.":d.passerby?"Ich kenn die Person nicht, ich bin nur vorbeigekommen.":d.rel?`Um ${d.rel.replace(/^mein /,"meinen ").replace(/^ein /,"einen ").replace(/^der /,"den ")}.`:"Ich bin nur der Anrufer.");break;
     case "count":out.push(d.kt?"Nur ein Patient.":me?"Nur ich.":f.count==="0"?"Verletzt ist niemand.":f.count==="1"?pick(["Nur "+he+".","Eine Person."]):`${f.count} Personen.`);break;
     case "trapped":out.push(f.trapped&&f.trapped!=="0"?"Ja, der kommt nicht raus, die Tür klemmt und die Beine stecken fest!":"Nein, eingeklemmt ist keiner.");break;
@@ -7816,13 +7978,13 @@ function simAnswerFor(c,text){
     case "airway":out.push(me?pick(SIM_A_SELF[f.a]||["Ja, geht."]):simFix(s,pick(SIM_A[f.a]||["Ich glaube, da ist nichts."])));break;
     case "bleed":out.push(f.x==="Ja"?(me?"Ja, das blutet total, das hört nicht auf!":"Ja, das blutet ganz stark!"):/blut|platzwunde/i.test(f.e||"")?pick(["Ein bisschen, am Kopf.","Ja, da läuft Blut, aber nicht so viel."]):"Nein, Blut seh ich keins.");break;
     case "circ":out.push(me?pick(SIM_C_SELF[f.c]||["Weiß nicht…"]):simFix(s,pick(SIM_C[f.c]||["Weiß ich nicht."])));break;
-    case "pain":out.push(me?(d.pain||"Weiß nicht genau."):f.e?simFix(s,`${He} sagt: ${f.e}.`):"Das kann ich nicht sagen.");break;
+    case "pain":out.push(me?(d.pain||(f.e?`Ja… ${f.e.split(",")[0]}.`:"Weiß nicht genau.")):f.e?simFix(s,`${He} sagt: ${f.e}.`):"Das kann ich nicht sagen.");break;
     case "age":out.push(age!=null?(me?pick([`Ich bin ${age}.`,`${age}.`]):pick([`${age}.`,`${He} ist ${age} Jahre alt.`,`Ähm… ${age}.`])):"Weiß ich nicht.");break;
-    case "name":out.push(me?`${d.caller.first} ${d.caller.last}.`:/anrufer|sie selbst|ihr name/.test(text.toLowerCase())||d.passerby||d.fire?`${d.caller.first} ${d.caller.last}.`:`${d.patient.first} ${d.patient.last}.`);break;
+    case "name":out.push(me?`${(d.isSelf?d.caller:d.patient).first} ${(d.isSelf?d.caller:d.patient).last}.`:/anrufer|sie selbst|ihr name/.test(text.toLowerCase())||d.passerby||d.fire?`${d.caller.first} ${d.caller.last}.`:`${d.patient.first} ${d.patient.last}.`);break;
     case "phone":out.push(`Meine Nummer ist ${s.phone}.`);break;
     case "danger":out.push(d.danger||(f.danger==="ja"?"Ja, das ist hier nicht ungefährlich.":"Nein, Gefahren seh ich keine."));break;
     case "water":out.push(s.loc.water?simFix(s,d.event):"Nein, mit Wasser hat das nichts zu tun.");break;
-    case "hist":out.push(me?(d.hist||"Nein, eigentlich nicht."):simFix(s,d.hist||"Weiß ich nicht."));break;
+    case "hist":out.push(me?(d.isSelf?(d.hist||"Nein, eigentlich nicht."):pick(["Das weiß meine Familie besser… ich nehm Tabletten, aber welche…","Ach… ich hab da so einiges, das steht alles im Medikamentenplan."])):simFix(s,d.hist||"Weiß ich nicht."));break;
     case "onset":out.push(d.onset||"Gerade eben.");break;
     case "gender":out.push(me?(d.patient.g==="w"?"Ich bin eine Frau.":"Ich bin ein Mann."):d.patient.g==="w"?"Eine Frau.":"Ein Mann.");break;
     case "dest":out.push(d.dest?`${d.dest.charAt(0).toUpperCase()+d.dest.slice(1)}.`:"Ins Krankenhaus natürlich!");break;
@@ -7855,6 +8017,7 @@ REGELN:
 - Du bist medizinischer Laie: keine Fachbegriffe, keine Diagnosen. Du weißt nur, was du siehst, hörst und weißt.
 - Beantworte genau die gestellte Frage. Nur manchmal eine kleine ungefragte Info oder Gefühlsäußerung.
 - Anweisungen des Disponenten (z. B. Herzdruckmassage, Seitenlage, Tür öffnen) führst du aus und sagst kurz, was du gerade tust.
+- Du bleibst in der Leitung, bis die Leitstelle auflegt. Lege nie selbst auf und verabschiede dich nicht von dir aus.
 - Wenn du etwas nicht weißt, sag das. Erfinde keine neuen dramatischen Wendungen. Was unten nicht steht, darfst du unauffällig und plausibel ergänzen.
 - Stimmung: ${d.panic?"sehr aufgeregt, teils panisch, du unterbrichst dich":"besorgt, aber einigermaßen gefasst"}.
 DEIN FALL:
@@ -7862,7 +8025,7 @@ DEIN FALL:
 - ${d.isSelf?"Du rufst für DICH SELBST an – du bist der Patient. Sprich in der Ich-Form.":d.passerby?"Du bist zufällig vorbeigekommen und kennst den Betroffenen nicht.":d.clinicCaller?"Du bist Pflegekraft auf Station 3 im Klinikum Wilhelmshaven.":d.rel?`Du rufst an für: ${d.rel}.`:"Du meldest ein Ereignis, das du beobachtest."}
 ${P.first&&!d.isSelf&&!d.fire?`- Betroffene Person: ${P.first} ${P.last}, ${P.g==="w"?"weiblich":"männlich"}${d.age!=null?`, ${d.age} Jahre`:""}.\n`:d.isSelf?`- Du bist ${d.age} Jahre alt.\n`:""}- Ort: ${s.loc.text}.
 - Was los ist: ${d.event}
-${lay?`- Zustand (in Laiensprache beschreiben): ${lay}${f.e?`; außerdem: ${f.e}`:""}.\n`:""}${d.pain?`- Beschwerden: ${d.pain}\n`:""}${d.onset?`- Seit wann: ${d.onset}\n`:""}${d.hist?`- Vorerkrankungen/Medikamente: ${d.hist}\n`:""}${d.danger?`- Gefahr vor Ort: ${d.danger}\n`:""}${d.inside?`- Personen im Gebäude: ${d.inside}\n`:""}${d.kt?`- Krankentransport: Ziel ${d.dest||"?"}, Transport ${d.mode||"?"}, Zeit ${d.time||"?"}, Unterlagen: ${d.doc||"?"}\n`:""}${s.isFollow?`- Du hast vorhin schon einmal angerufen. Jetzt rufst du ERNEUT an, weil: ${s.why||"sich etwas verändert hat"}.\n`:""}${d.extra&&d.extra.length?`- Typische Sätze von dir: ${d.extra.join(" | ")}\n`:""}${alarmMin!=null?`- Die Leitstelle hat vor ${alarmMin} Minuten Hilfe losgeschickt.\n`:""}${c.rea&&c.rea.open&&reaMetroCall===String(c.id)?"- Ein Metronom piept im Takt; du drückst auf die Brust und zählst mit.\n":""}${s.cprStarted?"- Du machst gerade Herzdruckmassage.\n":""}`;
+${lay?`- Zustand (in Laiensprache beschreiben): ${lay}${f.e?`; außerdem: ${f.e}`:""}.\n`:""}${d.pain?`- Beschwerden: ${d.pain}\n`:""}${d.onset?`- Seit wann: ${d.onset}\n`:""}${d.hist?`- Vorerkrankungen/Medikamente: ${d.hist}\n`:""}${d.danger?`- Gefahr vor Ort: ${d.danger}\n`:""}${d.inside?`- Personen im Gebäude: ${d.inside}\n`:""}${d.kt?`- Krankentransport: Ziel ${d.dest||"?"}, Transport ${d.mode||"?"}, Zeit ${d.time||"?"}, Unterlagen: ${d.doc||"?"}\n`:""}${s.isFollow?`- Du hast vorhin schon einmal angerufen. Jetzt rufst du ERNEUT an, weil: ${s.why||"sich etwas verändert hat"}.\n`:""}${d.extra&&d.extra.length?`- Typische Sätze von dir: ${d.extra.join(" | ")}\n`:""}${alarmMin!=null?`- Die Leitstelle hat vor ${alarmMin} Minuten Hilfe losgeschickt.\n`:""}${c.rea&&c.rea.open&&reaMetroCall===String(c.id)?"- Ein Metronom piept im Takt; du drückst auf die Brust und zählst mit.\n":""}${s.cprStarted?"- Du machst gerade Herzdruckmassage.\n":""}${s.speaker==="patient"&&!d.isSelf?`- WICHTIG: Gerade hat der Anrufer das Telefon an die betroffene Person weitergegeben. Du sprichst jetzt ALS ${P.first} ${P.last} selbst (Ich-Form, ${d.age} Jahre), mit den Beschwerden oben, so wie es dein Zustand erlaubt.\n`:""}`;
 }
 function simAiMessages(c){
  const msgs=[{role:"user",content:"(Die Leitstelle nimmt den Anruf an.)"}];
@@ -7881,6 +8044,8 @@ async function simAiCall(system,messages,maxTokens=200){
  }finally{clearTimeout(to)}
 }
 async function simReply(c,text){
+ const ints0=simIntents(text);
+ if(ints0.includes("toPatient")||ints0.includes("toCaller"))return simAnswerFor(c,text); // Telefonübergabe regelbasiert (Zustand)
  if(simAiReady()){
    try{const t=await simAiCall(simAiSystem(c),simAiMessages(c));if(t){simIntents(text).forEach(k=>{if((k==="cpr"||k==="keep")&&c.sim.d.cpr)c.sim.cprStarted=true});return t}}
    catch(e){toast("🤖 KI nicht erreichbar ("+String(e.message||e).slice(0,60)+") – Antwort regelbasiert")}
@@ -7890,7 +8055,7 @@ async function simReply(c,text){
 
 // ─── Gespräch ─────────────────────────────────────────────────────────────────────────────────
 function simSay(c,text){
- c.sim.log.push({who:"caller",text,t:Date.now()}); c.sim.lastAt=Date.now();
+ c.sim.log.push({who:c.sim.speaker==="patient"?"patient":"caller",text,t:Date.now()}); c.sim.lastAt=Date.now();
  if(simVoice)simSpeak(c,text);
 }
 function simCallById(id){return allOpenCalls().find(x=>String(x.id)===String(id))}
@@ -7906,17 +8071,43 @@ async function simSendFrom(callId,inputId,preset){
  setTimeout(()=>{c.sim.typing=false;if(c.phoneEnd){simRefresh();return}simSay(c,ans);save();simRefresh()},wait);
 }
 function simSend(){const c=db.currentCall;if(c)simSendFrom(c.id,"simInput")}
+// Das Gespräch läuft, bis man selbst auflegt – oder der Anrufer: wenn die Einsatzkräfte da sind
+// (nicht während einer laufenden Reanimationsanleitung) oder selten bei Verbindungsabbruch.
+function simCallerEnd(c){
+ const s=c.sim, now=Date.now();
+ if(s.dropAt&&now>=s.dropAt&&!s.dropped){
+   s.dropped=true;
+   simSay(c,pick(["Hallo? Hallo, hören Sie mich noch? Ich hab hier ganz schlechten Emp…","Hallo?! Sind Sie noch da? Hallo…?"]));
+   save(); simRefresh();
+   setTimeout(()=>{if(c.phoneEnd)return;c.history=c.history||[];c.history.push({q:"📶 Verbindung abgebrochen",a:new Date().toLocaleTimeString("de-DE")});hangUpCall(c.id,true);
+     const f=JSON.parse(JSON.stringify(s));Object.assign(f,{id:"sim"+Date.now().toString(36),log:[],lastAt:0,spontIdx:0,created:Date.now(),isFollow:true,refCallId:String(c.id),why:"Die Verbindung ist eben abgebrochen",dropAt:0,dropped:false});
+     f.d.open=["Hallo, ich bin's noch mal, wir wurden eben getrennt!","Hallo? Ich hatte eben angerufen, das Gespräch ist abgebrochen!"];
+     simFollowQueue.push({at:Date.now()+rnd(15,40)*1000,sim:f});simRefresh()},2500);
+   return true;
+ }
+ if(c.alarmTime&&!s.arrivedSaid&&!(c.rea&&c.rea.open)){
+   const onScene=(c.alarmedUnits||[]).some(id=>{const u=db.units.find(x=>String(x.id)===String(id));return u&&["4","7","8"].includes(String(u.status))});
+   if(onScene){
+     s.arrivedSaid=true;
+     simSay(c,s.kt?pick(["Ah, der Krankenwagen ist jetzt da.","Die Kollegen vom Transport sind da."]):pick(["Jetzt sind sie da! Ich mach auf …","Da sind sie, Gott sei Dank!","Ich seh das Blaulicht, die sind da!"]));
+     s.noFollow=true; save(); simRefresh();
+     return true;
+   }
+ }
+ return false;
+}
 // spontane Sätze, wenn länger nichts gesagt wurde
 function simSpontaneous(){
  for(const c of allOpenCalls()){
    if(!c.sim||c.phoneEnd||c.sim.typing)continue;
+   if(simCallerEnd(c))continue;
    const s=c.sim; if(Date.now()-s.lastAt<rnd(28,45)*1000)continue;
-   const pool=[...(s.d.extra||[])];
+   const pool=s.speaker==="patient"?["Mir ist so komisch…","Kommt jetzt jemand?","Ich… bin noch da."]:[...(s.d.extra||[])];
    if(c.alarmTime&&Date.now()-new Date(c.alarmTime).getTime()>120000&&!s.kt)pool.push("Ich glaub, ich hör schon das Martinshorn!","Wann sind die denn da?");
    if(s.d.cpr&&s.cprStarted)pool.push("Ich kann bald nicht mehr… zweiundzwanzig, dreiundzwanzig…","Ich drück die ganze Zeit… kommt denn keiner?");
    if(!pool.length){s.lastAt=Date.now();continue}
    const t=pool[s.spontIdx%pool.length]; s.spontIdx++;
-   simSay(c,s.d.isSelf?t:simFix(s,t)); save(); simRefresh();
+   simSay(c,s.d.isSelf||s.speaker==="patient"?t:simFix(s,t)); save(); simRefresh();
  }
 }
 
@@ -7926,7 +8117,7 @@ function simSpeak(c,text){
    if(!("speechSynthesis" in window))return;
    const u=new SpeechSynthesisUtterance(text); u.lang="de-DE";
    const voices=speechSynthesis.getVoices().filter(v=>/^de/i.test(v.lang));
-   const fem=c.sim.d.caller.g==="w";
+   const fem=(c.sim.speaker==="patient"&&c.sim.d.patient?c.sim.d.patient:c.sim.d.caller).g==="w";
    const v=voices.find(v=>fem?/anna|petra|helena|katja|hedda|marlene|vicki|female|frau/i.test(v.name):/markus|yannick|conrad|stefan|hans|male|mann/i.test(v.name))||voices[0];
    if(v)u.voice=v;
    u.pitch=fem?1.15:0.85; u.rate=c.sim.d.panic?1.15:1.0; u.onend=()=>{simSpeakEnd=Date.now()};
@@ -7950,12 +8141,12 @@ let simSpeakEnd=0;
 function simIsEcho(c,text){
  if(!c||!c.sim)return false;
  const flat=x=>String(x||"").toLowerCase().replace(/[^a-zäöüß0-9]/g,"");
- const lastC=c.sim.log.filter(m=>m.who==="caller").slice(-1)[0];
+ const lastC=c.sim.log.filter(m=>m.who!=="lst").slice(-1)[0];
  const recent=(()=>{try{if(speechSynthesis.speaking)return true}catch(e){}return Date.now()-simSpeakEnd<4000})();
  const f=flat(text);
  if(recent&&lastC&&f.length>=2&&flat(lastC.text).includes(f))return true;
  const w=simNorm(text); if(w.length<2)return false;
- const said=new Set(c.sim.log.filter(m=>m.who==="caller").slice(-2).flatMap(m=>simNorm(m.text)));
+ const said=new Set(c.sim.log.filter(m=>m.who!=="lst").slice(-2).flatMap(m=>simNorm(m.text)));
  const hit=w.filter(x=>said.has(x)).length;
  return hit/w.length>=0.6;
 }
@@ -7995,7 +8186,7 @@ function simMicEnsure(){
 function simListen(){simMicSet(!simMicOn)}
 function simLogHTML(c,max){
  const s=c.sim; const list=max?s.log.slice(-max):s.log;
- return list.map(m=>`<div style="margin:4px 0;display:flex;${m.who==="lst"?"justify-content:flex-end":""}"><div style="max-width:85%;padding:6px 10px;border-radius:12px;${m.who==="lst"?"background:#dbeafe;color:#1e3a8a":"background:#fee2e2;color:#7f1d1d"}"><small style="opacity:.7;font-weight:700">${m.who==="lst"?"Sie":"Anrufer"}</small><br>${esc(m.text)}</div></div>`).join("")
+ return list.map(m=>`<div style="margin:4px 0;display:flex;${m.who==="lst"?"justify-content:flex-end":""}"><div style="max-width:85%;padding:6px 10px;border-radius:12px;${m.who==="lst"?"background:#dbeafe;color:#1e3a8a":"background:#fee2e2;color:#7f1d1d"}"><small style="opacity:.7;font-weight:700">${m.who==="lst"?"Sie":m.who==="patient"?"Patient":"Anrufer"}</small><br>${esc(m.text)}</div></div>`).join("")
   +(s.typing?`<div class="muted" style="margin:4px 0;font-style:italic">Anrufer spricht …</div>`:"");
 }
 function simInputRowHTML(c,inputId){
@@ -8219,6 +8410,7 @@ function floatTick(){
 
 setInterval(()=>{renderCallTimerBar();const clock=document.getElementById("clock");if(clock)clock.textContent=new Date().toLocaleTimeString("de-DE");if(IS_MONITOR)return;applyDutySchedule();autoReturnToStation();autoAdvanceEnRoute();updateWaitTimers();simTick();simSpontaneous();floatTick()},1000);
 renderSimCtl();
+try{qsSyncRuleFields()}catch(e){}
 // Läuft der Hauptplatz in einem Hintergrund-Tab oder mit gesperrtem Bildschirm, drosseln Browser
 // (v. a. mobil/iOS) genau dieses 1-Sekunden-Intervall stark oder pausieren es ganz – der 07:00/
 // 19:00-Dienstplanwechsel (applyDutySchedule) wurde dann teils erst mit großer Verzögerung

@@ -1404,3 +1404,22 @@ Version 4.87:
 - Läuft ein Übungsgespräch weiter, während man woanders ist, erscheint es als kleines Fenster
   rechts (Tablet) bzw. unten (Handy) zum Weitersprechen. Auf dem Tablet rückt der Inhalt dafür
   nach links, damit nichts verdeckt wird.
+
+Version 4.88:
+- Notrufabfrage bearbeiten (Reiter AAO, unter der AAO-Liste), getrennt für Notruf 112 und
+  Krankentransport: Fragetexte ändern (↺ = Standardtext), Reihenfolge mit ▲▼, Fragen mit 👁️
+  ausblenden (werden dann als „nicht erhoben“ übersprungen) und eigene Fragen hinzufügen:
+  kurzer/langer Text, Zahl, Ja/Nein/Unbekannt oder Auswahl mit eigenen Antwortknöpfen,
+  wahlweise nur bei bestimmten Ereignissen (z. B. nur bei Feuer). Eigene Fragen stehen im
+  Abfrageverlauf, lassen sich über „Notruf ändern“ nachträglich ändern und sind als
+  AAO-Bedingung wählbar. Gespeichert wird zusammen mit den AAOs (alle Geräte).
+- Grenzen: „Über welche Nummer“, „Wo genau“, „Was ist passiert“ und die KT-Art bleiben immer
+  gefragt. Die Antwortknöpfe der Standardfragen sind fest, weil Stichwort und AAO darauf
+  aufbauen. Fragen, die von „Was ist passiert?“ abhängen, können nicht davor geschoben werden.
+- Übungsanrufe: Das Gespräch läuft weiter, bis man selbst auflegt. Der Anrufer legt nicht mehr
+  von sich aus auf (wenn die Kräfte eintreffen, sagt er nur „Die sind da!“). Ausnahme: selten
+  bricht die Verbindung ab (Funkloch) – dann ruft der Anrufer kurz darauf erneut an.
+- Mit dem Patienten sprechen: „Können Sie mir den Patienten/die Patientin geben?“ – ist die
+  Person wach genug, kommt sie ans Telefon und antwortet selbst (Ich-Form, im Sprachmodus mit
+  passender Stimme). „Geben Sie mir wieder den Anrufer“ holt den Anrufer zurück. Bei
+  Bewusstlosen, Kleinkindern oder Eingeklemmten erklärt der Anrufer, warum es nicht geht.
