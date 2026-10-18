@@ -163,13 +163,14 @@ table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:10px 8px
 html[data-device="handy"] #floatDock{left:8px;right:8px;width:auto;top:auto;bottom:74px;max-height:55vh}
 @keyframes reaPulse{0%{transform:scale(1.3);opacity:1}35%{transform:scale(1);opacity:.5}100%{transform:scale(1);opacity:.5}}
 .reaDot{display:inline-block;width:16px;height:16px;border-radius:50%;background:#dc2626;animation:reaPulse .5s infinite}
+.prevPick{outline:3px solid #f59e0b!important;outline-offset:1px}
 @media (max-width:700px){#simCtl{position:static!important;transform:none!important;order:-1;width:100%;justify-content:center}#simCtl .simLbl{display:none}}
 </style>
 <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
 </head>
 <body>
 <div style="padding:6px 10px;font-size:11px;color:#94a3b8;font-weight:700;display:flex;flex-wrap:wrap;align-items:center;gap:10px;position:sticky;top:0;z-index:10;background:var(--bg)">
- <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v4.92</span>
+ <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v4.93</span>
  <span id="syncState"></span>
  <span id="simCtl" style="position:absolute;left:50%;transform:translateX(-50%);display:flex;gap:6px;align-items:center"></span>
  <a id="homeLink" href="#" onclick="render('leitstelle');return false" class="hidden" style="color:#64748b;text-decoration:underline;font-weight:600">🖥️ Leitstelle</a>
@@ -3146,7 +3147,7 @@ function notruf(){
    ${renderVehicleFeedbackBadges(c)}
    ${q?`<div class="muted" style="margin-top:10px">Frage ${answeredCount+1} von ${QS.length}</div>
    <div style="height:6px;background:#eef2f6;border-radius:999px;margin-top:4px;overflow:hidden"><div style="height:100%;width:${Math.round(100*answeredCount/QS.length)}%;background:#e30613"></div></div>`:""}
-   <div style="margin-top:15px">${outOfArea?`<div class="suggest" style="background:#fff8e1;border-color:#f0c419"><h2>⚠️ Vermutlich nicht zuständig</h2><p>Der Einsatzort scheint auf dem Gebiet der Stadt Wilhelmshaven oder außerhalb des Landkreises Friesland zu liegen (${esc(c.geocodedAddress||c.location)}).</p><div class="row" style="margin:10px 0"><button class="primary" onclick="weiterverbindenCall()">📞 Weiterverbinden</button><button onclick="overrideJurisdiction()">Trotzdem hier bearbeiten</button></div></div>`:(q?questionHTML(q):(c.answers.callType&&c.answers.callType!=="112"?`<div class="suggest"><h2>☎️ Weiterleitung</h2><p>${esc(c.suggestion)}</p><p class="muted">Kein Fall für diese Rettungsleitstelle – kein Alarmvorschlag, keine weiteren Fragen nötig.</p><button onclick="render('leitstelle')">Zur Übersicht</button></div>`:`<div class="suggest"><h2>✅ Abfrage abgeschlossen</h2><p>${c.suggestion||"Kein Alarmvorschlag verfügbar."}</p><div class="row" style="margin:10px 0"><button class="primary" onclick="prepareAlarm()">🚨 Vorschlag alarmieren</button><button onclick="render('karte')">🗺️ Notfallort prüfen</button></div><button onclick="toggleNotrufDetails()">🔍 ${notrufDetailsVisible?"Details verbergen":"Interne Codes & Rohdaten anzeigen"}</button><div class="${notrufDetailsVisible?"":"hidden"}" style="margin-top:10px"><hr><b>Einsatzstichwort (intern)</b><div class="big">${esc(c.keyword)}</div><b>Antworten (Rohdaten)</b><pre style="white-space:pre-wrap">${esc(JSON.stringify(c.answers,null,2))}</pre></div></div>`))}</div>
+   <div style="margin-top:15px">${outOfArea?`<div class="suggest" style="background:#fff8e1;border-color:#f0c419"><h2>⚠️ Vermutlich nicht zuständig</h2><p>Der Einsatzort scheint auf dem Gebiet der Stadt Wilhelmshaven oder außerhalb des Landkreises Friesland zu liegen (${esc(c.geocodedAddress||c.location)}).</p><div class="row" style="margin:10px 0"><button class="primary" onclick="weiterverbindenCall()">📞 Weiterverbinden</button><button onclick="overrideJurisdiction()">Trotzdem hier bearbeiten</button></div></div>`:(q?qsWithPrefill(q):(c.answers.callType&&c.answers.callType!=="112"?`<div class="suggest"><h2>☎️ Weiterleitung</h2><p>${esc(c.suggestion)}</p><p class="muted">Kein Fall für diese Rettungsleitstelle – kein Alarmvorschlag, keine weiteren Fragen nötig.</p><button onclick="render('leitstelle')">Zur Übersicht</button></div>`:`<div class="suggest"><h2>✅ Abfrage abgeschlossen</h2><p>${c.suggestion||"Kein Alarmvorschlag verfügbar."}</p><div class="row" style="margin:10px 0"><button class="primary" onclick="prepareAlarm()">🚨 Vorschlag alarmieren</button><button onclick="render('karte')">🗺️ Notfallort prüfen</button></div><button onclick="toggleNotrufDetails()">🔍 ${notrufDetailsVisible?"Details verbergen":"Interne Codes & Rohdaten anzeigen"}</button><div class="${notrufDetailsVisible?"":"hidden"}" style="margin-top:10px"><hr><b>Einsatzstichwort (intern)</b><div class="big">${esc(c.keyword)}</div><b>Antworten (Rohdaten)</b><pre style="white-space:pre-wrap">${esc(JSON.stringify(c.answers,null,2))}</pre></div></div>`))}</div>
   </div>
   ${c.sim?`<div id="simChatBox">${simChatHTML(c)}</div>`:""}
   <div class="card"><h3>Abfrageverlauf</h3>${c.history.length?c.history.map(x=>`<div style="padding:7px 0;border-bottom:1px solid var(--line)"><b>${esc(x.q)}</b><br>${esc(x.a)}</div>`).join(""):"<span class='muted'>Noch keine Antworten.</span>"}</div>
@@ -3298,6 +3299,36 @@ async function qsMaskSubmit(key){
    }
  }finally{qsMaskBusy=false;qsMaskTag=null}
  notruf();
+}
+
+// ─── „Zurück“: vorherige Antworten bleiben vorbelegt (v4.93) ─────────────────────────────────
+function qsWithPrefill(q){const h=questionHTML(q);setTimeout(()=>qsPrefill(q[0]),0);return h}
+function qsPrefill(id){
+ const c=db.currentCall, P=c&&c.prevAnswers; if(!P)return;
+ const m=!c.kt&&qsMaskOf(id), ids=m?m.ids:[id]; let any=false;
+ for(const k of ids){
+   const pv=P[k]; if(!pv)continue; const v=String(pv.v??"");
+   if(m){
+     const inp=document.getElementById("mk_"+k);
+     const btn=[...document.querySelectorAll(`[data-mk="${k}"]`)].find(b=>b.textContent.trim()===v);
+     if(btn){qsMaskPick(btn,k,v);any=true}
+     else if(inp&&inp.type!=="hidden"&&v!=="unbekannt"){inp.value=v;any=true}
+     continue;
+   }
+   const inp=document.getElementById("ans");
+   if(inp&&(inp.tagName==="TEXTAREA"||inp.type!=="hidden")&&!document.querySelector(".answer button")){inp.value=v;any=true}
+   const want=pv.l||v;
+   document.querySelectorAll(".answer button, .suggest button").forEach(b=>{
+     const oc=b.getAttribute("onclick")||"", txt=b.textContent.replace(/^[^A-Za-zÄÖÜäöü0-9?]+/,"").trim();
+     const hit=oc.includes(`answer('${k}','${v.replace(/'/g,"\\'")}')`)||(k==="event"&&oc.includes(`answer('event','${v}')`))||(oc.includes(`qsAnswerPick('${k}'`)&&b.textContent.trim()===want)||(oc.includes(`answer('${k}',`)&&txt===v);
+     if(hit){b.classList.add("prevPick");any=true}
+   });
+   if(inp&&!any&&v){inp.value=v;any=true}
+ }
+ if(any){
+   const host=document.querySelector(".suggest")||document.getElementById("ans")?.parentElement||document.querySelector(".answer");
+   if(host&&!document.getElementById("prevHint"))host.insertAdjacentHTML("beforebegin",`<div id="prevHint" style="margin:6px 0;padding:6px 10px;border-radius:8px;background:#fef3c7;color:#92400e;font-size:13px;font-weight:700">↺ Deine vorherige Antwort ist ${m?"eingetragen":"markiert bzw. eingetragen"} – übernehmen oder neu beantworten.</div>`);
+ }
 }
 function questionHTML(q){
  const [id,label,type]=q;
@@ -3651,6 +3682,7 @@ async function answer(k,v,auto=false){
  const lbl=qsPendingLabel&&qsPendingLabel.id===k?qsPendingLabel.label:null; qsPendingLabel=null;
  c.answerLabels=c.answerLabels||{}; if(lbl)c.answerLabels[k]=lbl; else delete c.answerLabels[k];
  const shown=lbl||v;
+ if(c.prevAnswers&&!auto)delete c.prevAnswers[k];
  c.history.push({id:k,q:q?q[1]:k,a:shown,auto:!!auto,...(qsMaskTag?{mask:qsMaskTag}:{})});
  evaluate();
  save();
@@ -3667,6 +3699,7 @@ function goBackNotruf(){
  while(c.history.length){
    const last=c.history.pop();
    if(last.id){
+     if(!last.auto&&last.id in c.answers){c.prevAnswers=c.prevAnswers||{};c.prevAnswers[last.id]={v:c.answers[last.id],l:(c.answerLabels||{})[last.id]||null}}
      delete c.answers[last.id]; if(c.answerLabels)delete c.answerLabels[last.id];
      if(last.id==="location"){c.location="";delete c.lat;delete c.lng;delete c.geocodedAddress;delete c.locationIsWater;delete c.outOfJurisdiction;}
      if(last.id==="count")c.count="";

@@ -1460,3 +1460,10 @@ Version 4.92:
   bleiben („unbekannt“), Geschlecht ohne Auswahl = „Unbekannt“.
 - „Zurück“ nimmt immer die ganze Maske zurück. Umbenannte/ausgeblendete Fragen aus
   „Notrufabfrage bearbeiten“ gelten auch in den Masken.
+
+Version 4.93:
+- „Zurück“ in der Notrufabfrage löscht die Antworten nicht mehr einfach: Die vorherige Antwort
+  bleibt vorbelegt (Knopf orange umrandet, Textfelder/Zahlen und Masken ausgefüllt, Hinweis
+  „Deine vorherige Antwort ist markiert“). Man kann sie mit einem Tipp übernehmen oder neu
+  beantworten. Das gilt auch, wenn man mehrere Schritte zurückgeht – beim erneuten Vorgehen
+  sind alle früheren Antworten wieder vorbelegt. Erst die neue Antwort zählt.
