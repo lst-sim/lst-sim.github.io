@@ -169,7 +169,7 @@ html[data-device="handy"] #floatDock{left:8px;right:8px;width:auto;top:auto;bott
 </head>
 <body>
 <div style="padding:6px 10px;font-size:11px;color:#94a3b8;font-weight:700;display:flex;flex-wrap:wrap;align-items:center;gap:10px;position:sticky;top:0;z-index:10;background:var(--bg)">
- <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v4.89</span>
+ <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v4.90</span>
  <span id="syncState"></span>
  <span id="simCtl" style="position:absolute;left:50%;transform:translateX(-50%);display:flex;gap:6px;align-items:center"></span>
  <a id="homeLink" href="#" onclick="render('leitstelle');return false" class="hidden" style="color:#64748b;text-decoration:underline;font-weight:600">🖥️ Leitstelle</a>
@@ -2231,8 +2231,8 @@ function openCallEdit(id){
  uiLocked=true;
  const QS=callQs(c);
  const rows=QS.filter(([k])=>k in (c.answers||{})||(k==="location"&&c.location)).map(([k,label,type])=>{
-   const cur=k==="location"?(c.location||c.answers.location||""):String(c.answers[k]??"");
-   const opts=type==="custom"?(qsCustom(k)?qsCustomOptions(qsCustom(k)):null):CALL_EDIT_OPTIONS[type]?[...CALL_EDIT_OPTIONS[type],...qsOwnValues(k)]:null;
+   const cur=k==="location"?(c.location||c.answers.location||""):String(ansText(c,k)??"");
+   const opts=type==="custom"?(qsCustom(k)?qsCustomOptions(qsCustom(k)):null):(QS_ANS_EDIT[k]&&QS_ANS_EDIT[k]!=="equick"&&qsAnswers(k))?qsAnswerList(k).map(a=>a.label):CALL_EDIT_OPTIONS[type]||null;
    let ctl;
    if(opts){const all=opts.includes(cur)||cur===""?opts:[cur,...opts];ctl=`<select data-k="${esc(k)}" class="ceField">${all.map(o=>`<option ${o===cur?"selected":""}>${esc(o)}</option>`).join("")}</select>`}
    else if(type==="textarea")ctl=`<textarea data-k="${esc(k)}" class="ceField" rows="3" style="width:100%;box-sizing:border-box">${esc(cur)}</textarea>`;
@@ -2255,11 +2255,17 @@ function saveCallEdit(){
  const changes=[];
  document.querySelectorAll(".ceField").forEach(el=>{
    const k=el.dataset.k, v=String(el.value??"").trim();
-   const old=k==="location"?(c.location||c.answers.location||""):String(c.answers[k]??"");
+   const old=k==="location"?(c.location||c.answers.location||""):String(ansText(c,k)??"");
    if(v===old)return;
    const short=/^[XABCDE] – /.test(lab(k))?lab(k).slice(0,1):lab(k).replace(/^[^A-Za-zÄÖÜäöü]+/,"").replace(/\?$/,"");
    changes.push(`${short}: ${old||"—"} → ${v||"—"}`);
-   if(k==="location"){c.location=v;if("location" in c.answers)c.answers.location=v}else c.answers[k]=v;
+   if(k==="location"){c.location=v;if("location" in c.answers)c.answers.location=v}
+   else{
+     const ent=QS_ANS_EDIT[k]&&QS_ANS_EDIT[k]!=="equick"&&qsAnswers(k)?qsAnswerList(k).find(a=>a.label===v):null;
+     c.answerLabels=c.answerLabels||{};
+     if(ent&&!ent.own){c.answers[k]=ent.value;if(ent.label!==ent.value)c.answerLabels[k]=ent.label;else delete c.answerLabels[k]}
+     else{c.answers[k]=v;delete c.answerLabels[k]}
+   }
    if(k==="count")c.count=v;
  });
  uiLocked=false;
@@ -2938,7 +2944,7 @@ function qsCustomHTML(q,c){
 // eigene Fragen auch als AAO-Bedingung anbieten
 function qsSyncRuleFields(){
  Object.keys(AAO_RULE_FIELDS).forEach(k=>{if(k.startsWith("cq_"))delete AAO_RULE_FIELDS[k]});
- Object.keys(QS_ANS_EDIT).forEach(id=>{const f=AAO_RULE_FIELDS[id];if(!f||!f.values)return;f._base=f._base||[...f.values];f.values=[...new Set([...f._base,...qsOwnValues(id)])]});
+ Object.keys(QS_ANS_EDIT).forEach(id=>{const f=AAO_RULE_FIELDS[id];if(!f||!f.values)return;f._base=f._base||[...f.values];f.values=[...new Set([...(qsAnswers(id)||[]).map(a=>a.label),...f._base])]});
  ["112","kt"].forEach(key=>(((db.qsConfig||{})[key]||{}).custom||[]).forEach(cq=>{
    const o=qsCustomOptions(cq);
    AAO_RULE_FIELDS[cq.id]=o?{label:`Eigene Frage: ${cq.label}`,values:o}:{label:`Eigene Frage: ${cq.label}`,free:true,placeholder:cq.kind==="number"?"z. B. >2, 1, <=5":"enthält … (a, b = a ODER b)"};
@@ -3018,6 +3024,7 @@ function qsAnswers(id){const a=(((db.qsConfig||{})["112"]||{}).answers||{})[id];
 function qsAnswerList(id){return qsAnswers(id)||qsDefaultAnswers(id)}
 function qsOwnValues(id){return (qsAnswers(id)||[]).filter(a=>a.own).map(a=>a.label)}
 let qsPendingLabel=null;
+function ansText(c,k){return (c&&c.answerLabels&&c.answerLabels[k])||(c&&c.answers?c.answers[k]:"")}
 function qsAnswerPick(id,i){
  const a=qsAnswerList(id)[i]; if(!a)return;
  const v=a.own?a.label:a.value;
@@ -3046,10 +3053,10 @@ function qsAnsEditorHTML(id){
    <input style="width:100%;box-sizing:border-box" value="${esc(a.label)}" onchange="qsAnsSetLabel('${id}',${i},this.value)">
    <div class="row" style="gap:4px;margin-top:4px;flex-wrap:wrap">
    <button style="padding:2px 8px" onclick="qsAnsMove('${id}',${i},-1)" ${i===0?"disabled":""}>▲</button><button style="padding:2px 8px" onclick="qsAnsMove('${id}',${i},1)" ${i===list.length-1?"disabled":""}>▼</button>
-   ${isE?"":`<select style="flex:1;min-width:140px;width:auto" title="Bedeutung für Stichwort/AAO" onchange="qsAnsSetValue('${id}',${i},this.value)">${std.map(v=>`<option value="${esc(v)}" ${!a.own&&a.value===v?"selected":""}>zählt als: ${esc(v)}</option>`).join("")}<option value="__own" ${a.own?"selected":""}>eigene Antwort</option></select>`}
+   ${isE?"":`<select style="flex:1;min-width:140px;width:auto" title="Bedeutung für Stichwort/AAO" onchange="qsAnsSetValue('${id}',${i},this.value)">${std.map(v=>`<option value="${esc(v)}" ${!a.own&&a.value===v?"selected":""}>Stichwort-Logik wie: ${esc(v)}</option>`).join("")}<option value="__own" ${a.own?"selected":""}>keine Stichwort-Logik (nur eigene AAO)</option></select>`}
    <button title="Antwort löschen" onclick="qsAnsDel('${id}',${i})">🗑️</button></div></div>`).join("");
  return `<details ${qsAnsOpen.has(id)?"open":""} ontoggle="this.open?qsAnsOpen.add('${id}'):qsAnsOpen.delete('${id}')" style="margin-top:6px"><summary style="cursor:pointer;font-size:13px;font-weight:700">✏️ Antworten bearbeiten (${list.length})${custom?" · geändert":""}</summary>
-  <div style="font-size:12px;margin:4px 0" class="muted">${isE?"Schnellknöpfe unter dem Freitextfeld.":"„zählt als“ = Bedeutung für Stichwort, AAO und Reanimation. „Eigene Antwort“ wird so gespeichert und wirkt nur über eigene AAO-Bedingungen."}</div>
+  <div style="font-size:12px;margin:4px 0" class="muted">${isE?"Schnellknöpfe unter dem Freitextfeld.":"Gespeichert und überall angezeigt wird dein Antworttext – auch AAO-Bedingungen können ihn direkt nutzen. „Stichwort-Logik wie“ sagt nur der eingebauten Logik (RD_X…RD_D, Reanimation), wie sie die Antwort behandeln soll."}</div>
   ${rows}<div class="row" style="gap:6px;margin-top:4px"><button onclick="qsAnsAdd('${id}')">＋ Antwort</button>${custom?`<button onclick="qsAnsReset('${id}')">↺ Standardantworten</button>`:""}</div></details>`;
 }
 function qsEditorHTML(){
@@ -3571,7 +3578,9 @@ async function answer(k,v,auto=false){
  }
  if(k==="count")c.count=v;
  const q=callQs(c).find(x=>x[0]===k);
- const shown=qsPendingLabel&&qsPendingLabel.id===k?`${qsPendingLabel.label} (= ${v})`:v; qsPendingLabel=null;
+ const lbl=qsPendingLabel&&qsPendingLabel.id===k?qsPendingLabel.label:null; qsPendingLabel=null;
+ c.answerLabels=c.answerLabels||{}; if(lbl)c.answerLabels[k]=lbl; else delete c.answerLabels[k];
+ const shown=lbl||v;
  c.history.push({id:k,q:q?q[1]:k,a:shown,auto:!!auto});
  evaluate();
  save();
@@ -3588,7 +3597,7 @@ function goBackNotruf(){
  while(c.history.length){
    const last=c.history.pop();
    if(last.id){
-     delete c.answers[last.id];
+     delete c.answers[last.id]; if(c.answerLabels)delete c.answerLabels[last.id];
      if(last.id==="location"){c.location="";delete c.lat;delete c.lng;delete c.geocodedAddress;delete c.locationIsWater;delete c.outOfJurisdiction;}
      if(last.id==="count")c.count="";
    }
@@ -4011,7 +4020,7 @@ function buildMeldertext(c, nafoReason=""){
     const a=c.answers||{};
     const patient=[a.patientName,a.patientAge?`${a.patientAge} Jahre`:null,a.patientGender].filter(Boolean).join(", ");
     if(patient) txt+=`\nPatient: ${patient}`;
-    txt+=`\nXABCDE: X ${a.x_massive}; A ${a.a_airway}; B ${a.b_breath}; C ${a.c_circ}; D ${a.d_disability}; E ${a.e_exposure}`;
+    txt+=`\nXABCDE: X ${ansText(c,"x_massive")}; A ${ansText(c,"a_airway")}; B ${ansText(c,"b_breath")}; C ${ansText(c,"c_circ")}; D ${ansText(c,"d_disability")}; E ${a.e_exposure}`;
   }
   if(c.answers?.psy==="Ja")txt+=`\nPsy-Problem: Ja`;
   if(c.staging?.name)txt+=`\nBereitstellungsraum (Landfahrzeuge): ${c.staging.name}`;
@@ -4103,11 +4112,11 @@ function prepareAlarm(){
    return;
  }
  const xtext=needsXABCDE(c)?[
-   `X: ${c.answers.x_massive}`,
-   `A: ${c.answers.a_airway}`,
-   `B: ${c.answers.b_breath}`,
-   `C: ${c.answers.c_circ}`,
-   `D: ${c.answers.d_disability}`,
+   `X: ${ansText(c,"x_massive")}`,
+   `A: ${ansText(c,"a_airway")}`,
+   `B: ${ansText(c,"b_breath")}`,
+   `C: ${ansText(c,"c_circ")}`,
+   `D: ${ansText(c,"d_disability")}`,
    `E: ${c.answers.e_exposure}`
  ].join("\n"):"";
  document.getElementById("app").innerHTML=`<div class="card call">
@@ -6444,11 +6453,12 @@ function aaoRuleMatches(val,rule,key){
 function customAaoMatches(c){
  const a={...(c?.answers||{}),count:c?.answers?.count??c?.count,locationIsWater:c?.locationIsWater?"ja":"nein"};
  // UND-Bedingungen (rules) müssen alle passen; von den Entweder-oder-Bedingungen (orRules) mindestens eine.
+ const lb=c?.answerLabels||{}, m=(k,v)=>aaoRuleMatches(a[k],v,k)||(lb[k]!=null&&aaoRuleMatches(lb[k],v,k));
  return (db.aao||[]).filter(x=>{
    if((isBuiltinAao(x.id)&&!x.rulesEdited)||x.active===false)return false;
    const and=Object.entries(x.rules||{}), or=Array.isArray(x.orRules)?x.orRules.filter(r=>r&&r.k):[];
    if(!and.length&&!or.length)return false;
-   return and.every(([k,v])=>aaoRuleMatches(a[k],v,k))&&(!or.length||or.some(r=>aaoRuleMatches(a[r.k],r.v,r.k)));
+   return and.every(([k,v])=>m(k,v))&&(!or.length||or.some(r=>m(r.k,r.v)));
  });
 }
 function aaoRulesText(a){

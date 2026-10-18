@@ -1435,3 +1435,11 @@ Version 4.89:
 - „Eigene Antwort“ wird genau so gespeichert, löst von sich aus kein Stichwort aus und ist
   in eigenen AAO-Bedingungen wählbar sowie unter „Notruf ändern“ auswählbar.
 - Bei E (Freitext) sind die Antworten die Schnellknöpfe unter dem Textfeld.
+
+Version 4.90:
+- Eigene XABCDE-Antworten zählen jetzt als genau der Text, den man eingepflegt hat: Er steht so
+  im Abfrageverlauf, im Alarmtext, in der Einsatzübersicht und unter „Notruf ändern“, und
+  AAO-Bedingungen können direkt auf diesen Text gesetzt werden (z. B. B = „Röchelnd“).
+- Die Auswahl „Stichwort-Logik wie …“ (vorher „zählt als“) sagt nur noch der eingebauten
+  Stichwortlogik (RD_X…RD_D, Reanimation), wie sie die Antwort behandeln soll. Alte
+  AAO-Bedingungen auf die Standardwerte greifen weiterhin.
