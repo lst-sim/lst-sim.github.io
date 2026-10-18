@@ -170,8 +170,8 @@ html[data-device="handy"] #floatDock{left:8px;right:8px;width:auto;top:auto;bott
 </head>
 <body>
 <div style="padding:6px 10px;font-size:11px;color:#94a3b8;font-weight:700;display:flex;flex-wrap:wrap;align-items:center;gap:10px;position:sticky;top:0;z-index:10;background:var(--bg)">
- <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v4.96</span>
- <span id="syncState"></span>
+ <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v4.97</span>
+ <span id="syncState"></span> <a id="deskTag" href="#" onclick="renameDesk();return false" title="Name dieses Platzes (für „offen an …“) – antippen zum Ändern" style="color:#64748b;font-weight:700;text-decoration:none"></a>
  <span id="simCtl" style="position:absolute;left:50%;transform:translateX(-50%);display:flex;gap:6px;align-items:center"></span>
  <a id="homeLink" href="#" onclick="render('leitstelle');return false" class="hidden" style="color:#64748b;text-decoration:underline;font-weight:600">🖥️ Leitstelle</a>
  <a id="monitorLink" href="#" onclick="showMonitorQR();return false" style="color:#64748b;text-decoration:underline;font-weight:600;margin-left:auto">🖥️ Monitor hinzufügen</a>
@@ -717,6 +717,7 @@ let db=JSON.parse(localStorage.getItem(KEY)||"null")||JSON.parse(JSON.stringify(
 if(!Array.isArray(db.units))db.units=[];
 if(!Array.isArray(db.callers))db.callers=[];
 if(!Array.isArray(db.pendingCallerRequests))db.pendingCallerRequests=[];
+if(!Array.isArray(db.activeCalls))db.activeCalls=[];
 if(typeof db.mittelOrgFilter==="undefined")db.mittelOrgFilter=null; // null = Alle Organisationen anzeigen
 // Fahrzeuge, die in früheren Versionen mit erfundener OPTA-Nummer ausgeliefert wurden
 // und inzwischen bewusst zurückgezogen wurden – bei bereits laufenden Installationen
@@ -2390,6 +2391,7 @@ function resumeCall(id){
  save(); if(c.alarmTime)render("leitstelle"); else{evaluate();prepareAlarm()}
 }
 function waitTimerText(c){const ms=Date.now()-c.waitingSince,h=Math.floor(ms/3600000),m=Math.floor(ms%3600000/60000),sec=Math.floor(ms%60000/1000);return `${h}:${String(m).padStart(2,"0")}:${String(sec).padStart(2,"0")}`}
+function deskBadgeHTML(c){return c&&c.deskId&&c.deskId!==DEVICE_ID&&c!==db.currentCall?` <span style="display:inline-block;padding:2px 8px;border-radius:999px;background:#e0e7ff;color:#3730a3;font-size:12px;font-weight:800;vertical-align:middle">🎧 offen an ${esc(c.deskName||"anderem Platz")}</span>`:""}
 function waitBadgeHTML(c){
  if(!c||!c.waitingSince)return "";
  return ` <span class="waitTimer" data-call="${esc(String(c.id))}" style="color:#dc2626;font-weight:900;font-size:16px" title="Wartet seit ${new Date(c.waitingSince).toLocaleTimeString("de-DE",{hour:"2-digit",minute:"2-digit"})} Uhr">⏸ ${waitTimerText(c)}</span>${c.waitAlerted?` <span style="color:#dc2626;font-weight:900">⏰ erneut vorgelegt</span>`:""}`;
@@ -2621,6 +2623,7 @@ function allOpenCalls(){
 }
 function parkCurrentCall(){
  if(!db.currentCall)return;
+ delete db.currentCall.deskId; delete db.currentCall.deskName;
  db.activeCalls=db.activeCalls||[];
  const i=db.activeCalls.findIndex(x=>String(x.id)===String(db.currentCall.id));
  if(i>=0)db.activeCalls[i]=db.currentCall;
@@ -2698,7 +2701,7 @@ function incidentCard(c,isSelected){
  const neighborUnit=c.neighborUnitId?db.units.find(u=>String(u.id)===String(c.neighborUnitId)):null;
  return `<div class="card call">
    <div class="row between">
-    <div><h2>${c.alarmTime?"🚨":"📞"} Einsatz #${esc(c.id)}${waitBadgeHTML(c)}</h2><div class="muted">${esc(c.location||"Ort noch nicht bekannt")}</div></div>
+    <div><h2>${c.alarmTime?"🚨":"📞"} Einsatz #${esc(c.id)}${waitBadgeHTML(c)}</h2><div class="muted">${esc(c.location||"Ort noch nicht bekannt")}</div>${deskBadgeHTML(c)}</div>
     <span class="status ${stateClass}">${state}</span>
    </div>
    <hr>
@@ -2834,7 +2837,7 @@ function dashboard(){
     }
     const stateColor=c.alarmTime?"#e30613":"#94a3b8";
     return `<div onclick="toggleIncidentExpand('${esc(String(c.id))}')" style="cursor:pointer;background:var(--panel);border:1px solid var(--line);border-left:5px solid ${stateColor};border-radius:10px;padding:8px 14px;margin-top:${i===0?0:-9}px;position:relative;z-index:${sortedCalls.length-i};box-shadow:0 2px 5px rgba(0,0,0,.10);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">
-      <b>#${esc(c.id)}</b>${waitBadgeHTML(c)} <span class="muted">${esc(c.keyword||"Noch keine Bewertung")}</span>
+      <b>#${esc(c.id)}</b>${waitBadgeHTML(c)}${deskBadgeHTML(c)} <span class="muted">${esc(c.keyword||"Noch keine Bewertung")}</span>
      </div>`;
   }).join("")}</div>
    <p class="muted" style="margin-top:8px;font-size:11px">📂 Wie ein Aktensortierer: dringende Einsätze oben, R0 danach, bereits alarmierte ganz unten. Auf einen Eintrag tippen, um alle Infos zu sehen.</p>`:`<div class="card"><h2>Keine offenen Einsätze</h2><p class="muted">Starte einen Übungsnotruf.</p></div>`}
@@ -4333,7 +4336,7 @@ function alarmProposal(){
 }
 
 // ─── Telefonat-Leiste: läuft, solange der Notruf nicht aufgelegt wurde ───────────────────────
-function phoneCalls(){return [db.currentCall,...(db.activeCalls||[])].filter(c=>c&&c.phoneStart&&!c.phoneEnd)}
+function phoneCalls(){return [db.currentCall,...(db.activeCalls||[])].filter(c=>c&&c.phoneStart&&!c.phoneEnd&&(!c.deskId||c.deskId===DEVICE_ID||c===db.currentCall))}
 function fmtDur(ms){const t=Math.max(0,Math.floor(ms/1000)),h=Math.floor(t/3600),m=Math.floor(t%3600/60),s=t%60;const p=n=>String(n).padStart(2,"0");return h?`${h}:${p(m)}:${p(s)}`:`${p(m)}:${p(s)}`}
 function renderCallTimerBar(){
  const el=document.getElementById("callTimerBar"); if(!el)return;
@@ -4601,7 +4604,12 @@ async function cloudRequest(path,method="GET",data=null){
 // Sonderzeichen noch Arrays verfälscht und jedes Gerät seine eigenen Echos erkennt.
 const SYNC_CLIENT_ID=Math.random().toString(36).slice(2,10);
 // Rein gerätebezogene Anzeige-Einstellungen bleiben lokal.
-const SYNC_EXCLUDE=new Set(["cloud","mittelOrgFilter","ivenaAreaFilter","ivenaViewMode","ivenaControlsOpen"]);
+// v4.97: "currentCall" (der gerade an DIESEM Platz bearbeitete Notruf) ist je Gerät eigen. Er wird den
+// anderen Plätzen trotzdem live gezeigt – als Eintrag in activeCalls (siehe syncLocalSlots).
+const SYNC_EXCLUDE=new Set(["cloud","mittelOrgFilter","ivenaAreaFilter","ivenaViewMode","ivenaControlsOpen","currentCall"]);
+// Dauerhafte Geräte-Kennung (für „wird an Platz … abgefragt“ und Übungsanrufe dieses Platzes)
+const DEVICE_ID=(()=>{try{let d=localStorage.getItem("lst-device-id");if(!d){d=Math.random().toString(36).slice(2,8);localStorage.setItem("lst-device-id",d)}return d}catch(e){return SYNC_CLIENT_ID}})();
+function deskName(){try{const n=localStorage.getItem("lst-desk-name");if(n)return n}catch(e){}return (typeof IS_MONITOR!=="undefined"&&IS_MONITOR?"Monitor ":"Platz ")+DEVICE_ID.slice(0,3).toUpperCase()}
 var syncShadow=new Map();   // Slot-Pfad → zuletzt bekannter, synchroner JSON-Stand
 var syncRemote=null;        // Spiegel des entfernten Baums
 var syncSource=null, syncReady=false, syncPushTimer=null, syncPushing=false, syncPushAgain=false;
@@ -4623,7 +4631,12 @@ function syncLocalSlots(){
  const out=new Map();
  for(const k of Object.keys(db)){
    if(SYNC_EXCLUDE.has(k)||db[k]===undefined)continue;
-   const v=db[k];
+   let v=db[k];
+   if(k==="activeCalls"){
+     // eigenen offenen Notruf für die anderen Plätze mitveröffentlichen
+     const cur=db.currentCall; v=Array.isArray(v)?v:[];
+     if(cur&&cur.id!=null&&!v.some(x=>x&&String(x.id)===String(cur.id))){if(!cur.deskId){cur.deskId=DEVICE_ID;cur.deskName=deskName()}v=[...v,cur]}
+   }
    if(syncIsIdArray(v)){
      out.set(`${k}/o`,JSON.stringify(v.map(x=>x.id)));
      for(const x of v)out.set(`${k}/i/${syncEncId(x.id)}`,JSON.stringify(x));
@@ -4811,6 +4824,17 @@ function syncApplyRemote(keys,full,written){
        const x=syncSplit(node.v); if(x)db[k]=JSON.parse(x.json);
      }else continue;
    }catch(e){console.warn("State-Sync: Eintrag nicht lesbar",k,e);continue}
+   if(k==="activeCalls"&&db.currentCall&&Array.isArray(db.activeCalls)){
+     // eigener offener Notruf kommt als Eintrag zurück: nicht doppelt führen; fremde Änderungen übernehmen
+     const cid=syncEncId(db.currentCall.id);
+     const i=db.activeCalls.findIndex(x=>x&&syncEncId(x.id)===cid);
+     if(i>=0){const rmt=db.activeCalls.splice(i,1)[0];if(full||foreign.has(`activeCalls/i/${cid}`))db.currentCall=rmt}
+     else if(foreign.has(`activeCalls/i/${cid}`)&&node.i&&node.i[cid]){const x=syncSplit(node.i[cid]);if(x)db.currentCall=JSON.parse(x.json)}
+     else if(foreign.has("activeCalls/o")){
+       const oldHad=JSON.parse(syncShadow.get("activeCalls/o")||"[]").map(syncEncId).includes(cid);
+       if(oldHad){toast(`Einsatz #${db.currentCall.id} wurde an einem anderen Platz abgeschlossen`);db.currentCall=null}
+     }
+   }
    for(const [p,j] of foreign)syncShadow.set(p,j);
    if(full){for(const [p,str] of slots){const x=syncSplit(str);if(x)syncShadow.set(p,x.json)}}
    changed=true;
@@ -5048,11 +5072,12 @@ async function pollCloudUnits(){
    if(["leitstelle","mittel","ivenaZuweisungen","karte"].includes(currentPage)&&!uiLocked)render(currentPage);
  }
 }
+let phoneHere=(()=>{try{return localStorage.getItem("lst-phone-here")!=="0"}catch(e){return true}})();
 function renderCallerBanner(){
  const el=document.getElementById("callerRequestBanner");
  if(!el)return;
- const reqs=db.pendingCallerRequests||[];
- const simH=(typeof simBannerHTML==="function"&&!IS_MONITOR)?simBannerHTML():"";
+ const reqs=phoneHere?(db.pendingCallerRequests||[]):[];
+ const simH=(typeof simBannerHTML==="function")?simBannerHTML():"";
  if(!reqs.length){el.innerHTML=simH;return}
  el.innerHTML=simH+reqs.map(r=>{
    const slot=(db.callers||[]).find(x=>String(x.id)===String(r.callerId));
@@ -5065,6 +5090,13 @@ function renderCallerBanner(){
  }).join("");
 }
 async function acceptCallerRequest(callerId){
+ if(db.cloud?.enabled){
+   const live=await cloudRequest(`callRequests/${encodeURIComponent(String(callerId))}`);
+   if(!live||live.status!=="ringing"){
+     db.pendingCallerRequests=(db.pendingCallerRequests||[]).filter(r=>String(r.callerId)!==String(callerId));
+     save(); renderCallerBanner(); toast("Dieser Anruf wurde bereits an einem anderen Platz angenommen"); return;
+   }
+ }
  const idx=(db.pendingCallerRequests||[]).findIndex(r=>String(r.callerId)===String(callerId));
  const req=idx>=0?db.pendingCallerRequests[idx]:null;
  if(db.currentCall)parkCurrentCall();
@@ -8014,7 +8046,7 @@ async function simGeocode(sim){
 // ─── Zeitplan: mal einer, mal nichts, mal zwei nacheinander, mal zwei gleichzeitig ───────────
 function simSchedule(first){simNextAt=Date.now()+(first?rnd(15,45):rnd(150,480))*1000}
 function simTick(){
- if(!simOn||IS_MONITOR||isTerminalLink)return;
+ if(!simOn||isTerminalLink)return;
  const now=Date.now();
  const due=simFollowQueue.filter(x=>now>=x.at); simFollowQueue=simFollowQueue.filter(x=>now<x.at);
  due.forEach(x=>simRing(x.sim));
@@ -8057,7 +8089,7 @@ function simAccept(simId){
  if(s.kt)db.currentCall={id:stamp.slice(-6),kt:true,location:"",count:"1",answers:{},history:[{q:"☎️ Anruf über",a:"🚑 19222 – Krankentransport"}],keyword:"Krankentransport",suggestion:"",createdAt:new Date().toISOString()};
  else db.currentCall={id:stamp.slice(-6),location:"",count:"",answers:{callType:"112"},history:[{q:"☎️ Über welche Nummer ist der Anruf eingegangen?",a:CALLER_NUMBERS["112"].label}],keyword:"",suggestion:"",createdAt:new Date().toISOString()};
  const c=db.currentCall;
- c.phoneStart=Date.now(); c.callerNumber=s.num; c.sim=s;
+ c.phoneStart=Date.now(); c.callerNumber=s.num; c.sim=s; s.owner=DEVICE_ID;
  if(s.isFollow){c.followOf=s.refCallId;c.history.push({q:"🔁 Erneuter Anruf",a:`Rufnummer ${s.phone} – bekannt aus Einsatz #${s.refCallId}`})}
  c.callerGps={lat:s.loc.lat,lng:s.loc.lng,address:s.loc.kind==="home"?s.loc.addr:s.loc.text.replace(/^(am|auf der|auf dem) /,""),water:!!s.loc.water,sim:true};
  c.callerGpsPending=true;
@@ -8259,10 +8291,12 @@ async function simReply(c,text){
 
 // ─── Gespräch ─────────────────────────────────────────────────────────────────────────────────
 function simSay(c,text){
+ if(!simMine(c))return;
  c.sim.log.push({who:c.sim.speaker==="patient"?"patient":"caller",text,t:Date.now()}); c.sim.lastAt=Date.now();
  if(simVoice)simSpeak(c,text);
 }
 function simCallById(id){return allOpenCalls().find(x=>String(x.id)===String(id))}
+function simMine(c){return !!(c&&c.sim&&(!c.sim.owner||c.sim.owner===DEVICE_ID))}
 async function simSendFrom(callId,inputId,preset){
  const c=simCallById(callId); if(!c||!c.sim||c.phoneEnd)return;
  const el=inputId?document.getElementById(inputId):null;
@@ -8303,7 +8337,7 @@ function simCallerEnd(c){
 // spontane Sätze, wenn länger nichts gesagt wurde
 function simSpontaneous(){
  for(const c of allOpenCalls()){
-   if(!c.sim||c.phoneEnd||c.sim.typing)continue;
+   if(!c.sim||c.phoneEnd||c.sim.typing||!simMine(c))continue;
    if(simCallerEnd(c))continue;
    const s=c.sim; if(Date.now()-s.lastAt<rnd(28,45)*1000)continue;
    const pool=s.speaker==="patient"?["Mir ist so komisch…","Kommt jetzt jemand?","Ich… bin noch da."]:[...(s.d.extra||[])];
@@ -8336,8 +8370,8 @@ let simMic=null, simMicBlocked=false, simMicInterim="", simMicStartAt=0;
 let simRec=null, simRecFor=null; // (alt, für Kompatibilität)
 function simMicTarget(){
  const cur=db.currentCall;
- if(cur&&cur.sim&&!cur.phoneEnd)return cur;
- const live=allOpenCalls().filter(c=>c.sim&&!c.phoneEnd);
+ if(cur&&cur.sim&&!cur.phoneEnd&&simMine(cur))return cur;
+ const live=allOpenCalls().filter(c=>c.sim&&!c.phoneEnd&&simMine(c));
  return live.length?live[live.length-1]:null;
 }
 function simNorm(t){return String(t||"").toLowerCase().replace(/[^a-zäöüß0-9 ]/g," ").split(/\s+/).filter(w=>w.length>2)}
@@ -8363,7 +8397,7 @@ function simMicStop(){if(simMic){const m=simMic;simMic=null;try{m.onend=null;m.a
 function simMicLiveUpdate(){document.querySelectorAll(".simMicLive").forEach(el=>{el.textContent=simMicInterim?("🎙️ "+simMicInterim):(simMic?"🎙️ hört zu …":"")})}
 function simMicEnsure(){
  const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
- const want=simVoice&&simMicOn&&!simMicBlocked&&!!SR&&!!simMicTarget()&&!IS_MONITOR&&!isTerminalLink;
+ const want=simVoice&&simMicOn&&!simMicBlocked&&!!SR&&!!simMicTarget()&&!isTerminalLink;
  if(!want){if(simMic)simMicStop();return}
  if(simMic||Date.now()-simMicStartAt<1500)return;
  const rec=new SR(); rec.lang="de-DE"; rec.continuous=true; rec.interimResults=true; rec.maxAlternatives=1;
@@ -8431,11 +8465,24 @@ const simRenderChat=simRefresh;
 function simCtlHTML(){
  return `<button onclick="simToggleVoice()" title="${simVoice?"Sprachmodus – antippen für Textmodus":"Textmodus – antippen für Sprachmodus"}" style="font-size:20px;padding:2px 8px;background:none;border:1px solid var(--line);border-radius:8px">${simVoice?"🔊":"🔇"}</button>
   <button onclick="simToggleOn()" title="Automatische Übungsnotrufe ${simOn?"ausschalten":"einschalten"}" style="font-size:12px;padding:4px 10px;border-radius:8px;font-weight:800;${simOn?"background:#16a34a;color:#fff;border:1px solid #16a34a":"background:#fff;color:#334155;border:1px solid var(--line)"}">🎲 <span class="simLbl">Übungsnotrufe </span>${simOn?"AN":"AUS"}</button>
+  <button onclick="phoneHereToggle()" title="Anrufe vom Anrufer-Handy an diesem Platz ${phoneHere?"ausblenden":"anzeigen"} (${esc(deskName())})" style="font-size:12px;padding:4px 8px;border-radius:8px;font-weight:800;${phoneHere?"background:#e0f2fe;color:#075985;border:1px solid #7dd3fc":"background:#fff;color:#94a3b8;border:1px solid var(--line)"}">📞${phoneHere?"":"✕"}</button>
   <button onclick="simAiDialog()" title="KI-Anrufer einrichten" style="font-size:16px;padding:2px 8px;border-radius:8px;${simAiReady()?"background:#ede9fe;border:1px solid #7c3aed":"background:none;border:1px solid var(--line)"}">🤖</button>`;
 }
+function phoneHereToggle(){
+ phoneHere=!phoneHere; try{localStorage.setItem("lst-phone-here",phoneHere?"1":"0")}catch(e){}
+ renderSimCtl(); renderCallerBanner();
+ toast(phoneHere?`📞 Anrufe vom Anrufer-Handy klingeln an diesem Platz (${deskName()})`:"📞 Anrufe vom Anrufer-Handy an diesem Platz ausgeblendet");
+}
+function renameDesk(){
+ const n=prompt("Name dieses Platzes (z. B. „Platz 1“, „Monitor Funk“):",deskName());
+ if(n==null)return; try{if(n.trim())localStorage.setItem("lst-desk-name",n.trim().slice(0,30));else localStorage.removeItem("lst-desk-name")}catch(e){}
+ if(db.currentCall&&db.currentCall.deskId===DEVICE_ID){db.currentCall.deskName=deskName();save()}
+ renderSimCtl();
+}
 function renderSimCtl(){
+ const dt=document.getElementById("deskTag"); if(dt)dt.textContent=(db.cloud?.enabled&&!isTerminalLink)?"🎧 "+deskName():"";
  const el=document.getElementById("simCtl");if(!el)return;
- if(IS_MONITOR||isTerminalLink){el.innerHTML="";return}
+ if(isTerminalLink){el.innerHTML="";return}
  el.innerHTML=simCtlHTML();
  if(!document.getElementById("floatDock")){const d=document.createElement("div");d.id="floatDock";document.body.appendChild(d)}
 }
@@ -8585,12 +8632,12 @@ function simDockHTML(c){
 }
 function renderFloat(){
  const el=document.getElementById("floatDock"); if(!el)return;
- if(IS_MONITOR||isTerminalLink){el.innerHTML="";return}
+ if(isTerminalLink){el.innerHTML="";return}
  if(!isHandyMode()){const bn=document.getElementById("callerRequestBanner"),tb=document.getElementById("callTimerBar");const top=Math.max(84,(tb?tb.getBoundingClientRect().bottom:0)+8,bn&&bn.innerHTML?bn.getBoundingClientRect().bottom+8:0);el.style.top=Math.min(top,window.innerHeight-260)+"px";el.style.maxHeight=`calc(100vh - ${Math.min(top,window.innerHeight-260)+90}px)`}else{el.style.top="";el.style.maxHeight=""}
  const shown=document.getElementById("simChatBox")&&db.currentCall?String(db.currentCall.id):null;
  const calls=allOpenCalls();
  const reas=calls.filter(c=>c.rea&&c.rea.open);
- const docks=calls.filter(c=>c.sim&&!c.phoneEnd&&String(c.id)!==shown&&!(c.rea&&c.rea.open));
+ const docks=calls.filter(c=>c.sim&&!c.phoneEnd&&simMine(c)&&String(c.id)!==shown&&!(c.rea&&c.rea.open));
  const sig=JSON.stringify([shown,reaMetroCall,simMicOn,simMicBlocked,simVoice,floatCollapsed,reas.map(c=>[c.id,c.rea.steps,c.location,c.keyword,(c.alarmedUnits||[]).map(i=>{const u=db.units.find(x=>String(x.id)===String(i));return u?u.status:""}),c.sim?[c.sim.log.length,c.sim.typing,c.phoneEnd]:0]),docks.map(c=>[c.id,c.keyword,c.sim.log.length,c.sim.typing])]);
  if(sig===floatSig){el.querySelectorAll(".liveTimer").forEach(t=>{t.textContent=fmtDur(Date.now()-Number(t.dataset.start))});return}
  floatSig=sig;
@@ -8605,14 +8652,14 @@ function renderFloat(){
  simMicLiveUpdate();
 }
 function floatTick(){
- if(IS_MONITOR||isTerminalLink)return;
+ if(isTerminalLink)return;
  reaAutoCheck();
  try{simMicEnsure()}catch(e){}
  if(reaMetroCall&&!simCallById(reaMetroCall))reaStopMetro();
  renderFloat();
 }
 
-setInterval(()=>{renderCallTimerBar();const clock=document.getElementById("clock");if(clock)clock.textContent=new Date().toLocaleTimeString("de-DE");if(IS_MONITOR)return;applyDutySchedule();autoReturnToStation();autoAdvanceEnRoute();updateWaitTimers();simTick();simSpontaneous();floatTick()},1000);
+setInterval(()=>{renderCallTimerBar();const clock=document.getElementById("clock");if(clock)clock.textContent=new Date().toLocaleTimeString("de-DE");if(!isTerminalLink){simTick();simSpontaneous();floatTick()}if(IS_MONITOR)return;applyDutySchedule();autoReturnToStation();autoAdvanceEnRoute();updateWaitTimers()},1000);
 renderSimCtl();
 try{qsSyncRuleFields()}catch(e){}
 // Läuft der Hauptplatz in einem Hintergrund-Tab oder mit gesperrtem Bildschirm, drosseln Browser

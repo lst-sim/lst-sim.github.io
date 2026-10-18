@@ -1489,3 +1489,19 @@ Version 4.96:
 - Die Frage „Bestehen weitere Gefahren am Einsatzort?“ ist keine eigene Frage mehr, sondern ein
   kleines Kästchen unter dem Freitext („⚠️ Weitere Gefahren am Einsatzort … – Ja“). Angehakt =
   „ja“, nicht angehakt = „nein“. Die Frage steht deshalb immer direkt beim Freitext.
+
+Version 4.97:
+- Mehrere Plätze gleichzeitig: Jeder Platz (Hauptplatz und jeder Monitor) hat jetzt seinen
+  EIGENEN offenen Notruf. Mehrere Disponenten können also gleichzeitig verschiedene Notrufe
+  abfragen, ohne sich gegenseitig zu stören. Die anderen Plätze sehen den Notruf trotzdem live
+  in der Einsatzliste, mit dem Hinweis „🎧 offen an …“. Öffnet ein zweiter Platz denselben
+  Einsatz, bearbeiten beide ihn gemeinsam (Änderungen kommen live an). Wird ein Einsatz an
+  einem Platz abgeschlossen, verschwindet er überall.
+- Platzname oben neben „● Live“ (🎧 …), antippen zum Umbenennen (z. B. „Platz 1“).
+- Anrufe vom Anrufer-Handy klingeln an allen Plätzen; wer zuerst annimmt, hat ihn – an den
+  anderen Plätzen kommt dann „bereits an einem anderen Platz angenommen“. Mit dem neuen
+  📞-Knopf oben kann jeder Platz diese Anrufe für sich ausblenden (📞✕).
+- Übungsnotrufe (🎲), 🔇/🔊 und 🤖 gibt es jetzt auch auf den Monitoren, je Platz einstellbar.
+  Ein Übungsanruf gehört dem Platz, der ihn angenommen hat (nur dort spricht der Anrufer).
+- Die Telefonat-Leiste oben zeigt nur die eigenen Gespräche.
+- Wichtig: Nach dem Update alle Geräte (Hauptplatz und Monitore) einmal neu laden.
