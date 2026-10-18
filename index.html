@@ -169,7 +169,7 @@ html[data-device="handy"] #floatDock{left:8px;right:8px;width:auto;top:auto;bott
 </head>
 <body>
 <div style="padding:6px 10px;font-size:11px;color:#94a3b8;font-weight:700;display:flex;flex-wrap:wrap;align-items:center;gap:10px;position:sticky;top:0;z-index:10;background:var(--bg)">
- <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v4.91</span>
+ <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v4.92</span>
  <span id="syncState"></span>
  <span id="simCtl" style="position:absolute;left:50%;transform:translateX(-50%);display:flex;gap:6px;align-items:center"></span>
  <a id="homeLink" href="#" onclick="render('leitstelle');return false" class="hidden" style="color:#64748b;text-decoration:underline;font-weight:600">🖥️ Leitstelle</a>
@@ -3230,6 +3230,75 @@ function reaShortcutActive(c=db.currentCall){
  return a.event==="Reanimation" || a.b_breath==="Keine normale Atmung";
 }
 const REA_SHORTCUT_DEFAULTS={x_massive:"Nein",a_airway:"Gefährdet",b_breath:"Keine normale Atmung",c_circ:"Unklar",d_disability:"Bewusstlos",e_exposure:"Nicht einzeln erhoben – Reanimations-Kurzabfrage"};
+// ─── Abfrage-Masken (v4.92): mehrere Fragen auf einer Seite ───────────────────────────────────
+// Betroffene (Anzahl, eingeklemmt, durch Feuer bedroht, gefährdet), Wasser (im Wasser, Zustand)
+// und Patient (Psy, Name, Alter, Geschlecht). Nicht zutreffende Felder werden wie bisher
+// automatisch übersprungen; „Zurück“ nimmt die ganze Maske zurück.
+const QS_MASKS=[
+ {key:"betroffene",title:"👥 Betroffene",ids:["count","trapped","firePeople","personDanger"]},
+ {key:"wasser",title:"🌊 Person im Wasser",ids:["water","waterState"]},
+ {key:"patient",title:"👤 Patient",ids:["psy","patientName","patientAge","patientGender"]}
+];
+const QS_MASK_CHOICES={water:["Ja","Nein","?"],waterState:["Lebenszeichen","Vermisst","Bergung"],psy:["Ja","Nein"],patientGender:["M","W","Divers","Unbekannt"]};
+let qsMaskBusy=false, qsMaskTag=null;
+function qsMaskOf(id){return QS_MASKS.find(m=>m.ids.includes(id))||null}
+function qsMaskSkip(c,id){
+ if(qsIsHidden(c,id))return "nicht erhoben";
+ const a=c.answers||{}, e=a.event||"";
+ if(id==="trapped")return ["Verkehrsunfall","Technische Hilfeleistung"].includes(e)?null:"nicht zutreffend";
+ if(id==="firePeople")return e==="Feuer / Rauchentwicklung"?null:"nicht zutreffend";
+ if(id==="personDanger")return ["Reanimation","Medizinischer Notfall","Person im Wasser","Verkehrsunfall"].includes(e)?"=count":null;
+ if(id==="water")return e==="Person im Wasser"?null:"nein";
+ if(id==="waterState")return e==="Person im Wasser"?null:"nicht zutreffend";
+ if(id==="psy")return (!needsXABCDE(c)||reaShortcutActive(c))?"nicht erhoben":null;
+ if(["patientName","patientAge","patientGender"].includes(id))return Number(a.count)>1?"mehrere Patienten – entfällt":!needsXABCDE(c)?"nicht erhoben":null;
+ return null;
+}
+function qsMaskMembers(c,m){const order=callQs(c).map(q=>q[0]);return m.ids.filter(id=>order.includes(id)&&!(id in (c.answers||{}))).sort((x,y)=>order.indexOf(x)-order.indexOf(y))}
+function qsMaskPick(btn,id,v){
+ document.querySelectorAll(`[data-mk="${id}"]`).forEach(b=>{b.classList.toggle("primary",b===btn)});
+ const h=document.getElementById("mk_"+id); if(h)h.value=v;
+}
+function qsMaskHTML(c,m){
+ const mem=qsMaskMembers(c,m), labels=Object.fromEntries(callQs(c).map(q=>[q[0],q[1]]));
+ const vis=mem.filter(id=>qsMaskSkip(c,id)==null);
+ if(!vis.length){setTimeout(()=>qsMaskSubmit(m.key),0);return `<span class="muted">Nicht zutreffend – wird übersprungen …</span>`}
+ const field=id=>{
+   const L=`<label style="margin-top:10px">${esc(labels[id]||id)}</label>`;
+   if(QS_MASK_CHOICES[id])return `${L}<input type="hidden" id="mk_${id}"><div style="display:flex;flex-wrap:wrap;gap:6px">${QS_MASK_CHOICES[id].map(v=>`<button type="button" style="flex:1 1 0;min-width:84px" data-mk="${id}" onclick="qsMaskPick(this,'${id}',${esc(JSON.stringify(v))})">${esc(v)}</button>`).join("")}</div>`;
+   if(id==="patientName")return `${L}<input id="mk_${id}" type="text" placeholder="falls bekannt">`;
+   const quick=id==="patientAge"?"":["0","1","2","3"].filter(n=>!(id==="count"&&n==="0")).map(n=>`<button type="button" onclick="document.getElementById('mk_${id}').value='${n}'">${n}</button>`).join("");
+   return `${L}<div class="row"><input id="mk_${id}" type="number" min="0" inputmode="numeric" style="flex:1" placeholder="${id==="patientAge"?"Jahre, falls bekannt":"Anzahl"}">${quick}</div>`;
+ };
+ return `<div class="suggest" style="background:#f8fafc;border-color:var(--line)" onkeydown="if(event.key==='Enter'&&event.target.tagName==='INPUT'){event.preventDefault();qsMaskSubmit('${m.key}')}">
+   <h2 style="margin-top:0">${m.title}</h2>${vis.map(field).join("")}
+   <div class="row" style="margin-top:14px"><button class="primary" onclick="qsMaskSubmit('${m.key}')">✔ Antworten übernehmen</button></div></div>`;
+}
+async function qsMaskSubmit(key){
+ const c=db.currentCall, m=QS_MASKS.find(x=>x.key===key); if(!c||!m||qsMaskBusy)return;
+ const mem=qsMaskMembers(c,m), vals={}, missing=[];
+ const labels=Object.fromEntries(callQs(c).map(q=>[q[0],q[1]]));
+ for(const id of mem){
+   if(qsMaskSkip(c,id)!=null)continue;
+   let v=String(document.getElementById("mk_"+id)?.value??"").trim();
+   if(!v){
+     if(id==="patientName"||id==="patientAge")v="unbekannt";
+     else if(id==="patientGender")v="Unbekannt";
+     else missing.push(String(labels[id]||id).replace(/^[^A-Za-zÄÖÜäöü]+/,""));
+   }
+   vals[id]=v;
+ }
+ if(missing.length){toast("Bitte noch beantworten: "+missing.join(", "));return}
+ qsMaskBusy=true; qsMaskTag=key+"_"+Date.now();
+ try{
+   for(const id of mem){
+     const sk=qsMaskSkip(c,id);
+     if(sk==null)await answer(id,vals[id]);
+     else await answer(id,sk==="=count"?String(Math.max(1,Number(c.answers.count)||1)):sk,true);
+   }
+ }finally{qsMaskBusy=false;qsMaskTag=null}
+ notruf();
+}
 function questionHTML(q){
  const [id,label,type]=q;
  if(qsIsHidden(db.currentCall,id)&&!(id!=="callType"&&db.currentCall?.answers?.callType&&db.currentCall.answers.callType!=="112")){setTimeout(()=>answer(id,"nicht erhoben",true),0);return `<span class="muted">Ausgeblendete Frage – wird übersprungen …</span>`}
@@ -3249,6 +3318,7 @@ function questionHTML(q){
  if(id!=="callType" && callType && callType!=="112")
    return skip("entfällt – Weiterleitung");
  if(type==="custom")return qsCustomHTML(q,c);
+ if(!c?.kt&&qsMaskOf(id))return qsMaskHTML(c,qsMaskOf(id));
 
  if(type==="calltype") return `<label>${label}</label><div class="answer">
    <button onclick="answer('${id}','112')">🚨 112 – Feuerwehr/Rettungsdienst-Notruf</button>
@@ -3581,10 +3651,10 @@ async function answer(k,v,auto=false){
  const lbl=qsPendingLabel&&qsPendingLabel.id===k?qsPendingLabel.label:null; qsPendingLabel=null;
  c.answerLabels=c.answerLabels||{}; if(lbl)c.answerLabels[k]=lbl; else delete c.answerLabels[k];
  const shown=lbl||v;
- c.history.push({id:k,q:q?q[1]:k,a:shown,auto:!!auto});
+ c.history.push({id:k,q:q?q[1]:k,a:shown,auto:!!auto,...(qsMaskTag?{mask:qsMaskTag}:{})});
  evaluate();
  save();
- notruf();
+ if(!qsMaskBusy)notruf();
 }
 // Setzt die letzte(n) Antwort(en) zurück: übersprungene/automatisch gesetzte Antworten (z. B.
 // durch die Reanimations-Kurzabfrage oder "nicht zutreffend") werden dabei mit zurückgenommen,
@@ -3601,6 +3671,7 @@ function goBackNotruf(){
      if(last.id==="location"){c.location="";delete c.lat;delete c.lng;delete c.geocodedAddress;delete c.locationIsWater;delete c.outOfJurisdiction;}
      if(last.id==="count")c.count="";
    }
+   if(last.mask&&c.history.length&&c.history[c.history.length-1].mask===last.mask)continue; // ganze Maske zurücknehmen
    if(!last.auto){undone=true;break}
  }
  if(!undone)toast("Zurück zum Anfang der Abfrage");

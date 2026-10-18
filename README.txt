@@ -1447,3 +1447,16 @@ Version 4.90:
 Version 4.91:
 - Übungsanrufe: Krankentransporte (19222) rufen nicht mehr automatisch an, es kommen nur noch
   Notrufe über 112.
+
+Version 4.92:
+- Notrufabfrage mit Masken: mehrere Fragen erscheinen zusammen auf einer Seite.
+  • 👥 Betroffene: Anzahl Betroffene, eingeklemmt/eingeschlossen, durch Feuer/Rauch bedroht,
+    verletzt/gefährdet
+  • 🌊 Person im Wasser: im Wasser? und Zustand
+  • 👤 Patient: Psy-Problem, Name, Alter, Geschlecht
+  Es erscheinen nur die Felder, die zum Ereignis passen (z. B. „eingeklemmt“ nur bei VU/TH,
+  „bedroht“ nur bei Feuer); der Rest wird wie bisher automatisch übersprungen. Ganz
+  unpassende Masken (z. B. Wasser beim Brand) werden übersprungen. Name und Alter dürfen leer
+  bleiben („unbekannt“), Geschlecht ohne Auswahl = „Unbekannt“.
+- „Zurück“ nimmt immer die ganze Maske zurück. Umbenannte/ausgeblendete Fragen aus
+  „Notrufabfrage bearbeiten“ gelten auch in den Masken.
