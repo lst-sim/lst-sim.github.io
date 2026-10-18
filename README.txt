@@ -1484,3 +1484,8 @@ Version 4.95:
 - „Psy Problem?“ ist optional: In der Patienten-Maske kann man es leer lassen (wird als
   „nicht erhoben“ gespeichert). Name, Alter und Geschlecht sind dort ebenfalls als optional
   gekennzeichnet.
+
+Version 4.96:
+- Die Frage „Bestehen weitere Gefahren am Einsatzort?“ ist keine eigene Frage mehr, sondern ein
+  kleines Kästchen unter dem Freitext („⚠️ Weitere Gefahren am Einsatzort … – Ja“). Angehakt =
+  „ja“, nicht angehakt = „nein“. Die Frage steht deshalb immer direkt beim Freitext.

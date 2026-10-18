@@ -170,7 +170,7 @@ html[data-device="handy"] #floatDock{left:8px;right:8px;width:auto;top:auto;bott
 </head>
 <body>
 <div style="padding:6px 10px;font-size:11px;color:#94a3b8;font-weight:700;display:flex;flex-wrap:wrap;align-items:center;gap:10px;position:sticky;top:0;z-index:10;background:var(--bg)">
- <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v4.95</span>
+ <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v4.96</span>
  <span id="syncState"></span>
  <span id="simCtl" style="position:absolute;left:50%;transform:translateX(-50%);display:flex;gap:6px;align-items:center"></span>
  <a id="homeLink" href="#" onclick="render('leitstelle');return false" class="hidden" style="color:#64748b;text-decoration:underline;font-weight:600">🖥️ Leitstelle</a>
@@ -2896,10 +2896,10 @@ const QS_BASE=[
  ["d_disability","D – Wie ist der neurologische Zustand / das Bewusstsein?","xdisability"],
  ["e_exposure","E – Weitere Verletzungen, Erkrankungszeichen oder Umgebungseinflüsse?","textarea"],
  ["psy","🧠 Psy Problem?","ynPsy"],
- ["danger","⚠️ Bestehen weitere Gefahren am Einsatzort?","yn"],
  ["patientName","👤 Name der betroffenen Person (falls bekannt)","text"],
  ["patientAge","🎂 Alter der betroffenen Person","count"],
  ["patientGender","⚧ Geschlecht der betroffenen Person","gender"],
+ ["danger","⚠️ Bestehen weitere Gefahren am Einsatzort?","yn"],
  ["freeText","📝 Freitext – weitere Angaben des Anrufers","textarea"]
 ];
 // Krankentransport-Abfrage (eigener Button "Krankentransport annehmen")
@@ -2933,6 +2933,8 @@ function qsEffective(key){
  base.forEach((q,i)=>{if(order.includes(q[0]))return;let pos=0;for(let j=i-1;j>=0;j--){const k=order.indexOf(base[j][0]);if(k>=0){pos=k+1;break}}order.splice(pos,0,q[0])});
  (cfg.custom||[]).forEach(cq=>{if(!order.includes(cq.id)){const f=order.indexOf("freeText");order.splice(f>=0?f:order.length,0,cq.id)}});
  if(key==="112"){const i=order.indexOf("callType");if(i>0){order.splice(i,1);order.unshift("callType")}}
+ // Gefahren-Frage gehört zum Freitext (gemeinsame Maske) – immer direkt davor
+ if(key==="112"&&order.includes("danger")&&order.includes("freeText")){order.splice(order.indexOf("danger"),1);order.splice(order.indexOf("freeText"),0,"danger")}
  return order.map(id=>map.get(id));
 }
 function callQs(c){return qsEffective(c?.kt?"kt":"112")}
@@ -3245,7 +3247,8 @@ const REA_SHORTCUT_DEFAULTS={x_massive:"Nein",a_airway:"Gefährdet",b_breath:"Ke
 const QS_MASKS=[
  {key:"betroffene",title:"👥 Betroffene",ids:["count","trapped","firePeople","personDanger"]},
  {key:"wasser",title:"🌊 Person im Wasser",ids:["water","waterState"]},
- {key:"patient",title:"👤 Patient",ids:["psy","patientName","patientAge","patientGender"]}
+ {key:"patient",title:"👤 Patient",ids:["psy","patientName","patientAge","patientGender"]},
+ {key:"freitext",title:"📝 Freitext",ids:["danger","freeText"]}
 ];
 const QS_MASK_CHOICES={water:["Ja","Nein","?"],waterState:["Lebenszeichen","Vermisst","Bergung"],psy:["Ja","Nein"],patientGender:["M","W","Divers","Unbekannt"]};
 let qsMaskBusy=false, qsMaskTag=null;
@@ -3271,6 +3274,13 @@ function qsMaskHTML(c,m){
  const mem=qsMaskMembers(c,m), labels=Object.fromEntries(callQs(c).map(q=>[q[0],q[1]]));
  const vis=mem.filter(id=>qsMaskSkip(c,id)==null);
  if(!vis.length){setTimeout(()=>qsMaskSubmit(m.key),0);return `<span class="muted">Nicht zutreffend – wird übersprungen …</span>`}
+ if(m.key==="freitext"){
+   const ft=vis.includes("freeText"), dg=vis.includes("danger");
+   return `<div class="suggest" style="background:#f8fafc;border-color:var(--line)">
+    ${ft?`<label style="margin-top:0">${esc(labels.freeText||"Freitext")}</label><textarea id="mk_freeText" rows="6" placeholder="Freie Schilderung des Anrufers, zusätzliche Angaben, Besonderheiten …" style="width:100%;box-sizing:border-box"></textarea>`:""}
+    ${dg?`<label style="display:flex;gap:8px;align-items:center;margin:8px 0 0;font-size:13px;font-weight:600;color:#475569;cursor:pointer"><input type="checkbox" id="mk_danger" style="width:auto;margin:0"> ⚠️ Weitere Gefahren am Einsatzort (z. B. Strom, Gas, Verkehr, Tiere) – Ja</label>`:""}
+    <div class="row" style="margin-top:12px"><button class="primary" onclick="qsMaskSubmit('freitext')">✔ Antwort übernehmen</button>${ft?`<button onclick="const t=document.getElementById('mk_freeText');if(t)t.value='';qsMaskSubmit('freitext')">Keine weiteren Angaben</button>`:""}</div></div>`;
+ }
  const field=id=>{
    const L=`<label style="margin-top:10px">${esc(labels[id]||id)}${["psy","patientName","patientAge","patientGender"].includes(id)?` <span class="muted" style="font-weight:500">(optional)</span>`:""}</label>`;
    if(QS_MASK_CHOICES[id])return `${L}<input type="hidden" id="mk_${id}"><div style="display:flex;flex-wrap:wrap;gap:6px">${QS_MASK_CHOICES[id].map(v=>`<button type="button" style="flex:1 1 0;min-width:84px" data-mk="${id}" onclick="qsMaskPick(this,'${id}',${esc(JSON.stringify(v))})">${esc(v)}</button>`).join("")}</div>`;
@@ -3288,7 +3298,9 @@ async function qsMaskSubmit(key){
  const labels=Object.fromEntries(callQs(c).map(q=>[q[0],q[1]]));
  for(const id of mem){
    if(qsMaskSkip(c,id)!=null)continue;
-   let v=String(document.getElementById("mk_"+id)?.value??"").trim();
+   const el=document.getElementById("mk_"+id);
+   let v=el&&el.type==="checkbox"?(el.checked?"ja":"nein"):String(el?.value??"").trim();
+   if(id==="freeText"){vals[id]=v;continue}
    if(!v){
      if(id==="patientName"||id==="patientAge")v="unbekannt";
      else if(id==="patientGender")v="Unbekannt";
@@ -3320,6 +3332,7 @@ function qsPrefill(id){
      const inp=document.getElementById("mk_"+k);
      const btn=[...document.querySelectorAll(`[data-mk="${k}"]`)].find(b=>b.textContent.trim()===v);
      if(btn){qsMaskPick(btn,k,v);any=true}
+     else if(inp&&inp.type==="checkbox"){inp.checked=v==="ja";if(v==="ja")any=true}
      else if(inp&&inp.type!=="hidden"&&v!=="unbekannt"){inp.value=v;any=true}
      continue;
    }
