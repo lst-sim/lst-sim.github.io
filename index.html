@@ -170,7 +170,7 @@ html[data-device="handy"] #floatDock{left:8px;right:8px;width:auto;top:auto;bott
 </head>
 <body>
 <div style="padding:6px 10px;font-size:11px;color:#94a3b8;font-weight:700;display:flex;flex-wrap:wrap;align-items:center;gap:10px;position:sticky;top:0;z-index:10;background:var(--bg)">
- <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v4.93</span>
+ <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v4.94</span>
  <span id="syncState"></span>
  <span id="simCtl" style="position:absolute;left:50%;transform:translateX(-50%);display:flex;gap:6px;align-items:center"></span>
  <a id="homeLink" href="#" onclick="render('leitstelle');return false" class="hidden" style="color:#64748b;text-decoration:underline;font-weight:600">🖥️ Leitstelle</a>
@@ -2147,12 +2147,15 @@ function openNeighborUnitPickerForCall(kind,callId){
  const call=allOpenCalls().find(c=>String(c.id)===String(callId));
  if(!call){toast("Einsatz nicht gefunden");return}
  const districts=Object.entries(NEIGHBOR_LEITSTELLE).filter(([,k])=>k===kind).map(([d])=>d);
- const candidates=db.neighborUnits.filter(u=>districts.includes(u.district) && ["1","2"].includes(String(u.status)));
+ const dest=callDestinationPoint(call), own=ownBestEta(call);
+ const candidates=db.neighborUnits.filter(u=>districts.includes(u.district) && ["1","2"].includes(String(u.status)))
+   .map(u=>({u,eta:dest&&Number.isFinite(u.lat)&&Number.isFinite(u.lng)?Math.round(neighborEtaFor(u,dest).eta):null}))
+   .sort((a,b)=>(a.eta??999)-(b.eta??999)).map(x=>({...x.u,_eta:x.eta}));
  document.getElementById("app").innerHTML=`<div class="card">
   <div class="row between"><h2>🚨 Fahrzeug für Einsatz #${esc(call.id)} alarmieren</h2><button onclick="render('leitstelle')">Zurück</button></div>
-  <p class="muted">Alarmiertes Fahrzeug erscheint danach auf unserer Karte wie ein eigenes Fahrzeug (Status 3, Standort sichtbar).</p>
+  <p class="muted">Alarmiertes Fahrzeug erscheint danach auf unserer Karte wie ein eigenes Fahrzeug (Status 3, Standort sichtbar). Sortiert nach Ankunftszeit.</p>
   ${candidates.length?candidates.map(u=>`<div class="row between" style="padding:8px 0;border-bottom:1px solid var(--line)">
-     <div><b>${esc(u.opta)}</b><div class="muted">${esc(u.district)} · ${esc(u.type)} · ${esc(u.address||"")}</div></div>
+     <div><b>${esc(u.opta)}</b><div class="muted">${esc(u.district)} · ${esc(u.type)} · ${esc(u.address||"")}</div>${u._eta!=null?`<div style="font-weight:800;${own==null||u._eta<own?"color:#15803d":"color:#b45309"}">⏱️ ~${u._eta} min bis zum Einsatzort${own!=null?(u._eta<own?` – ${own-u._eta} min schneller als eigenes RTW/NEF (~${own} min)`:` – eigenes RTW/NEF ist schneller (~${own} min)`):" – kein eigenes RTW/NEF frei"}</div>`:""}</div>
      <button class="primary" onclick="alarmNeighborUnit(${u.id},'${esc(String(call.id))}')">🚨 Alarmieren</button>
     </div>`).join(""):`<p class="muted">Kein freies Fahrzeug in den zuständigen Nachbarlandkreisen.</p>`}
  </div>`;
@@ -2657,32 +2660,36 @@ function nearestOwnUnitKm(call){
  });
  return min;
 }
-function nearestNeighborUnit(call){
- // Nächstgelegenes FREIES Rettungsmittel eines Nachbarlandkreises zum Einsatzort.
- // "Frei" = Status 1 (Frei über Funk) ODER 2 (Frei auf Wache) – genau wie bei den eigenen
- // Fahrzeugen in nearestOwnUnitKm.
+// Nachbar-LK anfragen – gekoppelt an die Ankunftszeit (v4.94): Vorgeschlagen wird die Anfrage,
+// wenn ein freies Nachbar-Rettungsmittel (RTW/NEF) SCHNELLER am Einsatzort wäre als unser
+// schnellstes freies eigenes RTW/NEF (oder wir keins frei haben). Verglichen wird die geschätzte
+// Ankunftszeit (gleiche Rechnung wie im Alarmvorschlag), nicht mehr die reine Entfernung.
+function neighborEtaFor(n,dest){const km=haversine(dest[0],dest[1],n.lat,n.lng);return {km,eta:etaMinutesForDistance({...n,org:"Rettungsdienst",neighborLoan:true,status:String(n.status)},km)}}
+function ownBestEta(call,types=["RTW","NEF"]){
+ const dest=callDestinationPoint(call); if(!dest)return null;
+ let best=null;
+ db.units.filter(u=>types.includes(u.type)&&!u.neighborLoan&&["1","2"].includes(String(u.status))&&!(typeof drkBackground==="function"&&drkBackground(u))).forEach(u=>{const p=unitPoint(u);if(!p)return;const e=etaMinutesForDistance(u,haversine(dest[0],dest[1],p[0],p[1]));if(Number.isFinite(e)&&(best==null||e<best))best=e});
+ return best==null?null:Math.round(best);
+}
+function nearestNeighborUnit(call,types=["RTW","NEF"]){
+ // Schnellstes FREIES Rettungsmittel eines Nachbarlandkreises (Status 1/2) zum Einsatzort.
  const dest=callDestinationPoint(call);
  if(!dest)return null;
  let best=null;
- db.neighborUnits.filter(u=>["1","2"].includes(String(u.status))&&Number.isFinite(u.lat)&&Number.isFinite(u.lng)).forEach(u=>{
-   const d=haversine(dest[0],dest[1],u.lat,u.lng);
-   if(!best||d<best.distanceKm)best={distanceKm:d,district:u.district,unit:u};
+ (db.neighborUnits||[]).filter(u=>types.includes(u.type)&&["1","2"].includes(String(u.status))&&Number.isFinite(u.lat)&&Number.isFinite(u.lng)).forEach(u=>{
+   const {km,eta}=neighborEtaFor(u,dest);
+   if(!best||eta<best.eta)best={distanceKm:km,eta:Math.round(eta),district:u.district,unit:u};
  });
  return best;
 }
 function needsNeighborHelp(call){
- // Kein eigenes RTW/NEF <20km frei? Das ist unabhängig davon, ob der Einsatz bereits mit einem
- // eigenen Fahrzeug alarmiert wurde – gerade wenn gar kein eigenes Mittel in Frage kommt, soll
- // die Anfrage beim Nachbarlandkreis auch OHNE vorherige eigene Alarmierung möglich sein.
- // Einzige Voraussetzung: der Einsatzort muss bereits bekannt sein. Sobald ein Nachbar-Fahrzeug
- // für diesen Einsatz alarmiert wurde (call.neighborUnitId gesetzt), gilt der Bedarf als gedeckt.
- if(call.neighborUnitId)return false;
+ // Nur mit bekanntem Einsatzort, nicht bei R0, und nur solange noch kein Nachbar-Fahrzeug
+ // für diesen Einsatz alarmiert ist. Unabhängig davon, ob schon eigene Mittel alarmiert sind.
+ if(call.neighborUnitId||call.rZero||call.kt)return false;
  if(!callDestinationPoint(call))return false;
- // Eigenes RTW/NEF nicht innerhalb von 15 min (Hilfsfrist) da → Nachbar anfragen
- const dest=callDestinationPoint(call);
- let best=null;
- db.units.filter(u=>["RTW","NEF"].includes(u.type)&&["1","2"].includes(String(u.status))).forEach(u=>{const p=unitPoint(u);if(!p)return;const e=etaMinutesForDistance(u,haversine(dest[0],dest[1],p[0],p[1]));if(best==null||e<best)best=e});
- return best===null||best>15;
+ const nb=nearestNeighborUnit(call); if(!nb)return false;
+ const own=ownBestEta(call);
+ return own==null||nb.eta<own;
 }
 function incidentCard(c,isSelected){
  const state=c.alarmTime?"Alarmiert":"Bearbeitung";
@@ -2702,7 +2709,7 @@ function incidentCard(c,isSelected){
    <div class="suggest-compact"><b>🧠 Vorschlag / alarmierte Mittel</b><div>${c.suggestion||"Noch nicht genügend Angaben."}</div>${(c.stackedUnits||[]).length?`<div style="margin-top:4px;color:#0369a1;font-weight:700">🔁 Gestapelt: ${(c.stackedUnits||[]).map(id=>db.units.find(u=>String(u.id)===String(id))).filter(Boolean).map(u=>`${esc(u.opta||u.name)} (${esc(u.type)}, Status ${esc(String(u.status))})`).join(", ")}</div>`:""}</div>
    ${neighborSuggestion?`<div style="margin-top:10px">
      <button class="s0" style="width:100%;border:none;border-radius:9px;padding:12px;font-weight:800;cursor:pointer" onclick="openExternalRequest('${NEIGHBOR_LEITSTELLE[neighborSuggestion.district]}','${esc(String(c.id))}')">
-      🚨 Kein eigenes RTW/NEF &lt;20 km frei – bei ${NEIGHBOR_LEITSTELLE[neighborSuggestion.district]==="ostfriesland"?"LST Ostfriesland":"GOL"} anfragen (${esc(neighborSuggestion.district)}, ~${Math.round(neighborSuggestion.distanceKm)} km)
+      🚨 ${ownBestEta(c)!=null?`${esc(neighborSuggestion.unit.type)} aus ${esc(neighborSuggestion.district)} wäre schneller da (~${neighborSuggestion.eta} min statt ~${ownBestEta(c)} min mit eigenem RTW/NEF)`:`Kein eigenes RTW/NEF frei – ${esc(neighborSuggestion.unit.type)} aus ${esc(neighborSuggestion.district)} in ~${neighborSuggestion.eta} min`} – bei ${NEIGHBOR_LEITSTELLE[neighborSuggestion.district]==="ostfriesland"?"LST Ostfriesland":"GOL"} anfragen
      </button>
     </div>`:neighborUnit?`<div class="suggest-compact" style="margin-top:10px;border-color:#86c98b"><b>🤝 Nachbar-Fahrzeug übernimmt</b><div>${esc(neighborUnit.opta)} (${esc(neighborUnit.homeDistrict)}) – ${esc(statusName(neighborUnit.status))}</div></div>`:""}
    ${renderVehicleFeedbackBadges(c)}
@@ -7817,24 +7824,38 @@ const SIM_CASES=[
    f:{count:"1",x:"Nein",a:"Frei",b:"Normal",c:"Unauffällig",d:"Bewusstseinsgetrübt",e:"Platzwunde an der Stirn",psy:"Nein",danger:"nein"},
    onset:"Keine Ahnung, ich bin gerade vorbeigekommen.",hist:"Ich kenn den nicht.",
    extra:["Der blutet ein bisschen an der Stirn.","Jetzt bewegt er sich ein bisschen."]}}},
- {id:"vu_trapped",w:5,num:"112",loc:"road",mk:()=>{const p=simPerson(),age=rint(19,70);return {rel:"der Fahrer",caller:simPerson(),patient:p,age,passerby:true,
-   open:["Hier ist ein schwerer Unfall, ein Auto ist gegen einen Baum gefahren!"],
-   event:"Ein Auto ist von der Straße abgekommen und frontal gegen einen Baum. Der Fahrer sitzt noch drin, die Tür geht nicht auf.",
-   f:{event:"Verkehrsunfall",count:"1",trapped:"1",x:"Nein",a:"Frei",b:"Auffällig",c:"Auffällig",d:"Bewusstseinsgetrübt",e:"Beine eingeklemmt, Kopfplatzwunde",psy:"Nein",danger:"ja"},
-   onset:"Gerade eben, ich bin direkt dahinter gefahren.",hist:"Ich kenn die Person nicht.",danger:"Es riecht nach Benzin, das läuft da was aus.",
-   extra:["Da kommt ein bisschen Rauch aus dem Motorraum!","Hier halten jetzt noch andere Autos an."]}}},
- {id:"vu_light",w:5,num:"112",loc:"road",mk:()=>{const p=simPerson(),age=rint(19,70);return {rel:"die andere Fahrerin",caller:simPerson(),patient:p,age,
+ {id:"vu_trapped",w:5,num:"112",loc:"road",mk:()=>{const p=simPerson(),age=rint(19,70),n=pick([1,1,2,2,3,4]),t=n>1&&Math.random()<0.35?2:1;
+   const NUM=["","ein","zwei","drei","vier"];
+   return {rel:"der Fahrer",caller:simPerson(),patient:p,age,passerby:true,
+   open:[n>1?`Hier ist ein schwerer Unfall, ein Auto ist gegen einen Baum gefahren, da sitzen mehrere Leute drin!`:"Hier ist ein schwerer Unfall, ein Auto ist gegen einen Baum gefahren!"],
+   event:`Ein Auto ist von der Straße abgekommen und frontal gegen einen Baum. ${n>1?`Da sitzen ${NUM[n]} Leute drin, ${t>1?"vorne kommen zwei nicht raus":"der Fahrer kommt nicht raus, die Tür geht nicht auf"}.`:"Der Fahrer sitzt noch drin, die Tür geht nicht auf."}`,
+   f:{event:"Verkehrsunfall",count:String(n),trapped:String(t),x:"Nein",a:"Frei",b:"Auffällig",c:"Auffällig",d:"Bewusstseinsgetrübt",e:"Beine eingeklemmt, Kopfplatzwunde",psy:"Nein",danger:"ja"},
+   trappedText:t>1?"Ja, zwei kommen nicht raus, Fahrer und Beifahrer, die Türen klemmen!":"Ja, der Fahrer kommt nicht raus, die Tür klemmt und die Beine stecken fest!",
+   onset:"Gerade eben, ich bin direkt dahinter gefahren.",hist:"Ich kenn die Leute nicht.",danger:"Es riecht nach Benzin, das läuft da was aus.",
+   extra:["Da kommt ein bisschen Rauch aus dem Motorraum!","Hier halten jetzt noch andere Autos an.",...(n>2?["Hinten sitzt noch ein Kind, das weint die ganze Zeit!"]:[]),...(n>1?["Die Beifahrerin redet, aber sie blutet am Kopf."]:[])]}}},
+ {id:"vu_light",w:5,num:"112",loc:"road",mk:()=>{const p=simPerson(),age=rint(19,70),n=pick([2,2,3,3,4]);
+   return {rel:"die andere Fahrerin",caller:simPerson(),patient:p,age,
    open:["Hallo, wir hatten einen Unfall, zwei Autos sind zusammengestoßen."],
-   event:"An der Kreuzung ist mir einer reingefahren. Wir sind beide ausgestiegen, die andere Fahrerin hat Nackenschmerzen.",
-   f:{event:"Verkehrsunfall",count:"2",trapped:"0",x:"Nein",a:"Frei",b:"Normal",c:"Unauffällig",d:"Wach / orientiert",e:"Nackenschmerzen, Prellung",psy:"Nein",danger:"nein"},
+   event:`An der Kreuzung ist mir einer reingefahren. Wir sind alle ausgestiegen, die andere Fahrerin hat Nackenschmerzen.${n>2?` Bei ihr im Auto saßen noch ${n===3?"ein Kind":"ihr Mann und ein Kind"}, ${n===3?"das":"die"} klagen auch über Schmerzen.`:""}`,
+   f:{event:"Verkehrsunfall",count:String(n),trapped:"0",x:"Nein",a:"Frei",b:"Normal",c:"Unauffällig",d:"Wach / orientiert",e:"Nackenschmerzen, Prellung",psy:"Nein",danger:"nein"},
    onset:"Vor drei Minuten.",hist:"Weiß ich nicht.",danger:"Die Autos stehen noch auf der Kreuzung, hier ist viel Verkehr.",
-   extra:["Brauchen wir auch die Polizei?","Mir tut auch die Schulter ein bisschen weh."]}}},
- {id:"fire_kitchen",w:5,num:"112",loc:"home",mk:()=>{const p=simPerson();return {rel:"die Nachbarn",caller:simPerson(),patient:p,age:rint(30,70),fire:true,
+   extra:["Brauchen wir auch die Polizei?","Mir tut auch die Schulter ein bisschen weh.",...(n>2?["Das Kind weint die ganze Zeit."]:[])]}}},
+ {id:"vu_bus",w:2,num:"112",loc:"road",mk:()=>{const p=simPerson(),age=rint(19,70),n=rint(5,8);
+   return {rel:"die Fahrgäste",caller:simPerson(),patient:p,age,passerby:true,panic:true,
+   open:["Hier ist ein ganz schwerer Unfall, ein Kleinbus und ein Auto, da sind ganz viele Verletzte!"],
+   event:`Ein Kleinbus ist mit einem Auto zusammengestoßen, der Bus liegt halb im Graben. Ich zähl so ${n} Verletzte, ein paar bluten, der Autofahrer ist eingeklemmt.`,
+   f:{event:"Verkehrsunfall",count:String(n),trapped:"1",x:"Ja",a:"Frei",b:"Auffällig",c:"Auffällig",d:"Bewusstseinsgetrübt",e:"mehrere Platzwunden, Schmerzen",psy:"Nein",danger:"ja"},
+   trappedText:"Ja, der Autofahrer kommt nicht raus! Die aus dem Bus sind alle draußen.",
+   onset:"Gerade eben!",hist:"Ich kenn die Leute nicht.",danger:"Der Bus liegt schräg im Graben, und es kommen noch Autos aus der Kurve.",
+   extra:["Einer sitzt am Straßenrand und blutet ganz stark am Arm!","Hier sind jetzt mehrere Leute am Helfen.","Wie viele Krankenwagen kommen denn?"]}}},
+ {id:"fire_kitchen",w:5,num:"112",loc:"home",mk:()=>{const p=simPerson(),k=pick([1,1,2,2,3]);
+   const inside=k===1?"Ich glaube, die ältere Dame aus der Wohnung ist noch drin, die macht nicht auf!":k===2?"Das ältere Ehepaar aus der Wohnung ist noch drin, die machen nicht auf!":"Die Familie aus dem zweiten Stock ist noch drin, die Mutter mit zwei Kindern, die kommen nicht durchs Treppenhaus!";
+   return {rel:"die Nachbarn",caller:simPerson(),patient:p,age:rint(30,70),fire:true,
    open:["Hallo, Feuerwehr? Bei uns im Haus brennt es, aus der Wohnung im ersten Stock kommt Rauch!"],
-   event:"Im Mehrfamilienhaus, erster Stock, da kommt schwarzer Rauch unter der Wohnungstür raus, das Treppenhaus ist schon verqualmt.",
-   f:{event:"Feuer / Rauchentwicklung",count:"1",firePeople:"1",danger:"ja",x:"",a:"",b:"",c:"",d:"",e:""},
-   onset:"Vor fünf Minuten haben wir es gerochen.",hist:"",inside:"Ich glaube, die ältere Dame aus der Wohnung ist noch drin, die macht nicht auf!",
-   extra:["Ich hör die Rauchmelder piepen.","Wir sind jetzt alle draußen auf der Straße, nur die Frau nicht."]}}},
+   event:`Im Mehrfamilienhaus, erster Stock, da kommt schwarzer Rauch unter der Wohnungstür raus, das Treppenhaus ist schon verqualmt. ${inside}`,
+   f:{event:"Feuer / Rauchentwicklung",count:String(k),firePeople:String(k),danger:"ja",x:"",a:"",b:"",c:"",d:"",e:""},
+   onset:"Vor fünf Minuten haben wir es gerochen.",hist:"",inside,
+   extra:["Ich hör die Rauchmelder piepen.",k===3?"Die Kinder stehen oben am Fenster!":"Wir sind jetzt alle draußen auf der Straße, nur die nicht."]}}},
  {id:"fire_roof",w:3,num:"112",loc:"home",mk:()=>{const p=simPerson();return {rel:"",caller:simPerson(),patient:p,age:40,fire:true,
    open:["Bei meinem Nachbarn brennt der Dachstuhl!"],
    event:"Aus dem Dach vom Einfamilienhaus nebenan schlagen Flammen raus, ganz viel Rauch.",
@@ -7915,7 +7936,7 @@ const SIM_FOLLOW={
  vu_trapped:d=>({open:["Ich hab eben wegen dem Unfall angerufen – jetzt brennt es im Motorraum!"],event:"Aus dem Motorraum kommen jetzt Flammen, der Fahrer sitzt immer noch drin!",f:{danger:"ja"},fire:true,panic:true,danger:"Das brennt jetzt richtig vorne am Auto!",why:"Fahrzeugbrand mit eingeklemmter Person"}),
  vu_light:d=>d.isSelf?{open:["Ich hab eben wegen dem Unfall angerufen – mir ist jetzt ganz schwindelig und übel."],event:"Mir ist schwindelig und übel, und der Kopf tut weh.",f:{c:"Auffällig"},why:"Zustand verschlechtert"}
    :{open:["Ich hatte eben wegen dem Unfall angerufen – die andere Fahrerin ist gerade zusammengesackt!"],event:"Sie saß am Straßenrand und ist einfach umgekippt, sie redet nur noch ganz komisch.",f:{c:"Auffällig",d:"Bewusstseinsgetrübt"},why:"Patientin kollabiert"},
- fire_kitchen:d=>({open:["Ich hab eben wegen dem Brand angerufen – die Frau steht jetzt am Fenster im ersten Stock und ruft um Hilfe!"],event:"Die Frau steht am Fenster, hinter ihr ist alles voller Rauch!",f:{firePeople:"1"},panic:true,inside:"Ja! Die steht am Fenster, erster Stock!",why:"Person am Fenster"}),
+ fire_kitchen:d=>({open:["Ich hab eben wegen dem Brand angerufen – die Frau steht jetzt am Fenster im ersten Stock und ruft um Hilfe!"],event:"Die Frau steht am Fenster, hinter ihr ist alles voller Rauch!",panic:true,inside:"Ja! Die steht am Fenster, erster Stock!",why:"Person am Fenster"}),
  fire_roof:d=>({open:["Ich hab vorhin wegen dem Dachstuhl angerufen – das greift jetzt aufs Nachbarhaus über!"],event:"Die Flammen schlagen jetzt rüber aufs Dach vom Nachbarhaus, da wohnt eine Familie!",inside:"Die Familie nebenan ist rausgerannt, ich glaub, die sind alle draußen.",why:"Ausbreitung auf Nachbarhaus"}),
  fire_bin:d=>({open:["Ich hab eben wegen dem Container angerufen – jetzt brennt der Carport daneben!"],event:"Das Feuer ist auf den Carport übergesprungen, da steht ein Auto drunter!",why:"Ausbreitung auf Carport"}),
  tree:d=>({open:["Ich hab vorhin wegen dem Baum angerufen – jetzt ist ein Auto reingefahren!"],event:"Ein Auto ist gegen den Baum gefahren, die Fahrerin sitzt noch drin und blutet am Kopf.",f:{event:"Verkehrsunfall",count:"1",trapped:"0",x:"Nein",a:"Frei",b:"Normal",c:"Unauffällig",d:"Wach / orientiert",e:"Kopfplatzwunde"},patientW:true,why:"Verkehrsunfall am Hindernis"}),
@@ -8138,7 +8159,7 @@ function simAnswerFor(c,text){
     case "event":out.push(me?(d.isSelf?d.event:(d.pain?d.pain:`Mir geht's nicht gut… ${f.e?f.e.split(",")[0]:"ich weiß auch nicht"}.`)):simFix(s,d.event));break;
     case "who":out.push(me?"Um mich! Ich bin das selbst.":d.passerby?"Ich kenn die Person nicht, ich bin nur vorbeigekommen.":d.rel?`Um ${d.rel.replace(/^mein /,"meinen ").replace(/^ein /,"einen ").replace(/^der /,"den ")}.`:"Ich bin nur der Anrufer.");break;
     case "count":out.push(d.kt?"Nur ein Patient.":me?"Nur ich.":f.count==="0"?"Verletzt ist niemand.":f.count==="1"?pick(["Nur "+he+".","Eine Person."]):`${f.count} Personen.`);break;
-    case "trapped":out.push(f.trapped&&f.trapped!=="0"?"Ja, der kommt nicht raus, die Tür klemmt und die Beine stecken fest!":"Nein, eingeklemmt ist keiner.");break;
+    case "trapped":out.push(f.trapped&&f.trapped!=="0"?(d.trappedText||"Ja, der kommt nicht raus, die Tür klemmt und die Beine stecken fest!"):"Nein, eingeklemmt ist keiner.");break;
     case "inside":out.push(d.inside||"Nein, ich glaube nicht.");break;
     case "fire":out.push(d.fire?simFix(s,d.event):"Nein, brennen tut nichts.");break;
     case "conscious":out.push(me?pick(SIM_D_SELF[f.d]||["Ja… ich bin da."]):simFix(s,pick(SIM_D[f.d]||["Ich weiß nicht genau."])));break;

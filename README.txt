@@ -1467,3 +1467,15 @@ Version 4.93:
   „Deine vorherige Antwort ist markiert“). Man kann sie mit einem Tipp übernehmen oder neu
   beantworten. Das gilt auch, wenn man mehrere Schritte zurückgeht – beim erneuten Vorgehen
   sind alle früheren Antworten wieder vorbelegt. Erst die neue Antwort zählt.
+
+Version 4.94:
+- Anfrage Nachbarlandkreis jetzt an die Ankunftszeit gekoppelt: Der rote Knopf „bei GOL /
+  LST Ostfriesland anfragen“ erscheint, wenn ein freies Nachbar-RTW/NEF schneller am
+  Einsatzort wäre als unser schnellstes freies eigenes RTW/NEF (oder wir keins frei haben) –
+  nicht mehr nach reiner Entfernung (20 km). Der Knopf zeigt beide Zeiten. Nicht bei R0/KT.
+  DRK-Hintergrund zählt dabei nicht als eigenes Fahrzeug.
+- Die Fahrzeugauswahl beim Nachbarlandkreis ist nach Ankunftszeit sortiert und zeigt je
+  Fahrzeug „~X min“ und ob es schneller als unser eigenes ist.
+- Übungsanrufe: Bei Unfällen und Bränden gibt es jetzt auch mehrere Betroffene:
+  Unfall gegen Baum 1–4 Insassen (manchmal 2 eingeklemmt), Kreuzungsunfall 2–4 Verletzte,
+  Wohnungsbrand 1–3 Personen im Gebäude, neu: Unfall Kleinbus/Auto mit 5–8 Verletzten.
