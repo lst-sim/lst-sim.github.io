@@ -1353,3 +1353,24 @@ Version 4.85:
 - Umbenannt: „Rettungsmittel bearbeiten“ → „Fahrzeuge bearbeiten“, Reiter „Rettungsmittel“ →
   „Fahrzeuge“. Der bisherige Knopf „Fahrzeuge bearbeiten“ vor der Alarmierung heißt jetzt
   „Vorschlag bearbeiten“ (damit es keine zwei gleichen Knöpfe gibt).
+
+Version 4.86:
+- Übungsnotrufe (Generator): Oben in der Mitte gibt es jetzt 🔇/🔊 und „🎲 Übungsnotrufe AN/AUS“
+  (Einstellung je Gerät). Bei AN kommen zufällig realistische Anrufe rein: mal einer, mal eine
+  Pause, mal zwei kurz nacheinander, mal zwei gleichzeitig (danach 2,5–8 Minuten Ruhe, höchstens
+  4 klingeln gleichzeitig). Sie erscheinen wie echte Anrufe oben als rote (112) bzw. blaue (19222)
+  Leiste mit „Annehmen“ und laufen danach als ganz normaler Anruf mit Telefonat-Leiste und Abfrage.
+- Rund 20 Fälle: Brustschmerz, Schlaganfall, Sturz, Atemnot, Unterzucker, Krampfanfall, allergische
+  Reaktion am Strand, Fieberkind, psychischer Ausnahmezustand, Reanimation, hilflose Person,
+  VU mit eingeklemmter Person, VU an der Kreuzung, Wohnungsbrand, Dachstuhlbrand, Containerbrand,
+  Baum auf Straße, Schwimmer in Not, Segelboot in Seenot, KT-Einweisung und KT-Entlassung (19222).
+- Orte: fiktive Hausnummern an echten Straßen im Landkreis Friesland bzw. echte Strände/Häfen.
+  Der Handy-Standort des Anrufers kann wie beim Anrufer-Terminal mit „Standort übernehmen“
+  als Einsatzort übernommen werden.
+- 🔇 Textmodus: Über der Notrufabfrage erscheint ein Chat. Man tippt, was man sagen würde, der
+  Anrufer antwortet. 🔊 Sprachmodus: Der Anrufer spricht (Sprachausgabe des Geräts), Fragen per
+  🎤 (Spracherkennung, je nach Browser) oder per Tastatur. In beiden Modi sagt der Anrufer
+  zwischendurch auch von selbst etwas (z. B. „Ich glaub, ich hör schon das Martinshorn!“).
+- Wichtig: Der Anrufer ist keine KI. Er erkennt typische Fragen an Stichworten (wo, was ist
+  passiert, ansprechbar, atmet, wie alt, Vorerkrankungen, eingeklemmt, Rauch, wohin, liegend …)
+  und antwortet aus seinem Fall. Freie Gespräche versteht er nicht („Das hab ich nicht verstanden“).

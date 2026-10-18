@@ -157,13 +157,15 @@ table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:10px 8px
  .radio-kbd-row{display:flex;gap:4px;margin-bottom:4px;justify-content:center}
  .radio-kbd button{background:#33363b;color:#eee;border:1px solid #202226;border-radius:5px;min-width:26px;padding:7px 0;font-size:12px;font-weight:700}
  .radio-kbd input{width:100%;background:#151a13;color:#c9e6b0;border:2px solid #0a0d09;border-radius:6px;font-family:'Courier New',monospace;font-size:15px;padding:8px;margin-bottom:8px;box-sizing:border-box}
+@media (max-width:700px){#simCtl{position:static!important;transform:none!important;order:-1;width:100%;justify-content:center}#simCtl .simLbl{display:none}}
 </style>
 <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
 </head>
 <body>
-<div style="padding:6px 10px;font-size:11px;color:#94a3b8;font-weight:700;display:flex;align-items:center;gap:10px;position:sticky;top:0;z-index:10;background:var(--bg)">
- <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v4.85</span>
+<div style="padding:6px 10px;font-size:11px;color:#94a3b8;font-weight:700;display:flex;flex-wrap:wrap;align-items:center;gap:10px;position:sticky;top:0;z-index:10;background:var(--bg)">
+ <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v4.86</span>
  <span id="syncState"></span>
+ <span id="simCtl" style="position:absolute;left:50%;transform:translateX(-50%);display:flex;gap:6px;align-items:center"></span>
  <a id="homeLink" href="#" onclick="render('leitstelle');return false" class="hidden" style="color:#64748b;text-decoration:underline;font-weight:600">🖥️ Leitstelle</a>
  <a id="monitorLink" href="#" onclick="showMonitorQR();return false" style="color:#64748b;text-decoration:underline;font-weight:600;margin-left:auto">🖥️ Monitor hinzufügen</a>
  <a id="deviceSwitchLink" href="#" onclick="switchViewLink();return false" style="color:#64748b;text-decoration:underline;font-weight:600">📱⇄📲 Ansicht wechseln</a>
@@ -2922,6 +2924,7 @@ function notruf(){
  const answeredCount=QS.filter(x=>x[0] in c.answers || (x[0]==="location"&&c.location)).length;
  const nearest=nearestAvailableUnits();
  document.getElementById("app").innerHTML=`<div class="grid"><section>
+  ${c.sim?`<div id="simChatBox">${simChatHTML(c)}</div>`:""}
   <div class="card call" style="border-left-width:6px">
    <div class="row between">
     <div class="row" style="gap:12px">
@@ -3083,7 +3086,7 @@ function questionHTML(q){
    return `<label>${label}</label>
     <div class="suggest" style="background:#eef7ff;border-color:#2f7fd1">
      <h2>📍 Standort übernehmen?</h2>
-     <p>Der Anrufer hat über sein Anrufer-Terminal einen GPS-Standort übermittelt. Soll dieser als Notfallort übernommen werden?</p>
+     <p>${c.callerGps?.sim?`Das Handy des Anrufers hat einen Standort übermittelt (Übungsanruf): <b>${esc(c.callerGps.address||"")}</b>. Soll dieser als Notfallort übernommen werden?`:"Der Anrufer hat über sein Anrufer-Terminal einen GPS-Standort übermittelt. Soll dieser als Notfallort übernommen werden?"}</p>
      <div class="row" style="margin-top:10px">
       <button class="primary" onclick="acceptCallerLocation()">✅ Ja, übernehmen</button>
       <button onclick="declineCallerLocation()">✏️ Nein, manuell eingeben</button>
@@ -3295,6 +3298,7 @@ async function acceptCallerLocation(){
  c.callerGpsPending=false;
  const gps=c.callerGps;
  if(!gps||gps.lat==null||gps.lng==null){save();notruf();return}
+ if(gps.sim&&gps.address){c.locationIsWater=!!gps.water;c.outOfJurisdiction=false;notrufSelected={lat:Number(gps.lat),lng:Number(gps.lng)};await answer("location",gps.address);return}
  let address=`${Number(gps.lat).toFixed(6)}, ${Number(gps.lng).toFixed(6)}`;
  try{
    const res=await fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&addressdetails=1&lat=${gps.lat}&lon=${gps.lng}`,{headers:{"Accept":"application/json"}});
@@ -4009,6 +4013,7 @@ function hangUpCall(id,byCaller=false){
  const c=[db.currentCall,...(db.activeCalls||[])].find(x=>x&&String(x.id)===String(id));
  if(!c||c.phoneEnd)return;
  c.phoneEnd=Date.now();
+ if(c.sim){try{speechSynthesis.cancel()}catch(e){}if(typeof simRec!=="undefined"&&simRec)try{simRec.stop()}catch(e){}}
  c.history=c.history||[];
  c.history.push({q:byCaller?"📵 Anrufer hat aufgelegt":"📵 Telefonat beendet",a:`Dauer ${fmtDur(c.phoneEnd-c.phoneStart)}`});
  save();
@@ -4707,8 +4712,9 @@ function renderCallerBanner(){
  const el=document.getElementById("callerRequestBanner");
  if(!el)return;
  const reqs=db.pendingCallerRequests||[];
- if(!reqs.length){el.innerHTML="";return}
- el.innerHTML=reqs.map(r=>{
+ const simH=(typeof simBannerHTML==="function"&&!IS_MONITOR)?simBannerHTML():"";
+ if(!reqs.length){el.innerHTML=simH;return}
+ el.innerHTML=simH+reqs.map(r=>{
    const slot=(db.callers||[]).find(x=>String(x.id)===String(r.callerId));
    const idx=(db.callers||[]).indexOf(slot);
    const label=slot?`Anrufer ${idx+1}`:`Anrufer-Terminal ${esc(String(r.callerId))}`;
@@ -7346,7 +7352,444 @@ function nachbarLks(){
 // Die Automatik (Dienstzeiten, Rückkehr zur Wache, Statusfortschritt) läuft nur am Hauptplatz –
 // Monitore bekommen die Ergebnisse per Live-Sync, sonst würden mehrere Geräte gleichzeitig
 // dieselben Fahrzeuge weiterschalten.
-setInterval(()=>{renderCallTimerBar();const clock=document.getElementById("clock");if(clock)clock.textContent=new Date().toLocaleTimeString("de-DE");if(IS_MONITOR)return;applyDutySchedule();autoReturnToStation();autoAdvanceEnRoute();updateWaitTimers()},1000);
+// ═══ Übungsnotruf-Generator (v4.86) ═══════════════════════════════════════════════════════════
+// Erzeugt zufällig realistische Notrufe (112) und Krankentransport-Anrufe (19222), die wie echte
+// Anrufe klingeln/aufleuchten und angenommen werden. Der Anrufer antwortet REGELBASIERT (keine KI):
+// Er erkennt typische Leitstellenfragen an Stichworten und antwortet aus seinem Fall. Modus je
+// Gerät: 🔇 Text (Chat-Modul in der Notrufabfrage) oder 🔊 Stimme (Sprachausgabe, Fragen per
+// Mikrofon oder Tastatur). Orte sind fiktive Adressen an realen Straßen im LK Friesland; der
+// Anrufer-Standort kann wie beim Anrufer-Terminal übernommen werden.
+const SIM_KEY_ON="lst-sim-on", SIM_KEY_VOICE="lst-sim-voice";
+let simOn=(()=>{try{return localStorage.getItem(SIM_KEY_ON)==="1"}catch(e){return false}})();
+let simVoice=(()=>{try{return localStorage.getItem(SIM_KEY_VOICE)==="1"}catch(e){return false}})();
+let simPending=[];          // klingelnde Übungsanrufe (nur dieses Gerät)
+let simNextAt=0, simQueue=[]; // Zeitplan
+const rnd=(a,b)=>a+Math.random()*(b-a), rint=(a,b)=>Math.floor(rnd(a,b+1)), pick=a=>a[Math.floor(Math.random()*a.length)];
+
+// Orte: reale Straßen (u. a. Adressen von Wachen/Kliniken), Hausnummer zufällig → fiktive Adresse
+const SIM_TOWNS=[
+ {t:"Varel",s:["Pelzerstraße","Menckestraße","Bleichenpfad","Am Wasserturm","Obernstraße","Oldenburger Straße","Neumarktplatz"],c:[53.3969,8.1362]},
+ {t:"Varel-Obenstrohe",s:["Wiefelsteder Straße"],c:[53.3789,8.1067]},
+ {t:"Varel-Borgstede",s:["Ziegelstraße"],c:[53.3952,8.0917]},
+ {t:"Jever",s:["Milchstraße","Wangerländische Straße","Am Bullhamm","Alter Markt","Schlachtstraße","Mühlenstraße"],c:[53.5737,7.8996]},
+ {t:"Jever-Cleverns",s:["Dorfstraße"],c:[53.5482,7.8606]},
+ {t:"Schortens",s:["Plaggestraße","Menkestraße","Oldenburger Straße"],c:[53.5333,7.9500]},
+ {t:"Schortens-Accum",s:["Wilhelmshavener Straße"],c:[53.5447,8.0170]},
+ {t:"Schortens-Sillenstede",s:["Im Hamm"],c:[53.5793,7.9955]},
+ {t:"Sande",s:["Hauptstraße","Bahnhofstraße","An der Feuerwehr"],c:[53.5044,8.0147]},
+ {t:"Sande-Neustadtgödens",s:["Brückstraße"],c:[53.4806,7.9867]},
+ {t:"Zetel",s:["Neuenburger Straße"],c:[53.4167,7.9833]},
+ {t:"Zetel-Neuenburg",s:["Mühlenstraße"],c:[53.3891,7.9455]},
+ {t:"Bockhorn",s:["Schulstraße","Grabsteder Straße"],c:[53.3970,8.0200]},
+ {t:"Bockhorn-Grabstede",s:["Theilenmoorstraße"],c:[53.3649,7.9895]},
+ {t:"Wangerland-Hohenkirchen",s:["Jeversche Straße"],c:[53.6617,7.9157]},
+ {t:"Wangerland-Hooksiel",s:["Hohe Weg","Lange Straße"],c:[53.6345,8.0299]},
+ {t:"Wangerland-Waddewarden",s:["Hooksieler Straße"],c:[53.6099,7.9578]},
+ {t:"Wangerland-Tettens",s:["Hauptstraße"],c:[53.6380,7.8827]},
+ {t:"Wangerooge",s:["Straße zum Westen","Christian-Janßen-Straße","Zedeliusstraße"],c:[53.7888,7.9105]}
+];
+const SIM_WATER=[
+ {n:"am Badestrand in Dangast, bei den Toiletten",lat:53.4497,lng:8.1212,town:"Varel-Dangast"},
+ {n:"am Hafen in Dangast",lat:53.4463,lng:8.1081,town:"Varel-Dangast"},
+ {n:"am Strand in Schillig",lat:53.7058,lng:8.0300,town:"Wangerland-Schillig"},
+ {n:"am Badestrand in Hooksiel",lat:53.6395,lng:8.0850,town:"Wangerland-Hooksiel"},
+ {n:"am Strand in Horumersiel",lat:53.6870,lng:8.0225,town:"Wangerland-Horumersiel"},
+ {n:"am Hauptstrand auf Wangerooge",lat:53.7925,lng:7.8990,town:"Wangerooge"}
+];
+const SIM_ROADS=[
+ {n:"auf der Oldenburger Straße in Varel",town:"Varel",c:[53.3900,8.1450]},
+ {n:"auf der Wilhelmshavener Straße in Accum",town:"Schortens-Accum",c:[53.5447,8.0170]},
+ {n:"auf der Jeverschen Straße in Hohenkirchen",town:"Wangerland-Hohenkirchen",c:[53.6550,7.9100]},
+ {n:"auf der Wangerländischen Straße in Jever",town:"Jever",c:[53.5800,7.9050]},
+ {n:"auf der Neuenburger Straße in Zetel",town:"Zetel",c:[53.4050,7.9620]},
+ {n:"auf der Grabsteder Straße in Bockhorn",town:"Bockhorn",c:[53.3870,8.0090]}
+];
+const SIM_FIRST={m:["Klaus","Peter","Jürgen","Heinz","Thomas","Michael","Dieter","Uwe","Hinrich","Gerd","Lukas","Jan"],w:["Ingrid","Monika","Sabine","Petra","Anke","Heike","Gisela","Renate","Wiebke","Lena","Julia","Anna"]};
+const SIM_LAST=["Janssen","Gerdes","Hinrichs","Eilers","Ahlers","Meyer","Schmidt","Oltmanns","Harms","Cornelius","Peters","Tjaden"];
+function simPerson(g){g=g||pick(["m","w"]);return {g,first:pick(SIM_FIRST[g]),last:pick(SIM_LAST)}}
+function simHomeLoc(){const t=pick(SIM_TOWNS);const st=pick(t.s);const no=rint(1,48);const off=()=>rnd(-0.004,0.004);return {kind:"home",text:`${st} ${no} in ${t.t}`,addr:`${st} ${no}, ${t.t.split("-")[0]}`,town:t.t,lat:t.c[0]+off(),lng:t.c[1]+off(),geo:true}}
+function simWaterLoc(){const w=pick(SIM_WATER);return {kind:"water",text:w.n,addr:`${w.n.replace(/^(am|auf) /,"")}`,town:w.town,lat:w.lat,lng:w.lng,water:true}}
+function simRoadLoc(){const r=pick(SIM_ROADS);return {kind:"road",text:r.n,addr:r.n.replace(/^auf der /,""),town:r.town,lat:r.c[0]+rnd(-0.003,0.003),lng:r.c[1]+rnd(-0.003,0.003)}}
+
+// Fall-Bibliothek. f = Fakten (Antworten für den Anrufer), say = feste Sätze, extra = spontane Sätze.
+const SIM_CASES=[
+ {id:"acs",w:9,num:"112",loc:"home",mk:()=>{const p=simPerson("m"),age=rint(52,79);return {rel:"mein Mann",caller:simPerson("w"),patient:p,age,
+   open:["Hallo? Mein Mann hat ganz starke Schmerzen in der Brust!","Bitte kommen Sie schnell, meinem Mann geht es ganz schlecht, er hat so Druck auf der Brust!"],
+   event:"Er hat seit ungefähr zwanzig Minuten so einen Druck auf der Brust, das zieht in den linken Arm. Er ist ganz grau im Gesicht.",
+   f:{count:"1",x:"Nein",a:"Frei",b:"Auffällig",c:"Auffällig",d:"Wach / orientiert",e:"Druck auf der Brust, Ausstrahlung linker Arm, kaltschweißig",psy:"Nein",danger:"nein"},
+   onset:"So seit zwanzig Minuten, vielleicht auch etwas länger.",hist:"Er hat Bluthochdruck und nimmt dafür Tabletten. Mit dem Herzen war bisher nichts.",
+   extra:["Er schwitzt so stark, das ist gar nicht normal.","Soll ich ihm ein Glas Wasser geben?","Er sagt, es wird nicht besser."]}}},
+ {id:"stroke",w:7,num:"112",loc:"home",mk:()=>{const p=simPerson(),age=rint(66,88);return {rel:p.g==="m"?"mein Vater":"meine Mutter",caller:simPerson(),patient:p,age,
+   open:[`Hallo, ich glaube ${p.g==="m"?"mein Vater":"meine Mutter"} hat einen Schlaganfall!`,`${p.g==="m"?"Mein Vater":"Meine Mutter"} kann auf einmal nicht mehr richtig sprechen!`],
+   event:`${p.g==="m"?"Er":"Sie"} spricht ganz verwaschen, der Mundwinkel hängt rechts runter und ${p.g==="m"?"er":"sie"} kann den rechten Arm nicht mehr richtig heben.`,
+   f:{count:"1",x:"Nein",a:"Frei",b:"Normal",c:"Unauffällig",d:"Neurologisch auffällig",e:"Sprachstörung, hängender Mundwinkel rechts, Armschwäche rechts",psy:"Nein",danger:"nein"},
+   onset:"Beim Frühstück war noch alles gut, das fing vor etwa vierzig Minuten an.",hist:"Vorhofflimmern, dafür nimmt sie Blutverdünner.".replace("sie",p.g==="m"?"er":"sie"),
+   extra:["Das wird nicht besser, eher schlimmer.","Soll ich die Tabletten raussuchen?"]}}},
+ {id:"fall",w:8,num:"112",loc:"home",mk:()=>{const p=simPerson("w"),age=rint(79,94);return {rel:"meine Nachbarin",caller:simPerson(),patient:p,age,
+   open:["Ja hallo, meine Nachbarin ist gestürzt, sie liegt im Flur und kommt nicht mehr hoch.","Guten Tag, ich brauche einen Krankenwagen, meine Nachbarin ist hingefallen."],
+   event:"Sie ist im Flur über den Teppich gestolpert und auf die Seite gefallen. Sie hat Schmerzen in der rechten Hüfte und kann nicht aufstehen.",
+   f:{count:"1",x:"Nein",a:"Frei",b:"Normal",c:"Unauffällig",d:"Wach / orientiert",e:"Schmerzen rechte Hüfte, Bein verkürzt und nach außen gedreht",psy:"Nein",danger:"nein"},
+   onset:"Ich hab sie gerade gefunden, sie sagt, das war vor einer Stunde ungefähr.",hist:"Sie hat Osteoporose, sonst ist sie noch ganz fit.",
+   extra:["Sie friert ein bisschen, soll ich eine Decke holen?","Ich hab einen Schlüssel, ich bin jetzt bei ihr in der Wohnung."]}}},
+ {id:"dyspnoe",w:6,num:"112",loc:"home",mk:()=>{const p=simPerson("m"),age=rint(60,82);return {rel:"mein Mann",caller:simPerson("w"),patient:p,age,
+   open:["Mein Mann kriegt keine Luft mehr!","Hallo, mein Mann hat ganz schlimme Atemnot!"],
+   event:"Er sitzt auf der Bettkante und ringt nach Luft, das pfeift richtig. Das Spray hilft nicht.",
+   f:{count:"1",x:"Nein",a:"Frei",b:"Auffällig",c:"Unauffällig",d:"Wach / orientiert",e:"starke Atemnot, Giemen, Spray ohne Wirkung",psy:"Nein",danger:"nein"},
+   onset:"Seit heute Morgen schlechter, jetzt seit einer halben Stunde ganz schlimm.",hist:"Er hat COPD und raucht leider immer noch.",
+   extra:["Er kann kaum noch sprechen.","Die Lippen sind ein bisschen bläulich, glaube ich."]}}},
+ {id:"hypo",w:5,num:"112",loc:"home",mk:()=>{const p=simPerson(),age=rint(35,75);return {rel:p.g==="m"?"mein Mann":"meine Frau",caller:simPerson(p.g==="m"?"w":"m"),patient:p,age,
+   open:[`${p.g==="m"?"Mein Mann":"Meine Frau"} ist ganz komisch, ich krieg ${p.g==="m"?"ihn":"sie"} kaum wach!`],
+   event:`${p.g==="m"?"Er":"Sie"} ist total verschwitzt und reagiert kaum, redet wirres Zeug. ${p.g==="m"?"Er":"Sie"} ist Diabetiker.`,
+   f:{count:"1",x:"Nein",a:"Frei",b:"Normal",c:"Unauffällig",d:"Bewusstseinsgetrübt",e:"kaltschweißig, Diabetes mit Insulin",psy:"Nein",danger:"nein"},
+   onset:"Vor zehn Minuten hab ich das gemerkt.",hist:"Diabetes, spritzt Insulin. Heute Mittag hat er kaum was gegessen.".replace("er",p.g==="m"?"er":"sie"),
+   extra:["Soll ich ihm Saft geben? Ich hab Orangensaft da.","Das hatte er schon mal, aber nicht so schlimm."]}}},
+ {id:"seizure",w:4,num:"112",loc:"home",mk:()=>{const p=simPerson(),age=rint(17,45);return {rel:"mein Mitbewohner",caller:simPerson(),patient:p,age,
+   open:["Hallo, hier hat jemand einen Krampfanfall!"],
+   event:`${p.g==="m"?"Er":"Sie"} ist umgefallen und hat am ganzen Körper gezuckt, so zwei Minuten lang. Jetzt hört es auf, ${p.g==="m"?"er":"sie"} ist ganz schläfrig.`,
+   f:{count:"1",x:"Nein",a:"Frei",b:"Normal",c:"Unauffällig",d:"Krampfanfall",e:"Zungenbiss, eingenässt",psy:"Nein",danger:"nein"},
+   onset:"Gerade eben, vor ein paar Minuten.",hist:"Epilepsie hat er nicht, das hatte er noch nie.".replace("er",p.g==="m"?"er":"sie"),
+   extra:["Da ist ein bisschen Blut am Mund, ich glaub, auf die Zunge gebissen."]}}},
+ {id:"anaph",w:4,num:"112",loc:"water",mk:()=>{const p=simPerson("w"),age=rint(20,60);return {rel:"meine Freundin",caller:simPerson(),patient:p,age,landPatient:true,
+   open:["Hallo, wir sind am Strand, hier ist jemand von einer Wespe gestochen worden und kriegt schlecht Luft!"],
+   event:"Sie wurde in den Hals gestochen, das schwillt total an, sie kratzt sich überall und atmet ganz schwer.",
+   f:{count:"1",x:"Nein",a:"Gefährdet",b:"Auffällig",c:"Auffällig",d:"Wach / orientiert",e:"Quaddeln am ganzen Körper, Schwellung Hals",psy:"Nein",danger:"nein"},
+   onset:"Vor fünf Minuten.",hist:"Sie hat eine Allergie, aber das Notfallset liegt zu Hause.",
+   extra:["Die Stimme wird ganz heiser!","Hier stehen jetzt ganz viele Leute rum."]}}},
+ {id:"childfever",w:3,num:"112",loc:"home",mk:()=>{const p=simPerson(),age=rint(1,5);return {rel:"mein Kind",caller:simPerson("w"),patient:p,age,
+   open:["Mein Kind hat so hohes Fieber und ist ganz schlapp!"],
+   event:`${p.g==="m"?"Er":"Sie"} hat 40,1 Fieber und ist total schlapp, hat heute kaum getrunken.`,
+   f:{count:"1",x:"Nein",a:"Frei",b:"Normal",c:"Unauffällig",d:"Wach / orientiert",e:"Fieber 40,1, trinkt wenig",psy:"Nein",danger:"nein"},
+   onset:"Seit gestern Abend, heute ist es schlimmer.",hist:"Sonst ist das Kind gesund.",
+   extra:["Der Kinderarzt hat heute zu.","Soll ich Fieberzäpfchen geben?"]}}},
+ {id:"psych",w:3,num:"112",loc:"home",mk:()=>{const p=simPerson("m"),age=rint(25,55);return {rel:"mein Nachbar",caller:simPerson(),patient:p,age,
+   open:["Hallo, mein Nachbar benimmt sich total komisch, der schreit im Treppenhaus rum."],
+   event:"Er rennt im Treppenhaus rum, schreit, dass ihn jemand verfolgt, und redet total wirres Zeug. Verletzt ist er nicht.",
+   f:{count:"1",x:"Nein",a:"Frei",b:"Normal",c:"Unauffällig",d:"Wach / orientiert",e:"verwirrt, ängstlich, laut",psy:"Ja",danger:"unbekannt"},
+   onset:"Seit einer halben Stunde.",hist:"Ich glaub, der war schon mal in Behandlung, so genau weiß ich das aber nicht.",
+   extra:["Der hat jetzt die Wohnungstür zugeknallt.","Ich hab ein bisschen Angst, ehrlich gesagt."]}}},
+ {id:"rea",w:5,num:"112",loc:"home",mk:()=>{const p=simPerson("m"),age=rint(55,84);return {rel:"mein Mann",caller:simPerson("w"),patient:p,age,panic:true,cpr:true,
+   open:["Hilfe! Mein Mann ist umgefallen, er reagiert nicht mehr!","Bitte! Mein Mann liegt am Boden und rührt sich nicht!"],
+   event:"Er ist einfach umgekippt, in der Küche. Er reagiert gar nicht, ich hab ihn geschüttelt!",
+   f:{count:"1",x:"Nein",a:"Gefährdet",b:"Keine normale Atmung",c:"Unklar",d:"Bewusstlos",e:"",psy:"Nein",danger:"nein"},
+   onset:"Gerade eben! Vor einer Minute!",hist:"Er hatte vor zwei Jahren einen Herzinfarkt.",
+   extra:["Bitte beeilen Sie sich!","Er wird ganz blau!","Oh Gott, oh Gott…"]}}},
+ {id:"unconscious",w:3,num:"112",loc:"road",mk:()=>{const p=simPerson("m"),age=rint(30,70);return {rel:"ein Mann",caller:simPerson(),patient:p,age,passerby:true,
+   open:["Hallo, hier liegt ein Mann auf dem Gehweg und reagiert nicht richtig."],
+   event:"Ein Mann liegt auf dem Gehweg, ich hab ihn angesprochen, er murmelt nur. Er riecht ein bisschen nach Alkohol.",
+   f:{count:"1",x:"Nein",a:"Frei",b:"Normal",c:"Unauffällig",d:"Bewusstseinsgetrübt",e:"Platzwunde an der Stirn",psy:"Nein",danger:"nein"},
+   onset:"Keine Ahnung, ich bin gerade vorbeigekommen.",hist:"Ich kenn den nicht.",
+   extra:["Der blutet ein bisschen an der Stirn.","Jetzt bewegt er sich ein bisschen."]}}},
+ {id:"vu_trapped",w:5,num:"112",loc:"road",mk:()=>{const p=simPerson(),age=rint(19,70);return {rel:"der Fahrer",caller:simPerson(),patient:p,age,passerby:true,
+   open:["Hier ist ein schwerer Unfall, ein Auto ist gegen einen Baum gefahren!"],
+   event:"Ein Auto ist von der Straße abgekommen und frontal gegen einen Baum. Der Fahrer sitzt noch drin, die Tür geht nicht auf.",
+   f:{event:"Verkehrsunfall",count:"1",trapped:"1",x:"Nein",a:"Frei",b:"Auffällig",c:"Auffällig",d:"Bewusstseinsgetrübt",e:"Beine eingeklemmt, Kopfplatzwunde",psy:"Nein",danger:"ja"},
+   onset:"Gerade eben, ich bin direkt dahinter gefahren.",hist:"Ich kenn die Person nicht.",danger:"Es riecht nach Benzin, das läuft da was aus.",
+   extra:["Da kommt ein bisschen Rauch aus dem Motorraum!","Hier halten jetzt noch andere Autos an."]}}},
+ {id:"vu_light",w:5,num:"112",loc:"road",mk:()=>{const p=simPerson(),age=rint(19,70);return {rel:"die andere Fahrerin",caller:simPerson(),patient:p,age,
+   open:["Hallo, wir hatten einen Unfall, zwei Autos sind zusammengestoßen."],
+   event:"An der Kreuzung ist mir einer reingefahren. Wir sind beide ausgestiegen, die andere Fahrerin hat Nackenschmerzen.",
+   f:{event:"Verkehrsunfall",count:"2",trapped:"0",x:"Nein",a:"Frei",b:"Normal",c:"Unauffällig",d:"Wach / orientiert",e:"Nackenschmerzen, Prellung",psy:"Nein",danger:"nein"},
+   onset:"Vor drei Minuten.",hist:"Weiß ich nicht.",danger:"Die Autos stehen noch auf der Kreuzung, hier ist viel Verkehr.",
+   extra:["Brauchen wir auch die Polizei?","Mir tut auch die Schulter ein bisschen weh."]}}},
+ {id:"fire_kitchen",w:5,num:"112",loc:"home",mk:()=>{const p=simPerson();return {rel:"die Nachbarn",caller:simPerson(),patient:p,age:rint(30,70),fire:true,
+   open:["Hallo, Feuerwehr? Bei uns im Haus brennt es, aus der Wohnung im ersten Stock kommt Rauch!"],
+   event:"Im Mehrfamilienhaus, erster Stock, da kommt schwarzer Rauch unter der Wohnungstür raus, das Treppenhaus ist schon verqualmt.",
+   f:{event:"Feuer / Rauchentwicklung",count:"1",firePeople:"1",danger:"ja",x:"",a:"",b:"",c:"",d:"",e:""},
+   onset:"Vor fünf Minuten haben wir es gerochen.",hist:"",inside:"Ich glaube, die ältere Dame aus der Wohnung ist noch drin, die macht nicht auf!",
+   extra:["Ich hör die Rauchmelder piepen.","Wir sind jetzt alle draußen auf der Straße, nur die Frau nicht."]}}},
+ {id:"fire_roof",w:3,num:"112",loc:"home",mk:()=>{const p=simPerson();return {rel:"",caller:simPerson(),patient:p,age:40,fire:true,
+   open:["Bei meinem Nachbarn brennt der Dachstuhl!"],
+   event:"Aus dem Dach vom Einfamilienhaus nebenan schlagen Flammen raus, ganz viel Rauch.",
+   f:{event:"Feuer / Rauchentwicklung",count:"0",firePeople:"0",danger:"ja",x:"",a:"",b:"",c:"",d:"",e:""},
+   onset:"Gerade eben gesehen.",hist:"",inside:"Nein, die sind im Urlaub, das Haus ist leer. Das Auto ist auch nicht da.",
+   extra:["Die Flammen werden größer!","Da fliegen Funken rüber zu unserer Hecke."]}}},
+ {id:"fire_bin",w:3,num:"112",loc:"road",mk:()=>{const p=simPerson();return {rel:"",caller:simPerson(),patient:p,age:40,fire:true,
+   open:["Hier brennt ein Altpapiercontainer."],
+   event:"Ein Papiercontainer am Straßenrand brennt, das qualmt ganz schön. Personen sind keine in Gefahr.",
+   f:{event:"Feuer / Rauchentwicklung",count:"0",firePeople:"0",danger:"nein",x:"",a:"",b:"",c:"",d:"",e:""},
+   onset:"Seit ein paar Minuten.",hist:"",inside:"Nein, da ist niemand.",
+   extra:["Der steht ziemlich nah an einem Carport."]}}},
+ {id:"tree",w:3,num:"112",loc:"road",mk:()=>{const p=simPerson();return {rel:"",caller:simPerson(),patient:p,age:40,
+   open:["Hallo, hier liegt ein Baum quer über der Straße."],
+   event:"Ein großer Baum ist umgestürzt und liegt komplett über der Fahrbahn. Verletzt ist niemand.",
+   f:{event:"Technische Hilfeleistung",count:"0",trapped:"0",danger:"ja",x:"",a:"",b:"",c:"",d:"",e:""},
+   onset:"Gerade eben, bei dem Wind.",hist:"",danger:"Das ist hinter einer Kurve, da fahren die Autos voll drauf zu!",
+   extra:["Ich hab jetzt mein Warndreieck aufgestellt."]}}},
+ {id:"swimmer",w:4,num:"112",loc:"water",mk:()=>{const p=simPerson(),age=rint(10,70);return {rel:"ein Schwimmer",caller:simPerson(),patient:p,age,panic:true,
+   open:["Hilfe, da draußen ist ein Schwimmer in Not, der winkt und geht immer wieder unter!"],
+   event:"Ein Schwimmer ist ziemlich weit draußen, der winkt mit den Armen und geht immer wieder unter. Die Strömung zieht ihn weg.",
+   f:{event:"Person im Wasser",count:"1",water:"Ja",waterState:"Lebenszeichen",x:"",a:"",b:"",c:"",d:"",e:"",danger:"ja"},
+   onset:"Gerade jetzt!",hist:"",danger:"Die Strömung ist richtig stark, hier will keiner reinspringen.",
+   extra:["Jetzt seh ich ihn grad nicht mehr!","Doch, da ist er wieder!","Jemand ist mit einem Board raus."]}}},
+ {id:"boat",w:2,num:"112",loc:"water",mk:()=>{const p=simPerson("m");return {rel:"",caller:simPerson("m"),patient:p,age:58,
+   open:["Hallo, wir sind mit dem Segelboot unterwegs, der Motor ist ausgefallen und wir treiben auf die Buhnen zu."],
+   event:"Wir sind zu zweit auf einem Segelboot, der Motor geht nicht mehr, das Segel ist gerissen. Wir treiben Richtung Ufer.",
+   f:{event:"Verkehrsunfall",count:"2",trapped:"0",x:"",a:"",b:"",c:"",d:"",e:"",danger:"ja"},
+   onset:"Seit zwanzig Minuten.",hist:"",danger:"Es wird immer windiger, die Wellen kommen schon über.",
+   extra:["Wir haben Schwimmwesten an.","Der Anker hält nicht."]}}},
+ {id:"kt_dis",w:4,num:"19222",loc:"home",kt:true,mk:()=>{const p=simPerson("w"),age=rint(70,92);return {caller:simPerson(),patient:p,age,
+   open:["Guten Tag, ich möchte einen Krankentransport bestellen."],
+   ktType:"KT-Einweisung",dest:"ins Nordwest-Krankenhaus Sanderbusch",mode:"liegend, sie kann nicht laufen",time:"am besten heute noch, der Hausarzt hat eingewiesen",doc:"Ja, die Einweisung und den Transportschein vom Hausarzt hab ich hier.",
+   event:"Meine Mutter muss ins Krankenhaus, der Hausarzt hat sie eingewiesen wegen Lungenentzündung.",extra:["Muss ich ihre Tasche mitgeben?"]}}},
+ {id:"kt_home",w:4,num:"19222",loc:"home",kt:true,mk:()=>{const p=simPerson(),age=rint(60,90);return {caller:simPerson("w"),patient:p,age,clinicCaller:true,
+   open:["Hallo, hier ist die Station 3 vom Klinikum Wilhelmshaven, wir bräuchten einen Rücktransport."],
+   ktType:"KT-Entlassung",dest:"nach Hause",mode:"sitzend im Tragestuhl",time:"heute um 14 Uhr",doc:"Der Transportschein ist ausgefüllt.",
+   event:"Ein Patient wird entlassen und muss nach Hause gebracht werden.",extra:["Der Patient hat zwei Taschen dabei."]}}}
+];
+
+function simMakeCall(){
+ const tot=SIM_CASES.reduce((a,c)=>a+c.w,0); let r=Math.random()*tot, cs=SIM_CASES[0];
+ for(const c of SIM_CASES){r-=c.w;if(r<=0){cs=c;break}}
+ const d=cs.mk();
+ const loc=cs.loc==="water"?simWaterLoc():cs.loc==="road"?simRoadLoc():simHomeLoc();
+ const id="sim"+Date.now().toString(36)+Math.floor(Math.random()*1000);
+ const sim={id,caseId:cs.id,num:cs.num,kt:!!cs.kt,loc,d,phone:"01"+pick(["51","52","60","70","76"])+" "+rint(1000000,9999999),log:[],lastAt:0,spontIdx:0,created:Date.now()};
+ if(loc.geo)simGeocode(sim);
+ return sim;
+}
+async function simGeocode(sim){
+ try{
+   const q=encodeURIComponent(`${sim.loc.addr}, Landkreis Friesland, Niedersachsen, Deutschland`);
+   const res=await fetch(`https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&countrycodes=de&q=${q}`,{headers:{"Accept":"application/json"}});
+   const j=await res.json();
+   if(j&&j[0]){sim.loc.lat=Number(j[0].lat);sim.loc.lng=Number(j[0].lon);sim.loc.geocoded=true;
+     const c=allOpenCalls().find(x=>x.sim&&x.sim.id===sim.id);if(c&&c.callerGps&&!c.callerGps.fixed){c.callerGps.lat=sim.loc.lat;c.callerGps.lng=sim.loc.lng;c.sim.loc=sim.loc;save()}}
+ }catch(e){}
+}
+
+// ─── Zeitplan: mal einer, mal nichts, mal zwei nacheinander, mal zwei gleichzeitig ───────────
+function simSchedule(first){simNextAt=Date.now()+(first?rnd(15,45):rnd(150,480))*1000}
+function simTick(){
+ if(!simOn||IS_MONITOR||isTerminalLink)return;
+ const now=Date.now();
+ if(simQueue.length&&now>=simQueue[0]){simQueue.shift();simRing()}
+ if(!simNextAt){simSchedule(true);return}
+ if(now<simNextAt)return;
+ const r=Math.random();
+ if(r<0.45)simRing();
+ else if(r<0.62){/* Pause – diesmal nichts */}
+ else if(r<0.85){simRing();simQueue.push(now+rnd(25,90)*1000)}
+ else{simRing();simRing()}
+ simSchedule(false);
+}
+function simRing(){
+ if(simPending.length>=4)return;
+ const s=simMakeCall(); simPending.push(s);
+ renderCallerBanner();
+ toast(s.num==="19222"?"📞 Übungsanruf 19222 – Krankentransport":"📞 Übungsnotruf 112 eingegangen");
+ if(simVoice)simRingTone();
+}
+let simAudio=null;
+function simRingTone(){
+ try{simAudio=simAudio||new (window.AudioContext||window.webkitAudioContext)();const a=simAudio;
+   [0,0.45].forEach(o=>{const os=a.createOscillator(),g=a.createGain();os.frequency.value=440;g.gain.value=0.08;os.connect(g);g.connect(a.destination);os.start(a.currentTime+o);os.stop(a.currentTime+o+0.35)});
+ }catch(e){}
+}
+function simBannerHTML(){
+ return simPending.map(s=>`<div class="card" style="background:${s.num==="19222"?"#1d4ed8":"#e30613"};color:#fff;border:none;margin-bottom:8px;display:flex;align-items:center;justify-content:space-between;gap:12px">
+   <div class="row" style="gap:10px"><span style="font-size:26px">📞</span><div><b>${s.num==="19222"?"🚑 19222 – Krankentransport":"🚨 Notruf 112"} – Übungsanruf</b><br><span style="opacity:.9">Mobilfunk · Standort wird übermittelt</span></div></div>
+   <button class="primary" style="background:#fff;color:${s.num==="19222"?"#1d4ed8":"#e30613"}" onclick="simAccept('${s.id}')">✅ Annehmen</button>
+ </div>`).join("");
+}
+function simAccept(simId){
+ const i=simPending.findIndex(s=>s.id===simId); if(i<0)return;
+ const s=simPending.splice(i,1)[0];
+ if(db.currentCall)parkCurrentCall();
+ notrufDetailsVisible=false;
+ const stamp=Date.now().toString();
+ if(s.kt)db.currentCall={id:stamp.slice(-6),kt:true,location:"",count:"1",answers:{},history:[{q:"☎️ Anruf über",a:"🚑 19222 – Krankentransport"}],keyword:"Krankentransport",suggestion:"",createdAt:new Date().toISOString()};
+ else db.currentCall={id:stamp.slice(-6),location:"",count:"",answers:{callType:"112"},history:[{q:"☎️ Über welche Nummer ist der Anruf eingegangen?",a:CALLER_NUMBERS["112"].label}],keyword:"",suggestion:"",createdAt:new Date().toISOString()};
+ const c=db.currentCall;
+ c.phoneStart=Date.now(); c.callerNumber=s.num; c.sim=s;
+ c.callerGps={lat:s.loc.lat,lng:s.loc.lng,address:s.loc.kind==="home"?s.loc.addr:s.loc.text.replace(/^(am|auf der|auf dem) /,""),water:!!s.loc.water,sim:true};
+ c.callerGpsPending=true;
+ simSay(c,pick(s.d.open));
+ save(); renderCallerBanner(); render("notruf");
+}
+
+// ─── Antwortlogik ─────────────────────────────────────────────────────────────────────────────
+const SIM_INTENTS=[
+ ["cpr",/dr(ü|ue)ck|herzdruck|reanim|brustkorb|mitte der brust|hundert|zählen/],
+ ["side",/seitenlage|auf die seite/],
+ ["calm",/ruhig|beruhig|keine sorge/],
+ ["help",/hilfe (ist|kommt)|unterwegs|schicke|kommen gleich|ist alarmiert|rettungsdienst kommt|rettungswagen kommt|feuerwehr kommt/],
+ ["stay",/bleiben sie|nicht auflegen|dran bleiben|am telefon/],
+ ["door",/t(ü|ue)r (auf|öffnen|offen)|licht an|einweisen|an die stra(ss|ß)e|winken/],
+ ["loc",/\bwo\b|adresse|stra(ss|ß)e|hausnummer|welche(r|m)? (stadt|ort)|wo genau|standort|ortsteil|stockwerk|etage/],
+ ["event",/was (ist|genau|ist denn|ist da)? ?(passiert|los)|was passiert|worum geht|schildern|erz(ä|ae)hlen sie/],
+ ["count",/wie ?viele|anzahl|weitere (person|verletzte)|noch jemand verletzt|mehrere|betroffen/],
+ ["trapped",/eingeklemmt|eingeschlossen|raus ?kommen|aussteigen/],
+ ["inside",/noch (jemand|personen|leute)|alle (raus|drau(ss|ß)en)|im haus|in der wohnung/],
+ ["fire",/brennt|brand|feuer(?!wehr)|flamm|rauch|qualm/],
+ ["conscious",/ansprechbar|reagier|bewusst|wach|bei sich|redet|spricht|antwortet/],
+ ["breath",/atm|luft|atem/],
+ ["airway",/verschluck|erbroch|atemweg/],
+ ["bleed",/blut/],
+ ["circ",/puls|blass|kaltschwei|schwei(ß|ss)|kreislauf|schwindel|hautfarbe|farbe/],
+ ["pain",/schmerz|weh\b|tut .*weh|beschwerden/],
+ ["age",/wie alt|alter|jahre alt|geburts/],
+ ["name",/wie hei(ss|ß)|ihr name|name/],
+ ["phone",/telefon|r(ü|ue)ckruf|nummer/],
+ ["danger",/gefahr|gef(ä|ae)hrlich|strom|gas|benzin|verkehr|absichern|sicher/],
+ ["water",/wasser|schwimm|untergegangen|ertrink|treibt|boot|strömung/],
+ ["hist",/vorerkrank|krankheit|medikament|zucker|diabet|herz|tabletten|allerg|vorgeschichte|bekannt/],
+ ["onset",/seit wann|wann (ist|hat|war)|wie lange|zeitpunkt/],
+ ["gender",/mann oder frau|geschlecht|m(ä|ae)nnlich|weiblich/],
+ ["dest",/wohin|ziel|welches krankenhaus|welche klinik/],
+ ["mode",/liegend|sitzend|rollstuhl|tragestuhl|laufen|gehf(ä|ae)hig|transportart/],
+ ["time",/wann|uhrzeit|termin|abholzeit/],
+ ["doc",/verordnung|transportschein|krankenkasse|einweisung/],
+ ["greet",/^(notruf|feuerwehr|rettungsdienst|leitstelle|hallo|guten|moin|ja bitte)/]
+];
+function simIntents(text){const t=String(text||"").toLowerCase();return SIM_INTENTS.filter(([,re])=>re.test(t)).map(([k])=>k)}
+const SIM_D={"Wach / orientiert":["Ja, er redet ganz normal mit mir.","Ja, ansprechbar ist er."],"Bewusstseinsgetrübt":["Er ist so komisch, ganz schläfrig, antwortet kaum.","Nur so halb, er murmelt nur."],"Bewusstlos":["Nein! Er reagiert überhaupt nicht!","Nein, gar nicht, auch nicht wenn ich ihn rüttel!"],"Krampfanfall":["Jetzt so halb, er ist total müde nach dem Krampf."],"Neurologisch auffällig":["Ja, aber er redet ganz verwaschen, man versteht ihn kaum."]};
+const SIM_B={"Normal":["Ja, ganz normal.","Atmen tut er normal, ja."],"Auffällig":["Ganz schwer und schnell, das hört man richtig.","Ja, aber er ringt total nach Luft."],"Keine normale Atmung":["Ich… ich weiß nicht, er schnappt nur so ab und zu!","Nein, ich glaub nicht! Nur so ein Röcheln!"]};
+const SIM_C={"Unauffällig":["Normal eigentlich, nicht besonders blass."],"Auffällig":["Er ist ganz blass und kaltschweißig.","Total blass, und die Haut ist ganz kalt und nass."],"Schockzeichen":["Ganz grau, eiskalt, das sieht gar nicht gut aus."],"Unklar":["Das kann ich nicht sagen!"]};
+const SIM_A={"Frei":["Ja, da ist nichts im Mund."],"Gefährdet":["Das klingt so gurgelig…","Da ist irgendwie Spucke, das röchelt."],"Verlegt":["Da ist was im Mund, er kriegt nichts durch!"]};
+function simHe(s){return s.d.patient&&s.d.patient.g==="w"?["Sie","sie","ihr"]:["Er","er","ihm"]}
+function simFix(s,t){const [He,he]=simHe(s);if(he==="er")return String(t);return String(t).replace(/\bEr\b/g,"Sie").replace(/(^|[^A-Za-zÄÖÜäöüß])er\b/g,"$1sie").replace(/\bihn\b/g,"sie").replace(/\bihm\b/g,"ihr").replace(/\bEin Mann\b/g,"Eine Frau")}
+function simAnswerFor(c,text){
+ const s=c.sim, d=s.d, f=d.f||{}, ints=simIntents(text), out=[];
+ const [He,he]=simHe(s), age=d.age;
+ const panic=d.panic?pick(["Bitte schnell! ","Oh Gott… ","",""]):"";
+ for(const k of ints){
+   if(out.length>=2)break;
+   switch(k){
+    case "cpr":if(d.cpr){out.push(pick(["Okay… okay, ich drück! Eins, zwei, drei, vier…","Ich drücke! So fest? Eins, zwei, drei…","Mitte der Brust… okay, ich mach das! Zwanzig, einundzwanzig…"]));s.cprStarted=true}else out.push("Muss ich das wirklich? "+He+" atmet doch.");break;
+    case "side":out.push(pick(["Okay, ich dreh "+(he==="sie"?"sie":"ihn")+" auf die Seite.","Mach ich, Moment… so?"]));break;
+    case "calm":out.push(pick(["Ich versuch's ja!","Ja… okay. Okay.","Das sagen Sie so leicht!"]));break;
+    case "help":out.push(pick(["Danke, danke!","Wie lange dauert das denn?","Okay, gut. Beeilen Sie sich bitte."]));break;
+    case "stay":out.push(pick(["Ja, ich bleib dran.","Ja, ich bin hier."]));break;
+    case "door":out.push(pick(["Okay, ich mach die Haustür auf.","Ja, ich mach draußen Licht an.","Ich schick meinen Sohn raus zum Winken."]));break;
+    case "loc":out.push((s.loc.kind==="home"?`${s.loc.text}`:`Wir sind ${s.loc.text}`)+(s.loc.kind==="home"?pick(["."," – im Erdgeschoss."," – erster Stock, rechts."," – das gelbe Haus."]):"."));break;
+    case "event":out.push(simFix(s,d.event));break;
+    case "count":out.push(d.kt?"Nur ein Patient.":f.count==="0"?"Verletzt ist niemand.":f.count==="1"?pick(["Nur "+(he==="sie"?"sie":"er")+".","Eine Person."]):`${f.count} Personen.`);break;
+    case "trapped":out.push(f.trapped&&f.trapped!=="0"?"Ja, der kommt nicht raus, die Tür klemmt und die Beine stecken fest!":"Nein, eingeklemmt ist keiner.");break;
+    case "inside":out.push(d.inside||"Nein, ich glaube nicht.");break;
+    case "fire":out.push(d.fire?simFix(s,d.event):"Nein, brennen tut nichts.");break;
+    case "conscious":out.push(simFix(s,pick(SIM_D[f.d]||["Ich weiß nicht genau."])));break;
+    case "breath":out.push(simFix(s,pick(SIM_B[f.b]||["Ich glaube schon."])));break;
+    case "airway":out.push(simFix(s,pick(SIM_A[f.a]||["Ich glaube, da ist nichts."])));break;
+    case "bleed":out.push(f.x==="Ja"||/blut|platzwunde/i.test(f.e||"")?pick(["Ein bisschen, am Kopf.","Ja, da läuft Blut, aber nicht so viel."]):"Nein, Blut seh ich keins.");break;
+    case "circ":out.push(simFix(s,pick(SIM_C[f.c]||["Weiß ich nicht."])));break;
+    case "pain":out.push(f.e?simFix(s,`${He} sagt: ${f.e}.`):"Das kann ich nicht sagen.");break;
+    case "age":out.push(age!=null?pick([`${age}.`,`${He} ist ${age} Jahre alt.`,`Ähm… ${age}.`]):"Weiß ich nicht.");break;
+    case "name":out.push(/anrufer|sie selbst|ihr name/.test(text.toLowerCase())||d.passerby||d.fire?`${d.caller.first} ${d.caller.last}.`:`${d.patient.first} ${d.patient.last}.`);break;
+    case "phone":out.push(`Meine Nummer ist ${s.phone}.`);break;
+    case "danger":out.push(d.danger||(f.danger==="ja"?"Ja, das ist hier nicht ungefährlich.":"Nein, Gefahren seh ich keine."));break;
+    case "water":out.push(s.loc.water?simFix(s,d.event):"Nein, mit Wasser hat das nichts zu tun.");break;
+    case "hist":out.push(simFix(s,d.hist||"Weiß ich nicht."));break;
+    case "onset":out.push(d.onset||"Gerade eben.");break;
+    case "gender":out.push(d.patient.g==="w"?"Eine Frau.":"Ein Mann.");break;
+    case "dest":out.push(d.dest?`${d.dest.charAt(0).toUpperCase()+d.dest.slice(1)}.`:"Ins Krankenhaus natürlich!");break;
+    case "mode":out.push(d.mode?`${d.mode.charAt(0).toUpperCase()+d.mode.slice(1)}.`:"Laufen kann "+he+" nicht.");break;
+    case "time":out.push(d.time?d.time.charAt(0).toUpperCase()+d.time.slice(1)+".":(d.onset||"Jetzt gerade."));break;
+    case "doc":out.push(d.doc||"Weiß ich nicht.");break;
+    case "greet":out.push(pick(d.open));break;
+   }
+ }
+ if(!out.length)out.push(pick(d.panic?["Was?! Bitte, helfen Sie mir einfach!","Was meinen Sie? Ich versteh das nicht!"]:["Wie bitte?","Das hab ich nicht verstanden.","Äh… was meinen Sie genau?","Das weiß ich nicht."]));
+ return panic+out.join(" ");
+}
+function simSay(c,text){
+ c.sim.log.push({who:"caller",text,t:Date.now()}); c.sim.lastAt=Date.now();
+ if(simVoice)simSpeak(c,text);
+}
+function simSend(){
+ const c=db.currentCall; if(!c||!c.sim||c.phoneEnd)return;
+ const el=document.getElementById("simInput"); const text=String(el?.value||"").trim(); if(!text)return;
+ c.sim.log.push({who:"lst",text,t:Date.now()}); el.value="";
+ const ans=simAnswerFor(c,text);
+ save(); simRenderChat();
+ setTimeout(()=>{if(c.phoneEnd)return;simSay(c,ans);save();simRenderChat()},rnd(500,1300));
+}
+// spontane Sätze, wenn länger nichts gesagt wurde
+function simSpontaneous(){
+ if(!simOn&&!allOpenCalls().some(c=>c.sim))return;
+ for(const c of allOpenCalls()){
+   if(!c.sim||c.phoneEnd)continue;
+   const s=c.sim; if(Date.now()-s.lastAt<rnd(28,45)*1000)continue;
+   const pool=[...(s.d.extra||[])];
+   if(c.alarmTime&&Date.now()-new Date(c.alarmTime).getTime()>120000&&!s.kt)pool.push("Ich glaub, ich hör schon das Martinshorn!","Wann sind die denn da?");
+   if(s.d.cpr&&s.cprStarted)pool.push("Ich kann bald nicht mehr… zweiundzwanzig, dreiundzwanzig…");
+   if(!pool.length){s.lastAt=Date.now();continue}
+   const t=pool[s.spontIdx%pool.length]; s.spontIdx++;
+   simSay(c,simFix(s,t)); save();
+   if(db.currentCall&&String(db.currentCall.id)===String(c.id))simRenderChat();
+ }
+}
+
+// ─── Sprache ─────────────────────────────────────────────────────────────────────────────────
+function simSpeak(c,text){
+ try{
+   if(!("speechSynthesis" in window))return;
+   const u=new SpeechSynthesisUtterance(text); u.lang="de-DE";
+   const voices=speechSynthesis.getVoices().filter(v=>/^de/i.test(v.lang));
+   const fem=c.sim.d.caller.g==="w";
+   const v=voices.find(v=>fem?/anna|petra|helena|katja|hedda|marlene|vicki|female|frau/i.test(v.name):/markus|yannick|conrad|stefan|hans|male|mann/i.test(v.name))||voices[0];
+   if(v)u.voice=v;
+   u.pitch=fem?1.15:0.85; u.rate=c.sim.d.panic?1.15:1.0;
+   speechSynthesis.speak(u);
+ }catch(e){}
+}
+let simRec=null;
+function simListen(){
+ const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+ if(!SR){toast("Spracherkennung wird von diesem Browser nicht unterstützt – bitte eintippen");return}
+ if(simRec){try{simRec.stop()}catch(e){}simRec=null;simRenderChat();return}
+ try{speechSynthesis.cancel()}catch(e){}
+ simRec=new SR(); simRec.lang="de-DE"; simRec.interimResults=false; simRec.maxAlternatives=1;
+ simRec.onresult=e=>{const t=e.results[0][0].transcript;const el=document.getElementById("simInput");if(el){el.value=t;simSend()}};
+ simRec.onend=()=>{simRec=null;simRenderChat()};
+ simRec.onerror=()=>{simRec=null;simRenderChat()};
+ simRec.start(); simRenderChat();
+}
+function simChatHTML(c){
+ if(!c||!c.sim)return "";
+ const s=c.sim;
+ setTimeout(()=>{const lg=document.getElementById("simLog");if(lg)lg.scrollTop=lg.scrollHeight},0);
+ const log=s.log.map(m=>`<div style="margin:4px 0;display:flex;${m.who==="lst"?"justify-content:flex-end":""}"><div style="max-width:85%;padding:6px 10px;border-radius:12px;${m.who==="lst"?"background:#dbeafe;color:#1e3a8a":"background:#fee2e2;color:#7f1d1d"}"><small style="opacity:.7;font-weight:700">${m.who==="lst"?"Sie":"Anrufer"}</small><br>${esc(m.text)}</div></div>`).join("");
+ return `<div class="card" style="border:2px solid ${s.num==="19222"?"#1d4ed8":"#e30613"}">
+  <div class="row between"><h3 style="margin:0">🗣️ Übungsanruf ${s.num==="19222"?"19222":"112"} ${simVoice?"– 🔊 Sprachmodus":"– 🔇 Textmodus"}</h3><small class="muted">Anrufer antwortet auf typische Fragen (Stichworte)</small></div>
+  <div id="simLog" style="max-height:${simVoice?"140":"260"}px;overflow:auto;margin-top:6px;padding:4px;background:#f8fafc;border-radius:8px">${log}</div>
+  ${c.phoneEnd?`<div class="muted" style="margin-top:6px">📵 Aufgelegt.</div>`:`<div class="row" style="margin-top:6px;flex-wrap:nowrap">
+   <input id="simInput" placeholder="${simVoice?"Sprechen (🎤) oder eintippen …":"Was sagen Sie dem Anrufer? z. B. „Wo genau ist der Notfallort?“"}" style="flex:1" onkeydown="if(event.key==='Enter'){event.preventDefault();simSend()}">
+   ${simVoice?`<button onclick="simListen()" title="Frage sprechen" style="${simRec?"background:#dc2626;color:#fff":""}">${simRec?"⏹":"🎤"}</button>`:""}
+   <button class="primary" onclick="simSend()">Senden</button></div>`}
+ </div>`;
+}
+function simRenderChat(){
+ const box=document.getElementById("simChatBox"), c=db.currentCall;
+ if(!box||!c||!c.sim)return;
+ const keep=document.getElementById("simInput")?.value||"";
+ box.innerHTML=simChatHTML(c);
+ const inp=document.getElementById("simInput"); if(inp){inp.value=keep;}
+ const lg=document.getElementById("simLog"); if(lg)lg.scrollTop=lg.scrollHeight;
+}
+
+// ─── Kopfleiste: 🔇/🔊 (Text/Stimme) und 🎲 Übungsnotrufe an/aus ──────────────────────────────
+function simCtlHTML(){
+ return `<button onclick="simToggleVoice()" title="${simVoice?"Sprachmodus – antippen für Textmodus":"Textmodus – antippen für Sprachmodus"}" style="font-size:20px;padding:2px 8px;background:none;border:1px solid var(--line);border-radius:8px">${simVoice?"🔊":"🔇"}</button>
+  <button onclick="simToggleOn()" title="Automatische Übungsnotrufe ${simOn?"ausschalten":"einschalten"}" style="font-size:12px;padding:4px 10px;border-radius:8px;font-weight:800;${simOn?"background:#16a34a;color:#fff;border:1px solid #16a34a":"background:#fff;color:#334155;border:1px solid var(--line)"}">🎲 <span class="simLbl">Übungsnotrufe </span>${simOn?"AN":"AUS"}</button>`;
+}
+function renderSimCtl(){const el=document.getElementById("simCtl");if(!el)return;if(IS_MONITOR||isTerminalLink){el.innerHTML="";return}el.innerHTML=simCtlHTML()}
+function simToggleVoice(){
+ simVoice=!simVoice; try{localStorage.setItem(SIM_KEY_VOICE,simVoice?"1":"0")}catch(e){}
+ if(!simVoice)try{speechSynthesis.cancel()}catch(e){}
+ else try{speechSynthesis.getVoices();const u=new SpeechSynthesisUtterance("");speechSynthesis.speak(u)}catch(e){} // Ton auf iOS freischalten
+ renderSimCtl(); simRenderChat();
+ toast(simVoice?"🔊 Übungsanrufe mit Stimme":"🔇 Übungsanrufe als Text");
+}
+function simToggleOn(){
+ simOn=!simOn; try{localStorage.setItem(SIM_KEY_ON,simOn?"1":"0")}catch(e){}
+ simNextAt=0; simQueue=[];
+ if(simOn)simSchedule(true);
+ renderSimCtl();
+ toast(simOn?"🎲 Übungsnotrufe AN – kommen ab jetzt zufällig":"🎲 Übungsnotrufe AUS");
+}
+
+setInterval(()=>{renderCallTimerBar();const clock=document.getElementById("clock");if(clock)clock.textContent=new Date().toLocaleTimeString("de-DE");if(IS_MONITOR)return;applyDutySchedule();autoReturnToStation();autoAdvanceEnRoute();updateWaitTimers();simTick();simSpontaneous()},1000);
+renderSimCtl();
 // Läuft der Hauptplatz in einem Hintergrund-Tab oder mit gesperrtem Bildschirm, drosseln Browser
 // (v. a. mobil/iOS) genau dieses 1-Sekunden-Intervall stark oder pausieren es ganz – der 07:00/
 // 19:00-Dienstplanwechsel (applyDutySchedule) wurde dann teils erst mit großer Verzögerung
