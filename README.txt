@@ -1423,3 +1423,15 @@ Version 4.88:
   Person wach genug, kommt sie ans Telefon und antwortet selbst (Ich-Form, im Sprachmodus mit
   passender Stimme). „Geben Sie mir wieder den Anrufer“ holt den Anrufer zurück. Bei
   Bewusstlosen, Kleinkindern oder Eingeklemmten erklärt der Anrufer, warum es nicht geht.
+
+Version 4.89:
+- XABCDE-Antworten bearbeitbar (AAO → Notrufabfrage bearbeiten → bei X, A, B, C, D, E
+  „✏️ Antworten bearbeiten“): Antworttexte ändern, Reihenfolge ▲▼, löschen, neue hinzufügen,
+  ↺ zurück auf Standard.
+- Jede Antwort hat ein „zählt als“: die Standardbedeutung, auf die Stichwort, AAO und
+  Reanimationsprotokoll reagieren. Beispiel: „Schnappatmung“ zählt als „Keine normale Atmung“
+  → Reanimation wird wie bisher erkannt. Im Abfrageverlauf steht dann „Schnappatmung (= Keine
+  normale Atmung)“.
+- „Eigene Antwort“ wird genau so gespeichert, löst von sich aus kein Stichwort aus und ist
+  in eigenen AAO-Bedingungen wählbar sowie unter „Notruf ändern“ auswählbar.
+- Bei E (Freitext) sind die Antworten die Schnellknöpfe unter dem Textfeld.

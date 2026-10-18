@@ -169,7 +169,7 @@ html[data-device="handy"] #floatDock{left:8px;right:8px;width:auto;top:auto;bott
 </head>
 <body>
 <div style="padding:6px 10px;font-size:11px;color:#94a3b8;font-weight:700;display:flex;flex-wrap:wrap;align-items:center;gap:10px;position:sticky;top:0;z-index:10;background:var(--bg)">
- <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v4.88</span>
+ <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v4.89</span>
  <span id="syncState"></span>
  <span id="simCtl" style="position:absolute;left:50%;transform:translateX(-50%);display:flex;gap:6px;align-items:center"></span>
  <a id="homeLink" href="#" onclick="render('leitstelle');return false" class="hidden" style="color:#64748b;text-decoration:underline;font-weight:600">🖥️ Leitstelle</a>
@@ -2232,7 +2232,7 @@ function openCallEdit(id){
  const QS=callQs(c);
  const rows=QS.filter(([k])=>k in (c.answers||{})||(k==="location"&&c.location)).map(([k,label,type])=>{
    const cur=k==="location"?(c.location||c.answers.location||""):String(c.answers[k]??"");
-   const opts=type==="custom"?(qsCustom(k)?qsCustomOptions(qsCustom(k)):null):CALL_EDIT_OPTIONS[type];
+   const opts=type==="custom"?(qsCustom(k)?qsCustomOptions(qsCustom(k)):null):CALL_EDIT_OPTIONS[type]?[...CALL_EDIT_OPTIONS[type],...qsOwnValues(k)]:null;
    let ctl;
    if(opts){const all=opts.includes(cur)||cur===""?opts:[cur,...opts];ctl=`<select data-k="${esc(k)}" class="ceField">${all.map(o=>`<option ${o===cur?"selected":""}>${esc(o)}</option>`).join("")}</select>`}
    else if(type==="textarea")ctl=`<textarea data-k="${esc(k)}" class="ceField" rows="3" style="width:100%;box-sizing:border-box">${esc(cur)}</textarea>`;
@@ -2938,6 +2938,7 @@ function qsCustomHTML(q,c){
 // eigene Fragen auch als AAO-Bedingung anbieten
 function qsSyncRuleFields(){
  Object.keys(AAO_RULE_FIELDS).forEach(k=>{if(k.startsWith("cq_"))delete AAO_RULE_FIELDS[k]});
+ Object.keys(QS_ANS_EDIT).forEach(id=>{const f=AAO_RULE_FIELDS[id];if(!f||!f.values)return;f._base=f._base||[...f.values];f.values=[...new Set([...f._base,...qsOwnValues(id)])]});
  ["112","kt"].forEach(key=>(((db.qsConfig||{})[key]||{}).custom||[]).forEach(cq=>{
    const o=qsCustomOptions(cq);
    AAO_RULE_FIELDS[cq.id]=o?{label:`Eigene Frage: ${cq.label}`,values:o}:{label:`Eigene Frage: ${cq.label}`,free:true,placeholder:cq.kind==="number"?"z. B. >2, 1, <=5":"enthält … (a, b = a ODER b)"};
@@ -3003,6 +3004,54 @@ function qsReset(key){
  if(!confirm(`${key==="kt"?"Krankentransport-Abfrage":"Notrufabfrage"} komplett auf Standard zurücksetzen? Eigene Fragen werden gelöscht.`))return;
  db.qsConfig=db.qsConfig||{}; delete db.qsConfig[key]; qsChanged("Abfrage zurückgesetzt");
 }
+
+// ─── Antworten der XABCDE-Fragen bearbeiten (v4.89) ──────────────────────────────────────────
+// Jede Antwort hat einen angezeigten Text und eine Bedeutung („zählt als“ = Standardwert, auf den
+// Stichwort/AAO/Reanimation reagieren). „Eigene Antwort“ wird unverändert gespeichert und wirkt nur
+// über eigene AAO-Bedingungen. Bei E sind die Antworten Schnellknöpfe zum Freitext.
+const QS_ANS_EDIT={x_massive:"xyn",a_airway:"xairway",b_breath:"xbreathing",c_circ:"xcirc",d_disability:"xdisability",e_exposure:"equick"};
+const QS_E_DEFAULT=["Unauffällig","unklar"];
+let qsAnsOpen=new Set();
+function qsStdValues(id){const t=QS_ANS_EDIT[id];return t==="equick"?[]:(CALL_EDIT_OPTIONS[t]||[])}
+function qsDefaultAnswers(id){return QS_ANS_EDIT[id]==="equick"?QS_E_DEFAULT.map(v=>({label:v,value:v,own:true})):qsStdValues(id).map(v=>({label:v,value:v}))}
+function qsAnswers(id){const a=(((db.qsConfig||{})["112"]||{}).answers||{})[id];return Array.isArray(a)&&a.length?a:null}
+function qsAnswerList(id){return qsAnswers(id)||qsDefaultAnswers(id)}
+function qsOwnValues(id){return (qsAnswers(id)||[]).filter(a=>a.own).map(a=>a.label)}
+let qsPendingLabel=null;
+function qsAnswerPick(id,i){
+ const a=qsAnswerList(id)[i]; if(!a)return;
+ const v=a.own?a.label:a.value;
+ qsPendingLabel=(!a.own&&a.label!==a.value)?{id,label:a.label}:null;
+ answer(id,v);
+}
+function qsAnswerButtonsHTML(id,label){
+ return `<label>${label}</label><div class="answer">${qsAnswerList(id).map((a,i)=>`<button onclick="qsAnswerPick('${id}',${i})">${esc(a.label)}</button>`).join("")}</div>`;
+}
+function qsAnsEdit(id,fn){
+ const cfg=qsCfg("112"); cfg.answers=cfg.answers||{};
+ const list=JSON.parse(JSON.stringify(qsAnswerList(id)));
+ const res=fn(list); if(res===false)return;
+ if(!list.length){toast("Mindestens eine Antwort muss bleiben");return}
+ cfg.answers[id]=list; qsAnsOpen.add(id); qsChanged();
+}
+function qsAnsSetLabel(id,i,v){const t=String(v||"").trim();if(!t){toast("Antworttext darf nicht leer sein");render("aao");return}qsAnsEdit(id,l=>{l[i].label=t})}
+function qsAnsSetValue(id,i,v){qsAnsEdit(id,l=>{if(v==="__own"){l[i].own=true;delete l[i].value}else{l[i].own=false;l[i].value=v}})}
+function qsAnsMove(id,i,d){qsAnsEdit(id,l=>{const j=i+d;if(j<0||j>=l.length)return false;[l[i],l[j]]=[l[j],l[i]]})}
+function qsAnsDel(id,i){qsAnsEdit(id,l=>{l.splice(i,1)})}
+function qsAnsAdd(id){qsAnsEdit(id,l=>{const std=qsStdValues(id);l.push(std.length?{label:"Neue Antwort",value:std[std.length-1]}:{label:"Neue Antwort",own:true})})}
+function qsAnsReset(id){const cfg=qsCfg("112");if(cfg.answers)delete cfg.answers[id];qsAnsOpen.add(id);qsChanged("Standardantworten wiederhergestellt")}
+function qsAnsEditorHTML(id){
+ const list=qsAnswerList(id), std=qsStdValues(id), custom=!!qsAnswers(id), isE=QS_ANS_EDIT[id]==="equick";
+ const rows=list.map((a,i)=>`<div style="margin:4px 0;padding:6px;border:1px solid var(--line);border-radius:8px">
+   <input style="width:100%;box-sizing:border-box" value="${esc(a.label)}" onchange="qsAnsSetLabel('${id}',${i},this.value)">
+   <div class="row" style="gap:4px;margin-top:4px;flex-wrap:wrap">
+   <button style="padding:2px 8px" onclick="qsAnsMove('${id}',${i},-1)" ${i===0?"disabled":""}>▲</button><button style="padding:2px 8px" onclick="qsAnsMove('${id}',${i},1)" ${i===list.length-1?"disabled":""}>▼</button>
+   ${isE?"":`<select style="flex:1;min-width:140px;width:auto" title="Bedeutung für Stichwort/AAO" onchange="qsAnsSetValue('${id}',${i},this.value)">${std.map(v=>`<option value="${esc(v)}" ${!a.own&&a.value===v?"selected":""}>zählt als: ${esc(v)}</option>`).join("")}<option value="__own" ${a.own?"selected":""}>eigene Antwort</option></select>`}
+   <button title="Antwort löschen" onclick="qsAnsDel('${id}',${i})">🗑️</button></div></div>`).join("");
+ return `<details ${qsAnsOpen.has(id)?"open":""} ontoggle="this.open?qsAnsOpen.add('${id}'):qsAnsOpen.delete('${id}')" style="margin-top:6px"><summary style="cursor:pointer;font-size:13px;font-weight:700">✏️ Antworten bearbeiten (${list.length})${custom?" · geändert":""}</summary>
+  <div style="font-size:12px;margin:4px 0" class="muted">${isE?"Schnellknöpfe unter dem Freitextfeld.":"„zählt als“ = Bedeutung für Stichwort, AAO und Reanimation. „Eigene Antwort“ wird so gespeichert und wirkt nur über eigene AAO-Bedingungen."}</div>
+  ${rows}<div class="row" style="gap:6px;margin-top:4px"><button onclick="qsAnsAdd('${id}')">＋ Antwort</button>${custom?`<button onclick="qsAnsReset('${id}')">↺ Standardantworten</button>`:""}</div></details>`;
+}
 function qsEditorHTML(){
  const key=qsTab, list=qsEffective(key), cfg=(db.qsConfig||{})[key]||{};
  const d=qsNewDraft||(qsNewDraft={label:"",kind:"text",options:"",events:[]});
@@ -3010,8 +3059,9 @@ function qsEditorHTML(){
    const cq=type==="custom"?qsCustom(id):null, locked=QS_LOCKED.has(id), hidden=!locked&&!!(cfg.hidden||{})[id];
    const base=qsBase(key).find(q=>q[0]===id), changed=base&&(cfg.labels||{})[id];
    const kAttr=`'${key}','${id}'`;
+   const ansInfo=key==="112"&&qsAnswers(id)&&QS_ANS_EDIT[id]?qsAnswerList(id).map(a=>a.label).join(" / "):null;
    const info=cq?`<span class="pill" style="background:#ede9fe;color:#5b21b6">eigene Frage · ${esc(QS_KINDS[cq.kind]||cq.kind)}</span>${cq.events&&cq.events.length?` <small class="muted">nur bei: ${esc(cq.events.join(", "))}</small>`:""}`
-     :`<small class="muted">Standard · Antworten: ${esc(QS_ANSWER_INFO[type]||type)}${locked?" · 🔒 immer gefragt":""}</small>`;
+     :`<small class="muted">Standard · Antworten: ${esc(ansInfo||QS_ANSWER_INFO[type]||type)}${locked?" · 🔒 immer gefragt":""}</small>`;
    const extra=cq?`<div style="margin-top:6px;display:flex;flex-wrap:wrap;gap:6px;align-items:center">
       <select onchange="qsSetCustom(${kAttr},'kind',this.value)" style="width:auto">${Object.entries(QS_KINDS).map(([v,l])=>`<option value="${v}" ${cq.kind===v?"selected":""}>${l}</option>`).join("")}</select>
       ${cq.kind==="choice"?`<input style="flex:1;min-width:160px" value="${esc((cq.options||[]).join(", "))}" placeholder="Antworten, mit Komma getrennt" onchange="qsSetCustom(${kAttr},'options',this.value)">`:""}
@@ -3020,7 +3070,7 @@ function qsEditorHTML(){
    return `<div style="display:flex;gap:8px;align-items:flex-start;padding:8px 0;border-bottom:1px solid var(--line);${hidden?"opacity:.5":""}">
      <div style="display:flex;flex-direction:column;gap:2px"><button style="padding:2px 8px" title="nach oben" onclick="qsMove(${kAttr},-1)" ${i===0?"disabled":""}>▲</button><button style="padding:2px 8px" title="nach unten" onclick="qsMove(${kAttr},1)" ${i===list.length-1?"disabled":""}>▼</button></div>
      <div style="flex:1;min-width:0"><div class="row" style="flex-wrap:nowrap;gap:6px"><b style="width:22px;text-align:right">${i+1}.</b><input style="flex:1;min-width:0" value="${esc(label)}" onchange="qsSetLabel(${kAttr},this.value)">${changed?`<button title="Standardtext wiederherstellen" onclick="qsSetLabel(${kAttr},'')">↺</button>`:""}</div>
-      <div style="margin:4px 0 0 28px">${info}${hidden?` <span class="pill" style="background:#fee2e2;color:#991b1b">ausgeblendet – wird als „nicht erhoben“ übersprungen</span>`:""}</div>${extra?`<div style="margin-left:28px">${extra}</div>`:""}</div>
+      <div style="margin:4px 0 0 28px">${info}${hidden?` <span class="pill" style="background:#fee2e2;color:#991b1b">ausgeblendet – wird als „nicht erhoben“ übersprungen</span>`:""}</div>${extra?`<div style="margin-left:28px">${extra}</div>`:""}${key==="112"&&QS_ANS_EDIT[id]?`<div style="margin-left:28px">${qsAnsEditorHTML(id)}</div>`:""}</div>
      <div style="display:flex;gap:4px">${locked?"":`<button title="${hidden?"wieder fragen":"ausblenden"}" onclick="qsToggleHidden(${kAttr})">${hidden?"🚫":"👁️"}</button>`}${cq?`<button title="löschen" onclick="qsDeleteCustom(${kAttr})">🗑️</button>`:""}</div>
    </div>`;
  }).join("");
@@ -3262,7 +3312,7 @@ function questionHTML(q){
  }
  if(type==="textarea"){
    const ph=id==="freeText"?"Freie Schilderung des Anrufers, zusätzliche Angaben, Besonderheiten …":"z. B. Verletzungen, Schmerzen, Haut, Temperatur, Unfallmechanismus, Vergiftung …";
-   return `<label>${label}</label><textarea id="ans" rows="6" placeholder="${ph}" style="width:100%;box-sizing:border-box"></textarea><div class="row" style="margin-top:8px"><button class="primary" onclick="answer('${id}',document.getElementById('ans').value)">Antwort übernehmen</button>${id==="e_exposure"?`<button onclick="answer('${id}','Unauffällig')">Unauffällig</button><button onclick="answer('${id}','unklar')">unklar</button>`:""}${id==="freeText"?`<button onclick="answer('${id}','')">Keine weiteren Angaben</button>`:""}</div>`;
+   return `<label>${label}</label><textarea id="ans" rows="6" placeholder="${ph}" style="width:100%;box-sizing:border-box"></textarea><div class="row" style="margin-top:8px"><button class="primary" onclick="answer('${id}',document.getElementById('ans').value)">Antwort übernehmen</button>${id==="e_exposure"?qsAnswerList("e_exposure").map(a=>`<button onclick="answer('${id}',${esc(JSON.stringify(a.label))})">${esc(a.label)}</button>`).join(""):""}${id==="freeText"?`<button onclick="answer('${id}','')">Keine weiteren Angaben</button>`:""}</div>`;
  }
  if(type==="waterState") return `<label>${label}</label><div class="answer">
    <button onclick="answer('${id}','Lebenszeichen')">🟢 Mit Lebenszeichen (sichtbar/ansprechbar)</button>
@@ -3290,6 +3340,7 @@ function questionHTML(q){
    <button onclick="answer('${id}','Ja')">Ja</button>
    <button onclick="answer('${id}','Nein')">Nein</button>
    <button onclick="answer('${id}','?')">?</button></div>`;
+ if(QS_ANS_EDIT[id]&&QS_ANS_EDIT[id]!=="equick"&&qsAnswers(id)&&!c?.kt)return qsAnswerButtonsHTML(id,label);
  if(type==="xyn") return `<label>${label}</label><div class="answer">
    <button onclick="answer('${id}','Nein')">Nein</button>
    <button onclick="answer('${id}','Ja')">Ja</button>
@@ -3520,7 +3571,8 @@ async function answer(k,v,auto=false){
  }
  if(k==="count")c.count=v;
  const q=callQs(c).find(x=>x[0]===k);
- c.history.push({id:k,q:q?q[1]:k,a:v,auto:!!auto});
+ const shown=qsPendingLabel&&qsPendingLabel.id===k?`${qsPendingLabel.label} (= ${v})`:v; qsPendingLabel=null;
+ c.history.push({id:k,q:q?q[1]:k,a:shown,auto:!!auto});
  evaluate();
  save();
  notruf();
