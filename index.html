@@ -169,7 +169,7 @@ html[data-device="handy"] #floatDock{left:8px;right:8px;width:auto;top:auto;bott
 </head>
 <body>
 <div style="padding:6px 10px;font-size:11px;color:#94a3b8;font-weight:700;display:flex;flex-wrap:wrap;align-items:center;gap:10px;position:sticky;top:0;z-index:10;background:var(--bg)">
- <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v4.90</span>
+ <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v4.91</span>
  <span id="syncState"></span>
  <span id="simCtl" style="position:absolute;left:50%;transform:translateX(-50%);display:flex;gap:6px;align-items:center"></span>
  <a id="homeLink" href="#" onclick="render('leitstelle');return false" class="hidden" style="color:#64748b;text-decoration:underline;font-weight:600">🖥️ Leitstelle</a>
@@ -7827,8 +7827,10 @@ const SIM_FOLLOW_RATE=0.4;
 let simFollowQueue=[];
 
 function simMakeCall(){
- const tot=SIM_CASES.reduce((a,c)=>a+c.w,0); let r=Math.random()*tot, cs=SIM_CASES[0];
- for(const c of SIM_CASES){r-=c.w;if(r<=0){cs=c;break}}
+ // Krankentransporte (19222) rufen nicht automatisch an – nur Notrufe 112
+ const pool=SIM_CASES.filter(c=>!c.kt);
+ const tot=pool.reduce((a,c)=>a+c.w,0); let r=Math.random()*tot, cs=pool[0];
+ for(const c of pool){r-=c.w;if(r<=0){cs=c;break}}
  const d=cs.mk();
  if(SIM_SELF[cs.id]&&Math.random()<(SIM_SELF_RATE[cs.id]||0.4)){
    const v=SIM_SELF[cs.id](d);

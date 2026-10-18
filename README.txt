@@ -1443,3 +1443,7 @@ Version 4.90:
 - Die Auswahl „Stichwort-Logik wie …“ (vorher „zählt als“) sagt nur noch der eingebauten
   Stichwortlogik (RD_X…RD_D, Reanimation), wie sie die Antwort behandeln soll. Alte
   AAO-Bedingungen auf die Standardwerte greifen weiterhin.
+
+Version 4.91:
+- Übungsanrufe: Krankentransporte (19222) rufen nicht mehr automatisch an, es kommen nur noch
+  Notrufe über 112.
