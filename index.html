@@ -162,7 +162,7 @@ table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:10px 8px
 </head>
 <body>
 <div style="padding:6px 10px;font-size:11px;color:#94a3b8;font-weight:700;display:flex;align-items:center;gap:10px;position:sticky;top:0;z-index:10;background:var(--bg)">
- <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v4.84</span>
+ <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v4.85</span>
  <span id="syncState"></span>
  <a id="homeLink" href="#" onclick="render('leitstelle');return false" class="hidden" style="color:#64748b;text-decoration:underline;font-weight:600">🖥️ Leitstelle</a>
  <a id="monitorLink" href="#" onclick="showMonitorQR();return false" style="color:#64748b;text-decoration:underline;font-weight:600;margin-left:auto">🖥️ Monitor hinzufügen</a>
@@ -613,7 +613,7 @@ const isTerminalLink=(()=>{
  return !!(p.get("vehicle")||p.get("neighbor")||p.get("caller"));
 })();
 const NAV_PAGES_ALL=[
- ["leitstelle","🖥️ Leitstelle"],["notruf","📞 Notruf"],["karte","🗺️ Karte"],["mittel","🚤 Rettungsmittel"],["aao","🧠 AAO"],["ivena","🏥 IVENA"],["ivenaZuweisungen","📋 IVENA-Zuweisungen"],["nachbarLks","🚑 Nachbar LKs"]
+ ["leitstelle","🖥️ Leitstelle"],["notruf","📞 Notruf"],["karte","🗺️ Karte"],["mittel","🚤 Fahrzeuge"],["aao","🧠 AAO"],["ivena","🏥 IVENA"],["ivenaZuweisungen","📋 IVENA-Zuweisungen"],["nachbarLks","🚑 Nachbar LKs"]
 ];
 // Zusatz-Monitor (per QR vom Hauptplatz geöffnet): vollwertige Leitstellen-Oberfläche, die ihren
 // kompletten Zustand in Echtzeit mit dem Hauptplatz und allen anderen Monitoren teilt.
@@ -1409,6 +1409,7 @@ function setUnitStatus(u,status){
  delete u.status7Since; delete u.status8Due;
  if(String(status)==="1"){
    u.status1Since=Date.now();
+   if(u.stackedCallId)checkStackedDispatch(u);
    // Rückfahrzeit möglichst realistisch schätzen: von der zuletzt bekannten Position
    // (Zielklinik einer IVENA-Zuweisung oder sonst dem Einsatzort) zurück zur Heimatwache,
    // mit derselben Geschwindigkeitslogik wie die Hinfahrt (Hubschrauber schneller).
@@ -1992,11 +1993,14 @@ function islandReachable(u){
  if(db.currentCall?.locationIsWater&&waterCapable(u))return true;
  return incidentOnWangerooge()===unitOnIsland(u);
 }
+// DRK-Rettungswagen/-KTW sind Hintergrunddienst: nie automatisch vorschlagen, nur manuell
+// (Reiter DRK) oder wenn ausdrücklich die Organisation DRK angefordert ist.
+function drkBackground(u){return u&&u.org==="DRK"&&["RTW","KTW","NKTW","NEF"].includes(u.type)}
 function availableUnits(type,org=null){
  const orgOk=u=>!org||u.org===org||(org==="DLRG"&&u.wasserrettung);
- const prim=nearestFirst(db.units.filter(u=>!u.neighborLoan&&(!type||u.type===type)&&orgOk(u)&&["1","2"].includes(u.status)&&islandReachable(u)));
+ const prim=nearestFirst(db.units.filter(u=>!u.neighborLoan&&(!type||u.type===type)&&orgOk(u)&&(org==="DRK"||!drkBackground(u))&&["1","2"].includes(u.status)&&islandReachable(u)));
  if(prim.length)return prim;
- return nearestFirst(db.units.filter(u=>!u.neighborLoan&&(!type||u.type===type)&&orgOk(u)&&u.status==="8"&&islandReachable(u)));
+ return nearestFirst(db.units.filter(u=>!u.neighborLoan&&(!type||u.type===type)&&orgOk(u)&&(org==="DRK"||!drkBackground(u))&&u.status==="8"&&islandReachable(u)));
 }
 function chooseOne(type,org=null){return availableUnits(type,org)[0]||null}
 
@@ -2058,9 +2062,9 @@ function thwGroup(u){return String(u.fachgruppe||THW_GROUP_DEFAULT[u.opta]||"Ohn
 function chooseAvailableByType(type,org=null){
  const types=Array.isArray(type)?type:[type];
  const orgOk=u=>!org||u.org===org;
- const primary=nearestFirst(db.units.filter(u=>!u.neighborLoan&&orgOk(u)&&islandReachable(u)&&types.includes(u.type) && ["1","2"].includes(String(u.status))));
+ const primary=nearestFirst(db.units.filter(u=>!u.neighborLoan&&orgOk(u)&&(org==="DRK"||!drkBackground(u))&&islandReachable(u)&&types.includes(u.type) && ["1","2"].includes(String(u.status))));
  if(primary.length)return primary[0];
- const fallback=nearestFirst(db.units.filter(u=>!u.neighborLoan&&orgOk(u)&&islandReachable(u)&&types.includes(u.type) && String(u.status)==="8"));
+ const fallback=nearestFirst(db.units.filter(u=>!u.neighborLoan&&orgOk(u)&&(org==="DRK"||!drkBackground(u))&&islandReachable(u)&&types.includes(u.type) && String(u.status)==="8"));
  return fallback[0]||null;
 }
 // Wasserrettungszug Friesland: Das Führungsfahrzeug (Pelikan Friesland 71/11-01, ELW1) wird
@@ -2203,7 +2207,7 @@ function addManualUnit(){
 }
 // ─── Notruf nachträglich ändern ──────────────────────────────────────────────────────────────
 // Jeder beantwortete Abfragepunkt ist änderbar. Danach wird die AAO neu bewertet; bei bereits
-// alarmierten Einsätzen geht es direkt in „Rettungsmittel bearbeiten“ (zusätzlich nötige Mittel
+// alarmierten Einsätzen geht es direkt in „Fahrzeuge bearbeiten“ (zusätzlich nötige Mittel
 // zum Anhaken, Mittel entfernen/hinzufügen) und von dort mit einem Knopf „Alarm erneut senden“
 // an alle Fahrzeuge (Fahrzeug-Terminals klingeln erneut).
 const CALL_EDIT_OPTIONS={
@@ -2302,6 +2306,89 @@ function resendAlarm(){
  toast(`📢 Alarm erneut an ${n} Fahrzeug${n===1?"":"e"} gesendet`);
  render("leitstelle");
 }
+// ─── R0-Einsätze und Krankentransporte: Stapeln und Warten ──────────────────────────────────
+function callIsLowPrio(c){return !!c&&(c.kt||rLevelOf(c)==="R0")}
+function allOpenCalls(){return [db.currentCall,...(db.activeCalls||[])].filter(Boolean)}
+// Stapeln: Fahrzeug, das noch im Einsatz ist, wird vorgemerkt und bei Status 1 direkt alarmiert.
+function stackUnit(unitId){
+ const c=db.currentCall, u=db.units.find(x=>String(x.id)===String(unitId)); if(!c||!u)return;
+ if(u.stackedCallId&&String(u.stackedCallId)!==String(c.id)){if(!confirm(`${u.opta||u.name} ist schon für Einsatz #${u.stackedCallId} gestapelt. Umhängen?`))return;unstackUnit(u.id,true)}
+ u.stackedCallId=String(c.id);
+ c.stackedUnits=[...new Set([...(c.stackedUnits||[]).map(String),String(u.id)])];
+ c.history=c.history||[]; c.history.push({q:"🔁 Fahrzeug gestapelt",a:`${unitLabel(u)} – wird bei Status 1 direkt alarmiert`});
+ save(); toast(`🔁 ${u.opta||u.name} gestapelt`); showResourcePicker("additional");
+}
+function unstackUnit(unitId,silent){
+ const u=db.units.find(x=>String(x.id)===String(unitId)); if(!u)return;
+ const c=allOpenCalls().find(x=>String(x.id)===String(u.stackedCallId));
+ if(c)c.stackedUnits=(c.stackedUnits||[]).filter(i=>String(i)!==String(u.id));
+ delete u.stackedCallId; save();
+ if(!silent){toast("Stapelung aufgehoben");showResourcePicker("additional")}
+}
+function checkStackedDispatch(u){
+ if(!u||!u.stackedCallId||String(u.status)!=="1")return;
+ const c=allOpenCalls().find(x=>String(x.id)===String(u.stackedCallId)&&!x.endTime);
+ const cid=u.stackedCallId; delete u.stackedCallId;
+ if(!c)return;
+ c.stackedUnits=(c.stackedUnits||[]).filter(i=>String(i)!==String(u.id));
+ setTimeout(()=>{
+   appendUnitToCall(c,u,"gestapelt");
+   c.alarmedUnits=c.alarmedUnits||[]; if(!c.alarmedUnits.some(i=>String(i)===String(u.id)))c.alarmedUnits.push(u.id);
+   if(!c.alarmTime)c.alarmTime=new Date().toISOString();
+   delete c.waitingSince; delete c.waitAlerted;
+   setUnitStatus(u,"3");
+   c.history=c.history||[]; c.history.push({q:"🔁 Gestapeltes Fahrzeug alarmiert",a:`${unitLabel(u)} – nach Status 1 direkt weiter zu Einsatz #${cid}`});
+   save(); if(db.cloud?.enabled)pushCallCloud(c);
+   toast(`🔁 ${u.opta||u.name} fährt jetzt zu Einsatz #${cid}`);
+   if(["leitstelle","mittel"].includes(currentPage)&&!uiLocked)render(currentPage);
+ },0);
+}
+function stackSectionHTML(c){
+ if(!callIsLowPrio(c))return "";
+ const assigned=new Set([...(c.alarmedUnits||[]),...(c.proposedUnitIds||[])].map(String));
+ const types=c.kt?["KTW","NKTW","RTW"]:["RTW","NKTW","KTW"];
+ const busy=nearestFirst(db.units.filter(u=>types.includes(u.type)&&u.org==="Rettungsdienst"&&["3","4","7"].includes(String(u.status))&&!assigned.has(String(u.id))));
+ const stacked=(c.stackedUnits||[]).map(id=>db.units.find(u=>String(u.id)===String(id))).filter(Boolean);
+ return `<div class="suggest" style="background:#f0f9ff;border-color:#7dd3fc;margin-top:10px">
+  <b>🔁 Stapeln</b> <span class="muted" style="font-size:12px">(${c.kt?"Krankentransport":"R0"}) – Fahrzeug im Einsatz vormerken; es wird bei Status 1 automatisch alarmiert.</span>
+  ${stacked.length?`<div style="margin-top:6px">${stacked.map(u=>`<div class="row between" style="padding:4px 0"><span>🔁 <b>${esc(u.opta||u.name)}</b> – ${esc(u.type)} · jetzt ${esc(statusName(String(u.status)))}</span><button style="padding:3px 8px" onclick="unstackUnit('${String(u.id)}')">✕ Aufheben</button></div>`).join("")}</div>`:""}
+  <div class="answer" style="margin-top:6px">${busy.filter(u=>!stacked.includes(u)).slice(0,8).map(u=>`<button onclick="stackUnit('${String(u.id)}')">${esc(u.type)}<small style="display:block">${esc(u.opta||u.name)} · Status ${esc(String(u.status))}${u.stackedCallId?` · schon für #${esc(u.stackedCallId)}`:""}</small></button>`).join("")||`<span class="muted">Kein passendes Fahrzeug im Einsatz.</span>`}</div>
+ </div>`;
+}
+// Warten: Einsatz bleibt liegen; roter Timer an der Einsatznummer; nach 2 Std. erneut vorgelegt.
+const WAIT_REPRESENT_MS=2*3600000;
+function waitCall(id){
+ const c=allOpenCalls().find(x=>String(x.id)===String(id))||db.currentCall; if(!c)return;
+ c.waitingSince=Date.now(); delete c.waitAlerted;
+ c.history=c.history||[]; c.history.push({q:"⏸ Warten",a:"Einsatz zurückgestellt"});
+ if(db.currentCall&&String(db.currentCall.id)===String(c.id))parkCurrentCall();
+ save(); toast(`⏸ Einsatz #${c.id} wartet`); render("leitstelle");
+}
+function resumeCall(id){
+ const c=activateCallById(id); if(!c)return;
+ const mins=c.waitingSince?Math.round((Date.now()-c.waitingSince)/60000):0;
+ delete c.waitingSince; delete c.waitAlerted;
+ c.history.push({q:"▶️ Weiter",a:`nach ${mins} min Wartezeit`});
+ save(); if(c.alarmTime)render("leitstelle"); else{evaluate();prepareAlarm()}
+}
+function waitTimerText(c){const ms=Date.now()-c.waitingSince,h=Math.floor(ms/3600000),m=Math.floor(ms%3600000/60000),sec=Math.floor(ms%60000/1000);return `${h}:${String(m).padStart(2,"0")}:${String(sec).padStart(2,"0")}`}
+function waitBadgeHTML(c){
+ if(!c||!c.waitingSince)return "";
+ return ` <span class="waitTimer" data-call="${esc(String(c.id))}" style="color:#dc2626;font-weight:900;font-size:16px" title="Wartet seit ${new Date(c.waitingSince).toLocaleTimeString("de-DE",{hour:"2-digit",minute:"2-digit"})} Uhr">⏸ ${waitTimerText(c)}</span>${c.waitAlerted?` <span style="color:#dc2626;font-weight:900">⏰ erneut vorgelegt</span>`:""}`;
+}
+function updateWaitTimers(){
+ document.querySelectorAll(".waitTimer").forEach(el=>{const c=allOpenCalls().find(x=>String(x.id)===el.dataset.call);if(c&&c.waitingSince)el.textContent="⏸ "+waitTimerText(c)});
+ for(const c of allOpenCalls()){
+   if(c.waitingSince&&!c.waitAlerted&&Date.now()-c.waitingSince>=WAIT_REPRESENT_MS){
+     c.waitAlerted=true;
+     c.history=c.history||[]; c.history.push({q:"⏰ Erneut vorgelegt",a:"Einsatz wartet seit 2 Stunden"});
+     save();
+     try{playAlarmTone()}catch(e){}
+     toast(`⏰ Einsatz #${c.id} wartet seit 2 Stunden – erneut vorgelegt`);
+     if(currentPage==="leitstelle"&&!uiLocked)render("leitstelle");
+   }
+ }
+}
 function openAdditionalResources(id){
  const c=activateCallById(id);
  if(!c){toast("Einsatz nicht gefunden");return}
@@ -2365,13 +2452,14 @@ function showResourcePicker(mode="additional"){
  const assignedUnits=assignedIds.map(id=>db.units.find(u=>String(u.id)===id)).filter(Boolean);
  document.getElementById("app").innerHTML=`<div class="card call">
   <div class="row between">
-   <div><h2>${isNafo?"📟 Nachforderung":"✏️ Rettungsmittel bearbeiten"}</h2>
+   <div><h2>${isNafo?"📟 Nachforderung":"✏️ Fahrzeuge bearbeiten"}</h2>
    <div class="muted">Einsatz #${esc(c.id)} · ${esc(c.location||"Ort unbekannt")}</div></div>
    <button onclick="render('leitstelle')">Zurück</button>
   </div>
   ${isNafo?`<label>Nachforderungsgrund / Lageänderung</label>
     <textarea id="nafoReason" rows="4" placeholder="z. B. weiterer Patient, Zustand verschlechtert, zusätzliche technische Rettung erforderlich …">${esc(c.pendingNafoReason||"")}</textarea>`:""}
   ${!isNafo?realarmBannerHTML(c):""}
+  ${!isNafo?stackSectionHTML(c):""}
   ${!isNafo?`<label>Aktuell zugeordnete Rettungsmittel</label>
   ${assignedUnits.length?assignedUnits.map(u=>`<div class="row between" style="padding:8px 0;border-bottom:1px solid var(--line)"><span>${vehicleLabelBlock(u)}</span><button onclick="removeCallUnit('${esc(String(u.id))}')">🗑️ Entfernen</button></div>`).join(""):`<p class="muted">Noch keine Mittel zugeordnet.</p>`}
   <hr>`:""}
@@ -2588,7 +2676,7 @@ function incidentCard(c,isSelected){
  const neighborUnit=c.neighborUnitId?db.units.find(u=>String(u.id)===String(c.neighborUnitId)):null;
  return `<div class="card call">
    <div class="row between">
-    <div><h2>${c.alarmTime?"🚨":"📞"} Einsatz #${esc(c.id)}</h2><div class="muted">${esc(c.location||"Ort noch nicht bekannt")}</div></div>
+    <div><h2>${c.alarmTime?"🚨":"📞"} Einsatz #${esc(c.id)}${waitBadgeHTML(c)}</h2><div class="muted">${esc(c.location||"Ort noch nicht bekannt")}</div></div>
     <span class="status ${stateClass}">${state}</span>
    </div>
    <hr>
@@ -2596,7 +2684,7 @@ function incidentCard(c,isSelected){
     <div><label>Einsatzstichwort</label><div class="big">${esc(c.keyword||"Noch keine Bewertung")}</div></div>
     <div><label>Betroffene</label><div class="big">${esc(c.count||"–")}</div></div>
    </div>
-   <div class="suggest-compact"><b>🧠 Vorschlag / alarmierte Mittel</b><div>${c.suggestion||"Noch nicht genügend Angaben."}</div></div>
+   <div class="suggest-compact"><b>🧠 Vorschlag / alarmierte Mittel</b><div>${c.suggestion||"Noch nicht genügend Angaben."}</div>${(c.stackedUnits||[]).length?`<div style="margin-top:4px;color:#0369a1;font-weight:700">🔁 Gestapelt: ${(c.stackedUnits||[]).map(id=>db.units.find(u=>String(u.id)===String(id))).filter(Boolean).map(u=>`${esc(u.opta||u.name)} (${esc(u.type)}, Status ${esc(String(u.status))})`).join(", ")}</div>`:""}</div>
    ${neighborSuggestion?`<div style="margin-top:10px">
      <button class="s0" style="width:100%;border:none;border-radius:9px;padding:12px;font-weight:800;cursor:pointer" onclick="openExternalRequest('${NEIGHBOR_LEITSTELLE[neighborSuggestion.district]}','${esc(String(c.id))}')">
       🚨 Kein eigenes RTW/NEF &lt;20 km frei – bei ${NEIGHBOR_LEITSTELLE[neighborSuggestion.district]==="ostfriesland"?"LST Ostfriesland":"GOL"} anfragen (${esc(neighborSuggestion.district)}, ~${Math.round(neighborSuggestion.distanceKm)} km)
@@ -2608,7 +2696,8 @@ function incidentCard(c,isSelected){
     <button onclick="selectCall('${esc(c.id)}','notruf')">${isSelected?"Notruf öffnen":"Einsatz öffnen"}</button>
     <button onclick="selectCall('${esc(c.id)}','karte')">🗺️ Karte</button>
     ${!c.alarmTime?`<button class="primary" onclick="selectCall('${esc(c.id)}','notruf')">Weiter bearbeiten</button>`:""}
-    <button onclick="openAdditionalResources('${esc(c.id)}')">✏️ Rettungsmittel bearbeiten</button>
+    ${!c.alarmTime&&callIsLowPrio(c)?(c.waitingSince?`<button class="primary" style="background:#dc2626;border-color:#dc2626" onclick="resumeCall('${esc(c.id)}')">▶️ Weiter disponieren</button>`:`<button onclick="waitCall('${esc(c.id)}')" title="R0/KT zurückstellen – Timer läuft, nach 2 Std. erneut vorgelegt">⏸ Warten</button>`):""}
+    <button onclick="openAdditionalResources('${esc(c.id)}')">✏️ Fahrzeuge bearbeiten</button>
     <button onclick="openCallEdit('${esc(c.id)}')" title="Abfragepunkte nachträglich ändern, Rettungsmittel anpassen und Alarm erneut senden">📝 Notruf ändern</button>
     ${c.alarmTime?`<button class="btn blue" onclick="openNachforderung('${esc(c.id)}')">📟 Nachforderung</button>`:""}
     <button onclick="activateCallById('${esc(c.id)}');stagingPickMode=true;render('karte')" title="Bereitstellungsort für Landfahrzeuge auf der Karte wählen">🅿️ ${c.staging?esc(c.staging.name):"Bereitstellungsort"}</button>
@@ -2723,7 +2812,7 @@ function dashboard(){
     }
     const stateColor=c.alarmTime?"#e30613":"#94a3b8";
     return `<div onclick="toggleIncidentExpand('${esc(String(c.id))}')" style="cursor:pointer;background:var(--panel);border:1px solid var(--line);border-left:5px solid ${stateColor};border-radius:10px;padding:8px 14px;margin-top:${i===0?0:-9}px;position:relative;z-index:${sortedCalls.length-i};box-shadow:0 2px 5px rgba(0,0,0,.10);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">
-      <b>#${esc(c.id)}</b> <span class="muted">${esc(c.keyword||"Noch keine Bewertung")}</span>
+      <b>#${esc(c.id)}</b>${waitBadgeHTML(c)} <span class="muted">${esc(c.keyword||"Noch keine Bewertung")}</span>
      </div>`;
   }).join("")}</div>
    <p class="muted" style="margin-top:8px;font-size:11px">📂 Wie ein Aktensortierer: dringende Einsätze oben, R0 danach, bereits alarmierte ganz unten. Auf einen Eintrag tippen, um alle Infos zu sehen.</p>`:`<div class="card"><h2>Keine offenen Einsätze</h2><p class="muted">Starte einen Übungsnotruf.</p></div>`}
@@ -3829,14 +3918,15 @@ function prepareAlarm(){
      const u=o.unitId!=null?db.units.find(x=>x.id===o.unitId):null;const km=u?geographicRank(u):null;
      return u?`<label style="display:flex;gap:8px;align-items:center;font-weight:500;margin:4px 0"><input type="checkbox" style="width:auto" ${(c.optionalChecked||[]).map(String).includes(String(u.id))?"checked":""} onchange="toggleOptionalUnit('${String(u.id)}',this.checked)"> ${esc(u.opta||u.name)} – ${esc(u.type)}${km!=null&&km<999?` <small class="muted">(ca. ${estimatedEtaMinutes(u)} min)</small>`:""} <small class="muted">· ${esc(o.aao)}</small></label>`
        :`<div class="muted" style="margin:4px 0">☐ ${esc(o.type)} – nicht verfügbar <small>· ${esc(o.aao)}</small></div>`}).join("")}</div>`:""}
-   ${(c.proposedUnitIds.length+(c.neighborProposal||[]).length)?"":`<div class="suggest" style="margin-top:8px;background:#fff1f1;border-color:#f3b4b4">⚠️ Kein Einsatzmittel verfügbar. Der Einsatz wird trotzdem alarmiert und angelegt – Fahrzeuge können über „Rettungsmittel bearbeiten“ oder später per Nachforderung ergänzt werden.</div>`}
+   ${(c.proposedUnitIds.length+(c.neighborProposal||[]).length)?"":`<div class="suggest" style="margin-top:8px;background:#fff1f1;border-color:#f3b4b4">⚠️ Kein Einsatzmittel verfügbar. Der Einsatz wird trotzdem alarmiert und angelegt – Fahrzeuge können über „Fahrzeuge bearbeiten“ oder später per Nachforderung ergänzt werden.</div>`}
    ${xtext?`<label style="margin-top:12px">XABCDE</label><pre style="white-space:pre-wrap;background:#f8fafc;padding:10px;border-radius:10px">${esc(xtext)}</pre>`:""}
    <label style="margin-top:12px">📝 Freitext für die Alarmierung</label>
    <textarea id="alarmFreeText" rows="7" placeholder="Zusätzliche Lageinformationen, Hinweise zur Anfahrt, Gefahren, Zugang, Ansprechpartner …">${esc(c.alarmFreeText||"")}</textarea>
    <div class="row" style="margin-top:12px">
      <button onclick="render('leitstelle')">Zurück</button>
-     <button onclick="showResourcePicker('additional')">✏️ Rettungsmittel bearbeiten</button>
-     <button onclick="manageProposal()">🚗 Fahrzeuge bearbeiten</button>
+     <button onclick="showResourcePicker('additional')">✏️ Fahrzeuge bearbeiten</button>
+     <button onclick="manageProposal()">🚗 Vorschlag bearbeiten</button>
+     ${callIsLowPrio(c)?`<button onclick="waitCall('${esc(c.id)}')" title="R0/KT zurückstellen – roter Timer, nach 2 Std. erneut vorgelegt">⏸ Warten</button>`:""}
      <button class="primary" onclick="confirmAlarm()">🚨 Jetzt alarmieren</button>
    </div>
    <p class="muted">Simulation: Es wird keine reale Alarmierung ausgelöst.</p>
@@ -3984,7 +4074,7 @@ function unitEditorHTML(){
  const locs=[...new Set(inCat.map(u=>u.location).filter(Boolean))].sort((a,b)=>a.localeCompare(b,"de"));
  const icon=o=>(typeof ORG_ICON!=="undefined"&&ORG_ICON[o])||(o==="DRK"?"✚":"🚗");
  return `<div class="card">
-  <h2>${d.id==null?"＋ Rettungsmittel anlegen":"✏️ Rettungsmittel bearbeiten"}</h2>
+  <h2>${d.id==null?"＋ Fahrzeug anlegen":"✏️ Fahrzeug bearbeiten"}</h2>
   <label>Kategorie</label>
   <div class="row">${cats.map(o=>`<button class="${d.org===o?"primary":""}" onclick="unitDraft.org=${esc(JSON.stringify(o))};unitDraft.type='';render('mittel')">${icon(o)} ${esc(o)}</button>`).join("")}</div>
   ${d.org?`
@@ -4539,6 +4629,7 @@ async function pollCloudUnits(){
          u.status7Since=Date.now();
          u.status8Due=Date.now()+20*60*1000; // vom Fahrzeugterminal aus zugewiesen
        }
+       if(String(ru.status)==="1"&&u.stackedCallId)checkStackedDispatch(u);
        changed=true;
      }
      if(u && ru.lat!=null && ru.lng!=null && (u.lat!==ru.lat || u.lng!==ru.lng)){
@@ -5685,7 +5776,7 @@ function mittel(){
  <div class="card">
    <div class="row between">
      <div>
-       <h2>🚤 Rettungsmittel</h2>
+       <h2>🚤 Fahrzeuge</h2>
        <p class="muted">Nach Organisation und Standort gruppiert, mit Status und Fahrzeugterminal. Über die Auswahl unten kann nach Organisation gefiltert werden.</p>
      </div>
      <div class="row">
@@ -5694,7 +5785,7 @@ function mittel(){
        <button onclick="cfgPut('units',true);if(ghToken())saveSetupToGitHub('units')" title="Änderungen werden automatisch dauerhaft gespeichert – hier von Hand">☁️ Speichern</button>
        <button onclick="cfgSync('units',true)" title="Dauerhaft gespeicherten Stand laden">📥 Gespeicherten Stand laden</button>
        <button onclick="ghOpenSetup('units')" title="Optional: zusätzlich in GitHub speichern (Token)">🔑</button>
-       <button class="primary" onclick="addUnit()">＋ Rettungsmittel</button>
+       <button class="primary" onclick="addUnit()">＋ Fahrzeug</button>
      </div>
    </div>
    ${orgFilterBar}
@@ -7255,7 +7346,7 @@ function nachbarLks(){
 // Die Automatik (Dienstzeiten, Rückkehr zur Wache, Statusfortschritt) läuft nur am Hauptplatz –
 // Monitore bekommen die Ergebnisse per Live-Sync, sonst würden mehrere Geräte gleichzeitig
 // dieselben Fahrzeuge weiterschalten.
-setInterval(()=>{renderCallTimerBar();const clock=document.getElementById("clock");if(clock)clock.textContent=new Date().toLocaleTimeString("de-DE");if(IS_MONITOR)return;applyDutySchedule();autoReturnToStation();autoAdvanceEnRoute()},1000);
+setInterval(()=>{renderCallTimerBar();const clock=document.getElementById("clock");if(clock)clock.textContent=new Date().toLocaleTimeString("de-DE");if(IS_MONITOR)return;applyDutySchedule();autoReturnToStation();autoAdvanceEnRoute();updateWaitTimers()},1000);
 // Läuft der Hauptplatz in einem Hintergrund-Tab oder mit gesperrtem Bildschirm, drosseln Browser
 // (v. a. mobil/iOS) genau dieses 1-Sekunden-Intervall stark oder pausieren es ganz – der 07:00/
 // 19:00-Dienstplanwechsel (applyDutySchedule) wurde dann teils erst mit großer Verzögerung

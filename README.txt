@@ -1337,3 +1337,19 @@ Version 4.84:
 - Wangerooge: Die Boote von DRK (Wasserwacht) und DLRG („Olli“) bleiben an der Insel – nur
   Einsätze auf der Insel oder auf dem Wasser rund um Wangerooge (bis 8 km von der Inselmitte).
   Das DGzRS-Seenotrettungsboot FRITZ THIEME fährt weiterhin zu allen Einsätzen auf dem Wasser.
+
+Version 4.85:
+- R0-Einsätze und Krankentransporte stapeln: In „Fahrzeuge bearbeiten“ gibt es bei R0/KT den
+  Bereich „🔁 Stapeln“ mit RTW/NKTW/KTW, die gerade im Einsatz sind (Status 3/4/7). Ein gestapeltes
+  Fahrzeug wird in dem Moment, in dem es Status 1 meldet (auch über das Fahrzeug-Terminal),
+  automatisch zu diesem Einsatz alarmiert (Status 3). Aufheben jederzeit möglich; die Einsatzkarte
+  zeigt „🔁 Gestapelt: …“.
+- Warten: R0/KT-Einsätze lassen sich vor der Alarmierung zurückstellen („⏸ Warten“ in der
+  Alarmierung und an der Einsatzkarte). Neben der Einsatznummer läuft dann ein roter, fetter
+  Timer. Nach 2 Stunden wird der Einsatz mit Alarmton erneut vorgelegt („⏰ erneut vorgelegt“).
+  „▶️ Weiter disponieren“ holt ihn zurück in die Alarmierung.
+- DRK-Rettungswagen/-KTW (Hintergrunddienst) werden bei Rettungsdienst-Einsätzen und KTs nie mehr
+  automatisch vorgeschlagen (auch nicht bei „Nächstes freies“), nur manuell im Reiter DRK.
+- Umbenannt: „Rettungsmittel bearbeiten“ → „Fahrzeuge bearbeiten“, Reiter „Rettungsmittel“ →
+  „Fahrzeuge“. Der bisherige Knopf „Fahrzeuge bearbeiten“ vor der Alarmierung heißt jetzt
+  „Vorschlag bearbeiten“ (damit es keine zwei gleichen Knöpfe gibt).
