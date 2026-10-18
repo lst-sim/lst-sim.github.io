@@ -170,7 +170,7 @@ html[data-device="handy"] #floatDock{left:8px;right:8px;width:auto;top:auto;bott
 </head>
 <body>
 <div style="padding:6px 10px;font-size:11px;color:#94a3b8;font-weight:700;display:flex;flex-wrap:wrap;align-items:center;gap:10px;position:sticky;top:0;z-index:10;background:var(--bg)">
- <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v4.98</span>
+ <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v4.99</span>
  <span id="syncState"></span> <a id="deskTag" href="#" onclick="renameDesk();return false" title="Name dieses Platzes (für „offen an …“) – antippen zum Ändern" style="color:#64748b;font-weight:700;text-decoration:none"></a>
  <span id="simCtl" style="position:absolute;left:50%;transform:translateX(-50%);display:flex;gap:6px;align-items:center"></span>
  <a id="homeLink" href="#" onclick="render('leitstelle');return false" class="hidden" style="color:#64748b;text-decoration:underline;font-weight:600">🖥️ Leitstelle</a>
@@ -8006,6 +8006,8 @@ const SIM_FOLLOW_RATE=0.4;
 let simFollowQueue=[];
 
 function simMakeCall(){
+ // Mit KI: bevorzugt ein von der KI frisch erfundener Fall (im Hintergrund vorbereitet)
+ if(simAiReady()&&simAiCases.length&&!simMakeCall.noAi){const s=simAiCases.shift();s.created=Date.now();if(s.loc.geo)simGeocode(s);setTimeout(simAiFill,500);return s}
  // Krankentransporte (19222) rufen nicht automatisch an – nur Notrufe 112
  const pool=SIM_CASES.filter(c=>!c.kt);
  const tot=pool.reduce((a,c)=>a+c.w,0); let r=Math.random()*tot, cs=pool[0];
@@ -8024,7 +8026,7 @@ function simMakeCall(){
  return sim;
 }
 function simMakeFollow(c){
- const base=c.sim, fn=SIM_FOLLOW[base.caseId]; if(!fn)return null;
+ const base=c.sim, fn=SIM_FOLLOW[base.caseId]||(base.caseId==="ai"?(d=>({open:["Hallo, ich hab eben schon angerufen – es hat sich was verändert!"],why:"Es hat sich etwas verändert (entscheide selbst plausibel: Zustand schlechter, neue Gefahr oder dringende Nachfrage)"})):null); if(!fn)return null;
  const d=JSON.parse(JSON.stringify(base.d)); const v=fn(d); if(!v)return null;
  d.open=v.open; if(v.event)d.event=v.event; if(v.f)d.f={...d.f,...v.f};
  ["panic","cpr","fire","danger","inside","time"].forEach(k=>{if(v[k]!==undefined)d[k]=v[k]});
@@ -8035,7 +8037,7 @@ function simMakeFollow(c){
 }
 // beim Auflegen: manchmal ruft der Anrufer später noch einmal an
 function simMaybeFollow(c,force){
- if(!c||!c.sim||c.sim.isFollow||c.sim.noFollow||c.sim.dropped||!SIM_FOLLOW[c.sim.caseId])return;
+ if(!c||!c.sim||c.sim.isFollow||c.sim.noFollow||c.sim.dropped||!(SIM_FOLLOW[c.sim.caseId]||c.sim.caseId==="ai"))return;
  if(!force&&Math.random()>=SIM_FOLLOW_RATE)return;
  const f=simMakeFollow(c); if(!f)return;
  simFollowQueue.push({at:Date.now()+(force?0:rnd(70,240)*1000),sim:f});
@@ -8054,6 +8056,7 @@ async function simGeocode(sim){
 function simSchedule(first){simNextAt=Date.now()+(first?rnd(15,45):rnd(150,480))*1000}
 function simTick(){
  if(!simOn||isTerminalLink)return;
+ simAiFill();
  const now=Date.now();
  const due=simFollowQueue.filter(x=>now>=x.at); simFollowQueue=simFollowQueue.filter(x=>now<x.at);
  due.forEach(x=>simRing(x.sim));
@@ -8243,7 +8246,7 @@ function simAnswerFor(c,text){
 
 // ─── KI-Anrufer (Brücke zu Claude, eigener API-Schlüssel nur auf diesem Gerät) ────────────────
 const SIM_AI_KEY="lst-sim-ai";
-const SIM_AI_MODELS=[["claude-haiku-4-5-20251001","Claude Haiku 4.5 – schnell & günstig (empfohlen)"],["claude-sonnet-5-5","Claude Sonnet 5.5 – natürlicher, teurer"]];
+const SIM_AI_MODELS=[["claude-sonnet-5-5","Claude Sonnet 5.5 – natürlichste Gespräche (empfohlen)"],["claude-haiku-4-5-20251001","Claude Haiku 4.5 – schneller & günstiger"]];
 let simAi=(()=>{try{return Object.assign({on:false,key:"",model:SIM_AI_MODELS[0][0]},JSON.parse(localStorage.getItem(SIM_AI_KEY)||"{}"))}catch(e){return {on:false,key:"",model:SIM_AI_MODELS[0][0]}}})();
 function simAiReady(){return !!(simAi.on&&simAi.key)}
 function simAiSave(){try{localStorage.setItem(SIM_AI_KEY,JSON.stringify(simAi))}catch(e){}}
@@ -8258,7 +8261,9 @@ function simAiSystem(c){
 REGELN:
 - Bleib immer in der Rolle. Antworte NUR mit dem, was der Anrufer ins Telefon sagt: Deutsch, umgangssprachlich, kurz (meist 1–2 Sätze). Keine Regieanweisungen, keine Sternchen, keine Anführungszeichen, keine Erklärungen.
 - Du bist medizinischer Laie: keine Fachbegriffe, keine Diagnosen. Du weißt nur, was du siehst, hörst und weißt.
-- Beantworte genau die gestellte Frage. Nur manchmal eine kleine ungefragte Info oder Gefühlsäußerung.
+- Beantworte genau die gestellte Frage. Gib Informationen nur stückweise, wie ein echter Anrufer – nicht alles auf einmal. Nur manchmal eine kleine ungefragte Info oder Gefühlsäußerung.
+- Reagiere natürlich: Wenn etwas unklar gefragt ist, frag nach. Manchmal musst du kurz nachsehen („Moment …“). Bei Panik antwortest du hastig und unvollständig, wirst aber ruhiger, wenn der Disponent dich beruhigt.
+- Die Adresse nennst du vollständig, wenn danach gefragt wird; Rückfragen zu Hausnummer, Stockwerk, Klingelschild usw. beantwortest du plausibel.
 - Anweisungen des Disponenten (z. B. Herzdruckmassage, Seitenlage, Tür öffnen) führst du aus und sagst kurz, was du gerade tust.
 - Du bleibst in der Leitung, bis die Leitstelle auflegt. Lege nie selbst auf und verabschiede dich nicht von dir aus.
 - Wenn du etwas nicht weißt, sag das. Erfinde keine neuen dramatischen Wendungen. Was unten nicht steht, darfst du unauffällig und plausibel ergänzen.
@@ -8341,12 +8346,86 @@ function simCallerEnd(c){
  }
  return false;
 }
+
+// ─── KI erfindet die Fälle selbst (v4.99) ─────────────────────────────────────────────────────
+// Ist der KI-Anrufer eingerichtet, lässt der Generator im Hintergrund 1–2 neue, abwechslungsreiche
+// Fälle von der KI erfinden (Thema und Ort gibt die App vor, damit Ort/Straßen real bleiben).
+let simAiCases=[], simAiFilling=false, simAiFailAt=0;
+const SIM_AI_TOPICS=[
+ ["internistischer Notfall (z. B. Brustschmerz, Atemnot, Herzrasen, Bauchschmerz, Unterzucker, allergische Reaktion)",30,"home"],
+ ["neurologischer Notfall (z. B. Schlaganfall, Krampfanfall, plötzliche Verwirrtheit, Bewusstlosigkeit)",12,"home"],
+ ["Sturz oder Verletzung zu Hause, bei der Arbeit oder im Garten",12,"home"],
+ ["Kindernotfall (z. B. Fieberkrampf, Verschlucken, Sturz vom Wickeltisch, Vergiftung)",6,"home"],
+ ["Reanimation – Person umgekippt, reagiert nicht, atmet nicht normal",5,"home"],
+ ["psychischer Ausnahmezustand oder Alkohol-/Drogenproblem ohne Selbstverletzung",4,"home"],
+ ["Verkehrsunfall (Pkw, Motorrad, Fahrrad, Fußgänger, auch mit mehreren Beteiligten)",14,"road"],
+ ["Brand (Wohnung, Küche, Keller, Scheune, Fahrzeug, Mülltonne, Böschung) – manchmal mit Personen in Gefahr",10,"home"],
+ ["Technische Hilfeleistung (z. B. Baum auf Straße, Person eingeklemmt, Ölspur, Wasserschaden, Tür öffnen bei hilfloser Person)",5,"road"],
+ ["Wasserrettung an der Küste (Schwimmer in Not, Person vermisst im Wasser, Wattwanderer von der Flut überrascht, Boot in Not)",6,"water"]];
+function simAiPickTopic(){const tot=SIM_AI_TOPICS.reduce((a,t)=>a+t[1],0);let r=Math.random()*tot;for(const t of SIM_AI_TOPICS){r-=t[1];if(r<=0)return t}return SIM_AI_TOPICS[0]}
+const SIM_AI_ALLOWED={event:QS_EVENTS,x:["Nein","Ja","Unklar"],a:["Frei","Gefährdet","Verlegt","Unklar"],b:["Normal","Auffällig","Keine normale Atmung","Unklar"],c:["Unauffällig","Auffällig","Schockzeichen","Relevante Blutung","Unklar"],d:["Wach / orientiert","Bewusstseinsgetrübt","Bewusstlos","Krampfanfall","Neurologisch auffällig","Unklar"],psy:["Ja","Nein"],danger:["ja","nein","unbekannt"],waterState:["Lebenszeichen","Vermisst","Bergung"]};
+function simAiFill(){
+ if(!simAiReady()||!simOn||simAiFilling||simAiCases.length>=2||Date.now()-simAiFailAt<90000)return;
+ simAiFilling=true;
+ simAiMakeCase().then(sm=>{if(sm)simAiCases.push(sm)}).catch(e=>{simAiFailAt=Date.now();console.warn("KI-Fall",e)}).finally(()=>{simAiFilling=false});
+}
+async function simAiMakeCase(){
+ const [topic,,kind]=simAiPickTopic();
+ const loc=kind==="water"?simWaterLoc():kind==="road"?simRoadLoc():simHomeLoc();
+ const selfHint=Math.random()<0.3?"Der Anrufer ist SELBST der Patient (ruft für sich an), sofern das bei dem Fall möglich ist.":Math.random()<0.5?"Der Anrufer ist ein Angehöriger/Mitbewohner/Kollege.":"Der Anrufer ist ein Passant/Zeuge, der die Person nicht kennt.";
+ const sys=`Du erfindest realistische Notrufe für einen Leitstellen-Übungssimulator (Integrierte Leitstelle, Landkreis Friesland, Niedersachsen). Antworte NUR mit einem JSON-Objekt, ohne Erklärung.`;
+ const user=`Erfinde EINEN neuen, glaubwürdigen Notruf über 112.
+Thema: ${topic}
+Ort (fest vorgegeben, so verwenden): ${loc.text}
+${selfHint}
+Variiere Alter, Geschlecht, Anzahl Betroffener (meist 1, manchmal 2–5), Schwere und Stimmung. Keine Suizid-/Selbstverletzungsthemen, keine Gewaltverbrechen.
+JSON-Felder:
+{"caller":{"first":"Vorname","last":"Nachname","g":"m|w"},"patient":{"first":"","last":"","g":"m|w"},"age":Zahl,
+ "isSelf":true|false,"rel":"Beziehung des Anrufers zum Patienten aus Sicht des Anrufers, z. B. 'mein Mann' oder 'ein Radfahrer'","passerby":true|false,
+ "panic":true|false,"cpr":true|false (nur bei Reanimation),"fire":true|false,
+ "open":"erster Satz des Anrufers, wenn die Leitstelle abhebt (umgangssprachlich, oft ohne Adresse)",
+ "event":"was passiert ist, wie es der Anrufer schildert (2–3 Sätze)",
+ "f":{"event":"${QS_EVENTS.join("|")}","count":"Anzahl Betroffene als Zahl","trapped":"Anzahl eingeklemmt","firePeople":"Anzahl durch Feuer bedroht","x":"${SIM_AI_ALLOWED.x.join("|")}","a":"${SIM_AI_ALLOWED.a.join("|")}","b":"${SIM_AI_ALLOWED.b.join("|")}","c":"${SIM_AI_ALLOWED.c.join("|")}","d":"${SIM_AI_ALLOWED.d.join("|")}","e":"weitere Befunde kurz","psy":"Ja|Nein","danger":"ja|nein|unbekannt","waterState":"Lebenszeichen|Vermisst|Bergung (nur bei Wasser)"},
+ "onset":"seit wann (Anrufer-Worte)","hist":"Vorerkrankungen/Medikamente (Anrufer-Worte, oder dass er es nicht weiß)","pain":"Beschwerden in Ich-Form, falls der Patient selbst spricht",
+ "danger":"Gefahr vor Ort in Anrufer-Worten oder leer","inside":"bei Brand: wer noch im Gebäude ist, sonst leer",
+ "extra":["3–5 Sätze, die der Anrufer zwischendurch von selbst sagen könnte"]}`;
+ const txt=await simAiCall(sys,[{role:"user",content:user}],1200);
+ const m=String(txt).match(/\{[\s\S]*\}/); if(!m)throw new Error("kein JSON");
+ const j=JSON.parse(m[0]);
+ const g=x=>x==="w"?"w":"m", person=o=>({g:g(o&&o.g),first:String(o&&o.first||pick(SIM_FIRST[g(o&&o.g)])),last:String(o&&o.last||pick(SIM_LAST))});
+ const fIn=j.f||{}, f={};
+ for(const k of ["event","x","a","b","c","d","psy","danger","waterState"]){const v=fIn[k];if(SIM_AI_ALLOWED[k]&&SIM_AI_ALLOWED[k].includes(v))f[k]=v}
+ for(const k of ["count","trapped","firePeople"]){const n=parseInt(fIn[k],10);if(Number.isFinite(n)&&n>=0)f[k]=String(Math.min(n,30))}
+ f.e=String(fIn.e||"");
+ if(!f.event)f.event=kind==="water"?"Person im Wasser":/Brand/.test(topic)?"Feuer / Rauchentwicklung":/Verkehrsunfall/.test(topic)?"Verkehrsunfall":"Medizinischer Notfall";
+ if(!f.count)f.count="1";
+ const patient=person(j.patient), isSelf=!!j.isSelf;
+ const d={caller:isSelf?patient:person(j.caller),patient,age:Number.isFinite(Number(j.age))?Math.round(Number(j.age)):rint(20,85),
+   isSelf,rel:isSelf?"ich selbst":String(j.rel||""),passerby:!!j.passerby&&!isSelf,panic:!!j.panic,cpr:!!j.cpr||f.b==="Keine normale Atmung",fire:!!j.fire||f.event==="Feuer / Rauchentwicklung",
+   open:[String(j.open||"Hallo, ich brauche Hilfe!")],event:String(j.event||""),f,onset:String(j.onset||""),hist:String(j.hist||""),pain:String(j.pain||""),
+   danger:String(j.danger||""),inside:String(j.inside||""),extra:Array.isArray(j.extra)?j.extra.map(String).slice(0,6):[],ai:true};
+ return {id:"sim"+Date.now().toString(36)+Math.floor(Math.random()*1000),caseId:"ai",num:"112",kt:false,loc,d,phone:"01"+pick(["51","52","60","70","76"])+" "+rint(1000000,9999999),log:[],lastAt:0,spontIdx:0,created:Date.now(),topic};
+}
+// spontaner Satz von der KI (statt fester Liste)
+async function simAiSpontaneous(c){
+ const s=c.sim; s.typing=true; s.lastAt=Date.now();
+ try{
+   const msgs=simAiMessages(c);
+   const last=msgs[msgs.length-1];
+   const nudge="(Der Disponent sagt gerade nichts. Sag von dir aus EINEN kurzen Satz ins Telefon – was sich gerade tut, eine Sorge oder eine Frage. Wiederhole dich nicht.)";
+   if(last.role==="user")last.content+="\n"+nudge; else msgs.push({role:"user",content:nudge});
+   const t=await simAiCall(simAiSystem(c),msgs,120);
+   s.typing=false;
+   if(t&&!c.phoneEnd){simSay(c,t);save();simRefresh()}
+ }catch(e){s.typing=false}
+}
 // spontane Sätze, wenn länger nichts gesagt wurde
 function simSpontaneous(){
  for(const c of allOpenCalls()){
    if(!c.sim||c.phoneEnd||c.sim.typing||!simMine(c))continue;
    if(simCallerEnd(c))continue;
    const s=c.sim; if(Date.now()-s.lastAt<rnd(28,45)*1000)continue;
+   if(simAiReady()){if(Date.now()-s.lastAt>rnd(35,55)*1000)simAiSpontaneous(c);continue}
    const pool=s.speaker==="patient"?["Mir ist so komisch…","Kommt jetzt jemand?","Ich… bin noch da."]:[...(s.d.extra||[])];
    if(c.alarmTime&&Date.now()-new Date(c.alarmTime).getTime()>120000&&!s.kt)pool.push("Ich glaub, ich hör schon das Martinshorn!","Wann sind die denn da?");
    if(s.d.cpr&&s.cprStarted)pool.push("Ich kann bald nicht mehr… zweiundzwanzig, dreiundzwanzig…","Ich drück die ganze Zeit… kommt denn keiner?");
@@ -8448,7 +8527,7 @@ function simChatHTML(c){
  setTimeout(()=>{const lg=document.getElementById("simLog");if(lg)lg.scrollTop=lg.scrollHeight;simMicLiveUpdate()},0);
  const ref=s.isFollow&&String(s.refCallId)!==String(c.id)?simCallById(s.refCallId):null;
  return `<div class="card" style="border:2px solid ${s.num==="19222"?"#1d4ed8":"#e30613"}">
-  <div class="row between"><h3 style="margin:0">🗣️ Übungsanruf ${s.num==="19222"?"19222":"112"} ${simVoice?"– 🔊 Sprachmodus":"– 🔇 Textmodus"}</h3><small class="muted">${simAiReady()?"🤖 KI-Anrufer":"Anrufer antwortet auf typische Fragen (Stichworte)"}</small></div>
+  <div class="row between"><h3 style="margin:0">🗣️ Übungsanruf ${s.num==="19222"?"19222":"112"} ${simVoice?"– 🔊 Sprachmodus":"– 🔇 Textmodus"}</h3><small class="muted">${simAiReady()?`🤖 KI-Anrufer${s.d&&s.d.ai?" · Fall von der KI erfunden":""}`:`Stichwort-Anrufer · <a href="#" onclick="simAiDialog();return false">🤖 echte KI einrichten</a>`}</small></div>
   ${s.isFollow?`<div style="margin-top:6px;padding:6px 10px;border-radius:8px;background:#fef3c7;color:#92400e;font-weight:700">🔁 Erneuter Anruf – Rufnummer bekannt aus Einsatz #${esc(s.refCallId)}${ref?` (${esc(ref.keyword||"—")}, ${esc(ref.location||"")})`:" (Einsatz bereits abgeschlossen)"}
     ${ref?`<button style="margin-left:8px" onclick="simMergeFollow('${esc(String(c.id))}')">↩️ Zu Einsatz #${esc(String(ref.id))} übernehmen</button>`:""}</div>`:""}
   <div id="simLog" style="max-height:${simVoice?"140":"260"}px;overflow:auto;margin-top:6px;padding:4px;background:#f8fafc;border-radius:8px">${simLogHTML(c)}</div>
@@ -8513,8 +8592,15 @@ function simAiDialog(){
  d.style.cssText="position:fixed;inset:0;background:rgba(15,23,42,.55);z-index:2000;display:flex;align-items:center;justify-content:center;padding:16px";
  d.innerHTML=`<div class="card" style="max-width:520px;width:100%;max-height:90vh;overflow:auto;margin:0">
   <h2 style="margin-top:0">🤖 KI-Anrufer</h2>
-  <p>Mit KI antwortet der Anrufer frei auf alles, was du fragst oder sagst – nicht nur auf Stichworte. Der Fall (Ort, Zustand, Vorgeschichte) bleibt derselbe.</p>
-  <p class="muted" style="font-size:13px">Dafür brauchst du einen eigenen API-Schlüssel von Anthropic (Claude Console, console.anthropic.com). Jede Antwort kostet einen kleinen Betrag, mit Haiku meist deutlich unter 1 Cent. Der Schlüssel wird <b>nur auf diesem Gerät</b> gespeichert und nur an Anthropic geschickt – nicht in die Cloud-Sitzung, nicht an andere Geräte. Ohne Schlüssel oder bei Fehlern antwortet der Anrufer wie bisher nach Stichworten.</p>
+  <p>Mit KI antwortet der Anrufer frei auf alles, was du fragst oder sagst – wie ein echter Mensch am Telefon, nicht nur auf Stichworte.</p>
+  <p class="muted" style="font-size:13px">Mit KI werden außerdem die Fälle selbst jedes Mal neu erfunden (Ort und Thema gibt die App vor), und der Anrufer sagt zwischendurch passende Dinge von sich aus.</p>
+  <div style="font-size:13px;background:#f8fafc;border:1px solid var(--line);border-radius:10px;padding:8px 10px">
+   <b>So bekommst du einen Schlüssel:</b><br>
+   1. Auf <b>console.anthropic.com</b> (Claude Console) ein Konto anlegen bzw. anmelden.<br>
+   2. Unter „Billing“ etwas Guthaben aufladen.<br>
+   3. Unter „API Keys“ einen Schlüssel erstellen und hier einfügen → 🔌 Testen → 💾 Speichern.<br>
+   <span class="muted">Jede Antwort kostet einen kleinen Betrag von deinem Guthaben (Preise je Modell bei Anthropic; Haiku ist günstiger als Sonnet). Der Schlüssel bleibt <b>nur auf diesem Gerät</b> und geht nur an Anthropic – nicht in die Cloud-Sitzung, nicht an andere Plätze. Ohne Schlüssel oder bei Fehlern antwortet der Anrufer wie bisher nach Stichworten.</span>
+  </div>
   <label style="display:flex;gap:8px;align-items:center;margin:10px 0"><input type="checkbox" id="simAiOn" ${simAi.on?"checked":""} style="width:auto"> KI-Anrufer verwenden</label>
   <label>Modell</label><select id="simAiModel">${SIM_AI_MODELS.map(([v,l])=>`<option value="${v}" ${simAi.model===v?"selected":""}>${l}</option>`).join("")}</select>
   <label style="margin-top:8px">API-Schlüssel</label><input id="simAiKeyIn" type="password" autocomplete="off" placeholder="sk-ant-…" value="${esc(simAi.key||"")}">

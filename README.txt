@@ -1515,3 +1515,15 @@ Version 4.98:
   „In Einsatz übernehmen“, kein „Aktueller Standort“). Der Ort wird nur noch in der
   Notrufabfrage festgelegt. Die Suche auf der Karte springt nur noch hin (graues Suchergebnis).
   Bereitstellungsort per Karte wählen geht weiterhin.
+
+Version 4.99:
+- KI-Anrufer ausgebaut (🤖 oben, eigener Anthropic-Schlüssel nötig):
+  • Die KI erfindet die Übungsfälle jetzt selbst – jedes Mal neu und abwechslungsreich (Thema
+    und Ort an echten Straßen gibt die App vor, Antworten werden auf die Abfragewerte geprüft).
+    Zwei Fälle werden im Hintergrund vorbereitet, damit beim Klingeln nichts wartet.
+  • Spontane Sätze zwischendurch kommen ebenfalls von der KI, passend zum Gesprächsverlauf.
+  • Natürlicheres Gesprächsverhalten: gibt Infos stückweise, fragt nach, braucht mal „Moment …“,
+    wird ruhiger, wenn man beruhigt. Folgeanrufe gibt es auch bei KI-Fällen.
+  • Standardmodell jetzt Claude Sonnet 5.5 (natürlichere Gespräche), Haiku 4.5 wählbar.
+  • Kurze Anleitung zum Schlüssel im 🤖-Fenster; im Gespräch ohne KI ein Link „echte KI einrichten“.
+- Ohne Schlüssel läuft alles weiter wie bisher (Stichwort-Anrufer mit festen Fällen).
