@@ -170,7 +170,7 @@ html[data-device="handy"] #floatDock{left:8px;right:8px;width:auto;top:auto;bott
 </head>
 <body>
 <div style="padding:6px 10px;font-size:11px;color:#94a3b8;font-weight:700;display:flex;flex-wrap:wrap;align-items:center;gap:10px;position:sticky;top:0;z-index:10;background:var(--bg)">
- <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v4.99</span>
+ <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v5.00</span>
  <span id="syncState"></span> <a id="deskTag" href="#" onclick="renameDesk();return false" title="Name dieses Platzes (für „offen an …“) – antippen zum Ändern" style="color:#64748b;font-weight:700;text-decoration:none"></a>
  <span id="simCtl" style="position:absolute;left:50%;transform:translateX(-50%);display:flex;gap:6px;align-items:center"></span>
  <a id="homeLink" href="#" onclick="render('leitstelle');return false" class="hidden" style="color:#64748b;text-decoration:underline;font-weight:600">🖥️ Leitstelle</a>
@@ -8594,6 +8594,9 @@ function simAiDialog(){
   <h2 style="margin-top:0">🤖 KI-Anrufer</h2>
   <p>Mit KI antwortet der Anrufer frei auf alles, was du fragst oder sagst – wie ein echter Mensch am Telefon, nicht nur auf Stichworte.</p>
   <p class="muted" style="font-size:13px">Mit KI werden außerdem die Fälle selbst jedes Mal neu erfunden (Ort und Thema gibt die App vor), und der Anrufer sagt zwischendurch passende Dinge von sich aus.</p>
+  <div style="font-size:13px;background:#ecfdf5;border:1px solid #86efac;border-radius:10px;padding:8px 10px;margin-bottom:8px">
+   <b>Ohne Schlüssel:</b> Der <a href="https://claude.ai/artifact/HoqVwbPcKeejma6ZFNoHjx" target="_blank" rel="noopener">🗣️ Übungsanrufer 112</a> läuft direkt in Claude über dein Claude-Konto. Dort spielt Claude den Anrufer frei; du fragst parallel hier in der Leitstelle ab (Standort zum Kopieren steht dort). Tippen statt Mikrofon.
+  </div>
   <div style="font-size:13px;background:#f8fafc;border:1px solid var(--line);border-radius:10px;padding:8px 10px">
    <b>So bekommst du einen Schlüssel:</b><br>
    1. Auf <b>console.anthropic.com</b> (Claude Console) ein Konto anlegen bzw. anmelden.<br>

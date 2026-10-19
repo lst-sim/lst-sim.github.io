@@ -1527,3 +1527,11 @@ Version 4.99:
   • Standardmodell jetzt Claude Sonnet 5.5 (natürlichere Gespräche), Haiku 4.5 wählbar.
   • Kurze Anleitung zum Schlüssel im 🤖-Fenster; im Gespräch ohne KI ein Link „echte KI einrichten“.
 - Ohne Schlüssel läuft alles weiter wie bisher (Stichwort-Anrufer mit festen Fällen).
+
+Version 5.00:
+- Neu: „Übungsanrufer 112“ als eigene Seite in Claude (Link im 🤖-Fenster). Dort spielt Claude den
+  Anrufer – ohne API-Schlüssel, über das eigene Claude-Konto: erfundene Fälle (Thema wählbar oder
+  Zufall, Orte an echten Straßen in Friesland), freies Gespräch, Schnellfragen, Vorlesen, Auflegen,
+  „Anrufer ruft erneut an“ und eine Auswertung der eigenen Abfrage durch Claude. Die Abfrage und
+  Alarmierung macht man parallel in der Leitstelle; der Handy-Standort steht zum Kopieren bereit.
+  Grenze: Die Seite ist nicht automatisch mit der Leitstelle verbunden und kann kein Mikrofon nutzen.
