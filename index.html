@@ -170,7 +170,7 @@ html[data-device="handy"] #floatDock{left:8px;right:8px;width:auto;top:auto;bott
 </head>
 <body>
 <div style="padding:6px 10px;font-size:11px;color:#94a3b8;font-weight:700;display:flex;flex-wrap:wrap;align-items:center;gap:10px;position:sticky;top:0;z-index:10;background:var(--bg)">
- <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v5.04</span>
+ <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v5.05</span>
  <span id="syncState"></span> <a id="deskTag" href="#" onclick="renameDesk();return false" title="Name dieses Platzes (für „offen an …“) – antippen zum Ändern" style="color:#64748b;font-weight:700;text-decoration:none"></a>
  <span id="simCtl" style="position:absolute;left:50%;transform:translateX(-50%);display:flex;gap:6px;align-items:center"></span>
  <a id="homeLink" href="#" onclick="render('leitstelle');return false" class="hidden" style="color:#64748b;text-decoration:underline;font-weight:600">🖥️ Leitstelle</a>
@@ -2964,6 +2964,7 @@ function qsCustomHTML(q,c){
 // eigene Fragen auch als AAO-Bedingung anbieten
 function qsSyncRuleFields(){
  Object.keys(AAO_RULE_FIELDS).forEach(k=>{if(k.startsWith("cq_"))delete AAO_RULE_FIELDS[k]});
+ if(AAO_RULE_FIELDS.e_exposure)AAO_RULE_FIELDS.e_exposure.suggest=qsAnswerList("e_exposure").map(a=>a.label);
  Object.keys(QS_ANS_EDIT).forEach(id=>{const f=AAO_RULE_FIELDS[id];if(!f||!f.values)return;f._base=f._base||[...f.values];f.values=[...new Set([...(qsAnswers(id)||[]).map(a=>a.label),...f._base])]});
  ["112","kt"].forEach(key=>(((db.qsConfig||{})[key]||{}).custom||[]).forEach(cq=>{
    const o=qsCustomOptions(cq);
@@ -3201,14 +3202,25 @@ const E_NA_CATALOG=[
 ];
 function eNaIndication(c){
  const a=c?.answers||{}, t=String(a.e_exposure||"").toLowerCase().trim(); if(!t)return null;
- const own=(typeof qsAnswerList==="function"?qsAnswerList("e_exposure"):[]).find(x=>x&&x.na&&t===String(x.label).toLowerCase());
+ const parts=eParts(t);
+ const own=(typeof qsAnswerList==="function"?qsAnswerList("e_exposure"):[]).find(x=>x&&x.na&&parts.includes(String(x.label).toLowerCase()));
  if(own)return own.label;
  const hit=E_NA_CATALOG.find(([re])=>re.test(t)); return hit?hit[1]:null;
 }
+// E-Antwort = angetippte Knöpfe + Freitext, getrennt mit „; “ (z. B. „Unterkühlt; Schürfwunde Knie“)
+function eSubmit(){
+ const chips=[...document.querySelectorAll(".eChip.primary")].map(b=>b.dataset.v);
+ const t=String(document.getElementById("ans")?.value||"").trim();
+ const v=[...chips,t].filter(Boolean).join("; ");
+ if(!v){toast("Bitte Befund eintragen oder einen Knopf antippen");return}
+ answer("e_exposure",v);
+}
+function eParts(v){return String(v||"").split(/;\s*/).map(x=>x.trim()).filter(Boolean)}
 function isBenignExposureText(t){
  const s=String(t||"").trim().toLowerCase();
  if(s==="")return true;
- return ["keine","keine auffälligkeiten","keine befunde","kein befund","unauffällig","o.b.","ob","nichts","nichts auffällig","nichts weiter"].includes(s);
+ const ok=x=>["keine","keine auffälligkeiten","keine befunde","kein befund","unauffällig","o.b.","ob","nichts","nichts auffällig","nichts weiter"].includes(x);
+ return ok(s)||s.split(/;\s*/).filter(Boolean).every(ok);
 }
 // Anzahl-Antworten (eingeklemmt / lebensgefährlich bedroht). Ältere Einsätze hatten "ja"/"nein".
 function answerCount(v){const s=String(v??"").trim().toLowerCase();if(s==="ja")return 1;if(s==="nein"||s==="")return 0;const n=Number(s);return Number.isFinite(n)?n:0}
@@ -3371,6 +3383,7 @@ function qsPrefill(id){
      else if(inp&&inp.type!=="hidden"&&v!=="unbekannt"){inp.value=v;any=true}
      continue;
    }
+   if(k==="e_exposure"){const chips=[...document.querySelectorAll(".eChip")],rest=[];eParts(v).forEach(p=>{const b=chips.find(b=>b.dataset.v===p);if(b){b.classList.add("primary");any=true}else rest.push(p)});const ta=document.getElementById("ans");if(ta&&rest.length){ta.value=rest.join("; ");any=true}continue}
    const inp=document.getElementById("ans");
    if(inp&&(inp.tagName==="TEXTAREA"||inp.type!=="hidden")&&!document.querySelector(".answer button")){inp.value=v;any=true}
    const want=pv.l||v;
@@ -3476,7 +3489,11 @@ function questionHTML(q){
  }
  if(type==="textarea"){
    const ph=id==="freeText"?"Freie Schilderung des Anrufers, zusätzliche Angaben, Besonderheiten …":"z. B. Verletzungen, Schmerzen, Haut, Temperatur, Unfallmechanismus, Vergiftung …";
-   return `<label>${label}</label><textarea id="ans" rows="6" placeholder="${ph}" style="width:100%;box-sizing:border-box"></textarea><div class="row" style="margin-top:8px"><button class="primary" onclick="answer('${id}',document.getElementById('ans').value)">Antwort übernehmen</button>${id==="e_exposure"?qsAnswerList("e_exposure").map(a=>`<button onclick="answer('${id}',${esc(JSON.stringify(a.label))})">${esc(a.label)}</button>`).join(""):""}${id==="freeText"?`<button onclick="answer('${id}','')">Keine weiteren Angaben</button>`:""}</div>`;
+   if(id==="e_exposure")return `<label>${label}</label><textarea id="ans" rows="5" placeholder="${ph}" style="width:100%;box-sizing:border-box"></textarea>
+    <div style="margin-top:8px;font-size:13px;color:#475569;font-weight:600">Zutreffendes antippen (mehrere möglich):</div>
+    <div class="row" style="margin-top:4px;gap:6px">${qsAnswerList("e_exposure").map(a=>`<button type="button" class="eChip" data-v="${esc(a.label)}" onclick="this.classList.toggle('primary')">${a.na?"🚑 ":""}${esc(a.label)}</button>`).join("")}</div>
+    <div class="row" style="margin-top:10px"><button class="primary" onclick="eSubmit()">Antwort übernehmen</button></div>`;
+   return `<label>${label}</label><textarea id="ans" rows="6" placeholder="${ph}" style="width:100%;box-sizing:border-box"></textarea><div class="row" style="margin-top:8px"><button class="primary" onclick="answer('${id}',document.getElementById('ans').value)">Antwort übernehmen</button>${id==="freeText"?`<button onclick="answer('${id}','')">Keine weiteren Angaben</button>`:""}</div>`;
  }
  if(type==="waterState") return `<label>${label}</label><div class="answer">
    <button onclick="answer('${id}','Lebenszeichen')">🟢 Mit Lebenszeichen (sichtbar/ansprechbar)</button>
@@ -6344,7 +6361,7 @@ const AAO_RULE_FIELDS={
  b_breath:{label:"B – Atmung",values:["Normal","Auffällig","Keine normale Atmung","Unklar"]},
  c_circ:{label:"C – Kreislauf",values:["Unauffällig","Auffällig","Schockzeichen","Relevante Blutung","Sonstiges","Unklar"]},
  d_disability:{label:"D – Bewusstsein",values:["Wach / orientiert","Bewusstseinsgetrübt","Bewusstlos","Krampfanfall","Neurologisch auffällig","Unklar"]},
- e_exposure:{label:"E – weitere Befunde (Text)",free:true,placeholder:"exakter Text"},
+ e_exposure:{label:"E – weitere Befunde (Knopf oder Text)",free:true,placeholder:"Knopf wählen oder Text (enthält …; a, b = a ODER b)",suggest:[]},
  locationIsWater:{label:"Einsatzort auf dem Wasser",values:["ja","nein"]},
  freeText:{label:"Freitext enthält",free:true,placeholder:"Stichwort(e), mehrere mit Komma = eins davon"}
 };
@@ -6632,6 +6649,13 @@ function aaoRuleMatches(val,rule,key){
    if(r==="unbekannt")return false;
    return r==="ja"?answerYes(val):(String(val??"").trim()!==""&&!answerYes(val));
  }
+ if(key==="e_exposure"){
+   const v=String(val||"").toLowerCase(), rr=String(rule).trim().toLowerCase();
+   if(rr==="unauffällig/leer")return isBenignExposureText(val);
+   const parts=eParts(v);
+   // Knopf-Name passt genau auf einen angetippten Knopf, sonst Enthält-Suche im ganzen E-Text
+   return rr.split(",").map(x=>x.trim()).filter(Boolean).some(w=>parts.includes(w)||v.includes(w));
+ }
  if(key==="freeText"||(String(key).startsWith("cq_")&&!qsCustomOptions(qsCustom(key)||{kind:"text"})&&(qsCustom(key)||{}).kind!=="number")){
    // Enthält-Suche, Groß-/Kleinschreibung egal; "a, b" = a ODER b
    const t=String(val||"").toLowerCase();
@@ -6695,7 +6719,7 @@ function aaoEditor(){
  const ruleRow=(r,i)=>{
    const f=AAO_RULE_FIELDS[r.k];
    const valInput=!f||f.free
-     ?`<input value="${esc(r.v)}" placeholder="${esc(f?.placeholder||"Wert")}" oninput="aaoDraft._rules[${i}].v=this.value">`
+     ?`<input value="${esc(r.v)}" placeholder="${esc(f?.placeholder||"Wert")}" oninput="aaoDraft._rules[${i}].v=this.value"${f&&f.suggest&&f.suggest.length?` list="aaoSug_${esc(r.k)}"`:""}>${f&&f.suggest&&f.suggest.length?`<datalist id="aaoSug_${esc(r.k)}">${f.suggest.map(v=>`<option value="${esc(v)}">`).join("")}</datalist><div class="row" style="gap:4px;margin-top:4px">${f.suggest.map(v=>`<button type="button" style="padding:2px 8px;font-size:12px" onclick="aaoDraft._rules[${i}].v=${esc(JSON.stringify(v))};render('aao')">${esc(v)}</button>`).join("")}</div>`:""}`
      :`<select onchange="aaoDraft._rules[${i}].v=this.value">${f.values.map(v=>`<option ${v===r.v?"selected":""}>${esc(v)}</option>`).join("")}${f.values.includes(r.v)?"":`<option selected>${esc(r.v)}</option>`}</select>`;
    return `<div class="row" style="flex-wrap:nowrap;margin-bottom:6px"><select style="flex:1" onchange="aaoSetRuleKey(${i},this.value)">${Object.entries(AAO_RULE_FIELDS).map(([k,x])=>`<option value="${k}" ${k===r.k?"selected":""}>${esc(x.label)}</option>`).join("")}${AAO_RULE_FIELDS[r.k]?"":`<option selected value="${esc(r.k)}">${esc(r.k)}</option>`}</select><div style="flex:1">${valInput}</div><label title="Entweder-oder: von allen so markierten Bedingungen reicht EINE" style="display:flex;gap:4px;align-items:center;font-weight:500;white-space:nowrap;margin:0;${r.or?"color:#1d4ed8":""}"><input type="checkbox" style="width:auto" ${r.or?"checked":""} onchange="aaoDraft._rules[${i}].or=this.checked;render('aao')"> oder</label><button title="Bedingung entfernen" onclick="aaoDraft._rules.splice(${i},1);render('aao')">✕</button></div>`;
  };

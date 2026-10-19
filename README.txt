@@ -1597,3 +1597,12 @@ Version 5.04:
   E-Schnellknöpfe lassen sich im Abfrage-Editor mit „🚑 NA-Indikation“ markieren.
 - Eingehende Anrufe (Übungsanrufe und Anrufer-Handy) stehen nach Anrufzeit sortiert untereinander
   – der am längsten wartende oben, mit Nummer und Uhrzeit.
+
+Version 5.05:
+- E in der Notrufabfrage: Die Knöpfe unter dem Freitext sind jetzt zum Antippen (mehrere
+  möglich, blau = gewählt) und werden zusammen mit dem Freitext übernommen, z. B.
+  „Unterkühlt; Schürfwunde am Knie“. „Zurück“ stellt Knöpfe und Text wieder her.
+- AAO: Bei der Bedingung „E – weitere Befunde“ stehen die E-Knöpfe zur Auswahl (antippen oder
+  Text eingeben). Die Bedingung greift, wenn der Knopf gewählt wurde oder der Text vorkommt
+  („a, b“ = a ODER b). Mit „🚑 NA-Indikation“ markierte Knöpfe ziehen weiterhin einen Notarzt.
+- Nur „Unauffällig“ (ohne weitere Befunde) zählt weiter als unauffälliges E (R0 möglich).
