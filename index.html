@@ -170,7 +170,7 @@ html[data-device="handy"] #floatDock{left:8px;right:8px;width:auto;top:auto;bott
 </head>
 <body>
 <div style="padding:6px 10px;font-size:11px;color:#94a3b8;font-weight:700;display:flex;flex-wrap:wrap;align-items:center;gap:10px;position:sticky;top:0;z-index:10;background:var(--bg)">
- <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v5.00</span>
+ <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v5.01</span>
  <span id="syncState"></span> <a id="deskTag" href="#" onclick="renameDesk();return false" title="Name dieses Platzes (für „offen an …“) – antippen zum Ändern" style="color:#64748b;font-weight:700;text-decoration:none"></a>
  <span id="simCtl" style="position:absolute;left:50%;transform:translateX(-50%);display:flex;gap:6px;align-items:center"></span>
  <a id="homeLink" href="#" onclick="render('leitstelle');return false" class="hidden" style="color:#64748b;text-decoration:underline;font-weight:600">🖥️ Leitstelle</a>
@@ -7236,7 +7236,7 @@ function openIvenaAssignment(){
  const iso=new Date(dt.getTime()-dt.getTimezoneOffset()*60000).toISOString().slice(0,16);
  const pa=db.currentCall?.answers||{};
  const genderMap={"M":"M","W":"W"};
- document.getElementById("app").innerHTML=`<div class="card">
+ document.getElementById("app").innerHTML=`${ivenaManvBannerHTML()}<div class="card">
   <div class="row between"><h2>🚑🏥 Neue IVENA-Zuweisung</h2><button onclick="openIvenaManv()">🚨 MANV: mehrere Fahrzeuge</button></div>
   <p class="muted">Nur Fahrzeuge in Status 4 (Am Einsatzort) können zugewiesen werden. Sie wechseln danach direkt auf Status 7 und nach ca. 20 Minuten automatisch auf Status 8.</p>
   <label>Zielklinik</label>
@@ -7264,7 +7264,7 @@ function openIvenaManv(){
  const hospitals=db.ivena, units=assignableTransportUnits().filter(u=>u.type!=="NEF"), nefs=assignableNefUnits();
  if(!units.length){toast("Kein Transportmittel in Status 4 (Am Einsatzort)");return}
  uiLocked=true;
- document.getElementById("app").innerHTML=`<div class="card ivc manvc">
+ document.getElementById("app").innerHTML=`${ivenaManvBannerHTML()}<div class="card ivc manvc">
   <div class="row between ivc-head"><h2>🚨 IVENA MANV – Sammelzuweisung</h2><button onclick="openIvenaAssignment()">Einzelzuweisung</button></div>
   <p class="muted">Mehrere Fahrzeuge (Status 4) gleichzeitig zuweisen. Je Fahrzeug ein Patient mit eigenem PZC (6-stellig, optional) und bei Bedarf eigener Zielklinik. Alle gewählten Fahrzeuge gehen auf Status 7.</p>
   <label>Zielklinik (Standard für alle)</label>
@@ -7444,9 +7444,25 @@ function deleteIvenaAssignment(id,back="ivenaZuweisungen"){
  render(back);
 }
 const IVENA_DEL_STYLE="text-decoration:line-through;color:#94a3b8;opacity:.7";
+// IVENA: MANV-Hinweis oben wie im echten IVENA (v5.01). Erscheint, sobald ein alarmierter Einsatz
+// als MANV gilt (mehr als 3 Betroffene). MANV-Größe als Stufe 10/25/50/100 nach Betroffenenzahl.
+function ivenaManvBannerHTML(){
+ const list=allOpenCalls().filter(c=>c&&!c.kt&&c.alarmTime&&isManv(c));
+ if(!list.length)return "";
+ const stufe=n=>n<=10?10:n<=25?25:n<=50?50:100;
+ const art=c=>{const e=(c.answers||{}).event||"";return ["Verkehrsunfall","Technische Hilfeleistung"].includes(e)?"Traumatologisch":e==="Medizinischer Notfall"?"Internistisch":e==="Feuer / Rauchentwicklung"?"Brand / Rauchgas":e==="Person im Wasser"?"Wasserrettung":""};
+ const lst="Leitstelle "+(SCENARIOS[currentScenarioId]?.label||"");
+ const rows=list.map(c=>{const t=new Date(c.alarmTime).toLocaleTimeString("de-DE",{hour:"2-digit",minute:"2-digit"});const n=Number(c.answers.count)||0;
+   return `<div style="margin-top:4px">MANV-Aktiver Einsatz: ${esc(lst)} hat um ${t} Uhr einen MANV ${stufe(n)} „${esc((c.keyword||"Einsatz").replace(/_/g," "))} ${esc(c.location||"")}“${art(c)?" "+art(c):""} ausgelöst <span style="font-weight:600">(${n} Betroffene, Einsatz #${esc(c.id)})</span>.</div>`}).join("");
+ return `<div style="margin:-2px 0 12px;border:2px solid #c8202d;border-radius:10px;overflow:hidden">
+  <div style="display:flex;justify-content:flex-end;background:#f5c518;padding:4px 8px"><span style="background:#1d4ed8;color:#fff;font-weight:800;font-size:12px;padding:2px 10px;border-radius:4px;line-height:1.2">ℹ️ Information<br>MANV Einsatz</span></div>
+  <div style="background:#f7b9b9;color:#111;text-align:center;font-weight:800;font-size:clamp(15px,2.2vw,22px);line-height:1.3;padding:10px 12px">
+   <div>MANV-Aktiver Einsatz: Es ist ab sofort mit Zuweisungen zu rechnen. Es sind Maßnahmen nach Alarmplan zu aktivieren.</div>${rows}
+  </div></div>`;
+}
 function ivenaZuweisungen(){
  // Klinikansicht wie im echten IVENA: Krankenhaus auswählen → alle Zuweisungen dieses Hauses.
- document.getElementById("app").innerHTML=`<div class="card ivc">
+ document.getElementById("app").innerHTML=`${ivenaManvBannerHTML()}<div class="card ivc">
   <div class="row between ivc-head"><div><h2>📋 IVENA-Zuweisungen</h2><p class="muted">Simulierte Patiententransporte: Fahrzeug(e) → Zielklinik. Rein trainingsintern, keine Verbindung zum realen IVENA.</p></div><button class="primary" onclick="openIvenaAssignment()">➕ Neue Zuweisung</button></div>
   ${ivenaIncomingHTML()}
  </div>`;
@@ -7607,7 +7623,7 @@ function ivena(){
  const rows=db.ivena.filter(h=>db.ivenaAreaFilter.includes(h.area||"Sonstige"));
  const isAuto=db.ivenaMode==="auto";
  const byFach=db.ivenaViewMode==="fachrichtung";
- document.getElementById("app").innerHTML=`<div class="card ivc">
+ document.getElementById("app").innerHTML=`${ivenaManvBannerHTML()}<div class="card ivc">
   <div class="row between ivc-head"><div><h2>🏥 IVENA – Übungsansicht</h2><p class="muted">Lokale Simulation – keine Verbindung zum realen IVENA.</p></div><button class="primary" onclick="addIvena()">＋ Ziel hinzufügen</button></div>
   <label style="margin-top:4px">Leitstellenbereiche</label>
   <div class="row">${areas.map(a=>`<button class="${db.ivenaAreaFilter.includes(a)?"primary":""}" onclick="toggleIvenaArea('${a.replace(/'/g,"\\'")}')">${db.ivenaAreaFilter.includes(a)?"✅ ":""}${esc(a)}</button>`).join("")}</div>
@@ -8026,7 +8042,7 @@ function simMakeCall(){
  return sim;
 }
 function simMakeFollow(c){
- const base=c.sim, fn=SIM_FOLLOW[base.caseId]||(base.caseId==="ai"?(d=>({open:["Hallo, ich hab eben schon angerufen – es hat sich was verändert!"],why:"Es hat sich etwas verändert (entscheide selbst plausibel: Zustand schlechter, neue Gefahr oder dringende Nachfrage)"})):null); if(!fn)return null;
+ const base=c.sim, fn=SIM_FOLLOW[base.caseId]||((base.caseId==="ai"||(base.caseId==="custom"&&simAiReady()))?(d=>({open:["Hallo, ich hab eben schon angerufen – es hat sich was verändert!"],why:"Es hat sich etwas verändert (entscheide selbst plausibel: Zustand schlechter, neue Gefahr oder dringende Nachfrage)"})):null); if(!fn)return null;
  const d=JSON.parse(JSON.stringify(base.d)); const v=fn(d); if(!v)return null;
  d.open=v.open; if(v.event)d.event=v.event; if(v.f)d.f={...d.f,...v.f};
  ["panic","cpr","fire","danger","inside","time"].forEach(k=>{if(v[k]!==undefined)d[k]=v[k]});
@@ -8037,7 +8053,7 @@ function simMakeFollow(c){
 }
 // beim Auflegen: manchmal ruft der Anrufer später noch einmal an
 function simMaybeFollow(c,force){
- if(!c||!c.sim||c.sim.isFollow||c.sim.noFollow||c.sim.dropped||!(SIM_FOLLOW[c.sim.caseId]||c.sim.caseId==="ai"))return;
+ if(!c||!c.sim||c.sim.isFollow||c.sim.noFollow||c.sim.dropped||!(SIM_FOLLOW[c.sim.caseId]||c.sim.caseId==="ai"||(c.sim.caseId==="custom"&&simAiReady())))return;
  if(!force&&Math.random()>=SIM_FOLLOW_RATE)return;
  const f=simMakeFollow(c); if(!f)return;
  simFollowQueue.push({at:Date.now()+(force?0:rnd(70,240)*1000),sim:f});
@@ -8086,7 +8102,7 @@ function simRingTone(){
 }
 function simBannerHTML(){
  return simPending.map(s=>{const col=s.num==="19222"?"#1d4ed8":"#e30613";return `<div class="card" style="background:${col};color:#fff;border:none;margin-bottom:8px;display:flex;align-items:center;justify-content:space-between;gap:12px">
-   <div class="row" style="gap:10px"><span style="font-size:26px">${s.isFollow?"🔁":"📞"}</span><div><b>${s.num==="19222"?"🚑 19222 – Krankentransport":"🚨 Notruf 112"} – Übungsanruf</b><br><span style="opacity:.9">${s.isFollow?`Erneuter Anruf · Rufnummer ${esc(s.phone)} bekannt aus Einsatz #${esc(s.refCallId)}`:"Mobilfunk · Standort wird übermittelt"}</span></div></div>
+   <div class="row" style="gap:10px"><span style="font-size:26px">${s.isFollow?"🔁":"📞"}</span><div><b>${s.num==="19222"?"🚑 19222 – Krankentransport":"🚨 Notruf 112"} – Übungsanruf</b><br><span style="opacity:.9">${s.isFollow?`Erneuter Anruf · Rufnummer ${esc(s.phone)} bekannt aus Einsatz #${esc(s.refCallId)}`:`Mobilfunk · Standort wird übermittelt${s.prepared?" · vorbereiteter Fall":""}`}</span></div></div>
    <button class="primary" style="background:#fff;color:${col}" onclick="simAccept('${s.id}')">✅ Annehmen</button>
  </div>`}).join("");
 }
@@ -8212,7 +8228,8 @@ function simAnswerFor(c,text){
     case "help":out.push(pick(["Danke, danke!","Wie lange dauert das denn?","Okay, gut. Beeilen Sie sich bitte."]));break;
     case "stay":out.push(pick(["Ja, ich bleib dran.","Ja, ich bin hier."]));break;
     case "door":out.push(me?pick(["Ich versuch zur Tür zu kommen… okay, ist auf.","Ich komm hier nicht hoch, die Nachbarin hat einen Schlüssel."]):pick(["Okay, ich mach die Haustür auf.","Ja, ich mach draußen Licht an.","Ich schick meinen Sohn raus zum Winken."]));break;
-    case "loc":out.push((s.loc.kind==="home"?`${s.loc.text}`:`Wir sind ${s.loc.text}`)+(s.loc.kind==="home"?pick(["."," – im Erdgeschoss."," – erster Stock, rechts."," – das gelbe Haus."]):"."));break;
+    case "loc":if(s.loc.custom){out.push(`${s.loc.text}.`);break}
+     out.push((s.loc.kind==="home"?`${s.loc.text}`:`Wir sind ${s.loc.text}`)+(s.loc.kind==="home"?pick(["."," – im Erdgeschoss."," – erster Stock, rechts."," – das gelbe Haus."]):"."));break;
     case "event":out.push(me?(d.isSelf?d.event:(d.pain?d.pain:`Mir geht's nicht gut… ${f.e?f.e.split(",")[0]:"ich weiß auch nicht"}.`)):simFix(s,d.event));break;
     case "who":out.push(me?"Um mich! Ich bin das selbst.":d.passerby?"Ich kenn die Person nicht, ich bin nur vorbeigekommen.":d.rel?`Um ${d.rel.replace(/^mein /,"meinen ").replace(/^ein /,"einen ").replace(/^der /,"den ")}.`:"Ich bin nur der Anrufer.");break;
     case "count":out.push(d.kt?"Nur ein Patient.":me?"Nur ich.":f.count==="0"?"Verletzt ist niemand.":f.count==="1"?pick(["Nur "+he+".","Eine Person."]):`${f.count} Personen.`);break;
@@ -8273,7 +8290,7 @@ DEIN FALL:
 - ${d.isSelf?"Du rufst für DICH SELBST an – du bist der Patient. Sprich in der Ich-Form.":d.passerby?"Du bist zufällig vorbeigekommen und kennst den Betroffenen nicht.":d.clinicCaller?"Du bist Pflegekraft auf Station 3 im Klinikum Wilhelmshaven.":d.rel?`Du rufst an für: ${d.rel}.`:"Du meldest ein Ereignis, das du beobachtest."}
 ${P.first&&!d.isSelf&&!d.fire?`- Betroffene Person: ${P.first} ${P.last}, ${P.g==="w"?"weiblich":"männlich"}${d.age!=null?`, ${d.age} Jahre`:""}.\n`:d.isSelf?`- Du bist ${d.age} Jahre alt.\n`:""}- Ort: ${s.loc.text}.
 - Was los ist: ${d.event}
-${lay?`- Zustand (in Laiensprache beschreiben): ${lay}${f.e?`; außerdem: ${f.e}`:""}.\n`:""}${d.pain?`- Beschwerden: ${d.pain}\n`:""}${d.onset?`- Seit wann: ${d.onset}\n`:""}${d.hist?`- Vorerkrankungen/Medikamente: ${d.hist}\n`:""}${d.danger?`- Gefahr vor Ort: ${d.danger}\n`:""}${d.inside?`- Personen im Gebäude: ${d.inside}\n`:""}${d.kt?`- Krankentransport: Ziel ${d.dest||"?"}, Transport ${d.mode||"?"}, Zeit ${d.time||"?"}, Unterlagen: ${d.doc||"?"}\n`:""}${s.isFollow?`- Du hast vorhin schon einmal angerufen. Jetzt rufst du ERNEUT an, weil: ${s.why||"sich etwas verändert hat"}.\n`:""}${d.extra&&d.extra.length?`- Typische Sätze von dir: ${d.extra.join(" | ")}\n`:""}${alarmMin!=null?`- Die Leitstelle hat vor ${alarmMin} Minuten Hilfe losgeschickt.\n`:""}${c.rea&&c.rea.open&&reaMetroCall===String(c.id)?"- Ein Metronom piept im Takt; du drückst auf die Brust und zählst mit.\n":""}${s.cprStarted?"- Du machst gerade Herzdruckmassage.\n":""}${s.speaker==="patient"&&!d.isSelf?`- WICHTIG: Gerade hat der Anrufer das Telefon an die betroffene Person weitergegeben. Du sprichst jetzt ALS ${P.first} ${P.last} selbst (Ich-Form, ${d.age} Jahre), mit den Beschwerden oben, so wie es dein Zustand erlaubt.\n`:""}`;
+${lay?`- Zustand (in Laiensprache beschreiben): ${lay}${f.e?`; außerdem: ${f.e}`:""}.\n`:""}${d.pain?`- Beschwerden: ${d.pain}\n`:""}${d.onset?`- Seit wann: ${d.onset}\n`:""}${d.hist?`- Vorerkrankungen/Medikamente: ${d.hist}\n`:""}${d.danger?`- Gefahr vor Ort: ${d.danger}\n`:""}${d.inside?`- Personen im Gebäude: ${d.inside}\n`:""}${d.kt?`- Krankentransport: Ziel ${d.dest||"?"}, Transport ${d.mode||"?"}, Zeit ${d.time||"?"}, Unterlagen: ${d.doc||"?"}\n`:""}${d.notes?`- Vorgaben vom Ausbilder für deine Rolle: ${d.notes}\n`:""}${s.isFollow?`- Du hast vorhin schon einmal angerufen. Jetzt rufst du ERNEUT an, weil: ${s.why||"sich etwas verändert hat"}.\n`:""}${d.extra&&d.extra.length?`- Typische Sätze von dir: ${d.extra.join(" | ")}\n`:""}${alarmMin!=null?`- Die Leitstelle hat vor ${alarmMin} Minuten Hilfe losgeschickt.\n`:""}${c.rea&&c.rea.open&&reaMetroCall===String(c.id)?"- Ein Metronom piept im Takt; du drückst auf die Brust und zählst mit.\n":""}${s.cprStarted?"- Du machst gerade Herzdruckmassage.\n":""}${s.speaker==="patient"&&!d.isSelf?`- WICHTIG: Gerade hat der Anrufer das Telefon an die betroffene Person weitergegeben. Du sprichst jetzt ALS ${P.first} ${P.last} selbst (Ich-Form, ${d.age} Jahre), mit den Beschwerden oben, so wie es dein Zustand erlaubt.\n`:""}`;
 }
 function simAiMessages(c){
  const msgs=[{role:"user",content:"(Die Leitstelle nimmt den Anruf an.)"}];
@@ -8552,6 +8569,7 @@ function simCtlHTML(){
  return `<button onclick="simToggleVoice()" title="${simVoice?"Sprachmodus – antippen für Textmodus":"Textmodus – antippen für Sprachmodus"}" style="font-size:20px;padding:2px 8px;background:none;border:1px solid var(--line);border-radius:8px">${simVoice?"🔊":"🔇"}</button>
   <button onclick="simToggleOn()" title="Automatische Übungsnotrufe ${simOn?"ausschalten":"einschalten"}" style="font-size:12px;padding:4px 10px;border-radius:8px;font-weight:800;${simOn?"background:#16a34a;color:#fff;border:1px solid #16a34a":"background:#fff;color:#334155;border:1px solid var(--line)"}">🎲 <span class="simLbl">Übungsnotrufe </span>${simOn?"AN":"AUS"}</button>
   <button onclick="phoneHereToggle()" title="Anrufe vom Anrufer-Handy an diesem Platz ${phoneHere?"ausblenden":"anzeigen"} (${esc(deskName())})" style="font-size:12px;padding:4px 8px;border-radius:8px;font-weight:800;${phoneHere?"background:#e0f2fe;color:#075985;border:1px solid #7dd3fc":"background:#fff;color:#94a3b8;border:1px solid var(--line)"}">📞${phoneHere?"":"✕"}</button>
+  <button onclick="simPrepDialog()" title="Eigenen Notruf vorbereiten (Parameter festlegen, Anrufer spielt ihn)" style="font-size:16px;padding:2px 8px;border-radius:8px;background:none;border:1px solid var(--line)">📝</button>
   <button onclick="simAiDialog()" title="KI-Anrufer einrichten" style="font-size:16px;padding:2px 8px;border-radius:8px;${simAiReady()?"background:#ede9fe;border:1px solid #7c3aed":"background:none;border:1px solid var(--line)"}">🤖</button>`;
 }
 function phoneHereToggle(){
@@ -8586,6 +8604,104 @@ function simToggleOn(){
  renderSimCtl();
  toast(simOn?"🎲 Übungsnotrufe AN – kommen ab jetzt zufällig":"🎲 Übungsnotrufe AUS");
 }
+
+// ─── Eigene Notrufe vorbereiten (v5.01) ──────────────────────────────────────────────────────
+// Ausbilder legt einen Fall mit Parametern an; der Anruf klingelt sofort oder später zufällig an
+// einem gewählten Platz und wird dort gespielt (regelbasiert oder mit KI). Plätze melden sich in
+// db.desks an, vorbereitete Anrufe liegen in db.simPrepared (beides live synchron).
+function deskHeartbeat(){
+ if(isTerminalLink)return;
+ db.desks=Array.isArray(db.desks)?db.desks:[];
+ let me=db.desks.find(d=>d&&d.id===DEVICE_ID);
+ const now=Date.now();
+ if(!me){me={id:DEVICE_ID,name:deskName(),seen:now};db.desks.push(me);save();return}
+ if(me.name!==deskName()||now-(me.seen||0)>60000){me.name=deskName();me.seen=now;save()}
+}
+function activeDesks(){return (db.desks||[]).filter(d=>d&&Date.now()-(d.seen||0)<5*60000)}
+function simPreparedTick(){
+ if(isTerminalLink)return;
+ const list=Array.isArray(db.simPrepared)?db.simPrepared:[]; if(!list.length)return;
+ const now=Date.now();
+ const mine=list.filter(x=>x&&x.at<=now&&x.target===DEVICE_ID);
+ if(!mine.length)return;
+ db.simPrepared=list.filter(x=>!mine.includes(x)); save();
+ mine.forEach(x=>{try{simRing(simFromParams(x.p))}catch(e){console.warn(e)}});
+}
+const SIM_DEFAULT_EVENT_TEXT={"Medizinischer Notfall":"Es geht ihm ganz schlecht.","Reanimation":"Er ist einfach umgefallen und reagiert nicht mehr!","Feuer / Rauchentwicklung":"Hier brennt es!","Verkehrsunfall":"Hier ist ein Unfall passiert!","Technische Hilfeleistung":"Hier brauchen wir die Feuerwehr.","Person im Wasser":"Da ist jemand im Wasser in Not!","Vermisste Person":"Wir vermissen jemanden.","Sonstiger Notfall":"Ich brauche Hilfe."};
+function simFromParams(p){
+ const ev=p.evt||"Medizinischer Notfall";
+ const pat={g:p.patG==="w"?"w":p.patG==="m"?"m":pick(["m","w"])};
+ const [pf,pl]=String(p.patName||"").trim().split(/\s+(.+)/); pat.first=pf||pick(SIM_FIRST[pat.g]); pat.last=pl||pick(SIM_LAST);
+ const self=p.who==="self", passerby=p.who==="passant";
+ let caller=self?pat:{g:p.callerG==="w"?"w":p.callerG==="m"?"m":pick(["m","w"])};
+ if(!self){const [cf,cl]=String(p.callerName||"").trim().split(/\s+(.+)/);caller.first=cf||pick(SIM_FIRST[caller.g]);caller.last=cl||pick(SIM_LAST)}
+ const n=x=>{const v=parseInt(x,10);return Number.isFinite(v)&&v>=0?String(v):"0"};
+ const f={event:ev,count:n(p.count||1)==="0"&&!/Feuer|Technische/.test(ev)?"1":n(p.count||1),trapped:n(p.trapped),firePeople:n(p.firePeople),x:p.x||"Nein",a:p.a||"Frei",b:p.b||"Normal",c:p.c||"Unauffällig",d:p.d||"Wach / orientiert",e:String(p.e||""),psy:p.psy||"Nein",danger:p.dangerText?"ja":"nein"};
+ if(ev==="Person im Wasser"){f.water="Ja";f.waterState=p.waterState||"Lebenszeichen"}
+ const event=String(p.event||"").trim()||SIM_DEFAULT_EVENT_TEXT[ev]||"Ich brauche Hilfe.";
+ const first=String(p.open||"").trim()||(self?"Hallo, ich brauche Hilfe… "+event.split(/(?<=[.!?])\s/)[0]:"Hallo?! "+event.split(/(?<=[.!?])\s/)[0]);
+ const d={caller,patient:pat,age:Number.isFinite(parseInt(p.age,10))?parseInt(p.age,10):rint(25,85),isSelf:self,passerby,rel:self?"ich selbst":String(p.rel||"").trim()||(passerby?"":"ein Angehöriger"),
+  panic:p.mood==="panisch",cpr:f.b==="Keine normale Atmung",fire:ev==="Feuer / Rauchentwicklung",open:[first],event,f,
+  onset:String(p.onset||""),hist:String(p.hist||""),pain:String(p.pain||""),danger:String(p.dangerText||""),inside:String(p.inside||""),
+  extra:String(p.extra||"").split(/\n+/).map(x=>x.trim()).filter(Boolean),notes:String(p.notes||""),custom:true};
+ let loc;
+ const addr=String(p.addr||"").trim();
+ if(p.water&&SIM_WATER[Number(p.water)]){const w=SIM_WATER[Number(p.water)];loc={kind:"water",text:w.n,addr:w.n.replace(/^(am|auf) /,""),town:w.town,lat:w.lat,lng:w.lng,water:true}}
+ else if(addr){loc={kind:"home",custom:true,text:addr,addr,town:"",lat:53.3969,lng:8.1362,geo:true}}
+ else loc=ev==="Person im Wasser"?simWaterLoc():ev==="Verkehrsunfall"||ev==="Technische Hilfeleistung"?simRoadLoc():simHomeLoc();
+ const sim={id:"sim"+Date.now().toString(36)+Math.floor(Math.random()*1000),caseId:"custom",num:"112",kt:false,loc,d,phone:"01"+pick(["51","52","60","70","76"])+" "+rint(1000000,9999999),log:[],lastAt:0,spontIdx:0,created:Date.now(),prepared:true};
+ if(loc.geo)simGeocode(sim);
+ return sim;
+}
+let simPrepDraft=null;
+function simPrepDialog(){
+ document.getElementById("simPrepDlg")?.remove();
+ const d=simPrepDraft||(simPrepDraft={evt:"Medizinischer Notfall",who:"rel",mood:"besorgt",count:"1",trapped:"0",firePeople:"0",x:"Nein",a:"Frei",b:"Normal",c:"Unauffällig",d:"Wach / orientiert",psy:"Nein",when:"now",mins:"5",target:DEVICE_ID});
+ const sel=(k,opts)=>`<select data-k="${k}" style="width:100%">${opts.map(o=>{const [v,l]=Array.isArray(o)?o:[o,o];return `<option value="${esc(v)}" ${String(d[k]??"")===String(v)?"selected":""}>${esc(l)}</option>`}).join("")}</select>`;
+ const inp=(k,ph,type="text")=>`<input data-k="${k}" type="${type}" placeholder="${esc(ph)}" value="${esc(d[k]??"")}" style="width:100%">`;
+ const ta=(k,ph,rows=2)=>`<textarea data-k="${k}" rows="${rows}" placeholder="${esc(ph)}" style="width:100%;box-sizing:border-box">${esc(d[k]??"")}</textarea>`;
+ const F=(label,html)=>`<div style="min-width:0"><label style="margin:8px 0 3px;font-size:13px">${label}</label>${html}</div>`;
+ const g2=x=>`<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:0 10px">${x}</div>`;
+ const desks=activeDesks(); if(!desks.some(x=>x.id===DEVICE_ID))desks.unshift({id:DEVICE_ID,name:deskName()});
+ const pend=(db.simPrepared||[]).filter(Boolean);
+ const el=document.createElement("div"); el.id="simPrepDlg";
+ el.style.cssText="position:fixed;inset:0;background:rgba(15,23,42,.55);z-index:2000;display:flex;align-items:flex-start;justify-content:center;padding:16px;overflow:auto";
+ el.innerHTML=`<div class="card" style="max-width:720px;width:100%;margin:0" oninput="simPrepRead()" onchange="simPrepRead()">
+  <div class="row between"><h2 style="margin:0">📝 Eigenen Notruf vorbereiten</h2><button onclick="document.getElementById('simPrepDlg').remove()">Schließen</button></div>
+  <p class="muted" style="font-size:13px">Du legst den Fall fest, der Anrufer spielt ihn. Leere Felder werden passend ergänzt. ${simAiReady()?"Mit 🤖 KI spielt der Anrufer frei nach deinen Vorgaben.":"Ohne 🤖 KI antwortet der Anrufer nach Stichworten aus deinen Angaben."}</p>
+  <b style="display:block;margin-top:6px">Lage</b>
+  ${g2(F("Was ist passiert?",sel("evt",QS_EVENTS))+F("Notfallort (Adresse)",inp("addr","z. B. Pelzerstraße 12, Varel – leer = zufällig"))+F("…oder Strand/Hafen",sel("water",[["","–"],...SIM_WATER.map((w,i)=>[String(i),w.n.replace(/^(am|auf) /,"")])])))}
+  ${F("Schilderung des Anrufers",ta("event","z. B. Mein Mann hat seit 20 Minuten Druck auf der Brust, das zieht in den linken Arm.",2))}
+  ${g2(F("Erster Satz (optional)",inp("open","z. B. Hallo?! Bitte kommen Sie schnell!"))+F("Seit wann",inp("onset","z. B. seit 20 Minuten"))+F("Gefahren vor Ort",inp("dangerText","z. B. es riecht nach Gas – leer = keine")))}
+  <b style="display:block;margin-top:10px">Anrufer & Patient</b>
+  ${g2(F("Anrufer ist",sel("who",[["rel","Angehöriger/Bekannter"],["self","selbst der Patient"],["passant","Passant/Zeuge"]]))+F("Beziehung",inp("rel","z. B. mein Mann"))+F("Stimmung",sel("mood",[["ruhig","ruhig"],["besorgt","besorgt"],["panisch","panisch"]])))}
+  ${g2(F("Anrufer Geschlecht",sel("callerG",[["","egal"],["m","männlich"],["w","weiblich"]]))+F("Anrufer Name",inp("callerName","leer = zufällig"))+F("Patient Geschlecht",sel("patG",[["","egal"],["m","männlich"],["w","weiblich"]]))+F("Patient Name",inp("patName","leer = zufällig"))+F("Alter",inp("age","z. B. 67","number")))}
+  <b style="display:block;margin-top:10px">Betroffene & Zustand</b>
+  ${g2(F("Betroffene",inp("count","1","number"))+F("eingeklemmt",inp("trapped","0","number"))+F("durch Feuer bedroht",inp("firePeople","0","number"))+F("Wasser: Zustand",sel("waterState",[["Lebenszeichen","Lebenszeichen"],["Vermisst","Vermisst"],["Bergung","Bergung"]])))}
+  ${g2(F("X – Blutung",sel("x",["Nein","Ja","Unklar"]))+F("A – Atemweg",sel("a",["Frei","Gefährdet","Verlegt","Unklar"]))+F("B – Atmung",sel("b",["Normal","Auffällig","Keine normale Atmung","Unklar"]))+F("C – Kreislauf",sel("c",["Unauffällig","Auffällig","Schockzeichen","Relevante Blutung","Unklar"]))+F("D – Bewusstsein",sel("d",["Wach / orientiert","Bewusstseinsgetrübt","Bewusstlos","Krampfanfall","Neurologisch auffällig","Unklar"]))+F("Psy",sel("psy",["Nein","Ja"])))}
+  ${g2(F("E / Beschwerden",inp("e","z. B. Schmerzen linker Arm, kaltschweißig"))+F("Beschwerden in Ich-Form (wenn Patient spricht)",inp("pain","z. B. Mir drückt es auf der Brust"))+F("Vorerkrankungen/Medikamente",inp("hist","z. B. Bluthochdruck, Blutverdünner"))+F("Personen im Gebäude (Brand)",inp("inside","z. B. Oma im 1. OG")))}
+  ${F("Sätze, die der Anrufer zwischendurch sagt (je Zeile einer)",ta("extra","Er schwitzt so stark!\nSoll ich die Tür aufmachen?",2))}
+  ${F("Hinweise nur für die KI (z. B. „versteht die Frage nach dem Ort erst beim zweiten Mal“)",ta("notes","",2))}
+  <b style="display:block;margin-top:10px">Wann und wo klingelt es?</b>
+  ${g2(F("Zeitpunkt",sel("when",[["now","sofort"],["in","in … Minuten"],["rand","zufällig innerhalb von … Minuten"]]))+F("Minuten",inp("mins","5","number"))+F("Platz",sel("target",desks.map(x=>[x.id,x.name+(x.id===DEVICE_ID?" (dieser)":"")]))))}
+  <div class="row" style="justify-content:flex-end;margin-top:12px"><button onclick="simPrepDraft=null;simPrepDialog()">Leeren</button><button class="primary" onclick="simPrepSave()">📞 Notruf einplanen</button></div>
+  ${pend.length?`<hr><b>Geplante Notrufe</b>${pend.map(x=>`<div class="row between" style="padding:6px 0;border-bottom:1px solid var(--line)"><span>${esc(x.p.evt)} – ${esc(x.p.addr||"zufälliger Ort")} · ${x.at<=Date.now()?"jetzt":new Date(x.at).toLocaleTimeString("de-DE",{hour:"2-digit",minute:"2-digit"})+(x.hidden?" (zufällig, geheim)":"")} · ${esc(x.targetName||"")}</span><button onclick="simPrepCancel('${esc(x.id)}')">✕</button></div>`).join("")}`:""}
+ </div>`;
+ document.body.appendChild(el);
+}
+function simPrepRead(){const dlg=document.getElementById("simPrepDlg");if(!dlg)return;dlg.querySelectorAll("[data-k]").forEach(x=>{simPrepDraft[x.dataset.k]=x.value})}
+function simPrepSave(){
+ simPrepRead(); const p={...simPrepDraft};
+ const mins=Math.max(0,Number(p.mins)||0);
+ const at=p.when==="now"?Date.now():p.when==="in"?Date.now()+mins*60000:Date.now()+Math.random()*Math.max(1,mins)*60000;
+ const target=p.target||DEVICE_ID, tn=(activeDesks().find(x=>x.id===target)||{name:deskName()}).name;
+ db.simPrepared=Array.isArray(db.simPrepared)?db.simPrepared:[];
+ db.simPrepared.push({id:"prep"+Date.now().toString(36),at,target,targetName:tn,hidden:p.when==="rand",p,by:deskName()});
+ save(); toast(p.when==="now"?`📞 Notruf geht jetzt an ${tn}`:`📞 Notruf eingeplant für ${tn}`);
+ document.getElementById("simPrepDlg")?.remove(); simPrepTickSoon();
+}
+function simPrepTickSoon(){setTimeout(simPreparedTick,300)}
+function simPrepCancel(id){db.simPrepared=(db.simPrepared||[]).filter(x=>x&&x.id!==id);save();simPrepDialog()}
 function simAiDialog(){
  document.getElementById("simAiDlg")?.remove();
  const d=document.createElement("div"); d.id="simAiDlg";
@@ -8755,9 +8871,10 @@ function floatTick(){
  renderFloat();
 }
 
-setInterval(()=>{renderCallTimerBar();const clock=document.getElementById("clock");if(clock)clock.textContent=new Date().toLocaleTimeString("de-DE");if(!isTerminalLink){simTick();simSpontaneous();floatTick()}if(IS_MONITOR)return;applyDutySchedule();autoReturnToStation();autoAdvanceEnRoute();updateWaitTimers()},1000);
+setInterval(()=>{renderCallTimerBar();const clock=document.getElementById("clock");if(clock)clock.textContent=new Date().toLocaleTimeString("de-DE");if(!isTerminalLink){simTick();simSpontaneous();floatTick();simPreparedTick();if(Date.now()%15000<1000)deskHeartbeat()}if(IS_MONITOR)return;applyDutySchedule();autoReturnToStation();autoAdvanceEnRoute();updateWaitTimers()},1000);
 renderSimCtl();
 try{qsSyncRuleFields()}catch(e){}
+setTimeout(()=>{try{deskHeartbeat()}catch(e){}},2500);
 // Läuft der Hauptplatz in einem Hintergrund-Tab oder mit gesperrtem Bildschirm, drosseln Browser
 // (v. a. mobil/iOS) genau dieses 1-Sekunden-Intervall stark oder pausieren es ganz – der 07:00/
 // 19:00-Dienstplanwechsel (applyDutySchedule) wurde dann teils erst mit großer Verzögerung

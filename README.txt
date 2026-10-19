@@ -1535,3 +1535,18 @@ Version 5.00:
   „Anrufer ruft erneut an“ und eine Auswertung der eigenen Abfrage durch Claude. Die Abfrage und
   Alarmierung macht man parallel in der Leitstelle; der Handy-Standort steht zum Kopieren bereit.
   Grenze: Die Seite ist nicht automatisch mit der Leitstelle verbunden und kann kein Mikrofon nutzen.
+
+Version 5.01:
+- 📝 Eigenen Notruf vorbereiten (oben neben 🤖): Ausbilder legt den Fall mit Parametern fest –
+  Ereignis, Adresse (oder Strand/Hafen), Schilderung, erster Satz, Anrufer (selbst/Angehöriger/
+  Passant, Stimmung, Name), Patient (Alter, Geschlecht, Name), Betroffene/eingeklemmt/bedroht,
+  X/A/B/C/D, Psy, Beschwerden, Vorerkrankungen, Gefahren, Sätze zwischendurch und Hinweise nur für
+  die KI. Klingeln: sofort, in X Minuten oder zufällig innerhalb von X Minuten (geheim), an diesem
+  oder einem anderen Platz der Sitzung. Der Anrufer spielt genau diesen Fall (mit 🤖 KI frei, sonst
+  nach Stichworten). Geplante Notrufe lassen sich im selben Fenster wieder löschen.
+- IVENA: Bei einem alarmierten MANV (mehr als 3 Betroffene) steht oben in IVENA (Übungsansicht,
+  Zuweisungen, Anmeldung, MANV-Zuweisung) wie im echten IVENA der rote Hinweis „MANV-Aktiver Einsatz:
+  Es ist ab sofort mit Zuweisungen zu rechnen …“ mit Uhrzeit, MANV-Stufe (10/25/50/100 nach
+  Betroffenenzahl), Stichwort, Ort und Art (z. B. Traumatologisch) sowie „Information MANV Einsatz“.
+- Übungsanrufer 112 (Seite in Claude): neu „✍️ Eigenen Fall vorgeben“ – Fall in Stichworten
+  beschreiben, Claude spielt ihn.
