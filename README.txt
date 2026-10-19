@@ -1562,3 +1562,17 @@ Version 5.02:
   nicht genau“) statt mit einem Standardsatz.
 - Ehrlich: Das ist keine echte KI, sondern ein deutlich schlauerer Regel-Anrufer. Völlig freie
   Gespräche gibt es nur mit 🤖 (eigener Schlüssel) oder auf der Seite „Übungsanrufer 112“ in Claude.
+
+Version 5.03:
+- Anrufer noch schlauer: Zu jedem Anruf gibt es jetzt ein festes, stimmiges „Fallwissen“, aus dem
+  er auch unerwartete Detailfragen beantwortet und sich dabei nicht widerspricht: Augen auf?,
+  kann sprechen/sich bewegen?, wo liegt er (passend zur Schilderung, z. B. Küche), sind Sie bei
+  ihm?, Tür offen?, erbrochen?, Fieber?, Alkohol?, Blutverdünner?, Allergien?, Diabetes?,
+  schwanger?, Gewicht, gestürzt/Kopf angeschlagen?, Lippen blau?, Puls, Haustiere, wann zuletzt
+  normal gesehen, „wie geht es ihm jetzt?“.
+- Schlaganfall-Test (FAST): „Bitten Sie ihn zu lächeln“, „beide Arme heben“, „Satz nachsprechen“
+  → passende Befunde beim Schlaganfall, sonst unauffällig.
+- Adresse mit festem Stockwerk, Klingelschild (Nachname) und Hausbeschreibung; „Wie schreibt man
+  das?“ → buchstabiert. Angehörige (Mann/Frau/Vater/Mutter/Kind) tragen denselben Nachnamen.
+- Aufgeregte Anrufer werden ungeduldig, wenn lange gefragt und noch nicht alarmiert wurde
+  („Warum fragen Sie so viel? Schicken Sie doch endlich jemanden!“).

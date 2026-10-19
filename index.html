@@ -170,7 +170,7 @@ html[data-device="handy"] #floatDock{left:8px;right:8px;width:auto;top:auto;bott
 </head>
 <body>
 <div style="padding:6px 10px;font-size:11px;color:#94a3b8;font-weight:700;display:flex;flex-wrap:wrap;align-items:center;gap:10px;position:sticky;top:0;z-index:10;background:var(--bg)">
- <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v5.02</span>
+ <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v5.03</span>
  <span id="syncState"></span> <a id="deskTag" href="#" onclick="renameDesk();return false" title="Name dieses Platzes (für „offen an …“) – antippen zum Ändern" style="color:#64748b;font-weight:700;text-decoration:none"></a>
  <span id="simCtl" style="position:absolute;left:50%;transform:translateX(-50%);display:flex;gap:6px;align-items:center"></span>
  <a id="homeLink" href="#" onclick="render('leitstelle');return false" class="hidden" style="color:#64748b;text-decoration:underline;font-weight:600">🖥️ Leitstelle</a>
@@ -8035,6 +8035,7 @@ function simMakeCall(){
    Object.assign(d,{open:v.open,event:v.event,hist:v.hist||d.hist,pain:v.pain,extra:v.extra||[]});
    if(v.f)d.f={...d.f,...v.f};
  }
+ if(!d.isSelf&&d.caller&&d.patient&&/^mein(e)? (mann|frau|vater|mutter|kind|sohn|tochter)/.test(String(d.rel||"")))d.caller.last=d.patient.last;
  const loc=cs.loc==="water"?simWaterLoc():cs.loc==="road"?simRoadLoc():simHomeLoc();
  const id="sim"+Date.now().toString(36)+Math.floor(Math.random()*1000);
  const sim={id,caseId:cs.id,num:cs.num,kt:!!cs.kt,loc,d,phone:"01"+pick(["51","52","60","70","76"])+" "+rint(1000000,9999999),log:[],lastAt:0,spontIdx:0,created:Date.now()};
@@ -8157,7 +8158,7 @@ const SIM_INTENTS=[
  ["help",/hilfe (ist|kommt)|unterwegs|schicke|kommen gleich|ist alarmiert|rettungsdienst kommt|rettungswagen kommt|feuerwehr kommt/],
  ["stay",/bleiben sie|nicht auflegen|dran bleiben|am telefon/],
  ["door",/t(ü|ue)r (auf|öffnen|offen)|licht an|einweisen|an die stra(ss|ß)e|winken/],
- ["loc",/\bwo\b(?!.*(schmerz|weh|blut))|adresse|stra(ss|ß)e|hausnummer|welche(r|m)? (stadt|ort)|wo genau|standort|ortsteil|stockwerk|etage/],
+ ["loc",/klingel|eingang|hinterhaus|welches haus|\bwo\b(?!.*(schmerz|weh|blut))|adresse|stra(ss|ß)e|hausnummer|welche(r|m)? (stadt|ort)|wo genau|standort|ortsteil|stockwerk|etage/],
  ["event",/was (ist |genau |denn |jetzt |da |nun )*(passiert|los)|worum geht|schildern|erz(ä|ae)hlen sie|was hat sich (ver)?(ä|ae)ndert/],
  ["who",/f(ü|ue)r wen|wer ist (betroffen|der patient|krank|verletzt)|sind sie selbst|sie selbst betroffen|um wen geht/],
  ["count",/wie ?viele|anzahl|weitere (person|verletzte)|noch jemand verletzt|mehrere|betroffen|verletzte\b|gibt es verletzt/],
@@ -8201,7 +8202,7 @@ function simFix(s,t){const [He,he]=simHe(s);if(he==="er")return String(t);return
 // Versteht Tippfehler und Umschreibungen, mehrere Fragen in einem Satz, Rückfragen („wie bitte?“),
 // Bestätigungen, Ja/Nein-Fragen zu Details des Falls und Anweisungen. Merkt sich, was schon gesagt
 // wurde, wiederholt sich nicht wörtlich und wird ruhiger, wenn man ihn beruhigt.
-const SIM_VOCAB=["ansprechbar","bewusstlos","bewusstsein","reagiert","atmet","atmung","atmen","luft","blutet","blutung","schmerzen","vorerkrankungen","medikamente","tabletten","adresse","hausnummer","stockwerk","etage","eingeklemmt","eingeschlossen","verletzt","verletzte","brennt","rauch","feuer","flammen","passiert","notfallort","strasse","straße","telefonnummer","rückrufnummer","geschlecht","schwindelig","kaltschweißig","blass","herzdruckmassage","seitenlage","lautsprecher","defibrillator","krankenhaus","personen","betroffen","gefahren","gefährlich","benzin","wasser","schwimmer","allergie","diabetes","zucker","schlaganfall","krampfanfall","bewegen","sprechen","antwortet"];
+const SIM_VOCAB=["erbrochen","übergeben","fieber","temperatur","lächeln","bewegen","aufstehen","schlüssel","blutverdünner","allergien","diabetiker","schwanger","gewicht","gestürzt","hingefallen","umgefallen","buchstabieren","bläulich","haustür","ansprechbar","bewusstlos","bewusstsein","reagiert","atmet","atmung","atmen","luft","blutet","blutung","schmerzen","vorerkrankungen","medikamente","tabletten","adresse","hausnummer","stockwerk","etage","eingeklemmt","eingeschlossen","verletzt","verletzte","brennt","rauch","feuer","flammen","passiert","notfallort","strasse","straße","telefonnummer","rückrufnummer","geschlecht","schwindelig","kaltschweißig","blass","herzdruckmassage","seitenlage","lautsprecher","defibrillator","krankenhaus","personen","betroffen","gefahren","gefährlich","benzin","wasser","schwimmer","allergie","diabetes","zucker","schlaganfall","krampfanfall","bewegen","sprechen","antwortet"];
 function simLev(a,b){if(Math.abs(a.length-b.length)>2)return 9;const m=a.length,n=b.length;let prev=Array.from({length:n+1},(_,j)=>j);for(let i=1;i<=m;i++){const cur=[i];for(let j=1;j<=n;j++)cur[j]=Math.min(prev[j]+1,cur[j-1]+1,prev[j-1]+(a[i-1]===b[j-1]?0:1));prev=cur}return prev[n]}
 function simNormText(t){
  const x=String(t||"").toLowerCase().replace(/[^\wäöüß\s?]/g," ").replace(/\?/g," ? ");
@@ -8229,6 +8230,70 @@ function simYesNo(c,norm,raw){
  const medical=/schmerz|übel|erbroch|fieber|zucker|herz|allerg|krank|medikament|tablett|alkohol|getrunken|drogen|schwanger/.test(norm);
  return medical?pick(["Nein, nicht dass ich wüsste.","Hat er nichts gesagt, glaube ich nicht.","Nein, ich glaube nicht."]):pick(["Nein.","Nein, eigentlich nicht.","Nein, sehe ich nicht."]);
 }
+
+// ─── Fallwissen (v5.03): zu jedem Anruf ein fester, stimmiger Satz an Details ──────────────────
+// Wird beim ersten Bedarf aus dem Fall abgeleitet (und ggf. einmal plausibel ausgewürfelt) und
+// bleibt für das ganze Gespräch gleich – so passen auch Antworten auf unerwartete Detailfragen.
+function simKB(s){
+ if(s.kb)return s.kb;
+ const d=s.d,f=d.f||{},txt=[d.event,f.e,d.hist,d.pain].join(" ").toLowerCase(),cid=s.caseId;
+ const R=(p)=>Math.random()<p;
+ const D=f.d||"", B=f.b||"", C=f.c||"";
+ const kb={
+  conscious:D==="Bewusstlos"?"no":D==="Bewusstseinsgetrübt"||D==="Krampfanfall"?"half":"yes",
+  slurred:D==="Neurologisch auffällig"||/verwaschen|sprachstörung/.test(txt),
+  stroke:cid==="stroke"||/schlaganfall|mundwinkel|halbseit|armschwäche/.test(txt),
+  vomit:/erbroch|übergeben/.test(txt)?true:R(0.12),
+  fever:/fieber/.test(txt)?(txt.match(/fieber\s*([\d,]+)|([\d,]+)\s*fieber/)?.slice(1).find(Boolean)||"über 39"):null,
+  room:/küche/.test(txt)?"in der Küche auf dem Boden":/\bbad\b|badezimmer/.test(txt)?"im Bad auf dem Boden":/flur/.test(txt)?"im Flur":/wohnzimmer|sofa/.test(txt)?"im Wohnzimmer":/bett|schlafzimmer|bettkante/.test(txt)?"im Schlafzimmer":/treppenhaus/.test(txt)?"im Treppenhaus":s.loc.kind==="water"?"im Wasser bzw. am Strand":s.loc.kind==="road"?(cid&&/vu_/.test(cid)?(f.trapped&&f.trapped!=="0"?"im Auto":"auf der Straße neben dem Auto"):"auf dem Gehweg"):pick(["im Wohnzimmer auf dem Boden","in der Küche auf dem Boden","im Schlafzimmer im Bett","im Bad auf dem Boden","im Flur","im Wohnzimmer auf dem Sofa"]),
+  withPt:!(d.passerby&&R(0.3)),
+  door:s.loc.kind!=="home"?null:d.isSelf&&cid==="fall"?"abgeschlossen, die Nachbarin hat einen Schlüssel":pick(["zu, aber ich kann gleich aufmachen","offen","zu, ich mach gleich auf"]),
+  alcohol:/alkohol/.test(txt)?"Er riecht ein bisschen nach Alkohol.":R(0.1)?"Ein, zwei Bier vielleicht, mehr nicht.":null,
+  thinner:/blutverdünn/.test(txt)?true:null,
+  allergy:/allerg/.test(txt)?"Ja, eine Allergie hat er.":null,
+  diabetes:/diabet|insulin|zucker/.test(txt),
+  weight:(d.patient&&d.patient.g==="w"?rint(55,85):rint(70,110)),
+  fell:/stürz|gestürzt|gefallen|umgekippt|umgefallen|zusammengesackt/.test(txt),
+  head:/kopf|stirn|platzwunde/.test(txt),
+  aed:pick(["Weiß ich nicht.","In der Apotheke um die Ecke hängt einer, glaub ich.","Nein, hier ist keiner."]),
+  pets:R(0.2)?pick(["Ja, wir haben einen Hund, der ist aber lieb.","Eine Katze, die ist im Schlafzimmer."]):null,
+  cyan:B==="Keine normale Atmung"||C==="Schockzeichen"||/blau/.test(txt),
+  pulse:C==="Schockzeichen"||C==="Auffällig"?"Der geht ganz schnell, glaub ich… und schwach.":"Ich weiß nicht, wie man das fühlt…"
+ };
+ return s.kb=kb;
+}
+const SIM_KB_Q=[
+ [/augen (auf|offen|zu)|öffnet .*augen|macht .*augen/,(s,kb,me,H,h)=>me?"Ja, die Augen hab ich auf.":kb.conscious==="no"?`Nein, die Augen sind zu, ${h} reagiert gar nicht!`:kb.conscious==="half"?"Mal auf, mal zu… so ganz schläfrig.":"Ja, die Augen sind auf."],
+ [/(lächeln|grinsen|zähne zeigen)/,(s,kb,me,H,h)=>kb.stroke?`Moment… ${h} versucht's… der Mundwinkel hängt auf der rechten Seite runter!`:"Ja… das geht, sieht normal aus."],
+ [/(beide )?arme? (hoch)?(heben|hochhalten|ausstrecken|nach vorne)/,(s,kb,me,H,h)=>kb.stroke?"Der rechte Arm sinkt sofort wieder runter, der linke geht.":kb.conscious==="no"?`${H} kann doch gar nichts machen!`:"Beide Arme gehen hoch, ja."],
+ [/(satz|nachsprechen|sagen sie .* nach|wiederholen lassen)/,(s,kb,me,H,h)=>kb.slurred?"Das klingt total verwaschen, man versteht kaum was.":kb.conscious==="no"?`${H} sagt gar nichts!`:"Ja, das sagt er ganz normal nach."],
+ [/kann (er|sie) (noch )?(sprechen|reden)|spricht (er|sie)|redet (er|sie)|antwortet (er|sie)/,(s,kb,me,H,h)=>kb.conscious==="no"?`Nein, ${h} sagt gar nichts!`:kb.slurred?"Schon, aber ganz verwaschen.":kb.conscious==="half"?"Nur so ein Murmeln.":"Ja, ganz normal."],
+ [/(kann|bewegt) (er|sie) (sich|die arme|die beine|arme|beine)|aufstehen|steht (er|sie) (auf|wieder)|hochkommen/,(s,kb,me,H,h)=>me?(kb.fell?"Nein, ich komm nicht hoch, die Hüfte tut so weh.":"Ja, bewegen geht."):kb.conscious==="no"?`Nein, ${h} bewegt sich gar nicht.`:kb.stroke?"Die rechte Seite geht irgendwie nicht richtig.":kb.fell&&s.caseId==="fall"?"Sie kann nicht aufstehen, das Bein tut ihr so weh.":"Ja, bewegen kann er sich."],
+ [/erbroch|übergeben|gebrochen|kotzt|spuckt/,(s,kb,me,H,h)=>kb.vomit?"Ja, vorhin einmal.":"Nein, übergeben hat er sich nicht."],
+ [/fieber|temperatur|ist (er|sie) heiß|glüht/,(s,kb,me,H,h)=>kb.fever?`Ja, ${kb.fever} Grad hab ich gemessen.`:"Gemessen hab ich nicht, heiß fühlt sich die Stirn nicht an."],
+ [/wo (genau )?liegt|wo ist (er|sie)( jetzt)?\b|in welchem raum|wo befindet sich (der|die) (patient|person|betroffen)/,(s,kb,me,H,h)=>me?`Ich lieg ${kb.room.replace(/^im |^in der |^auf dem /,m=>m)}.`:`${H} liegt ${kb.room}.`],
+ [/sind sie (bei|neben) (ihm|ihr|der person)|ist jemand bei (ihm|ihr)|sind sie allein|ist noch jemand da/,(s,kb,me,H,h)=>me?"Nein, ich bin allein.":kb.withPt?"Ja, ich bin direkt bei ihm.":"Ich steh etwas weiter weg, aber ich seh ihn."],
+ [/tür (offen|auf|zu|abgeschlossen)|kommen (die|wir|sie) rein|haustür|schlüssel/,(s,kb,me,H,h)=>kb.door?`Die Tür ist ${kb.door}.`:"Hier gibt's keine Tür, wir sind draußen."],
+ [/alkohol|getrunken|betrunken|drogen|tabletten genommen/,(s,kb,me,H,h)=>kb.alcohol||"Nein, getrunken hat er nichts."],
+ [/blutverdünn|marcumar|eliquis|xarelto|aspirin|\bass\b/,(s,kb,me,H,h)=>kb.thinner?"Ja, Blutverdünner nimmt er.":"Weiß ich nicht genau, ich müsste in den Tablettenplan gucken."],
+ [/allergi/,(s,kb,me,H,h)=>kb.allergy||"Allergien? Nicht dass ich wüsste."],
+ [/diabet|zucker|insulin/,(s,kb,me,H,h)=>kb.diabetes?"Ja, er ist Diabetiker, spritzt Insulin.":"Zucker hat er nicht."],
+ [/schwanger/,(s,kb,me,H,h)=>"Nein, schwanger ist sie nicht."],
+ [/wiegt|gewicht|kilo/,(s,kb,me,H,h)=>`So ungefähr ${kb.weight} Kilo.`],
+ [/kopf (gestoßen|angeschlagen|aufgeschlagen|verletzt)|auf den kopf/,(s,kb,me,H,h)=>kb.head?"Ja, am Kopf hat er was abbekommen.":kb.fell?"Ich glaub nicht, aber ich hab's nicht gesehen.":"Nein."],
+ [/gestürzt|hingefallen|umgefallen|gefallen\b/,(s,kb,me,H,h)=>kb.fell?"Ja, er ist umgefallen.":"Nein, gestürzt ist er nicht."],
+ [/zuletzt (gesund|normal|unauffällig)|wann (haben|hatten) sie (ihn|sie) zuletzt|letzte(s)? mal normal/,(s,kb,me,H,h)=>s.d.onset||"Vor einer halben Stunde war noch alles normal."],
+ [/hund|katze|tiere?\b|haustier/,(s,kb,me,H,h)=>kb.pets||"Nein, Tiere haben wir keine."],
+ [/wie schreibt|buchstabier/,(s,kb,me,H,h)=>{const n=(me||s.d.passerby||s.d.fire?s.d.caller:s.d.patient).last||"";return n.split("").join("-").toUpperCase()+"."}],
+ [/lippen|bläulich|blau angelaufen|zyanot/,(s,kb,me,H,h)=>kb.cyan?"Ja, die Lippen sind ganz bläulich!":"Nein, blau ist er nicht."],
+ [/puls|herzschlag/,(s,kb,me,H,h)=>kb.pulse],
+ [/wie geht es (ihm|ihr) (jetzt|gerade)|hat sich (was|etwas) verändert|wird es (besser|schlechter)|veränder/,(s,kb,me,H,h)=>s.d.f.d==="Bewusstlos"?"Unverändert, er reagiert nicht!":pick(["Unverändert, würd ich sagen.","Ein bisschen schlechter, kommt mir vor.","Gleich geblieben."])]
+];
+function simKBAnswer(c,part){
+ const s=c.sim, kb=simKB(s), me=!!s.d.isSelf||s.speaker==="patient", [H,h]=simHe(s);
+ for(const [re,fn] of SIM_KB_Q)if(re.test(part)){const a=fn(s,kb,me,H,h);return a?(me?a:simFix(s,a)):null}
+ return null;
+}
 function simAnswerSmart(c,text){
  const s=c.sim, d=s.d; s.mem=s.mem||{said:[],calm:0};
  const raw=String(text||"").trim(), norm=simNormText(raw);
@@ -8249,8 +8314,8 @@ function simAnswerSmart(c,text){
  const check=/(schauen|gucken|prüfen|sehen|fühlen) sie (mal |bitte )*(nach|ob)|gucken sie mal|schauen sie mal/.test(norm);
  for(const part of (parts.length?parts:[norm]).slice(0,3)){
    const ints=simIntents(part);
-   let ans=null;
-   if(ints.length){ans=simAnswerFor(c,part).replace(/^(Bitte schnell! |Oh Gott… )/,"");
+   let ans=simKBAnswer(c,part);
+   if(!ans&&ints.length){ans=simAnswerFor(c,part).replace(/^(Bitte schnell! |Oh Gott… )/,"");
      if(/^(Wie bitte\?|Das hab ich nicht verstanden\.|Äh… was meinen Sie genau\?|Das weiß ich nicht\.)$/.test(ans))ans=null}
    if(!ans)ans=simYesNo(c,part,raw);
    if(!ans&&/^(bitte |gehen|holen|legen|machen|öffnen|schließen|bleiben|nehmen|setzen|halten|sagen|rufen|schicken|stellen|ziehen|decken)\b|\bsie (bitte )?(mal )?(die|den|das|ihn|sie|ihm|ihr)\b.*\b(auf|zu|hin|weg|raus|rein|hoch|runter)\b/.test(part))
@@ -8266,6 +8331,8 @@ function simAnswerSmart(c,text){
    return simAnswerFor(c,raw);
  }
  let res=out.join(" ");
+ s.mem.q=(s.mem.q||0)+1;
+ if(d.panic&&!c.alarmTime&&(s.mem.q===6||s.mem.q===10))res="Warum fragen Sie so viel? Schicken Sie doch endlich jemanden! "+res;
  if(check)res=pick(["Moment, ich guck… ","Warten Sie… ","Moment… "])+res;
  if(d.panic&&Math.random()<0.35)res=pick(["Bitte schnell! ","Oh Gott… ","Bitte beeilen Sie sich! "])+res;
  return res;
@@ -8303,8 +8370,13 @@ function simAnswerFor(c,text){
     case "stay":out.push(pick(["Ja, ich bleib dran.","Ja, ich bin hier."]));break;
     case "door":out.push(me?pick(["Ich versuch zur Tür zu kommen… okay, ist auf.","Ich komm hier nicht hoch, die Nachbarin hat einen Schlüssel."]):pick(["Okay, ich mach die Haustür auf.","Ja, ich mach draußen Licht an.","Ich schick meinen Sohn raus zum Winken."]));break;
     case "loc":if(s.loc.custom){out.push(`${s.loc.text}.`);break}
-     if(s.loc.kind==="home"&&!s.addrDetail)s.addrDetail=pick(["im Erdgeschoss","erster Stock, rechts","zweiter Stock, links","das gelbe Haus mit der Hecke","Hinterhaus, durch die Einfahrt"]);
-     out.push(s.loc.kind==="home"?(/stock|etage|klingel|eingang|hinterhaus|wo genau im haus/i.test(text)&&s.addrRepeat?`${s.addrDetail.charAt(0).toUpperCase()+s.addrDetail.slice(1)}.`:`${s.loc.text} – ${s.addrDetail}.`):`Wir sind ${s.loc.text}.`);s.addrRepeat=true;break;
+     if(s.loc.kind==="home"&&!s.addrFloor){s.addrFloor=pick(["Erdgeschoss","Erdgeschoss","erster Stock rechts","erster Stock links","zweiter Stock"]);s.addrDesc=pick(["das gelbe Haus mit der Hecke","rotes Backsteinhaus","das Haus mit dem Carport","Eingang hinten über den Hof",""])}
+     {const tl=String(text).toLowerCase();
+      if(s.loc.kind==="home"&&/stock|etage/.test(tl)){out.push(s.addrFloor.charAt(0).toUpperCase()+s.addrFloor.slice(1)+".");break}
+      if(s.loc.kind==="home"&&/klingel/.test(tl)){out.push(`Klingel ${(s.d.patient||s.d.caller).last}.`);break}
+      if(s.loc.kind==="home"&&/eingang|hinterhaus|wie (finden|erkennen)|welches haus|haus aus/.test(tl)){out.push(s.addrDesc?s.addrDesc.charAt(0).toUpperCase()+s.addrDesc.slice(1)+".":"Normales Einfamilienhaus, Hausnummer steht dran.");break}
+      out.push(s.loc.kind==="home"?`${s.loc.text}, ${s.addrFloor}${s.addrDesc?" – "+s.addrDesc:""}.`:`Wir sind ${s.loc.text}.`);}
+     break;
     case "event":out.push(me?(d.isSelf?d.event:(d.pain?d.pain:`Mir geht's nicht gut… ${f.e?f.e.split(",")[0]:"ich weiß auch nicht"}.`)):simFix(s,d.event));break;
     case "who":out.push(me?"Um mich! Ich bin das selbst.":d.passerby?"Ich kenn die Person nicht, ich bin nur vorbeigekommen.":d.rel?`Um ${d.rel.replace(/^mein /,"meinen ").replace(/^ein /,"einen ").replace(/^der /,"den ")}.`:"Ich bin nur der Anrufer.");break;
     case "count":out.push(d.kt?"Nur ein Patient.":me?"Nur ich.":f.count==="0"?"Verletzt ist niemand.":f.count==="1"?pick(["Nur "+he+".","Eine Person."]):`${f.count} Personen.`);break;
