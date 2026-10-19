@@ -170,7 +170,7 @@ html[data-device="handy"] #floatDock{left:8px;right:8px;width:auto;top:auto;bott
 </head>
 <body>
 <div style="padding:6px 10px;font-size:11px;color:#94a3b8;font-weight:700;display:flex;flex-wrap:wrap;align-items:center;gap:10px;position:sticky;top:0;z-index:10;background:var(--bg)">
- <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v5.01</span>
+ <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v5.02</span>
  <span id="syncState"></span> <a id="deskTag" href="#" onclick="renameDesk();return false" title="Name dieses Platzes (für „offen an …“) – antippen zum Ändern" style="color:#64748b;font-weight:700;text-decoration:none"></a>
  <span id="simCtl" style="position:absolute;left:50%;transform:translateX(-50%);display:flex;gap:6px;align-items:center"></span>
  <a id="homeLink" href="#" onclick="render('leitstelle');return false" class="hidden" style="color:#64748b;text-decoration:underline;font-weight:600">🖥️ Leitstelle</a>
@@ -8160,7 +8160,7 @@ const SIM_INTENTS=[
  ["loc",/\bwo\b(?!.*(schmerz|weh|blut))|adresse|stra(ss|ß)e|hausnummer|welche(r|m)? (stadt|ort)|wo genau|standort|ortsteil|stockwerk|etage/],
  ["event",/was (ist |genau |denn |jetzt |da |nun )*(passiert|los)|worum geht|schildern|erz(ä|ae)hlen sie|was hat sich (ver)?(ä|ae)ndert/],
  ["who",/f(ü|ue)r wen|wer ist (betroffen|der patient|krank|verletzt)|sind sie selbst|sie selbst betroffen|um wen geht/],
- ["count",/wie ?viele|anzahl|weitere (person|verletzte)|noch jemand verletzt|mehrere|betroffen/],
+ ["count",/wie ?viele|anzahl|weitere (person|verletzte)|noch jemand verletzt|mehrere|betroffen|verletzte\b|gibt es verletzt/],
  ["trapped",/eingeklemmt|eingeschlossen|raus ?kommen|aussteigen/],
  ["inside",/noch (jemand|personen|leute)|alle (raus|drau(ss|ß)en)|im haus|in der wohnung/],
  ["fire",/brennt|brand|feuer(?!wehr)|flamm|rauch|qualm/],
@@ -8196,6 +8196,80 @@ const SIM_C_SELF={"Unauffällig":["Geht so, ein bisschen schwindelig vielleicht.
 const SIM_A_SELF={"Frei":["Schlucken geht."],"Gefährdet":["Der Hals wird immer enger…"]};
 function simHe(s){return s.d.patient&&s.d.patient.g==="w"?["Sie","sie","ihr"]:["Er","er","ihm"]}
 function simFix(s,t){const [He,he]=simHe(s);if(he==="er")return String(t);return String(t).replace(/\bEr\b/g,"Sie").replace(/(^|[^A-Za-zÄÖÜäöüß])er\b/g,"$1sie").replace(/\bihn\b/g,"sie").replace(/\bihm\b/g,"ihr").replace(/\bEin Mann\b/g,"Eine Frau")}
+
+// ─── Anrufer-Engine 2 (v5.02): „KI-ähnlich“, komplett im Gerät, kostenlos ─────────────────────
+// Versteht Tippfehler und Umschreibungen, mehrere Fragen in einem Satz, Rückfragen („wie bitte?“),
+// Bestätigungen, Ja/Nein-Fragen zu Details des Falls und Anweisungen. Merkt sich, was schon gesagt
+// wurde, wiederholt sich nicht wörtlich und wird ruhiger, wenn man ihn beruhigt.
+const SIM_VOCAB=["ansprechbar","bewusstlos","bewusstsein","reagiert","atmet","atmung","atmen","luft","blutet","blutung","schmerzen","vorerkrankungen","medikamente","tabletten","adresse","hausnummer","stockwerk","etage","eingeklemmt","eingeschlossen","verletzt","verletzte","brennt","rauch","feuer","flammen","passiert","notfallort","strasse","straße","telefonnummer","rückrufnummer","geschlecht","schwindelig","kaltschweißig","blass","herzdruckmassage","seitenlage","lautsprecher","defibrillator","krankenhaus","personen","betroffen","gefahren","gefährlich","benzin","wasser","schwimmer","allergie","diabetes","zucker","schlaganfall","krampfanfall","bewegen","sprechen","antwortet"];
+function simLev(a,b){if(Math.abs(a.length-b.length)>2)return 9;const m=a.length,n=b.length;let prev=Array.from({length:n+1},(_,j)=>j);for(let i=1;i<=m;i++){const cur=[i];for(let j=1;j<=n;j++)cur[j]=Math.min(prev[j]+1,cur[j-1]+1,prev[j-1]+(a[i-1]===b[j-1]?0:1));prev=cur}return prev[n]}
+function simNormText(t){
+ const x=String(t||"").toLowerCase().replace(/[^\wäöüß\s?]/g," ").replace(/\?/g," ? ");
+ const key=w=>w.replace(/ß/g,"ss");
+ const vocab=SIM_VOCAB.map(v=>[v,key(v)]);
+ return x.split(/\s+/).map(w=>{
+   if(w.length<5)return w;
+   const cands=[w,w.replace(/ae/g,"ä").replace(/oe/g,"ö").replace(/ue/g,"ü")];
+   let best=null,bd=9;
+   for(const cw of cands){const k=key(cw);for(const [v,vk] of vocab){if(k===vk)return v;const dd=simLev(k,vk);if(dd<bd){bd=dd;best=v}}}
+   return bd<=(w.length>=9?2:1)?best:w;
+ }).join(" ").replace(/\s+\?/g,"?").trim();
+}
+const SIM_STOP=new Set("der die das den dem des ein eine einen einem einer und oder aber ist sind war hat haben hatte sie er es ihr ihm ihn ich wir mir mich dich du noch schon auch nicht kein keine mal bitte gerade jetzt denn doch ganz sehr irgendwie irgendwas etwas was wie wo wer wann warum gibt geben gibt's dort hier da so zu im in am an auf aus bei mit von vor nach für über unter seit ob wenn dass sein seine seiner ihre ihren können kann könnte haben habt wird werden wurde".split(" "));
+function simFactCorpus(s){const d=s.d,f=d.f||{};return [d.event,f.e,d.hist,d.pain,d.danger,d.inside,d.onset,...(d.extra||[]),...((s.log||[]).filter(m=>m.who!=="lst").map(m=>m.text))].filter(Boolean).join(" . ")}
+function simYesNo(c,norm,raw){
+ // „Hat er Schmerzen in der Brust?“ → im Fall nachsehen
+ if(!/^(hat|ist|sind|haben|kann|können|atmet|blutet|gibt|nimmt|trinkt|raucht|liegt|sitzt|steht|war|hatte|bewegt|spricht|reagiert|schwitzt|redet|sieht|riecht|brennt|kommt|wissen|weiß)\b/.test(norm))return null;
+ const words=norm.replace(/\?/g,"").split(/\s+/).filter(w=>w.length>3&&!SIM_STOP.has(w));
+ if(!words.length)return null;
+ const corpus=simFactCorpus(c.sim).toLowerCase();
+ const sentences=simFactCorpus(c.sim).split(/(?<=[.!?])\s+|\s\.\s/).map(x=>x.trim()).filter(Boolean);
+ const hit=words.find(w=>corpus.includes(w.slice(0,Math.max(5,w.length-2))));
+ if(hit){const sent=sentences.find(x=>x.toLowerCase().includes(hit.slice(0,Math.max(5,hit.length-2))));return "Ja"+(sent?", "+simFix(c.sim,sent.charAt(0).toLowerCase()+sent.slice(1)).replace(/[.!]*$/,"."):".")}
+ const medical=/schmerz|übel|erbroch|fieber|zucker|herz|allerg|krank|medikament|tablett|alkohol|getrunken|drogen|schwanger/.test(norm);
+ return medical?pick(["Nein, nicht dass ich wüsste.","Hat er nichts gesagt, glaube ich nicht.","Nein, ich glaube nicht."]):pick(["Nein.","Nein, eigentlich nicht.","Nein, sehe ich nicht."]);
+}
+function simAnswerSmart(c,text){
+ const s=c.sim, d=s.d; s.mem=s.mem||{said:[],calm:0};
+ const raw=String(text||"").trim(), norm=simNormText(raw);
+ const lastCaller=[...s.log].reverse().find(m=>m.who!=="lst");
+ // Beruhigen senkt die Aufregung
+ if(/ruhig|beruhig|keine sorge|tief durchatmen|sie machen das gut|das schaffen sie/.test(norm)){s.mem.calm++;if(s.mem.calm>=2)d.panic=false}
+ // Rückfrage / nicht verstanden
+ if(/^(wie bitte|was|bitte|nochmal|noch mal|wiederholen|hab ich nicht verstanden|sorry)\W*\??$/.test(norm)&&lastCaller)return pick(["Ich hab gesagt: ","Nochmal: ","Also… "])+lastCaller.text.replace(/^(Bitte schnell! |Oh Gott… )/,"");
+ // reine Bestätigung
+ if(/^(ok|okay|gut|alles klar|verstanden|ja|mhm|aha|in ordnung|danke)\W*$/.test(norm)){
+   const unused=(d.extra||[]).filter(x=>!s.mem.said.includes(x));
+   if(unused.length&&Math.random()<0.5){const t=unused[0];s.mem.said.push(t);return d.isSelf||s.speaker==="patient"?t:simFix(s,t)}
+   return pick(d.panic?["Was soll ich denn jetzt machen?","Ja… und jetzt?","Kommt jemand?"]:["Ja.","Okay.","Gut, und jetzt?"]);
+ }
+ // mehrere Fragen in einem Satz einzeln beantworten
+ const parts=norm.split(/\?|\s(?:und|außerdem|ausserdem|sowie)\s(?=(?:wie|wo|was|wer|wann|ist|hat|atmet|blutet|seit|gibt|können|kann|sind)\b)/).map(x=>x.trim()).filter(x=>x.length>2);
+ const out=[];
+ const check=/(schauen|gucken|prüfen|sehen|fühlen) sie (mal |bitte )*(nach|ob)|gucken sie mal|schauen sie mal/.test(norm);
+ for(const part of (parts.length?parts:[norm]).slice(0,3)){
+   const ints=simIntents(part);
+   let ans=null;
+   if(ints.length){ans=simAnswerFor(c,part).replace(/^(Bitte schnell! |Oh Gott… )/,"");
+     if(/^(Wie bitte\?|Das hab ich nicht verstanden\.|Äh… was meinen Sie genau\?|Das weiß ich nicht\.)$/.test(ans))ans=null}
+   if(!ans)ans=simYesNo(c,part,raw);
+   if(!ans&&/^(bitte |gehen|holen|legen|machen|öffnen|schließen|bleiben|nehmen|setzen|halten|sagen|rufen|schicken|stellen|ziehen|decken)\b|\bsie (bitte )?(mal )?(die|den|das|ihn|sie|ihm|ihr)\b.*\b(auf|zu|hin|weg|raus|rein|hoch|runter)\b/.test(part))
+     ans=pick(["Okay, mach ich.","Ja, Moment… okay.","Mach ich sofort.","Okay… so?"]);
+   if(ans){
+     if(s.mem.said.includes(ans))ans=pick(["Wie gesagt: ","Hab ich doch schon gesagt: ","Nochmal: "])+ans;
+     s.mem.said.push(ans); out.push(ans);
+   }
+ }
+ if(!out.length){
+   // nicht verstanden: menschlich reagieren statt Standardsatz
+   if(/\?$/.test(raw)||/^(wie|wo|was|wer|wann|warum|wieso|welche)/.test(norm))return pick(d.panic?["Was?! Ich… ich weiß nicht! Bitte schicken Sie einfach jemanden!","Ich versteh die Frage nicht, bitte schnell!"]:["Das weiß ich nicht genau.","Hm, das kann ich Ihnen nicht sagen.","Wie meinen Sie das?","Das weiß ich leider nicht."]);
+   return simAnswerFor(c,raw);
+ }
+ let res=out.join(" ");
+ if(check)res=pick(["Moment, ich guck… ","Warten Sie… ","Moment… "])+res;
+ if(d.panic&&Math.random()<0.35)res=pick(["Bitte schnell! ","Oh Gott… ","Bitte beeilen Sie sich! "])+res;
+ return res;
+}
 function simAnswerFor(c,text){
  const s=c.sim, d=s.d, f=d.f||{}, ints=simIntents(text), out=[];
  if(ints.includes("toCaller")&&s.speaker==="patient"){s.speaker="caller";return pick(["Ja, hier bin ich wieder.","Ja? Ich bin wieder dran."])}
@@ -8229,7 +8303,8 @@ function simAnswerFor(c,text){
     case "stay":out.push(pick(["Ja, ich bleib dran.","Ja, ich bin hier."]));break;
     case "door":out.push(me?pick(["Ich versuch zur Tür zu kommen… okay, ist auf.","Ich komm hier nicht hoch, die Nachbarin hat einen Schlüssel."]):pick(["Okay, ich mach die Haustür auf.","Ja, ich mach draußen Licht an.","Ich schick meinen Sohn raus zum Winken."]));break;
     case "loc":if(s.loc.custom){out.push(`${s.loc.text}.`);break}
-     out.push((s.loc.kind==="home"?`${s.loc.text}`:`Wir sind ${s.loc.text}`)+(s.loc.kind==="home"?pick(["."," – im Erdgeschoss."," – erster Stock, rechts."," – das gelbe Haus."]):"."));break;
+     if(s.loc.kind==="home"&&!s.addrDetail)s.addrDetail=pick(["im Erdgeschoss","erster Stock, rechts","zweiter Stock, links","das gelbe Haus mit der Hecke","Hinterhaus, durch die Einfahrt"]);
+     out.push(s.loc.kind==="home"?(/stock|etage|klingel|eingang|hinterhaus|wo genau im haus/i.test(text)&&s.addrRepeat?`${s.addrDetail.charAt(0).toUpperCase()+s.addrDetail.slice(1)}.`:`${s.loc.text} – ${s.addrDetail}.`):`Wir sind ${s.loc.text}.`);s.addrRepeat=true;break;
     case "event":out.push(me?(d.isSelf?d.event:(d.pain?d.pain:`Mir geht's nicht gut… ${f.e?f.e.split(",")[0]:"ich weiß auch nicht"}.`)):simFix(s,d.event));break;
     case "who":out.push(me?"Um mich! Ich bin das selbst.":d.passerby?"Ich kenn die Person nicht, ich bin nur vorbeigekommen.":d.rel?`Um ${d.rel.replace(/^mein /,"meinen ").replace(/^ein /,"einen ").replace(/^der /,"den ")}.`:"Ich bin nur der Anrufer.");break;
     case "count":out.push(d.kt?"Nur ein Patient.":me?"Nur ich.":f.count==="0"?"Verletzt ist niemand.":f.count==="1"?pick(["Nur "+he+".","Eine Person."]):`${f.count} Personen.`);break;
@@ -8315,7 +8390,7 @@ async function simReply(c,text){
    try{const t=await simAiCall(simAiSystem(c),simAiMessages(c));if(t){simIntents(text).forEach(k=>{if((k==="cpr"||k==="keep")&&c.sim.d.cpr)c.sim.cprStarted=true});return t}}
    catch(e){toast("🤖 KI nicht erreichbar ("+String(e.message||e).slice(0,60)+") – Antwort regelbasiert")}
  }
- return simAnswerFor(c,text);
+ return simAnswerSmart(c,text);
 }
 
 // ─── Gespräch ─────────────────────────────────────────────────────────────────────────────────

@@ -1550,3 +1550,15 @@ Version 5.01:
   Betroffenenzahl), Stichwort, Ort und Art (z. B. Traumatologisch) sowie „Information MANV Einsatz“.
 - Übungsanrufer 112 (Seite in Claude): neu „✍️ Eigenen Fall vorgeben“ – Fall in Stichworten
   beschreiben, Claude spielt ihn.
+
+Version 5.02:
+- Anrufer-Engine 2 (ohne KI-Schlüssel, kostenlos, läuft komplett im Gerät): versteht Tippfehler
+  („pasiert“, „ansprechbr“), mehrere Fragen in einem Satz („Ist er ansprechbar und atmet er
+  normal?“), Rückfragen („wie bitte?“ → wiederholt), Bestätigungen („okay“ → sagt etwas Neues),
+  Ja/Nein-Fragen zu Details des Falls („Hat er Schmerzen im Arm?“ → schaut im Fall nach),
+  Anweisungen („Legen Sie ihn hin“ → „Okay, mach ich“), „Schauen Sie mal nach …“ („Moment, ich
+  guck …“). Wiederholt sich nicht wörtlich, Stockwerk/Hausbeschreibung bleibt im Gespräch gleich,
+  wird ruhiger, wenn man beruhigt. Unbekannte Fragen beantwortet er menschlich („Das weiß ich
+  nicht genau“) statt mit einem Standardsatz.
+- Ehrlich: Das ist keine echte KI, sondern ein deutlich schlauerer Regel-Anrufer. Völlig freie
+  Gespräche gibt es nur mit 🤖 (eigener Schlüssel) oder auf der Seite „Übungsanrufer 112“ in Claude.
