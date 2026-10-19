@@ -170,7 +170,7 @@ html[data-device="handy"] #floatDock{left:8px;right:8px;width:auto;top:auto;bott
 </head>
 <body>
 <div style="padding:6px 10px;font-size:11px;color:#94a3b8;font-weight:700;display:flex;flex-wrap:wrap;align-items:center;gap:10px;position:sticky;top:0;z-index:10;background:var(--bg)">
- <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v5.03</span>
+ <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v5.04</span>
  <span id="syncState"></span> <a id="deskTag" href="#" onclick="renameDesk();return false" title="Name dieses Platzes (für „offen an …“) – antippen zum Ändern" style="color:#64748b;font-weight:700;text-decoration:none"></a>
  <span id="simCtl" style="position:absolute;left:50%;transform:translateX(-50%);display:flex;gap:6px;align-items:center"></span>
  <a id="homeLink" href="#" onclick="render('leitstelle');return false" class="hidden" style="color:#64748b;text-decoration:underline;font-weight:600">🖥️ Leitstelle</a>
@@ -3064,6 +3064,7 @@ function qsAnsEdit(id,fn){
 function qsAnsSetLabel(id,i,v){const t=String(v||"").trim();if(!t){toast("Antworttext darf nicht leer sein");render("aao");return}qsAnsEdit(id,l=>{l[i].label=t})}
 function qsAnsSetValue(id,i,v){qsAnsEdit(id,l=>{if(v==="__own"){l[i].own=true;delete l[i].value}else{l[i].own=false;l[i].value=v}})}
 function qsAnsMove(id,i,d){qsAnsEdit(id,l=>{const j=i+d;if(j<0||j>=l.length)return false;[l[i],l[j]]=[l[j],l[i]]})}
+function qsAnsSetNA(id,i,on){qsAnsEdit(id,l=>{l[i].na=!!on})}
 function qsAnsDel(id,i){qsAnsEdit(id,l=>{l.splice(i,1)})}
 function qsAnsAdd(id){qsAnsEdit(id,l=>{const std=qsStdValues(id);l.push(std.length?{label:"Neue Antwort",value:std[std.length-1]}:{label:"Neue Antwort",own:true})})}
 function qsAnsReset(id){const cfg=qsCfg("112");if(cfg.answers)delete cfg.answers[id];qsAnsOpen.add(id);qsChanged("Standardantworten wiederhergestellt")}
@@ -3073,10 +3074,10 @@ function qsAnsEditorHTML(id){
    <input style="width:100%;box-sizing:border-box" value="${esc(a.label)}" onchange="qsAnsSetLabel('${id}',${i},this.value)">
    <div class="row" style="gap:4px;margin-top:4px;flex-wrap:wrap">
    <button style="padding:2px 8px" onclick="qsAnsMove('${id}',${i},-1)" ${i===0?"disabled":""}>▲</button><button style="padding:2px 8px" onclick="qsAnsMove('${id}',${i},1)" ${i===list.length-1?"disabled":""}>▼</button>
-   ${isE?"":`<select style="flex:1;min-width:140px;width:auto" title="Bedeutung für Stichwort/AAO" onchange="qsAnsSetValue('${id}',${i},this.value)">${std.map(v=>`<option value="${esc(v)}" ${!a.own&&a.value===v?"selected":""}>Stichwort-Logik wie: ${esc(v)}</option>`).join("")}<option value="__own" ${a.own?"selected":""}>keine Stichwort-Logik (nur eigene AAO)</option></select>`}
+   ${isE?`<label style="display:flex;gap:4px;align-items:center;margin:0;font-weight:600;font-size:13px" title="Bei dieser Antwort wird ein Notarzt (NEF) mit alarmiert"><input type="checkbox" style="width:auto" ${a.na?"checked":""} onchange="qsAnsSetNA('${id}',${i},this.checked)"> 🚑 NA-Indikation</label>`:""}${isE?"":`<select style="flex:1;min-width:140px;width:auto" title="Bedeutung für Stichwort/AAO" onchange="qsAnsSetValue('${id}',${i},this.value)">${std.map(v=>`<option value="${esc(v)}" ${!a.own&&a.value===v?"selected":""}>Stichwort-Logik wie: ${esc(v)}</option>`).join("")}<option value="__own" ${a.own?"selected":""}>keine Stichwort-Logik (nur eigene AAO)</option></select>`}
    <button title="Antwort löschen" onclick="qsAnsDel('${id}',${i})">🗑️</button></div></div>`).join("");
  return `<details ${qsAnsOpen.has(id)?"open":""} ontoggle="this.open?qsAnsOpen.add('${id}'):qsAnsOpen.delete('${id}')" style="margin-top:6px"><summary style="cursor:pointer;font-size:13px;font-weight:700">✏️ Antworten bearbeiten (${list.length})${custom?" · geändert":""}</summary>
-  <div style="font-size:12px;margin:4px 0" class="muted">${isE?"Schnellknöpfe unter dem Freitextfeld.":"Gespeichert und überall angezeigt wird dein Antworttext – auch AAO-Bedingungen können ihn direkt nutzen. „Stichwort-Logik wie“ sagt nur der eingebauten Logik (RD_X…RD_D, Reanimation), wie sie die Antwort behandeln soll."}</div>
+  <div style="font-size:12px;margin:4px 0" class="muted">${isE?"Schnellknöpfe unter dem Freitextfeld. Mit „🚑 NA-Indikation“ wird bei dieser Antwort ein Notarzt mit alarmiert. Freitext wird außerdem automatisch nach Notarzt-Stichworten durchsucht (z. B. Verbrennung, Stromunfall, Vergiftung, Unterkühlung, Brustschmerz, Amputation, Sturz aus Höhe, Geburt).":"Gespeichert und überall angezeigt wird dein Antworttext – auch AAO-Bedingungen können ihn direkt nutzen. „Stichwort-Logik wie“ sagt nur der eingebauten Logik (RD_X…RD_D, Reanimation), wie sie die Antwort behandeln soll."}</div>
   ${rows}<div class="row" style="gap:6px;margin-top:4px"><button onclick="qsAnsAdd('${id}')">＋ Antwort</button>${custom?`<button onclick="qsAnsReset('${id}')">↺ Standardantworten</button>`:""}</div></details>`;
 }
 function qsEditorHTML(){
@@ -3179,6 +3180,30 @@ function notruf(){
 }
 function isManv(c=db.currentCall){
  return Number(c?.answers?.count)>3;
+}
+// E-Befunde, die einen Notarzt erfordern (v5.04). Freitext wird nach Stichworten durchsucht;
+// zusätzlich zählen eigene E-Schnellknöpfe, die im Abfrage-Editor als „NA-Indikation“ markiert sind.
+// Auswahl angelehnt an den Notarzt-Indikationskatalog (Laien-Stichworte), in der AAO anpassbar.
+const E_NA_CATALOG=[
+ [/verbrenn|verbrüh|brandverletz/,"Verbrennung/Verbrühung"],
+ [/strom(schlag|unfall)|\bstrom\b|blitz/,"Stromunfall"],
+ [/vergift|intox|überdos|tabletten (geschluckt|genommen)|alkoholvergift/,"Vergiftung"],
+ [/unterkühl|hypotherm|eiskalt/,"Unterkühlung"],
+ [/ertrunk|ertrink|wasser (eingeatmet|geschluckt)|beinahe.ertrink/,"Beinahe-Ertrinken"],
+ [/polytrauma|sturz aus|aus (großer|der) höhe|meter (tief|hoch)|vom dach|leiter/,"Sturz aus Höhe / Polytrauma"],
+ [/amputat|abgetrennt|abgerissen/,"Amputation"],
+ [/pfählung|aufgespießt|durchbohrt|stich|schuss/,"penetrierende Verletzung"],
+ [/geburt|wehen|blasensprung|schwanger.*(blut|schmerz)/,"Geburt / Schwangerschaftskomplikation"],
+ [/anaphyla|allergisch|quaddeln|schwellung (im |am )?hals|zunge schwillt/,"Anaphylaxie"],
+ [/brustschmerz|druck auf der brust|herzinfarkt|ausstrahlung (linker )?arm|engegefühl/,"Akutes Koronarsyndrom (V. a.)"],
+ [/vernichtungsschmerz|stärkste schmerzen|unerträgliche schmerzen/,"stärkste Schmerzen"],
+ [/schädel.?hirn|kopfverletzung schwer|schwere kopfverletzung/,"Schädel-Hirn-Trauma"]
+];
+function eNaIndication(c){
+ const a=c?.answers||{}, t=String(a.e_exposure||"").toLowerCase().trim(); if(!t)return null;
+ const own=(typeof qsAnswerList==="function"?qsAnswerList("e_exposure"):[]).find(x=>x&&x.na&&t===String(x.label).toLowerCase());
+ if(own)return own.label;
+ const hit=E_NA_CATALOG.find(([re])=>re.test(t)); return hit?hit[1]:null;
 }
 function isBenignExposureText(t){
  const s=String(t||"").trim().toLowerCase();
@@ -3892,6 +3917,13 @@ function evaluate(){
    } else if(a.d_disability==="Bewusstseinsgetrübt"){
      xLabel="RD_D – Bewusstsein getrübt";
    }
+   // E: weitere Befunde mit Notarzt-Indikation → NEF (+ RTW) nachlegen, falls noch nicht dabei
+   const eNa=eNaIndication(c);
+   if(eNa&&!reaAlready){
+     if(!req.some(r=>r.type==="RTW"))add("RTW",1,"Rettungsdienst");
+     if(!req.some(r=>r.type==="NEF"))add("NEF",1,"Rettungsdienst");
+     xLabel=(xLabel?xLabel+" · ":"")+`RD_E – ${eNa} (NA-Indikation)`;
+   }
    if(xLabel) keyword=`${keyword} · ${xLabel}`;
 
    // Komplett unauffälliges XABCDE: nur die medizinischen Transportmittel auf einen
@@ -3900,7 +3932,7 @@ function evaluate(){
    if(!xLabel
       && a.x_massive==="Nein" && a.a_airway==="Frei" && a.b_breath==="Normal"
       && a.c_circ==="Unauffällig" && a.d_disability==="Wach / orientiert"
-      && isBenignExposureText(a.e_exposure)){
+      && isBenignExposureText(a.e_exposure) && !eNaIndication(c)){
      req=req.filter(r=>!["RTW","NEF"].includes(r.type));
      src="r0mod";
      for(const x of aaoUnits(17)){
@@ -5084,9 +5116,13 @@ function renderCallerBanner(){
  const el=document.getElementById("callerRequestBanner");
  if(!el)return;
  const reqs=phoneHere?(db.pendingCallerRequests||[]):[];
- const simH=(typeof simBannerHTML==="function")?simBannerHTML():"";
- if(!reqs.length){el.innerHTML=simH;return}
- el.innerHTML=simH+reqs.map(r=>{
+ // Alle klingelnden Anrufe nach Anrufzeit sortieren – der am längsten wartende steht oben (v5.04)
+ const items=[...((typeof simPending!=="undefined"?simPending:[]).map(x=>({t:x.ringAt||x.created||Date.now(),html:simBannerHTML([x])}))),
+  ...reqs.map(r=>({t:r.time?new Date(r.time).getTime():Date.now(),html:callerReqHTML(r)}))].sort((a,b)=>a.t-b.t);
+ el.innerHTML=items.map((it,i)=>it.html.replace('<div class="row" style="gap:10px">',`<div class="row" style="gap:10px"><span style="font:800 13px system-ui;background:rgba(255,255,255,.25);border-radius:999px;padding:2px 8px;white-space:nowrap" title="Reihenfolge nach Anrufzeit">${items.length>1?(i+1)+". · ":""}${new Date(it.t).toLocaleTimeString("de-DE")}</span>`)).join("");
+}
+function callerReqHTML(r){
+ {
    const slot=(db.callers||[]).find(x=>String(x.id)===String(r.callerId));
    const idx=(db.callers||[]).indexOf(slot);
    const label=slot?`Anrufer ${idx+1}`:`Anrufer-Terminal ${esc(String(r.callerId))}`;
@@ -5094,7 +5130,7 @@ function renderCallerBanner(){
      <div class="row" style="gap:10px"><span style="font-size:26px">📞</span><div><b>${esc(CALLER_NUMBERS[r.number||"112"]?.banner||"Notruf 112")} – ${esc(label)}</b><br><span style="opacity:.9">${r.lat!=null&&r.lng!=null?"GPS-Standort verfügbar":"Kein GPS-Standort übermittelt"}</span></div></div>
      <button class="primary" style="background:#fff;color:#e30613" onclick="acceptCallerRequest('${esc(String(r.callerId))}')">✅ Annehmen</button>
    </div>`;
- }).join("");
+ }
 }
 async function acceptCallerRequest(callerId){
  if(db.cloud?.enabled){
@@ -8089,7 +8125,7 @@ function simTick(){
 }
 function simRing(pre){
  if(simPending.length>=4&&!pre)return;
- const s=pre||simMakeCall(); simPending.push(s);
+ const s=pre||simMakeCall(); s.ringAt=Date.now(); simPending.push(s);
  renderCallerBanner();
  toast(s.isFollow?`🔁 Erneuter Anruf – Rufnummer bekannt aus Einsatz #${s.refCallId}`:s.num==="19222"?"📞 Übungsanruf 19222 – Krankentransport":"📞 Übungsnotruf 112 eingegangen");
  if(simVoice)simRingTone();
@@ -8101,8 +8137,8 @@ function simRingTone(){
    [0,0.45].forEach(o=>{const os=a.createOscillator(),g=a.createGain();os.frequency.value=440;g.gain.value=0.08;os.connect(g);g.connect(a.destination);os.start(a.currentTime+o);os.stop(a.currentTime+o+0.35)});
  }catch(e){}
 }
-function simBannerHTML(){
- return simPending.map(s=>{const col=s.num==="19222"?"#1d4ed8":"#e30613";return `<div class="card" style="background:${col};color:#fff;border:none;margin-bottom:8px;display:flex;align-items:center;justify-content:space-between;gap:12px">
+function simBannerHTML(list){
+ return (list||simPending).map(s=>{const col=s.num==="19222"?"#1d4ed8":"#e30613";return `<div class="card" style="background:${col};color:#fff;border:none;margin-bottom:8px;display:flex;align-items:center;justify-content:space-between;gap:12px">
    <div class="row" style="gap:10px"><span style="font-size:26px">${s.isFollow?"🔁":"📞"}</span><div><b>${s.num==="19222"?"🚑 19222 – Krankentransport":"🚨 Notruf 112"} – Übungsanruf</b><br><span style="opacity:.9">${s.isFollow?`Erneuter Anruf · Rufnummer ${esc(s.phone)} bekannt aus Einsatz #${esc(s.refCallId)}`:`Mobilfunk · Standort wird übermittelt${s.prepared?" · vorbereiteter Fall":""}`}</span></div></div>
    <button class="primary" style="background:#fff;color:${col}" onclick="simAccept('${s.id}')">✅ Annehmen</button>
  </div>`}).join("");
@@ -8202,7 +8238,7 @@ function simFix(s,t){const [He,he]=simHe(s);if(he==="er")return String(t);return
 // Versteht Tippfehler und Umschreibungen, mehrere Fragen in einem Satz, Rückfragen („wie bitte?“),
 // Bestätigungen, Ja/Nein-Fragen zu Details des Falls und Anweisungen. Merkt sich, was schon gesagt
 // wurde, wiederholt sich nicht wörtlich und wird ruhiger, wenn man ihn beruhigt.
-const SIM_VOCAB=["erbrochen","übergeben","fieber","temperatur","lächeln","bewegen","aufstehen","schlüssel","blutverdünner","allergien","diabetiker","schwanger","gewicht","gestürzt","hingefallen","umgefallen","buchstabieren","bläulich","haustür","ansprechbar","bewusstlos","bewusstsein","reagiert","atmet","atmung","atmen","luft","blutet","blutung","schmerzen","vorerkrankungen","medikamente","tabletten","adresse","hausnummer","stockwerk","etage","eingeklemmt","eingeschlossen","verletzt","verletzte","brennt","rauch","feuer","flammen","passiert","notfallort","strasse","straße","telefonnummer","rückrufnummer","geschlecht","schwindelig","kaltschweißig","blass","herzdruckmassage","seitenlage","lautsprecher","defibrillator","krankenhaus","personen","betroffen","gefahren","gefährlich","benzin","wasser","schwimmer","allergie","diabetes","zucker","schlaganfall","krampfanfall","bewegen","sprechen","antwortet"];
+const SIM_VOCAB=["polizei","hausarzt","wetter","parkplatz","zufahrt","kennzeichen","strömung","rettungsschwimmer","nachbarn","fahrzeuge","richtung","verkehr","kleidung","badekappe","entfernung","erbrochen","übergeben","fieber","temperatur","lächeln","bewegen","aufstehen","schlüssel","blutverdünner","allergien","diabetiker","schwanger","gewicht","gestürzt","hingefallen","umgefallen","buchstabieren","bläulich","haustür","ansprechbar","bewusstlos","bewusstsein","reagiert","atmet","atmung","atmen","luft","blutet","blutung","schmerzen","vorerkrankungen","medikamente","tabletten","adresse","hausnummer","stockwerk","etage","eingeklemmt","eingeschlossen","verletzt","verletzte","brennt","rauch","feuer","flammen","passiert","notfallort","strasse","straße","telefonnummer","rückrufnummer","geschlecht","schwindelig","kaltschweißig","blass","herzdruckmassage","seitenlage","lautsprecher","defibrillator","krankenhaus","personen","betroffen","gefahren","gefährlich","benzin","wasser","schwimmer","allergie","diabetes","zucker","schlaganfall","krampfanfall","bewegen","sprechen","antwortet"];
 function simLev(a,b){if(Math.abs(a.length-b.length)>2)return 9;const m=a.length,n=b.length;let prev=Array.from({length:n+1},(_,j)=>j);for(let i=1;i<=m;i++){const cur=[i];for(let j=1;j<=n;j++)cur[j]=Math.min(prev[j]+1,cur[j-1]+1,prev[j-1]+(a[i-1]===b[j-1]?0:1));prev=cur}return prev[n]}
 function simNormText(t){
  const x=String(t||"").toLowerCase().replace(/[^\wäöüß\s?]/g," ").replace(/\?/g," ? ");
@@ -8272,7 +8308,7 @@ const SIM_KB_Q=[
  [/erbroch|übergeben|gebrochen|kotzt|spuckt/,(s,kb,me,H,h)=>kb.vomit?"Ja, vorhin einmal.":"Nein, übergeben hat er sich nicht."],
  [/fieber|temperatur|ist (er|sie) heiß|glüht/,(s,kb,me,H,h)=>kb.fever?`Ja, ${kb.fever} Grad hab ich gemessen.`:"Gemessen hab ich nicht, heiß fühlt sich die Stirn nicht an."],
  [/wo (genau )?liegt|wo ist (er|sie)( jetzt)?\b|in welchem raum|wo befindet sich (der|die) (patient|person|betroffen)/,(s,kb,me,H,h)=>me?`Ich lieg ${kb.room.replace(/^im |^in der |^auf dem /,m=>m)}.`:`${H} liegt ${kb.room}.`],
- [/sind sie (bei|neben) (ihm|ihr|der person)|ist jemand bei (ihm|ihr)|sind sie allein|ist noch jemand da/,(s,kb,me,H,h)=>me?"Nein, ich bin allein.":kb.withPt?"Ja, ich bin direkt bei ihm.":"Ich steh etwas weiter weg, aber ich seh ihn."],
+ [/sind sie (bei|neben) (ihm|ihr|der person)|ist jemand bei (ihm|ihr)/,(s,kb,me,H,h)=>me?"Nein, ich bin allein.":kb.withPt?"Ja, ich bin direkt bei ihm.":"Ich steh etwas weiter weg, aber ich seh ihn."],
  [/tür (offen|auf|zu|abgeschlossen)|kommen (die|wir|sie) rein|haustür|schlüssel/,(s,kb,me,H,h)=>kb.door?`Die Tür ist ${kb.door}.`:"Hier gibt's keine Tür, wir sind draußen."],
  [/alkohol|getrunken|betrunken|drogen|tabletten genommen/,(s,kb,me,H,h)=>kb.alcohol||"Nein, getrunken hat er nichts."],
  [/blutverdünn|marcumar|eliquis|xarelto|aspirin|\bass\b/,(s,kb,me,H,h)=>kb.thinner?"Ja, Blutverdünner nimmt er.":"Weiß ich nicht genau, ich müsste in den Tablettenplan gucken."],
@@ -8289,9 +8325,134 @@ const SIM_KB_Q=[
  [/puls|herzschlag/,(s,kb,me,H,h)=>kb.pulse],
  [/wie geht es (ihm|ihr) (jetzt|gerade)|hat sich (was|etwas) verändert|wird es (besser|schlechter)|veränder/,(s,kb,me,H,h)=>s.d.f.d==="Bewusstlos"?"Unverändert, er reagiert nicht!":pick(["Unverändert, würd ich sagen.","Ein bisschen schlechter, kommt mir vor.","Gleich geblieben."])]
 ];
+
+// ─── Umgebung & Drumherum (v5.04): Anrufer versteht auch Fragen zum Umfeld, zu sich selbst und
+// Smalltalk. Werte werden je Anruf einmal festgelegt (stimmig für das ganze Gespräch).
+function simEnv(s){
+ if(s.env)return s.env;
+ const d=s.d,f=d.f||{},k=s.loc.kind,h=new Date().getHours(),dark=h<7||h>=19;
+ const town=(s.loc.town||s.loc.text||"").replace(/^.* in /,"").split("-").pop();
+ const towards=pick(["Richtung Jever","Richtung Varel","Richtung Wilhelmshaven","Richtung Oldenburg","Richtung Hooksiel","Richtung Sande"]);
+ s.env={
+  dark, weather:pick(["trocken","es nieselt","es regnet ziemlich","ganz schön windig","neblig, man sieht nicht weit","sonnig"]),
+  access:k!=="home"?null:/erdgeschoss/i.test(s.addrFloor||"")?"Erdgeschoss, ein, zwei Stufen vor der Tür.":pick(["Treppenhaus, kein Aufzug, die Treppe ist ziemlich eng.","Es gibt einen Aufzug.","Treppe, aber breit genug."]),
+  parking:k==="water"?"Am Deich ist ein Parkplatz, von da sind es noch ein paar Meter.":pick(["Vor dem Haus ist genug Platz.","Die Straße ist eng, da stehen überall Autos.","In die Einfahrt können Sie rein."]),
+  landmark:k==="water"?pick(["bei der Badestelle, neben dem Kiosk","an der Buhne, wo die Strandkörbe stehen","beim DLRG-Turm"]):k==="road"?pick(["kurz hinter dem Ortsschild","an der Kreuzung mit der Ampel","bei der Bushaltestelle","neben der Tankstelle"]):pick(["gegenüber vom Supermarkt","neben dem Bäcker","in der Nähe der Kirche","Ecke Schulstraße"]),
+  others:d.passerby?pick(["Hier stehen noch ein paar Leute.","Ein anderer Autofahrer hilft mit.","Nur ich."]):d.isSelf?"Nein, ich bin allein.":pick(["Nur ich.","Mein Sohn ist auch da.","Die Nachbarin ist gerade rübergekommen."]),
+  firstAid:d.cpr?"Ich hab ihn auf den Rücken gedreht, mehr nicht.":f.x==="Ja"?"Ich drück ein Handtuch drauf.":pick(["Nein, noch nichts.","Ich hab ihm ein Kissen untergelegt.","Ich hab ihm Wasser gegeben."]),
+  doing:d.cpr&&s.cprStarted?"Ich drück auf die Brust, wie Sie gesagt haben!":pick(["Ich sitz neben ihm und halt seine Hand.","Ich steh hier und guck nach ihm.","Ich red mit ihm, damit er wach bleibt."]),
+  callerHurt:s.caseId==="vu_light"&&!d.isSelf?"Mir tut die Schulter ein bisschen weh, aber das geht.":d.isSelf?null:"Nein, mir geht's gut.",
+  police:pick(["Nein, die hab ich nicht angerufen.","Nein, nur Sie.","Weiß ich nicht, vielleicht hat das jemand anders gemacht."]),
+  doctor:pick(["Nein, den Hausarzt hab ich nicht erreicht.","Nein, ich hab gleich die 112 gewählt."]),
+  direction:towards,
+  vehicles:/vu_bus/.test(s.caseId)?"Ein weißer Kleinbus und ein dunkelblauer Kombi.":/vu_/.test(s.caseId)?pick(["Ein silberner Golf und ein schwarzer BMW.","Ein roter Kleinwagen und ein weißer Transporter.","Ein blauer Opel."]):null,
+  plate:pick(["FRI-","WHV-","OL-","WST-"])+String.fromCharCode(65+rint(0,25))+String.fromCharCode(65+rint(0,25))+" "+rint(10,999),
+  traffic:pick(["Der Verkehr staut sich schon.","Hier fährt kaum einer.","Die Autos fahren langsam vorbei."]),
+  blocked:pick(["Eine Spur ist dicht.","Die ganze Straße ist blockiert.","Man kommt einspurig vorbei."]),
+  shore:pick(["so 50 Meter vom Ufer","bestimmt 100 Meter draußen","nicht weit, vielleicht 30 Meter"]),
+  current:pick(["Die Strömung zieht Richtung Hafen.","Die Strömung ist ziemlich stark.","Es ist ruhig, kaum Wellen."]),
+  clothing:pick(["eine rote Badekappe","ein gelbes T-Shirt","eine blaue Badehose","ein orangefarbenes Shirt"]),
+  lastSeen:pick(["bei der Buhne","vor dem DLRG-Turm","links von der Badestelle"]),
+  tide:pick(["Die Flut kommt gerade rein.","Es ist gerade Ebbe, das Wasser geht zurück.","Fast Hochwasser."]),
+  lifeguards:pick(["Der Turm ist nicht besetzt.","Die Rettungsschwimmer sind schon unterwegs.","Ich seh keine Rettungsschwimmer."]),
+  smoke:pick(["schwarzer Rauch","dichter grauer Rauch"]),
+  gas:pick(["Weiß ich nicht.","Im Keller ist eine Gasheizung, glaub ich.","Nein, wir haben Fernwärme."]),
+  neighbors:pick(["Die meisten sind schon draußen.","Ich klingel gerade überall.","Weiß ich nicht genau."]),
+  town
+ };
+ return s.env;
+}
+const SIM_ENV_Q=[
+ [/sind sie (selbst )?verletzt|geht es ihnen gut|ist ihnen was passiert|sind sie ok/,(s,e)=>s.d.isSelf?null:e.callerHurt],
+ [/was machen sie (gerade|jetzt)|was tun sie gerade/,(s,e)=>e.doing],
+ [/(erste hilfe|schon (etwas|was) gemacht|haben sie (schon )?(etwas|was) (gemacht|unternommen))/,(s,e)=>e.firstAid],
+ [/wer ist (noch )?(da|vor ort|bei ihnen)|ist noch jemand (da|bei ihnen)|sind sie allein|helfer/,(s,e)=>e.others],
+ [/polizei/,(s,e)=>e.police],
+ [/hausarzt|arzt (angerufen|informiert|erreicht)/,(s,e)=>e.doctor],
+ [/wetter|regnet|regen|wind|nebel|glatt|sicht\b/,(s,e)=>`${e.weather.charAt(0).toUpperCase()+e.weather.slice(1)}${e.dark?", und es ist schon dunkel":""}.`],
+ [/dunkel|hell|beleuchtet|licht\b/,(s,e)=>e.dark?"Es ist dunkel, aber hier ist eine Laterne.":"Es ist noch hell."],
+ [/aufzug|treppe|trage|stockwerk.*eng|zugang/,(s,e)=>e.access||"Das ist hier draußen, ganz normal zu erreichen."],
+ [/parken|parkplatz|zufahrt|einfahrt|anfahr|rankommen|durchkommen/,(s,e)=>e.parking],
+ [/in der nähe|markant|orientierung|woran erkenn|was ist (dort|da) (in der nähe|gegenüber)|gegenüber/,(s,e)=>`Das ist ${e.landmark}.`],
+ [/richtung|fahrtrichtung|welche seite/,(s,e)=>s.loc.kind==="road"?`${e.direction}, kurz hinter dem Ortsausgang.`:null],
+ [/welche (autos|fahrzeuge)|was für (autos|fahrzeuge)|fahrzeugtyp|marke|farbe .*auto/,(s,e)=>e.vehicles],
+ [/kennzeichen|nummernschild/,(s,e)=>/vu_/.test(s.caseId)?`Moment… ${e.plate}, glaub ich.`:"Hab ich nicht gesehen."],
+ [/verkehr|stau|autos fahren/,(s,e)=>s.loc.kind==="road"?e.traffic:"Hier ist kaum Verkehr."],
+ [/straße (frei|blockiert|gesperrt|dicht)|spur|durchkommen die autos/,(s,e)=>s.loc.kind==="road"?e.blocked:null],
+ [/läuft (was|etwas) aus|ausgelaufen|öl\b|benzin|flüssigkeit/,(s,e)=>/vu_/.test(s.caseId)?(s.d.danger&&/benzin/i.test(s.d.danger)?"Ja, das riecht nach Benzin, da läuft was aus.":"Ich seh nichts auslaufen."):null],
+ [/wie weit (draußen|vom ufer|weg)|entfernung|abstand zum ufer/,(s,e)=>s.loc.kind==="water"?`${e.shore.charAt(0).toUpperCase()+e.shore.slice(1)}.`:null],
+ [/strömung|wellen|seegang/,(s,e)=>s.loc.kind==="water"?e.current:null],
+ [/was (hat|trägt) (er|sie) an|kleidung|badekappe|anziehen|erkennen.*im wasser/,(s,e)=>s.loc.kind==="water"?`${s.d.patient&&s.d.patient.g==="w"?"Sie":"Er"} hat ${e.clothing} an.`:null],
+ [/wo (zuletzt )?gesehen|zuletzt gesehen|wo ist (er|sie) untergegangen/,(s,e)=>s.loc.kind==="water"?`Zuletzt ${e.lastSeen}.`:null],
+ [/ebbe|flut|hochwasser|niedrigwasser|gezeit/,(s,e)=>e.tide],
+ [/rettungsschwimmer|dlrg|turm besetzt|wachturm/,(s,e)=>s.loc.kind==="water"?e.lifeguards:null],
+ [/boot|schiff/,(s,e)=>s.loc.kind==="water"&&s.caseId!=="boat"?pick(["Ein Segelboot ist weiter draußen.","Nein, hier ist kein Boot."]):null],
+ [/rauch(farbe)?|welche farbe .*rauch|schwarz|qualm/,(s,e)=>s.d.fire?`${e.smoke.charAt(0).toUpperCase()+e.smoke.slice(1)}, das quillt richtig raus.`:null],
+ [/flammen|sieht man feuer|offenes feuer/,(s,e)=>s.d.fire?(/flammen/i.test(s.d.event)?"Ja, man sieht Flammen!":"Flammen seh ich nicht, nur Rauch."):"Nein, Feuer ist hier keins."],
+ [/gas(flasche|heizung|leitung)?\b/,(s,e)=>/gas/i.test(s.d.danger||"")?s.d.danger:s.d.fire?e.gas:"Gas? Nein, riecht nicht danach."],
+ [/nachbarn|andere bewohner|alle (draußen|raus)/,(s,e)=>s.d.fire?e.neighbors:null],
+ [/(können|hören) sie mich|verstehen sie mich|sind sie (noch )?(da|dran)|hallo\?/,(s,e)=>pick(["Ja, ich hör Sie!","Ja, ich bin noch dran.","Ja, ja!"])],
+ [/woher wissen sie|wie kommen sie darauf|sicher\?/,(s,e)=>pick(["Ich seh das doch!","Das hat er mir selbst gesagt.","Das sieht man doch!"])],
+ [/haben sie (ein )?(handy|telefon) (mit|dabei)|akku/,(s,e)=>pick(["Ja, ich ruf ja vom Handy an. Akku ist noch okay.","Mein Akku ist nur noch bei 15 Prozent."])],
+ [/^(guten (morgen|tag|abend)|moin|hallo)\b(?!.*\?)/,(s,e)=>null],
+ [/entschuldigung|tut mir leid/,(s,e)=>pick(["Schon gut.","Ist ja egal, Hauptsache es kommt jemand."])],
+ [/wie heißen sie|ihr name|wer ist am telefon|mit wem spreche/,(s,e)=>`${s.d.caller.first} ${s.d.caller.last}.`],
+ [/wo sind sie (selbst|gerade)|wo stehen sie/,(s,e)=>s.d.passerby?"Ich steh am Straßenrand, gleich daneben.":s.loc.kind==="water"?"Ich steh hier vorne am Wasser.":"Ich bin hier in der Wohnung, direkt bei ihm."],
+ [/kinder|kind im haus|kleine kinder/,(s,e)=>s.d.fire?(/kinder/i.test(s.d.inside||"")?"Ja, Kinder sind noch drin!":"Kinder, glaub ich, nicht."):pick(["Nein, Kinder sind keine da.","Die Kinder sind in der Schule."])]
+];
+function simEnvAnswer(c,part){
+ const s=c.sim, e=simEnv(s);
+ for(const [re,fn] of SIM_ENV_Q)if(re.test(part)){const a=fn(s,e);if(a)return s.d.isSelf||s.speaker==="patient"?a:simFix(s,a)}
+ return null;
+}
 function simKBAnswer(c,part){
  const s=c.sim, kb=simKB(s), me=!!s.d.isSelf||s.speaker==="patient", [H,h]=simHe(s);
  for(const [re,fn] of SIM_KB_Q)if(re.test(part)){const a=fn(s,kb,me,H,h);return a?(me?a:simFix(s,a)):null}
+ return null;
+}
+
+// ─── Gesprächskontext (v5.04): kurze Nachfragen beziehen sich auf das letzte Thema ─────────────
+// „Wo genau?“, „Wie stark?“, „Zieht das irgendwohin?“ nach Schmerz; „Wie schnell?“ nach Atmung;
+// „Wie stark?“/„Wo?“ nach Blutung; Brand-, Unfall- und Wasser-Details.
+const SIM_BODY=["brust","linken arm","unterarm","arm","bauch","kopf","stirn","hüfte","rücken","bein","nacken","schulter","hals","hand","knie","fuß"];
+function simBodyPart(s){const t=[s.d.f&&s.d.f.e,s.d.pain,s.d.event].join(" ").toLowerCase();const b=SIM_BODY.find(x=>t.includes(x));
+ if(!b)return null;const art={brust:"an der Brust","linken arm":"im linken Arm",unterarm:"am Unterarm",arm:"am Arm",bauch:"am Bauch",kopf:"am Kopf",stirn:"an der Stirn","hüfte":"an der Hüfte","rücken":"am Rücken",bein:"am Bein",nacken:"im Nacken",schulter:"an der Schulter",hals:"am Hals",hand:"an der Hand",knie:"am Knie","fuß":"am Fuß"};return art[b]}
+function simTopicFollow(c,part){
+ const s=c.sim,d=s.d,f=d.f||{},t=s.mem&&s.mem.topic; if(!t)return null;
+ if(part.split(/\s+/).length>7)return null;
+ const all=[f.e,d.pain,d.event].join(" ").toLowerCase();
+ if(t==="pain"){
+   if(/wo (genau|tut|hat|sind)|welche stelle|an welcher|^wo\??$/.test(part)){const b=simBodyPart(s);return b?`Hier ${b}${/brust/.test(b)&&/arm/.test(all)?", und das zieht in den linken Arm":""}.`:"Das ist so überall irgendwie."}
+   if(/wie (stark|schlimm|doll|sehr)|skala|von (1|eins) bis (10|zehn)/.test(part))return d.panic?"Ganz schlimm, so neun von zehn!":"Schon heftig, so acht von zehn.";
+   if(/ausstrahl|zieht (es|das)|wandert|strahlt/.test(part))return /arm/.test(all)?"Ja, das zieht in den linken Arm.":"Nein, das bleibt an einer Stelle.";
+   if(/drückend|stechend|brennend|wie fühlt sich|was für (ein|eine) schmerz/.test(part))return /druck/.test(all)?"Wie ein Druck, als ob einer draufsitzt.":"Eher stechend.";
+ }
+ if(t==="breath"){
+   if(/wie schnell|hechel|schnappt|wie oft|wie (atmet|ist die atmung)/.test(part))return f.b==="Keine normale Atmung"?"Nur ganz selten so ein Schnappen!":f.b==="Auffällig"?"Ganz schnell, so hechelnd.":"Normal, ganz ruhig.";
+   if(/pfeift|rassel|geräusch|röchel|gurgel/.test(part))return f.a==="Gefährdet"||f.a==="Verlegt"?"Ja, das röchelt so.":/giemen|pfeif/.test(all)?"Ja, das pfeift richtig.":"Nein, Geräusche hör ich keine.";
+ }
+ if(t==="bleed"){
+   if(/wo (blutet|genau)|welche stelle|woher|^wo\??$/.test(part)){const b=simBodyPart(s);return b?`${b.charAt(0).toUpperCase()+b.slice(1)}.`:"Am Kopf, glaub ich."}
+   if(/wie (stark|viel)|spritzt|tropft|läuft/.test(part))return f.x==="Ja"?"Das spritzt richtig, das hört nicht auf!":"Nur so ein bisschen, das tropft.";
+ }
+ if(t==="fire"){
+   if(/wo genau|welches stockwerk|welche wohnung|welches zimmer|^wo\??$/.test(part))return "Im ersten Stock, die Wohnung links.";
+ }
+ if(t==="trapped"){
+   if(/wie viele|wer|fahrer|beifahrer|wo genau/.test(part))return f.trapped&&f.trapped!=="0"?(d.trappedText||"Der Fahrer kommt nicht raus."):"Eingeklemmt ist keiner.";
+ }
+ return null;
+}
+const SIM_CTX_Q=[
+ [/hören sie (schon )?(die )?(sirenen?|martinshorn|tatütata|den rettungswagen)|kommen (die|sie) schon|sehen sie (schon )?(blaulicht|den rettungswagen)/,c=>c.alarmTime&&Date.now()-new Date(c.alarmTime).getTime()>120000?"Ja, ich hör da was!":"Nein, noch nichts."],
+ [/lebt (er|sie) allein|wohnt (er|sie) allein|wer wohnt (da|dort|noch)/,c=>c.sim.d.passerby?"Keine Ahnung, ich kenn ihn nicht.":/mann|frau|vater|mutter|kind|sohn|tochter/i.test(String(c.sim.d.rel))?"Nein, wir wohnen zusammen.":"Ja, er wohnt allein."],
+ [/was sehen sie|beschreiben sie (mal |bitte )?(was|die lage|das)|schildern sie|erzählen sie/,c=>simFix(c.sim,c.sim.d.event)],
+ [/haben sie (noch )?(eine )?frage|noch fragen|ist (noch )?(was|etwas) unklar/,c=>pick(["Wie lange dauert das denn noch?","Soll ich irgendwas machen?","Nein… nur, wann kommen die?"])],
+ [/wie lange (ist|war) (er|sie) (schon )?(so|bewusstlos|am boden)|wie lange liegt (er|sie)/,c=>c.sim.d.onset||"Ein paar Minuten bestimmt."]
+];
+function simCtxAnswer(c,part){
+ const tf=simTopicFollow(c,part); if(tf)return tf;
+ for(const [re,fn] of SIM_CTX_Q)if(re.test(part)){const a=fn(c);if(a)return a}
  return null;
 }
 function simAnswerSmart(c,text){
@@ -8314,13 +8475,15 @@ function simAnswerSmart(c,text){
  const check=/(schauen|gucken|prüfen|sehen|fühlen) sie (mal |bitte )*(nach|ob)|gucken sie mal|schauen sie mal/.test(norm);
  for(const part of (parts.length?parts:[norm]).slice(0,3)){
    const ints=simIntents(part);
-   let ans=simKBAnswer(c,part);
+   let ans=simCtxAnswer(c,part)||simKBAnswer(c,part)||simEnvAnswer(c,part);
    if(!ans&&ints.length){ans=simAnswerFor(c,part).replace(/^(Bitte schnell! |Oh Gott… )/,"");
      if(/^(Wie bitte\?|Das hab ich nicht verstanden\.|Äh… was meinen Sie genau\?|Das weiß ich nicht\.)$/.test(ans))ans=null}
    if(!ans)ans=simYesNo(c,part,raw);
    if(!ans&&/^(bitte |gehen|holen|legen|machen|öffnen|schließen|bleiben|nehmen|setzen|halten|sagen|rufen|schicken|stellen|ziehen|decken)\b|\bsie (bitte )?(mal )?(die|den|das|ihn|sie|ihm|ihr)\b.*\b(auf|zu|hin|weg|raus|rein|hoch|runter)\b/.test(part))
      ans=pick(["Okay, mach ich.","Ja, Moment… okay.","Mach ich sofort.","Okay… so?"]);
    if(ans){
+     const topicNow=ints.find(k=>["pain","breath","bleed","fire","trapped"].includes(k))||(/schmerz|weh tut|tut weh/.test(part)?"pain":/atm|luft/.test(part)?"breath":/blut/.test(part)?"bleed":/brenn|feuer|rauch/.test(part)?"fire":/eingeklemmt/.test(part)?"trapped":null);
+     if(topicNow)s.mem.topic=topicNow;
      if(s.mem.said.includes(ans))ans=pick(["Wie gesagt: ","Hab ich doch schon gesagt: ","Nochmal: "])+ans;
      s.mem.said.push(ans); out.push(ans);
    }

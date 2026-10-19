@@ -1576,3 +1576,24 @@ Version 5.03:
   das?“ → buchstabiert. Angehörige (Mann/Frau/Vater/Mutter/Kind) tragen denselben Nachnamen.
 - Aufgeregte Anrufer werden ungeduldig, wenn lange gefragt und noch nicht alarmiert wurde
   („Warum fragen Sie so viel? Schicken Sie doch endlich jemanden!“).
+
+Version 5.04:
+- Anrufer versteht mehr Drumherum und Kontext:
+  • Kurze Nachfragen beziehen sich aufs letzte Thema: nach Schmerz „Wo genau?“, „Wie stark?“,
+    „Strahlt das aus?“; nach Atmung „Wie schnell?“, „Pfeift das?“; nach Blutung „Wo?“, „Wie stark?“;
+    nach Brand „Wo genau?“; nach eingeklemmt „Wer genau?“.
+  • Fragen zum Umfeld (je Anruf fest): Wetter, Licht, Aufzug/Treppe, Parken/Zufahrt, Orientierung
+    („was ist gegenüber?“), Fahrtrichtung, beteiligte Fahrzeuge, Kennzeichen, Verkehr/Straße
+    blockiert, läuft etwas aus, Strömung/Ebbe-Flut, Kleidung im Wasser, wo zuletzt gesehen,
+    Rettungsschwimmer, Rauchfarbe, Flammen, Gas, Nachbarn, Kinder im Haus.
+  • Fragen an den Anrufer selbst: verletzt?, was machen Sie gerade?, schon erste Hilfe?, wer ist
+    noch da?, Polizei/Hausarzt informiert?, wo stehen Sie?, Akku, „Hören Sie mich?“, Sirenen
+    schon zu hören?, lebt er allein?, „Was sehen Sie?“, „Haben Sie noch Fragen?“.
+- E in der Notarzt-Abfrage wird beachtet: Findet sich im E-Freitext ein Notarzt-Stichwort
+  (u. a. Verbrennung/Verbrühung, Stromunfall, Vergiftung, Unterkühlung, Beinahe-Ertrinken, Sturz
+  aus Höhe/Polytrauma, Amputation, Stich/Schuss/Pfählung, Geburt/Schwangerschaftskomplikation,
+  Anaphylaxie, Brustschmerz/ACS, stärkste Schmerzen, schweres SHT), wird ein NEF (und ggf. RTW)
+  mit alarmiert, Stichwortzusatz „RD_E – … (NA-Indikation)“; kein R0-Herabstufen mehr. Eigene
+  E-Schnellknöpfe lassen sich im Abfrage-Editor mit „🚑 NA-Indikation“ markieren.
+- Eingehende Anrufe (Übungsanrufe und Anrufer-Handy) stehen nach Anrufzeit sortiert untereinander
+  – der am längsten wartende oben, mit Nummer und Uhrzeit.
