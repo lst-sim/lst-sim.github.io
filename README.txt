@@ -1607,6 +1607,12 @@ Version 5.05:
   („a, b“ = a ODER b). Mit „🚑 NA-Indikation“ markierte Knöpfe ziehen weiterhin einen Notarzt.
 - Nur „Unauffällig“ (ohne weitere Befunde) zählt weiter als unauffälliges E (R0 möglich).
 
+Version 5.10:
+- Neue AAO-Bedingung „Anzahl Patienten (inkl. Angabe bei X)“: Zahl oder Vergleich (z. B. 2, >1,
+  <=3). Zählt die Patientenzahl aus der Abfrage – auch wenn sie erst bei X geändert wurde (der
+  höchste Wert aus Betroffene, Verletzte/gefährdet, Eingeklemmt, durch Feuer bedroht).
+  Damit lässt sich z. B. „bei 2 Patienten 2 RTW“ selbst als AAO anlegen.
+
 Version 5.09:
 - Fehler behoben (aus v5.07): Auf iPad/iPhone blieb der Anrufer im Sprachmodus stumm. Seit der
   Disponent zuerst spricht, fehlte der erste Tipp, der die Sprachausgabe freischaltet. Sie wird
