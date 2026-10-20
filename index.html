@@ -170,7 +170,7 @@ html[data-device="handy"] #floatDock{left:8px;right:8px;width:auto;top:auto;bott
 </head>
 <body>
 <div style="padding:6px 10px;font-size:11px;color:#94a3b8;font-weight:700;display:flex;flex-wrap:wrap;align-items:center;gap:10px;position:sticky;top:0;z-index:10;background:var(--bg)">
- <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v5.11</span>
+ <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v5.12</span>
  <span id="syncState"></span> <a id="deskTag" href="#" onclick="renameDesk();return false" title="Name dieses Platzes (für „offen an …“) – antippen zum Ändern" style="color:#64748b;font-weight:700;text-decoration:none"></a>
  <span id="simCtl" style="position:absolute;left:50%;transform:translateX(-50%);display:flex;gap:6px;align-items:center"></span>
  <a id="homeLink" href="#" onclick="render('leitstelle');return false" class="hidden" style="color:#64748b;text-decoration:underline;font-weight:600">🖥️ Leitstelle</a>
@@ -4172,7 +4172,10 @@ function evaluate(){
        if(blocked(L)){noteExcl(L);continue}
        active.push(L); topUp(L);
        const lk=String(kwMap[L]||aaoEntry(L)?.keyword||"").trim(), pre=lk.split("_")[0].trim();
-       if(pre){const k0=String(keyword||""),u=k0.indexOf("_");keyword=u>0&&u<=8&&!/\s/.test(k0.slice(0,u))?pre+k0.slice(u):`${pre}_${k0}`}
+       if(pre){const k0=String(keyword||""),u=k0.indexOf("_"),hasPre=u>0&&u<=8&&!/\s/.test(k0.slice(0,u));
+         // Notarzt-Teil der Lage bleibt erhalten: R1N1_Trauma + führende „R2“ → R2N1_Trauma (v5.12)
+         const oldN=hasPre?(k0.slice(0,u).match(/N\d+$/)||[""])[0]:"", np=/N\d+$/.test(pre)?pre:pre+oldN;
+         keyword=hasPre?np+k0.slice(u):`${np}_${k0}`}
        c.aaoLead=(aaoEntry(L)?.name)||L;
        break; // nur eine führende AAO
      }

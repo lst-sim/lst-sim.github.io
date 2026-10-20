@@ -1607,6 +1607,11 @@ Version 5.05:
   („a, b“ = a ODER b). Mit „🚑 NA-Indikation“ markierte Knöpfe ziehen weiterhin einen Notarzt.
 - Nur „Unauffällig“ (ohne weitere Befunde) zählt weiter als unauffälliges E (R0 möglich).
 
+Version 5.12:
+- Führende AAO: Der Notarzt-Teil der Lage bleibt erhalten. R1N1_Trauma schwer + führende „R2“
+  → R2N1_Trauma schwer. Enthält das Stichwort der führenden AAO selbst schon ein N (z. B. R2N1),
+  gilt dieses.
+
 Version 5.11:
 - AAO-Option „🎯 Führt das Stichwort“: Passt eine führende AAO, liefert sie den Anfang des
   Alarmstichworts (Teil vor dem „_“), der Rest kommt von der eigentlichen Lage.
