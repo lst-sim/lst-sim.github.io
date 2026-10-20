@@ -170,7 +170,7 @@ html[data-device="handy"] #floatDock{left:8px;right:8px;width:auto;top:auto;bott
 </head>
 <body>
 <div style="padding:6px 10px;font-size:11px;color:#94a3b8;font-weight:700;display:flex;flex-wrap:wrap;align-items:center;gap:10px;position:sticky;top:0;z-index:10;background:var(--bg)">
- <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v5.12</span>
+ <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v5.13</span>
  <span id="syncState"></span> <a id="deskTag" href="#" onclick="renameDesk();return false" title="Name dieses Platzes (für „offen an …“) – antippen zum Ändern" style="color:#64748b;font-weight:700;text-decoration:none"></a>
  <span id="simCtl" style="position:absolute;left:50%;transform:translateX(-50%);display:flex;gap:6px;align-items:center"></span>
  <a id="homeLink" href="#" onclick="render('leitstelle');return false" class="hidden" style="color:#64748b;text-decoration:underline;font-weight:600">🖥️ Leitstelle</a>
@@ -8803,8 +8803,88 @@ function simAdviceAnswer(c,part){
  if(d.misdial&&!s.resolved&&/brauchen sie hilfe|alles in ordnung|ist (etwas|was) passiert|geht es ihnen gut|wirklich/.test(part)){s.resolved=true;return "Nein, nein, alles gut, das war wirklich nur ein Versehen. Entschuldigung!"}
  return null;
 }
+
+// ─── Ende des Notrufs: Rettung unterwegs, Zeit, Hinweise bis zum Eintreffen (v5.13) ──────────
+// Versteht „Der RTW ist unterwegs, ca. 8 Minuten“, merkt sich die Zeit (und wird ungeduldig, wenn
+// sie deutlich überschritten ist), reagiert auf die üblichen Hinweise (Tür auf, Licht an, Hund weg,
+// Medikamente bereitlegen, jemand an die Straße, beim Patienten bleiben) und aufs Verabschieden.
+const SIM_NUMW={ein:1,eine:1,einer:1,eins:1,zwei:2,drei:3,vier:4,"fünf":5,sechs:6,sieben:7,acht:8,neun:9,zehn:10,elf:11,"zwölf":12,dreizehn:13,vierzehn:14,"fünfzehn":15,sechzehn:16,siebzehn:17,achtzehn:18,neunzehn:19,zwanzig:20,"fünfundzwanzig":25,"dreißig":30,vierzig:40};
+const SIM_NUMSAY=["null","eine","zwei","drei","vier","fünf","sechs","sieben","acht","neun","zehn","elf","zwölf"];
+function simParseMinutes(t){
+ t=String(t).toLowerCase();
+ if(/viertelstunde/.test(t))return 15; if(/halbe(n)? stunde/.test(t))return 30; if(/dreiviertel ?stunde/.test(t))return 45; if(/\beine stunde\b/.test(t))return 60;
+ let m=t.match(/(\d+)\s*(?:-|bis)\s*(\d+)\s*(min|minuten)/); if(m)return Math.round((+m[1]+ +m[2])/2);
+ m=t.match(/(\d+)\s*(min|minuten|minütig)/); if(m)return +m[1];
+ m=t.match(/([a-zäöüß]+)\s+(?:bis\s+([a-zäöüß]+)\s+)?minuten/); if(m&&SIM_NUMW[m[1]]!=null)return m[2]&&SIM_NUMW[m[2]]!=null?Math.round((SIM_NUMW[m[1]]+SIM_NUMW[m[2]])/2):SIM_NUMW[m[1]];
+ if(/(paar|wenige[n]?) minuten/.test(t))return -1;
+ return null;
+}
+function simUrgent(d){const f=d.f||{};return !!(d.cpr||d.panic||f.x==="Ja"||/bewusstlos/i.test(f.d||"")||f.b==="Keine normale Atmung"||f.a==="Verlegt")}
+const SIM_EG=[
+ ["eta",/(unterwegs|auf dem weg|auf der anfahrt|ist alarmiert|sind alarmiert|alarmiert|(kommt|kommen) (gleich|sofort|zu ihnen|in|bald)|(schicke|schicken|habe|hab) (ihnen )?(einen |den |die )?(rettungswagen|rtw|krankenwagen|notarzt|feuerwehr|rettung|hilfe)|fährt (los|zu ihnen)|(sind|ist) (gleich|bald) (da|bei ihnen)|(minuten|viertelstunde|halbe stunde) (da|bei ihnen))/],
+ ["door",/(haus|wohnungs)?tür (auf|öffnen|aufmachen|aufschließen|offen)|aufschließen|tür.*(auf|öffnen)/],
+ ["light",/licht (an|anmachen|einschalten)|(außen|flur)?beleuchtung|lampe an/],
+ ["pets",/hund|katze|(tiere?|haustiere?) (weg|wegsperren|einsperren|wegbringen)|wegsperren|einsperren/],
+ ["meds",/medikament|tabletten (bereit|zusammen|raus)|medikamentenplan|arztbrief|befunde|(versicherten|kranken)(karte|kassenkarte)|unterlagen/],
+ ["wave",/(an die|zur|auf die) straße|winken|einweisen|rausgehen|raus gehen|entgegen|draußen (warten|stehen)|vor dem haus|hausnummer (sichtbar|beleuchten)/],
+ ["car",/(auto|wagen|fahrzeug) (wegfahren|wegstellen|umparken)|zufahrt (frei|freimachen)|platz (machen|schaffen)|einfahrt frei/],
+ ["stay",/bleiben sie (bei|neben)|lassen sie (ihn|sie|das kind) nicht allein|nicht allein lassen/],
+ ["line",/bleiben sie (am telefon|dran|in der leitung)|ich bleibe (am telefon|dran|in der leitung)|legen sie nicht auf/],
+ ["bye",/(ich lege|ich leg|wir legen) (jetzt )?auf|auf wiederhören|wiederhören|tschüss|tschüs|bis gleich|ich beende (das gespräch|jetzt)|alles gute|gute besserung/]
+];
+function simEndgame(c,text){
+ const s=c.sim,d=s.d; s.mem=s.mem||{said:[],calm:0};
+ const sents=String(text).split(/(?<=[.!?;])\s+/).map(x=>x.trim()).filter(Boolean);
+ const hits=new Set(), rest=[]; let eta=null, who=null;
+ for(const se of sents){
+   const t=se.toLowerCase(); let used=false;
+   for(const [k,re] of SIM_EG)if(re.test(t)){hits.add(k);used=true}
+   // Minuten nur als Ankunftszeit, wenn es um die Anfahrt geht (nicht „10 Minuten kühlen“)
+   const mn=simParseMinutes(t); if(mn!=null&&(SIM_EG[0][1].test(t)||/(da|bei ihnen|dauert|braucht|brauchen|eintreffen|vor ort)\b/.test(t))){eta=mn;used=true;hits.add("eta")}
+   if(/notarzt|\bnef\b/.test(t))who="na"; else if(!who&&/feuerwehr/.test(t))who="fw"; else if(!who&&/hubschrauber|christoph/.test(t))who="rth";
+   if(!used)rest.push(se);
+ }
+ if(!hits.size)return null;
+ const H=simHe(s)[1], him=simHe(s)[2], self=!!d.isSelf, outdoor=s.loc&&s.loc.kind!=="home", urgent=simUrgent(d), cpr=!!(s.cprStarted||(c.rea&&c.rea.open));
+ if(d.hasDog==null)d.hasDog=!outdoor&&Math.random()<0.3;
+ if(d.helper==null)d.helper=!self&&!outdoor&&Math.random()<0.6?pick(["meine Tochter","mein Sohn","der Nachbar","die Nachbarin","mein Mann","meine Frau"]):"";
+ const out=[];
+ if(hits.has("eta")){
+   if(d.phoneOnly&&!d.misdial){out.push(pick(["Oh – so schlimm ist es eigentlich nicht. Aber gut, wenn Sie meinen.","Echt, ein Krankenwagen? Na gut, okay."]))}
+   else{
+     if(eta!=null){s.mem.eta=eta;s.mem.etaAt=Date.now();s.etaNag=false}
+     const say=eta>0&&eta<=12?SIM_NUMSAY[eta]+(eta===1?" Minute":" Minuten"):eta>0?(eta===15?"eine Viertelstunde":eta===30?"eine halbe Stunde":eta+" Minuten"):"";
+     if(eta==null)out.push(urgent?pick(["Okay … wie lange dauert das denn?","Gut, gut. Wann sind die denn da?"]):pick(["Okay, danke.","Gut, dann warten wir.","Okay, danke schön."]));
+     else if(eta===-1)out.push(pick(["Ein paar Minuten, okay.","Okay, gut."]));
+     else if(eta>=15||(urgent&&eta>=10))out.push(urgent?pick([`${say}?! Das ist ja ewig! Geht das nicht schneller?`,`So lange? ${say}? Was mach ich denn bis dahin?`]):pick([`${say}, okay … das ist schon lang, aber gut.`,`Okay, ${say}. Wir warten.`]));
+     else out.push(pick([`${say}, okay.`,`Okay, ${say}. Danke!`,`Gut, ${say}.`])+(urgent?" "+pick(["Bitte beeilen Sie sich!","Hoffentlich schnell!"]):""));
+     if(who==="na")out.push(urgent?pick(["Gut, dass ein Notarzt kommt.","Ein Notarzt auch – okay."]):pick(["Ein Notarzt auch? Ist es so schlimm?","Oh, der Notarzt kommt auch?"]));
+     if(who==="rth")out.push("Ein Hubschrauber?! Wo soll der denn landen?");
+   }
+ }
+ if(hits.has("door"))out.push(outdoor?"Hier ist keine Tür, wir sind draußen.":cpr&&self===false&&!d.helper?"Ich kann hier nicht weg, ich drück doch!":d.helper?`${d.helper[0].toUpperCase()+d.helper.slice(1)} macht die Tür auf.`:self&&(/bewusst|krampf|neuro/i.test((d.f||{}).d||"")||["Auffällig","Keine normale Atmung"].includes((d.f||{}).b))?"Ich versuch's … ich schleppe mich zur Tür.":"Ja, ich mach die Tür auf.");
+ if(hits.has("light"))out.push(outdoor?"Hier gibt's kein Licht, aber ich mach die Taschenlampe vom Handy an.":"Licht mach ich an.");
+ if(hits.has("pets"))out.push(outdoor?"Hier ist kein Hund.":d.hasDog?pick(["Ja, der Hund kommt ins Schlafzimmer.","Mach ich, ich sperr den Hund in die Küche."]):"Wir haben keine Tiere.");
+ if(hits.has("meds"))out.push(outdoor&&self?"Meine Tabletten hab ich nicht dabei, die sind zu Hause.":self?"Die Tabletten liegen in der Küche, ich leg sie hin.":d.passerby||outdoor?`Ich kenn ${him==="ihr"?"die Frau":"den Mann"} doch gar nicht, da weiß ich nichts.`:pick([`Ja, ich such ${him==="ihr"?"ihre":"seine"} Tabletten und den Medikamentenplan raus.`,"Die Tabletten liegen im Bad, ich hol sie."]));
+ if(hits.has("wave"))out.push(outdoor?pick(["Ja, hier steht noch jemand, der geht vor und winkt.","Okay, ich schick einen von den Leuten vor zur Straße."]):d.helper?`Okay, ${d.helper} geht raus an die Straße.`:self?"Ich bin allein, ich kann hier nicht raus.":`Dann ist ${H} ja allein … okay, ich geh kurz raus, wenn sie kommen.`);
+ if(hits.has("car"))out.push("Okay, das Auto fahr ich weg.");
+ if(hits.has("stay"))out.push(self?"Ja.":`Ja, ich bleib bei ${him}.`);
+ if(hits.has("line"))out.push(pick(["Gut, dass Sie dranbleiben.","Okay, ich bleib dran."]));
+ if(hits.has("bye")){
+   if(cpr||(d.cpr&&!c.alarmTime))out.push("Nein, bitte nicht auflegen! Ich weiß nicht, ob ich das richtig mache!");
+   else{const cb=/wieder an(rufen)?|melden sie sich|schlimmer/.test(String(text).toLowerCase());
+     if(cb){s.mem.adv=s.mem.adv||[];if(!s.mem.adv.includes("callback"))s.mem.adv.push("callback")}
+     out.push((cb?"Okay, wenn was ist, ruf ich sofort wieder an. ":"")+pick(["Danke! Bis gleich.","Danke schön, tschüss!","Danke, dann warten wir. Tschüss!"]));s.byeAt=Date.now()}
+ }
+ const cap=x=>x.replace(/(^|[.!?]\s+)([a-zäöü])/g,(m,a,b)=>a+b.toUpperCase());
+ return {text:cap(out.join(" ")),rest:rest.join(" ")};
+}
 function simAnswerSmart(c,text){
  const s=c.sim, d=s.d; s.mem=s.mem||{said:[],calm:0};
+ if(!s._eg){const eg=simEndgame(c,text);
+   if(eg){let extra="";if(eg.rest){s._eg=true;try{extra=simAnswerSmart(c,eg.rest)}finally{s._eg=false}}
+     if(/wie bitte|nicht verstanden|wie meinen|versteh/i.test(extra))extra="";
+     return [eg.text,extra].filter(Boolean).join(" ")}}
  const raw=String(text||"").trim(), norm=simNormText(raw);
  const lastCaller=[...s.log].reverse().find(m=>m.who!=="lst");
  // Beruhigen senkt die Aufregung
@@ -9019,6 +9099,10 @@ function simCallerEnd(c){
      f.d.open=["Hallo, ich bin's noch mal, wir wurden eben getrennt!","Hallo? Ich hatte eben angerufen, das Gespräch ist abgebrochen!"];
      simFollowQueue.push({at:Date.now()+rnd(15,40)*1000,sim:f});simRefresh()},2500);
    return true;
+ }
+ if(s.byeAt&&now-s.byeAt>4000&&!c.phoneEnd){s.byeAt=0;hangUpCall(c.id,true);return true}
+ if(s.mem&&s.mem.etaAt&&s.mem.eta>0&&!s.etaNag&&!s.arrivedSaid&&now-s.mem.etaAt>(s.mem.eta*60+90)*1000){
+   s.etaNag=true; simSay(c,pick(["Die sind immer noch nicht da! Sie hatten doch gesagt, "+s.mem.eta+" Minuten!","Wo bleiben die denn? Das ist doch schon länger als "+s.mem.eta+" Minuten!","Hallo? Hier ist immer noch keiner!"])); save(); simRefresh(); return true;
  }
  if(c.alarmTime&&!s.arrivedSaid&&!(c.rea&&c.rea.open)){
    const onScene=(c.alarmedUnits||[]).some(id=>{const u=db.units.find(x=>String(x.id)===String(id));return u&&["4","7","8"].includes(String(u.status))});

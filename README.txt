@@ -1607,6 +1607,22 @@ Version 5.05:
   („a, b“ = a ODER b). Mit „🚑 NA-Indikation“ markierte Knöpfe ziehen weiterhin einen Notarzt.
 - Nur „Unauffällig“ (ohne weitere Befunde) zählt weiter als unauffälliges E (R0 möglich).
 
+Version 5.13:
+- Übungsanrufer verstehen das Ende des Notrufs besser:
+  • „Der RTW ist unterwegs, ca. 8 Minuten“ → wiederholt die Zeit („Acht Minuten, okay.“). Bei
+    langer Anfahrt und ernster Lage wird er unruhig („Eine Viertelstunde?! Geht das nicht
+    schneller?“). Versteht Zahlen, „Viertelstunde“, „halbe Stunde“, „ein paar Minuten“.
+    Notarzt/Hubschrauber werden kommentiert. Bei Telefon-Fällen wundert er sich über den RTW.
+  • Merkt sich die Zeit: Ist sie deutlich überschritten (Zeit + 1,5 min) und noch keiner da,
+    meldet er sich („Die sind immer noch nicht da!“).
+  • Hinweise bis zum Eintreffen, auch mehrere in einem Satz: Tür auf, Licht an, Hund wegsperren,
+    Medikamente/Unterlagen bereitlegen, jemand an die Straße/winken, Auto wegfahren, beim
+    Patienten bleiben, am Telefon bleiben. Die Antwort passt zur Lage (allein / jemand dabei /
+    draußen / Passant, der den Patienten nicht kennt / Patient selbst).
+  • Verabschieden („Ich lege jetzt auf, rufen Sie wieder an, wenn …“) → bedankt sich, legt nach
+    ein paar Sekunden selbst auf. Während einer Reanimationsanleitung: „Bitte nicht auflegen!“
+  • Weitere Fragen im selben Satz werden weiterhin beantwortet.
+
 Version 5.12:
 - Führende AAO: Der Notarzt-Teil der Lage bleibt erhalten. R1N1_Trauma schwer + führende „R2“
   → R2N1_Trauma schwer. Enthält das Stichwort der führenden AAO selbst schon ein N (z. B. R2N1),
