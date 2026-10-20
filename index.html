@@ -170,7 +170,7 @@ html[data-device="handy"] #floatDock{left:8px;right:8px;width:auto;top:auto;bott
 </head>
 <body>
 <div style="padding:6px 10px;font-size:11px;color:#94a3b8;font-weight:700;display:flex;flex-wrap:wrap;align-items:center;gap:10px;position:sticky;top:0;z-index:10;background:var(--bg)">
- <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v5.08</span>
+ <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v5.09</span>
  <span id="syncState"></span> <a id="deskTag" href="#" onclick="renameDesk();return false" title="Name dieses Platzes (für „offen an …“) – antippen zum Ändern" style="color:#64748b;font-weight:700;text-decoration:none"></a>
  <span id="simCtl" style="position:absolute;left:50%;transform:translateX(-50%);display:flex;gap:6px;align-items:center"></span>
  <a id="homeLink" href="#" onclick="render('leitstelle');return false" class="hidden" style="color:#64748b;text-decoration:underline;font-weight:600">🖥️ Leitstelle</a>
@@ -3328,6 +3328,7 @@ function qsMaskOf(id){return QS_MASKS.find(m=>m.ids.includes(id))||null}
 function qsMaskSkip(c,id){
  if(qsIsHidden(c,id))return "nicht erhoben";
  const a=c.answers||{}, e=a.event||"";
+ if(id==="count")return ["Medizinischer Notfall","Reanimation"].includes(e)?"1":null;
  if(id==="trapped")return ["Verkehrsunfall","Technische Hilfeleistung"].includes(e)?null:"nicht zutreffend";
  if(id==="firePeople")return e==="Feuer / Rauchentwicklung"?null:"nicht zutreffend";
  if(id==="personDanger")return ["Reanimation","Medizinischer Notfall","Person im Wasser","Verkehrsunfall"].includes(e)?"=count":null;
@@ -3354,7 +3355,7 @@ function qsMaskHTML(c,m){
     <div class="row" style="margin-top:12px"><button class="primary" onclick="qsMaskSubmit('freitext')">✔ Antwort übernehmen</button>${ft?`<button onclick="const t=document.getElementById('mk_freeText');if(t)t.value='';qsMaskSubmit('freitext')">Keine weiteren Angaben</button>`:""}</div></div>`;
  }
  const field=id=>{
-   const L=`<label style="margin-top:10px">${esc(labels[id]||id)}${["psy","patientName","patientAge","patientGender"].includes(id)?` <span class="muted" style="font-weight:500">(optional)</span>`:""}</label>`;
+   const L=`<label style="margin-top:10px">${esc(labels[id]||id)}${["psy","patientName","patientAge","patientGender"].includes(id)?` <span class="muted" style="font-weight:500">(optional)</span>`:id==="count"?` <span class="muted" style="font-weight:500">(optional – leer = 1)</span>`:""}</label>`;
    if(QS_MASK_CHOICES[id])return `${L}<input type="hidden" id="mk_${id}"><div style="display:flex;flex-wrap:wrap;gap:6px">${QS_MASK_CHOICES[id].map(v=>`<button type="button" style="flex:1 1 0;min-width:84px" data-mk="${id}" onclick="qsMaskPick(this,'${id}',${esc(JSON.stringify(v))})">${esc(v)}</button>`).join("")}</div>`;
    if(id==="patientName")return `${L}<input id="mk_${id}" type="text" placeholder="falls bekannt">`;
    const quick=id==="patientAge"?"":["0","1","2","3"].filter(n=>!(id==="count"&&n==="0")).map(n=>`<button type="button" onclick="document.getElementById('mk_${id}').value='${n}'">${n}</button>`).join("");
@@ -3377,6 +3378,7 @@ async function qsMaskSubmit(key){
      if(id==="patientName"||id==="patientAge")v="unbekannt";
      else if(id==="patientGender")v="Unbekannt";
      else if(id==="psy")v="nicht erhoben"; // optional
+     else if(id==="count")v="1"; // optional: leer = 1 Betroffener
      else missing.push(String(labels[id]||id).replace(/^[^A-Za-zÄÖÜäöü]+/,""));
    }
    vals[id]=v;
@@ -3394,13 +3396,67 @@ async function qsMaskSubmit(key){
 }
 
 // ─── „Zurück“: vorherige Antworten bleiben vorbelegt (v4.93) ─────────────────────────────────
-function qsWithPrefill(q){const h=questionHTML(q);setTimeout(()=>qsPrefill(q[0]),0);return xabcdeJumpBar(q[0],h)+h}
+function qsWithPrefill(q){const h=questionHTML(q);setTimeout(()=>{qsPrefill(q[0]);if(q[0]==="x_massive")multiXabPrefill()},0);return patCountBar(q[0],h)+xabcdeJumpBar(q[0],h)+h}
+// ─── Mehrere Patienten bei X (v5.09) ──────────────────────────────────────────────────────────
+// Freiwillig: über X die Patientenzahl ändern (Standard 1). Mehr als 3 → MANV wie gehabt.
+// Bei 2–3 Patienten werden nur X, A und B abgefragt – für alle gleichzeitig nebeneinander.
+// Für Stichwort/AAO zählt der schwerste Wert; C, D, E entfallen.
+function multiPat(c=db.currentCall){const n=Number(c?.answers?.count)||1;return !c?.kt&&n>=2&&n<=3}
+function patCountBar(id,html){
+ const c=db.currentCall; if(!c||c.kt||id!=="x_massive"||reaShortcutActive(c)||/wird übersprungen|wird automatisch/.test(html))return "";
+ const n=Number(c.answers.count)||1;
+ const b=k=>`<button type="button" onclick="setPatCount(${k})" style="padding:4px 12px;font-weight:800;${n===k?"background:#1d4ed8;color:#fff;border-color:#1d4ed8":""}">${k}</button>`;
+ return `<div class="row" style="gap:6px;align-items:center;margin-bottom:8px;font-size:13px;flex-wrap:wrap;background:#eff6ff;border-radius:8px;padding:6px 8px">
+  <span style="font-weight:700;color:#1e3a8a">👥 Patienten <span class="muted" style="font-weight:500">(optional)</span>:</span>${b(1)}${b(2)}${b(3)}
+  <input id="patCountIn" type="number" min="4" inputmode="numeric" placeholder="mehr …" style="width:80px;padding:4px 6px" onkeydown="if(event.key==='Enter'){event.preventDefault();setPatCount(this.value)}">
+  <button type="button" onclick="setPatCount(document.getElementById('patCountIn').value)" style="padding:4px 10px">OK</button>
+  <span class="muted">ab 4 → MANV</span></div>`;
+}
+function setPatCount(v){
+ const c=db.currentCall; if(!c)return; const n=Math.max(1,Math.floor(Number(v)||0));
+ if(!n||!Number.isFinite(n)){toast("Bitte eine Zahl eingeben");return}
+ const old=String(c.answers.count??"1"); if(String(n)===old)return;
+ const pd=c.answers.personDanger, pdAuto=pd===undefined||String(pd)===old;
+ c.answers.count=String(n); c.count=String(n);
+ if(pdAuto&&pd!==undefined)c.answers.personDanger=String(n);
+ c.history.push({id:"count",q:"👥 Anzahl Patienten (bei X geändert)",a:String(n)+(n>3?" – MANV":""),restore:old,restorePD:pdAuto?(pd===undefined?undefined:pd):undefined});
+ evaluate(); save(); notruf();
+ toast(n>3?`MANV – ${n} Verletzte`:n>1?`${n} Patienten – es werden nur X, A, B für alle abgefragt`:"1 Patient");
+}
+const MX_OPTS={x:["Nein","Ja","Unklar"],a:["Frei","Gefährdet","Verlegt","Unklar"],b:["Normal","Auffällig","Keine normale Atmung","Unklar"]};
+const MX_RANK={x:["Nein","Unklar","Ja"],a:["Frei","Unklar","Gefährdet","Verlegt"],b:["Normal","Unklar","Auffällig","Keine normale Atmung"]};
+let mxSel=null;
+function multiXabHTML(c){
+ const n=Number(c.answers.count)||2; mxSel=Array.from({length:n},()=>({x:"",a:"",b:""}));
+ const row=(p,k,lab)=>`<div style="margin-top:6px"><div style="font-size:12px;font-weight:700;color:#475569">${lab}</div><div style="display:flex;flex-wrap:wrap;gap:4px">${MX_OPTS[k].map(v=>`<button type="button" data-mx="${p}_${k}" data-v="${esc(v)}" onclick="mxPick(${p},'${k}',this)" style="padding:6px 8px;font-size:13px">${esc(v)}</button>`).join("")}</div></div>`;
+ return `<label>👥 ${n} Patienten – X, A und B für alle gleichzeitig</label>
+  <div style="display:grid;grid-template-columns:repeat(${n},minmax(0,1fr));gap:10px">${mxSel.map((_,p)=>`<div style="border:1px solid var(--line);border-radius:10px;padding:8px;min-width:0"><b>Patient ${p+1}</b>
+   ${row(p,"x","X – kritische Blutung")}${row(p,"a","A – Atemweg")}${row(p,"b","B – Atmung")}
+   <button type="button" onclick="mxNormal(${p})" style="margin-top:8px;font-size:12px;padding:4px 8px">✓ unauffällig</button></div>`).join("")}</div>
+  <p class="muted" style="font-size:12px;margin:6px 0 0">Für Stichwort und AAO zählt jeweils der schwerste Wert. C, D und E werden bei mehreren Patienten nicht abgefragt.</p>
+  <div class="row" style="margin-top:10px"><button class="primary" onclick="mxSubmit()">✔ XAB übernehmen</button></div>`;
+}
+function mxPick(p,k,btn){if(!mxSel||!mxSel[p])return;mxSel[p][k]=btn.dataset.v;document.querySelectorAll(`[data-mx="${p}_${k}"]`).forEach(b=>b.classList.toggle("primary",b===btn))}
+function mxNormal(p){["x","a","b"].forEach(k=>{const b=document.querySelector(`[data-mx="${p}_${k}"][data-v="${MX_OPTS[k][0]}"]`);if(b)mxPick(p,k,b)})}
+function multiXabPrefill(){const c=db.currentCall;if(!c||!mxSel||!Array.isArray(c.multiXab))return;c.multiXab.forEach((pt,p)=>["x","a","b"].forEach(k=>{const b=document.querySelector(`[data-mx="${p}_${k}"][data-v="${pt[k]}"]`);if(b)mxPick(p,k,b)}))}
+async function mxSubmit(){
+ const c=db.currentCall; if(!c||!mxSel||qsMaskBusy)return;
+ const miss=[];mxSel.forEach((pt,p)=>["x","a","b"].forEach(k=>{if(!pt[k])miss.push(`P${p+1} ${k.toUpperCase()}`)}));
+ if(miss.length){toast("Bitte noch wählen: "+miss.join(", "));return}
+ c.multiXab=JSON.parse(JSON.stringify(mxSel));
+ const worst=k=>mxSel.map(pt=>pt[k]).sort((u,v)=>MX_RANK[k].indexOf(v)-MX_RANK[k].indexOf(u))[0];
+ const lab=k=>mxSel.map((pt,p)=>`P${p+1}: ${pt[k]}`).join(" · ");
+ qsMaskBusy=true; qsMaskTag="multixab_"+Date.now();
+ try{for(const [id,k] of [["x_massive","x"],["a_airway","a"],["b_breath","b"]]){qsPendingLabel={id,label:`${worst(k)} (${lab(k)})`};await answer(id,worst(k))}}
+ finally{qsMaskBusy=false;qsMaskTag=null}
+ notruf();
+}
 // XABCDE überspringen (v5.06): Sprung zu einem späteren Buchstaben – alles dazwischen gilt als unauffällig.
 const XABCDE_IDS=["x_massive","a_airway","b_breath","c_circ","d_disability","e_exposure"];
 const XABCDE_NORMAL={x_massive:"Nein",a_airway:"Frei",b_breath:"Normal",c_circ:"Unauffällig",d_disability:"Wach / orientiert",e_exposure:"Unauffällig"};
 function xabcdeJumpBar(id,html){
  const c=db.currentCall; if(!c||c.kt)return "";
- const i=XABCDE_IDS.indexOf(id); if(i<0||!needsXABCDE(c)||reaShortcutActive(c)||/wird übersprungen/.test(html))return "";
+ const i=XABCDE_IDS.indexOf(id); if(i<0||!needsXABCDE(c)||reaShortcutActive(c)||multiPat(c)||/wird übersprungen/.test(html))return "";
  const later=XABCDE_IDS.slice(i+1).filter(k=>!(k in c.answers)&&!qsIsHidden(c,k));
  const btn=(k)=>`<button type="button" onclick="xabcdeJump('${k}')" style="padding:4px 10px;font-weight:800" title="${XABCDE_IDS.slice(i,XABCDE_IDS.indexOf(k)).map(x=>x[0].toUpperCase()).join(", ")} als unauffällig übernehmen und zu ${k[0].toUpperCase()} springen">${k[0].toUpperCase()}</button>`;
  return `<div class="row" style="gap:6px;align-items:center;margin-bottom:8px;font-size:13px;flex-wrap:wrap"><span class="muted" style="font-weight:700">Springen zu:</span>${later.map(btn).join("")}<button type="button" onclick="xabcdeJump(null)" style="padding:4px 10px">✓ Rest unauffällig</button><span class="muted" style="font-size:12px">(Übersprungenes gilt als unauffällig)</span></div>`;
@@ -3498,6 +3554,12 @@ function questionHTML(q){
    return skip(REA_SHORTCUT_DEFAULTS[id]);
  if(["xyn","xairway","xbreathing","xcirc","xdisability"].includes(type) && !needsXABCDE(c))
    return skip("nicht zutreffend");
+ if(["c_circ","d_disability","e_exposure"].includes(id) && multiPat(c))
+   return skip("nicht erhoben – mehrere Patienten (nur XAB)");
+ if(["x_massive","a_airway","b_breath"].includes(id) && multiPat(c) && !reaShortcutActive(c)){
+   if(id!=="x_massive")return skip(c.answers[id]||"nicht erhoben");
+   return multiXabHTML(c);
+ }
  if(["patientName","patientAge","patientGender"].includes(id)){
    if(Number(c?.answers?.count)>1)return skip("mehrere Patienten – entfällt");
    if(!needsXABCDE(c))return skip("nicht erhoben");
@@ -3820,6 +3882,11 @@ function goBackNotruf(){
  let undone=false;
  while(c.history.length){
    const last=c.history.pop();
+   if(last.id&&last.restore!=null){
+     c.answers[last.id]=last.restore; if(last.id==="count")c.count=last.restore;
+     if(last.restorePD!==undefined){if(last.restorePD===null)delete c.answers.personDanger;else c.answers.personDanger=last.restorePD}
+     undone=true;break;
+   }
    if(last.id){
      if(!last.auto&&last.id in c.answers){c.prevAnswers=c.prevAnswers||{};c.prevAnswers[last.id]={v:c.answers[last.id],l:(c.answerLabels||{})[last.id]||null}}
      delete c.answers[last.id]; if(c.answerLabels)delete c.answerLabels[last.id];
@@ -8382,6 +8449,7 @@ function simAccept(simId){
  if(!s.isFollow&&!s.kt&&Math.random()<0.07)s.dropAt=Date.now()+rnd(60,200)*1000;
  // Der Disponent meldet sich zuerst – der Anrufer spricht erst danach (v5.07)
  s.awaitGreeting=true; s.lastAt=Date.now();
+ if(simVoice)simSpeechUnlock();
  if(!s.kt){const so=simSollAao(s);if(so)s.soll=so}
  save(); renderCallerBanner(); render("notruf");
 }
@@ -9018,6 +9086,10 @@ async function simAiSpontaneous(c){
 // spontane Sätze, wenn länger nichts gesagt wurde
 function simSpontaneous(){
  for(const c of allOpenCalls()){
+   if(c.sim&&!c.phoneEnd&&simMine(c)&&c.sim.awaitGreeting&&!c.sim.helloSaid&&Date.now()-(c.sim.lastAt||0)>10000){
+     // meldet sich die Leitstelle nicht, fragt der Anrufer nach ein paar Sekunden nach
+     c.sim.helloSaid=true; simSay(c,pick(["Hallo? … Hallo, ist da jemand?","Hallo?? Hören Sie mich?","Hallo, bin ich da richtig beim Notruf?"])); save(); simRefresh(); continue;
+   }
    if(!c.sim||c.phoneEnd||c.sim.typing||!simMine(c)||c.sim.awaitGreeting||c.sim.resolved)continue;
    if(simCallerEnd(c))continue;
    const s=c.sim; if(Date.now()-s.lastAt<rnd(28,45)*1000)continue;
@@ -9032,6 +9104,15 @@ function simSpontaneous(){
 }
 
 // ─── Sprache ─────────────────────────────────────────────────────────────────────────────────
+// iPad/iPhone: Sprachausgabe ist erst erlaubt, nachdem sie einmal direkt durch einen Tipp
+// gestartet wurde. Seit der Disponent zuerst spricht (v5.07), fiel dieser erste Tipp-Start weg –
+// darum wird sie beim Annehmen/Senden mit einem stillen Satz „aufgeweckt“.
+let simSpeechUnlocked=false;
+function simSpeechUnlock(){
+ if(simSpeechUnlocked)return;
+ try{if(!("speechSynthesis" in window))return;const u=new SpeechSynthesisUtterance(" ");u.volume=0;u.lang="de-DE";speechSynthesis.speak(u);simSpeechUnlocked=true}catch(e){}
+}
+document.addEventListener("pointerdown",()=>{if(simVoice)simSpeechUnlock()},{capture:true});
 function simSpeak(c,text){
  try{
    if(!("speechSynthesis" in window))return;

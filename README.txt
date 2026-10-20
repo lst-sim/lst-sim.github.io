@@ -1607,6 +1607,20 @@ Version 5.05:
   („a, b“ = a ODER b). Mit „🚑 NA-Indikation“ markierte Knöpfe ziehen weiterhin einen Notarzt.
 - Nur „Unauffällig“ (ohne weitere Befunde) zählt weiter als unauffälliges E (R0 möglich).
 
+Version 5.09:
+- Fehler behoben (aus v5.07): Auf iPad/iPhone blieb der Anrufer im Sprachmodus stumm. Seit der
+  Disponent zuerst spricht, fehlte der erste Tipp, der die Sprachausgabe freischaltet. Sie wird
+  jetzt beim Annehmen bzw. beim ersten Tipp freigeschaltet.
+- Meldet sich die Leitstelle nach dem Annehmen ca. 10 Sekunden nicht, fragt der Anrufer
+  „Hallo? Ist da jemand?“.
+- Patientenzahl bei X (freiwillig): Über der X-Frage „👥 Patienten: 1 · 2 · 3 · mehr …“. Bei
+  Medizinischer Notfall/Reanimation fällt die Anzahl in der Maske „Betroffene“ weg (Standard 1),
+  bei anderen Lagen ist sie dort optional (leer = 1). Ab 4 → MANV wie bisher.
+- Bei 2–3 Patienten werden nur X, A und B abgefragt – für alle gleichzeitig nebeneinander
+  (mit „✓ unauffällig“ je Patient). Für Stichwort und AAO zählt jeweils der schwerste Wert;
+  im Verlauf steht z. B. „Ja (P1: Nein · P2: Ja)“. C, D, E entfallen. „Zurück“ nimmt die XAB-
+  Maske bzw. die geänderte Patientenzahl zurück.
+
 Version 5.08:
 - D (Bewusstsein) mit Mehrfachauswahl: Bewusstseinsgetrübt, Bewusstlos, Krampfanfall und
   Neurologisch auffällig antippen (mehrere möglich) und mit „✓ Weiter“ übernehmen. „Wach /
