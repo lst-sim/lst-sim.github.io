@@ -170,7 +170,7 @@ html[data-device="handy"] #floatDock{left:8px;right:8px;width:auto;top:auto;bott
 </head>
 <body>
 <div style="padding:6px 10px;font-size:11px;color:#94a3b8;font-weight:700;display:flex;flex-wrap:wrap;align-items:center;gap:10px;position:sticky;top:0;z-index:10;background:var(--bg)">
- <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v5.10</span>
+ <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v5.11</span>
  <span id="syncState"></span> <a id="deskTag" href="#" onclick="renameDesk();return false" title="Name dieses Platzes (für „offen an …“) – antippen zum Ändern" style="color:#64748b;font-weight:700;text-decoration:none"></a>
  <span id="simCtl" style="position:absolute;left:50%;transform:translateX(-50%);display:flex;gap:6px;align-items:center"></span>
  <a id="homeLink" href="#" onclick="render('leitstelle');return false" class="hidden" style="color:#64748b;text-decoration:underline;font-weight:600">🖥️ Leitstelle</a>
@@ -4107,7 +4107,11 @@ function evaluate(){
    const groups=new Map();
    for(const r of req){if(r.src==="r0mod")continue;const k=String(r.src);if(!groups.has(k))groups.set(k,0);groups.set(k,groups.get(k)+1)}
    let win=null,best=-1;
-   for(const [k,n] of groups)if(n>=best){best=n;win=k}
+   // „Führende“ AAOs (v5.11) machen beim Wettbewerb um das Stichwort nicht mit – sie liefern nur
+   // den Anfang (z. B. „R2“) und füllen Fahrzeuge auf. Passen NUR führende, gilt die normale Regel.
+   const isLead=k=>!!aaoEntry(k)?.lead;
+   const nonLead=[...groups.keys()].some(k=>k!=="base"&&!isLead(k));
+   for(const [k,n] of groups){if(nonLead&&isLead(k))continue;if(n>=best){best=n;win=k}}
    c.aaoMatches=[...groups.keys()].filter(k=>k!=="base").map(k=>(aaoEntry(k)?.name)||k);
    if(win!==null){
      const all=req;
@@ -4160,6 +4164,17 @@ function evaluate(){
      if(win==="9"&&firstKwId&&!active.includes(firstKwId)){
        const old=kwMap[9]; if(old&&keyword.startsWith(old))keyword=`MANV – ${cnt} Verletzte`+keyword.slice(old.length);
        if(active.some(o=>aaoExcluded(o,firstKwId)))noteExcl(firstKwId);
+     }
+     // Führende AAO: Fahrzeuge auffüllen (Maximalprinzip) und den Anfang des Stichworts liefern
+     c.aaoLead=null;
+     const leads=[...groups.keys()].filter(k=>k!==win&&isLead(k)&&!active.includes(k)).sort((x,y)=>groups.get(y)-groups.get(x));
+     for(const L of leads){
+       if(blocked(L)){noteExcl(L);continue}
+       active.push(L); topUp(L);
+       const lk=String(kwMap[L]||aaoEntry(L)?.keyword||"").trim(), pre=lk.split("_")[0].trim();
+       if(pre){const k0=String(keyword||""),u=k0.indexOf("_");keyword=u>0&&u<=8&&!/\s/.test(k0.slice(0,u))?pre+k0.slice(u):`${pre}_${k0}`}
+       c.aaoLead=(aaoEntry(L)?.name)||L;
+       break; // nur eine führende AAO
      }
      c.aaoWinner=(aaoEntry(win)?.name)||null; c.aaoWinnerId=win; winAao=win;
      c.aaoExcluded=excludedNames;
@@ -6834,7 +6849,7 @@ function aaoTopicsList(){const extra=[...new Set((db.aao||[]).map(aaoTopic))].fi
 function aaoSortKey(a){return `${a.active===false?"1":"0"}|${String(a.keyword||a.name||"").toLowerCase()}|${String(a.name||"").toLowerCase()}`}
 function aaoRowHTML(a){
    const builtin=isBuiltinAao(a.id);
-   return `<tr style="${a.active===false?"opacity:.5":""}"><td><b>${esc(a.name)}</b>${a.keyword?`<br><small class="muted">${esc(a.keyword)}</small>`:""}${builtin&&!a.rulesEdited?"":`<br><span class="pill">${builtin?"Bedingungen geändert":"eigene"}${a.active===false?" · inaktiv":""}</span>`}</td><td>${aaoRulesText(a)}</td><td>${(a.units||[]).map(x=>`${x.n==="pat"?`${esc(x.type)} je Patient`:`${aaoNText(x)}× ${esc(x.type)}`}${x.org?` <small class="muted">(${esc(x.org)})</small>`:""}${x.opt?` <span class="pill">optional</span>`:""}`).join(", ")||`<span class="muted">keine</span>`}</td><td><small>${aaoCombineText(a)}</small></td><td style="white-space:nowrap"><button onclick="editAAO(${JSON.stringify(a.id)})">✏️ Bearbeiten</button><button onclick="deleteAAO(${JSON.stringify(a.id)})">Löschen</button></td></tr>`;
+   return `<tr style="${a.active===false?"opacity:.5":""}"><td><b>${esc(a.name)}</b>${a.keyword?`<br><small class="muted">${esc(a.keyword)}</small>`:""}${a.lead?` <span class="pill" title="Liefert den Anfang des Stichworts">🎯 führt</span>`:""}${builtin&&!a.rulesEdited?"":`<br><span class="pill">${builtin?"Bedingungen geändert":"eigene"}${a.active===false?" · inaktiv":""}</span>`}</td><td>${aaoRulesText(a)}</td><td>${(a.units||[]).map(x=>`${x.n==="pat"?`${esc(x.type)} je Patient`:`${aaoNText(x)}× ${esc(x.type)}`}${x.org?` <small class="muted">(${esc(x.org)})</small>`:""}${x.opt?` <span class="pill">optional</span>`:""}`).join(", ")||`<span class="muted">keine</span>`}</td><td><small>${aaoCombineText(a)}</small></td><td style="white-space:nowrap"><button onclick="editAAO(${JSON.stringify(a.id)})">✏️ Bearbeiten</button><button onclick="deleteAAO(${JSON.stringify(a.id)})">Löschen</button></td></tr>`;
 }
 function aaoGroupsHTML(){
  const by={}; (db.aao||[]).forEach(a=>{const t=aaoTopic(a);(by[t]=by[t]||[]).push(a)});
@@ -6880,6 +6895,7 @@ function aaoEditor(){
   <label>Name</label><input id="aaoName" value="${esc(d.name)}" oninput="aaoDraft.name=this.value">
   <label>Themenfeld</label><input list="aaoTopicList" value="${esc(d.topic||"")}" placeholder="leer = automatisch (${esc(aaoTopic({...d,topic:""}))})" oninput="aaoDraft.topic=this.value"><datalist id="aaoTopicList">${aaoTopicsList().map(t=>`<option value="${esc(t)}">`).join("")}</datalist>
   ${manv?`<p class="muted" style="margin-top:8px">Meldestichwort wird bei MANV automatisch gebildet („MANV – … – n Verletzte“). Die RTW-Anzahl steigt automatisch auf mindestens 1 RTW je 3 Verletzte.</p>`:`<label>Meldestichwort</label><input value="${esc(d.keyword||"")}" placeholder="${builtin?"leer = Standard":"leer = Name"}" oninput="aaoDraft.keyword=this.value">`}
+  <label style="display:flex;gap:8px;align-items:flex-start;margin-top:10px;font-weight:600;cursor:pointer"><input type="checkbox" style="width:auto;margin-top:3px" ${d.lead?"checked":""} onchange="aaoDraft.lead=this.checked"> <span>🎯 Führt das Stichwort<br><small class="muted" style="font-weight:500">Passt diese AAO, liefert sie den Anfang des Alarmstichworts (Teil vor dem „_“, z. B. „R2“) – der Rest kommt von der eigentlichen Lage: R1_Atemnot leicht + führende „R2“ → R2_Atemnot leicht. Ihre Fahrzeuge werden aufgefüllt (nicht doppelt).</small></span></label>
   <label>Bedingungen</label>
   ${builtin?`<div class="suggest-compact">${aaoRulesText(d)}<br><span class="muted">Fest mit der Notrufabfrage verknüpft.</span></div>
      <button style="margin-top:6px" onclick="aaoDraft.rulesEdited=true;aaoDraft.active=aaoDraft.active!==false;render('aao')">✏️ Bedingungen ändern</button>`
@@ -6948,6 +6964,7 @@ function saveAAO(){
  if(orRules.length)entry.orRules=orRules;
  if(String(d.keyword||"").trim())entry.keyword=String(d.keyword).trim();
  if(String(d.topic||"").trim())entry.topic=String(d.topic).trim();
+ if(d.lead)entry.lead=true;
  if(!builtin)entry.active=d.active!==false;
  if(d.rulesEdited)entry.rulesEdited=true;
  entry.combine=d.combine||"nein";

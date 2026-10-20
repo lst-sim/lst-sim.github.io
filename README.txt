@@ -1607,6 +1607,15 @@ Version 5.05:
   („a, b“ = a ODER b). Mit „🚑 NA-Indikation“ markierte Knöpfe ziehen weiterhin einen Notarzt.
 - Nur „Unauffällig“ (ohne weitere Befunde) zählt weiter als unauffälliges E (R0 möglich).
 
+Version 5.11:
+- AAO-Option „🎯 Führt das Stichwort“: Passt eine führende AAO, liefert sie den Anfang des
+  Alarmstichworts (Teil vor dem „_“), der Rest kommt von der eigentlichen Lage.
+  Beispiel: „Atemnot leicht“ (R1_Atemnot leicht) + führende AAO „2 Patienten“ (Stichwort R2)
+  → R2_Atemnot leicht. Die Fahrzeuge der führenden AAO werden aufgefüllt (Maximalprinzip, nicht
+  doppelt: 1 RTW + 2 RTW = 2 RTW). Führende AAOs konkurrieren nicht um das Stichwort; passen nur
+  führende, gilt die normale Regel. Es führt immer nur eine (die mit den meisten Fahrzeugen).
+  In der AAO-Liste mit „🎯 führt“ gekennzeichnet.
+
 Version 5.10:
 - Neue AAO-Bedingung „Anzahl Patienten (inkl. Angabe bei X)“: Zahl oder Vergleich (z. B. 2, >1,
   <=3). Zählt die Patientenzahl aus der Abfrage – auch wenn sie erst bei X geändert wurde (der
