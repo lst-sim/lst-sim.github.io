@@ -1607,6 +1607,29 @@ Version 5.05:
   („a, b“ = a ODER b). Mit „🚑 NA-Indikation“ markierte Knöpfe ziehen weiterhin einen Notarzt.
 - Nur „Unauffällig“ (ohne weitere Befunde) zählt weiter als unauffälliges E (R0 möglich).
 
+Version 5.07:
+- Du beginnst das Gespräch: Nach dem Annehmen sagt der Übungsanrufer nichts, bis du dich meldest
+  (z. B. „Notruf Feuerwehr und Rettungsdienst, wo genau ist der Notfallort?“). Stellst du gleich
+  eine Frage, antwortet er nach seinem ersten Satz direkt darauf. Gilt auch für Folgeanrufe.
+- Neue Notrufe, die am Telefon erledigt werden: kleine Verbrennung, Nasenbluten, Wespenstich ohne
+  Allergie, Rückenschmerzen, Fieber, Apotheke gesucht, Ruhestörung, piepender Rauchmelder,
+  kleine Schnittwunde, Kind hat an Spülmaschinentablette geleckt, Hosentaschen-Anruf.
+- Der Anrufer versteht Anweisungen und bestätigt sie konkret (kühlen, Kopf nach vorne/Nase
+  zudrücken, Druck auf die Wunde, wieder anrufen wenn schlimmer, 116 117, 110, Apotheken-
+  Notdienst, Giftnotruf, Batterie wechseln, Beine hoch, hinsetzen …). Hat er alles Nötige, bedankt
+  er sich. Bei einer Kleinigkeit wundert er sich, wenn ein Rettungswagen kommen soll.
+- Knopf „📞 Telefonisch erledigt“ (vor der Alarmierung): Ergebnis wählen (Beratung, an 116 117,
+  an 110, Apotheke, Giftnotruf, Fehlanruf) – der Notruf wird ohne Fahrzeug abgeschlossen. Bei
+  Übungsanrufen gibt es eine Rückmeldung, ob das passte oder welcher Rat noch fehlte.
+- Anrufer halten sich an die AAO: Jeder Übungsfall wird vorab mit den Angaben des Anrufers durch
+  die AAO geschickt. Fälle ohne passende AAO werden nicht angeboten. Nach der Alarmierung steht im
+  Verlauf „🎓 Übungs-Check AAO“: was laut AAO zu alarmieren war und was fehlt oder zusätzlich kam.
+  KI-Anrufer bekommen die AAO-Liste mit und erfinden nur passende Fälle.
+- AAO-Seite: AAOs nach Themenfeldern (Rettungsdienst, Brand, Technische Hilfe/VU, Wasserrettung/
+  Suche, MANV, Sonstige), innerhalb sortiert nach Stichwort. Jedes Themenfeld ist einklappbar
+  (bleibt gemerkt), dazu „Alle auf-/einklappen“. Im AAO-Editor kann man das Themenfeld selbst
+  festlegen (leer = automatisch).
+
 Version 5.06:
 - XABCDE überspringen: Über jeder XABCDE-Frage steht „Springen zu: A B C D E“. Ein Tipp auf einen
   späteren Buchstaben übernimmt alles dazwischen als unauffällig (X Nein, A Frei, B Normal,

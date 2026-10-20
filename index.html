@@ -170,7 +170,7 @@ html[data-device="handy"] #floatDock{left:8px;right:8px;width:auto;top:auto;bott
 </head>
 <body>
 <div style="padding:6px 10px;font-size:11px;color:#94a3b8;font-weight:700;display:flex;flex-wrap:wrap;align-items:center;gap:10px;position:sticky;top:0;z-index:10;background:var(--bg)">
- <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v5.06</span>
+ <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v5.07</span>
  <span id="syncState"></span> <a id="deskTag" href="#" onclick="renameDesk();return false" title="Name dieses Platzes (für „offen an …“) – antippen zum Ändern" style="color:#64748b;font-weight:700;text-decoration:none"></a>
  <span id="simCtl" style="position:absolute;left:50%;transform:translateX(-50%);display:flex;gap:6px;align-items:center"></span>
  <a id="homeLink" href="#" onclick="render('leitstelle');return false" class="hidden" style="color:#64748b;text-decoration:underline;font-weight:600">🖥️ Leitstelle</a>
@@ -3161,6 +3161,7 @@ function notruf(){
     <div class="row">
      ${(c.history.some(h=>!h.auto) && !c.alarmTime)?`<button onclick="goBackNotruf()" title="Letzte Antwort zurücknehmen">⬅️ Zurück</button>`:""}
      ${Object.keys(c.answers||{}).length?`<button onclick="openCallEdit('${esc(c.id)}')" title="Jeden Abfragepunkt nachträglich ändern">📝 Notruf ändern</button>`:""}
+     ${!c.alarmTime?`<button onclick="closeByPhoneDialog('${esc(c.id)}')" title="Ohne Rettungsmittel abschließen: Beratung, Weiterleitung, Fehlanruf">📞 Telefonisch erledigt</button>`:""}
      ${!c.kt&&!(c.rea&&c.rea.open)?`<button onclick="reaOpen('${esc(c.id)}')" title="Telefonreanimation: Anleitung und Metronom" style="color:#b91c1c;border-color:#fca5a5">🫀 Reanimation</button>`:""}
      <button onclick="render('leitstelle')">Zur Übersicht</button>
     </div>
@@ -4406,6 +4407,7 @@ function alarmProposal(){
  c.abPlans=[];
  c.alarmTime=now.toISOString();
  c.history.push({q:"🚨 Alarmierung",a:`Vorschlag alarmiert – ${now.toLocaleTimeString("de-DE")}${c.alarmFreeText?` | Freitext: ${c.alarmFreeText}`:""}`});
+ try{simAaoCheck(c)}catch(e){}
  save();
  if(db.cloud?.enabled)setTimeout(()=>pushCallCloud(c),0);
  toast(c.proposedUnitIds.length?"Vorschlag im Simulator alarmiert – weiterer Notruf möglich":"Einsatz ohne verfügbare Fahrzeuge alarmiert – bitte Einsatzmittel nachfordern");
@@ -6716,13 +6718,40 @@ function aaoRulesText(a){
  return [andTxt,orTxt].filter(Boolean).join(" · ");
 }
 let aaoDraft=null;
+// ─── AAO-Übersicht nach Themenfeldern (v5.07): sortiert und einklappbar ───────────────────────
+const AAO_TOPICS=["Rettungsdienst","Brand","Technische Hilfe / Verkehrsunfall","Wasserrettung / Suche","MANV","Sonstige"];
+function aaoTopic(a){
+ if(a.topic&&String(a.topic).trim())return String(a.topic).trim();
+ const k=String(a.keyword||"").toUpperCase(), n=String(a.name||"").toLowerCase(), ev=String((a.rules||{}).event||"");
+ if(String(a.id)==="9"||/manv/.test(n))return "MANV";
+ if(/^DLRG|wasser|boot|drohne|vermisst|suche/i.test(a.name||"")||/^H_(PERS|BOOT|SUCHE)/.test(k)||ev==="Person im Wasser"||ev==="Vermisste Person")return "Wasserrettung / Suche";
+ if(/^TH|^H_|_VU\b/.test(k)||/verkehrsunfall|technische|eingeklemmt/.test(n)||ev==="Verkehrsunfall"||ev==="Technische Hilfeleistung")return "Technische Hilfe / Verkehrsunfall";
+ if(/^F_/.test(k)||/feuer|brand|rauch/.test(n)||ev==="Feuer / Rauchentwicklung")return "Brand";
+ if(/^R\d|^R0|^RD/.test(k)||/rettungsdienst|bewusst|atem|krampf|blutung|reanimation|notfall/.test(n))return "Rettungsdienst";
+ return "Sonstige";
+}
+let aaoOpen=(()=>{try{return JSON.parse(localStorage.getItem("lst-aao-open")||"null")}catch(e){return null}})();
+function aaoToggleTopic(t,open){aaoOpen=aaoOpen||{};aaoOpen[t]=open;try{localStorage.setItem("lst-aao-open",JSON.stringify(aaoOpen))}catch(e){}}
+function aaoAllTopics(open){aaoOpen={};aaoTopicsList().forEach(t=>aaoOpen[t]=open);try{localStorage.setItem("lst-aao-open",JSON.stringify(aaoOpen))}catch(e){}render("aao")}
+function aaoTopicsList(){const extra=[...new Set((db.aao||[]).map(aaoTopic))].filter(t=>!AAO_TOPICS.includes(t)).sort((x,y)=>x.localeCompare(y,"de"));return [...AAO_TOPICS.slice(0,-1),...extra,"Sonstige"]}
+// Sortierung innerhalb eines Themenfelds: Einsatzstufe/Stichwort (R0 < R1 < R1N1 …), dann Name
+function aaoSortKey(a){return `${a.active===false?"1":"0"}|${String(a.keyword||a.name||"").toLowerCase()}|${String(a.name||"").toLowerCase()}`}
+function aaoRowHTML(a){
+   const builtin=isBuiltinAao(a.id);
+   return `<tr style="${a.active===false?"opacity:.5":""}"><td><b>${esc(a.name)}</b>${a.keyword?`<br><small class="muted">${esc(a.keyword)}</small>`:""}${builtin&&!a.rulesEdited?"":`<br><span class="pill">${builtin?"Bedingungen geändert":"eigene"}${a.active===false?" · inaktiv":""}</span>`}</td><td>${aaoRulesText(a)}</td><td>${(a.units||[]).map(x=>`${x.n==="pat"?`${esc(x.type)} je Patient`:`${aaoNText(x)}× ${esc(x.type)}`}${x.org?` <small class="muted">(${esc(x.org)})</small>`:""}${x.opt?` <span class="pill">optional</span>`:""}`).join(", ")||`<span class="muted">keine</span>`}</td><td><small>${aaoCombineText(a)}</small></td><td style="white-space:nowrap"><button onclick="editAAO(${JSON.stringify(a.id)})">✏️ Bearbeiten</button><button onclick="deleteAAO(${JSON.stringify(a.id)})">Löschen</button></td></tr>`;
+}
+function aaoGroupsHTML(){
+ const by={}; (db.aao||[]).forEach(a=>{const t=aaoTopic(a);(by[t]=by[t]||[]).push(a)});
+ return `<div class="row" style="gap:6px;margin:8px 0"><button onclick="aaoAllTopics(true)">▾ Alle aufklappen</button><button onclick="aaoAllTopics(false)">▸ Alle einklappen</button></div>`+
+  aaoTopicsList().filter(t=>by[t]).map(t=>{const list=by[t].sort((x,y)=>aaoSortKey(x).localeCompare(aaoSortKey(y),"de",{numeric:true}));const open=!aaoOpen||aaoOpen[t]!==false;
+   return `<details ${open?"open":""} ontoggle="aaoToggleTopic(${esc(JSON.stringify(t))},this.open)" style="border:1px solid #e2e8f0;border-radius:10px;margin:8px 0;padding:0 10px">
+    <summary style="cursor:pointer;padding:10px 0;font-weight:800;font-size:16px">${esc(t)} <span class="pill">${list.length}</span></summary>
+    <div style="overflow-x:auto"><table><thead><tr><th>Stichwort</th><th>Bedingungen</th><th>Alarmierung</th><th>Mit anderen AAOs</th><th></th></tr></thead><tbody>${list.map(aaoRowHTML).join("")}</tbody></table></div></details>`}).join("");
+}
 function aao(){
  if(aaoDraft)return aaoEditor();
  document.getElementById("app").innerHTML=`<div class="card"><div class="row between"><div><h2>🧠 AAO / Einsatzstichworte</h2><p class="muted">Die AAO steuert den Alarmvorschlag. Passen mehrere AAOs, wird nur die höchste alarmiert (die mit den meisten Fahrzeugen; bei Gleichstand die spezifischere). Rettungsdienst aus XABCDE (RD_X…RD_D) kommt immer dazu.</p></div><div class="row" style="gap:6px;flex-wrap:wrap;justify-content:flex-end"><button onclick="cfgPut('aao',true);if(ghToken())saveSetupToGitHub('aao')" title="Änderungen werden automatisch dauerhaft gespeichert – hier von Hand">☁️ Speichern</button><button onclick="cfgSync('aao',true)" title="Dauerhaft gespeicherten Stand laden">📥 Gespeicherten Stand laden</button><button onclick="ghOpenSetup('aao')" title="Optional: zusätzlich in GitHub speichern (Token)">🔑</button>${(db.deletedAaoIds||[]).some(id=>(defaults.aao||[]).some(a=>String(a.id)===String(id)))?`<button onclick="restoreDeletedStdAao()" title="Gelöschte Standard-AAOs zurückholen">↺ Gelöschte Standard-AAOs</button>`:""}<button class="primary" onclick="editAAO(null)">＋ AAO anlegen</button></div></div>
- <table><thead><tr><th>Stichwort</th><th>Bedingungen</th><th>Alarmierung</th><th>Mit anderen AAOs</th><th></th></tr></thead><tbody>${db.aao.map(a=>{
-   const builtin=isBuiltinAao(a.id);
-   return `<tr style="${a.active===false?"opacity:.5":""}"><td><b>${esc(a.name)}</b>${a.keyword?`<br><small class="muted">${esc(a.keyword)}</small>`:""}${builtin&&!a.rulesEdited?"":`<br><span class="pill">${builtin?"Bedingungen geändert":"eigene"}${a.active===false?" · inaktiv":""}</span>`}</td><td>${aaoRulesText(a)}</td><td>${(a.units||[]).map(x=>`${x.n==="pat"?`${esc(x.type)} je Patient`:`${aaoNText(x)}× ${esc(x.type)}`}${x.org?` <small class="muted">(${esc(x.org)})</small>`:""}${x.opt?` <span class="pill">optional</span>`:""}`).join(", ")||`<span class="muted">keine</span>`}</td><td><small>${aaoCombineText(a)}</small></td><td style="white-space:nowrap"><button onclick="editAAO(${JSON.stringify(a.id)})">✏️ Bearbeiten</button><button onclick="deleteAAO(${JSON.stringify(a.id)})">Löschen</button></td></tr>`;
- }).join("")}</tbody></table></div>${qsEditorHTML()}`;
+ ${aaoGroupsHTML()}</div>${qsEditorHTML()}`;
 }
 function editAAO(id){
  const src=id==null?null:db.aao.find(x=>String(x.id)===String(id));
@@ -6753,6 +6782,7 @@ function aaoEditor(){
  document.getElementById("app").innerHTML=`<div class="card">
   <h2>✏️ ${d.id==null?"AAO anlegen":"AAO bearbeiten"}</h2>
   <label>Name</label><input id="aaoName" value="${esc(d.name)}" oninput="aaoDraft.name=this.value">
+  <label>Themenfeld</label><input list="aaoTopicList" value="${esc(d.topic||"")}" placeholder="leer = automatisch (${esc(aaoTopic({...d,topic:""}))})" oninput="aaoDraft.topic=this.value"><datalist id="aaoTopicList">${aaoTopicsList().map(t=>`<option value="${esc(t)}">`).join("")}</datalist>
   ${manv?`<p class="muted" style="margin-top:8px">Meldestichwort wird bei MANV automatisch gebildet („MANV – … – n Verletzte“). Die RTW-Anzahl steigt automatisch auf mindestens 1 RTW je 3 Verletzte.</p>`:`<label>Meldestichwort</label><input value="${esc(d.keyword||"")}" placeholder="${builtin?"leer = Standard":"leer = Name"}" oninput="aaoDraft.keyword=this.value">`}
   <label>Bedingungen</label>
   ${builtin?`<div class="suggest-compact">${aaoRulesText(d)}<br><span class="muted">Fest mit der Notrufabfrage verknüpft.</span></div>
@@ -6821,6 +6851,7 @@ function saveAAO(){
  const entry={id:d.id??Date.now(),name,rules,units};
  if(orRules.length)entry.orRules=orRules;
  if(String(d.keyword||"").trim())entry.keyword=String(d.keyword).trim();
+ if(String(d.topic||"").trim())entry.topic=String(d.topic).trim();
  if(!builtin)entry.active=d.active!==false;
  if(d.rulesEdited)entry.rulesEdited=true;
  entry.combine=d.combine||"nein";
@@ -8050,7 +8081,52 @@ const SIM_CASES=[
    event:"Er ist beim Holzmachen mit der Säge abgerutscht, am Unterarm. Das blutet total, ich drück ein Handtuch drauf.",
    f:{count:"1",x:"Ja",a:"Frei",b:"Normal",c:"Auffällig",d:"Wach / orientiert",e:"tiefe Schnittwunde Unterarm, starke Blutung",psy:"Nein",danger:"nein"},
    onset:"Vor zwei, drei Minuten.",hist:"Er nimmt Blutverdünner, wegen dem Herzen.",
-   extra:["Das Handtuch ist schon ganz durch!","Er ist ganz blass."]}}}
+   extra:["Das Handtuch ist schon ganz durch!","Er ist ganz blass."]}}},
+ // ── Fälle, die am Telefon erledigt werden (kein Rettungsmittel nötig), v5.07 ──
+ {id:"ph_burn",w:3,num:"112",loc:"home",phoneOnly:true,mk:()=>{const p=simPerson();return {rel:"ich selbst",caller:p,patient:p,age:rint(20,70),isSelf:true,phoneOnly:true,need:["cool"],
+   open:["Hallo, ich hab mir die Hand an der Herdplatte verbrannt, das tut so weh!"],event:"Ich hab aus Versehen auf die heiße Herdplatte gefasst. Die Handfläche ist rot, da ist eine kleine Blase.",
+   f:{count:"1",x:"Nein",a:"Frei",b:"Normal",c:"Unauffällig",d:"Wach / orientiert",e:"kleine Verbrennung Handfläche, Rötung, kleine Blase",psy:"Nein",danger:"nein",event:"Medizinischer Notfall"},
+   onset:"Gerade eben.",hist:"Nein, ich bin gesund.",pain:"Das brennt richtig an der Handfläche.",extra:["Soll ich da Butter draufmachen?","Muss ich jetzt ins Krankenhaus?"]}}},
+ {id:"ph_nose",w:3,num:"112",loc:"home",phoneOnly:true,mk:()=>{const p=simPerson("m");return {rel:"mein Sohn",caller:simPerson("w"),patient:p,age:rint(6,14),phoneOnly:true,need:["nose"],
+   open:["Hallo, mein Sohn hat Nasenbluten und das hört nicht auf!"],event:"Er hat seit zehn Minuten Nasenbluten, aus einem Nasenloch. Er sitzt auf dem Sofa und hat den Kopf nach hinten gelegt.",
+   f:{count:"1",x:"Nein",a:"Frei",b:"Normal",c:"Unauffällig",d:"Wach / orientiert",e:"Nasenbluten seit 10 Minuten",psy:"Nein",danger:"nein",event:"Medizinischer Notfall"},
+   onset:"Seit zehn Minuten.",hist:"Nein, sonst ist er gesund.",extra:["Das Taschentuch ist schon ganz rot.","Soll ich ihm den Kopf in den Nacken legen?"]}}},
+ {id:"ph_sting",w:2,num:"112",loc:"home",phoneOnly:true,mk:()=>{const p=simPerson("w");return {rel:"meine Tochter",caller:simPerson("m"),patient:p,age:rint(8,16),phoneOnly:true,need:["cool","callback"],
+   open:["Hallo, meine Tochter ist von einer Wespe gestochen worden, was soll ich machen?"],event:"Sie ist in den Unterarm gestochen worden, das ist ein bisschen dick und rot. Luft kriegt sie ganz normal, Allergien hat sie keine.",
+   f:{count:"1",x:"Nein",a:"Frei",b:"Normal",c:"Unauffällig",d:"Wach / orientiert",e:"Wespenstich Unterarm, lokale Schwellung",psy:"Nein",danger:"nein",event:"Medizinischer Notfall"},
+   onset:"Vor fünf Minuten.",hist:"Keine Allergien, sonst gesund.",extra:["Sie weint, weil es so weh tut.","Muss da ein Arzt drauf gucken?"]}}},
+ {id:"ph_back",w:2,num:"112",loc:"home",phoneOnly:true,mk:()=>{const p=simPerson();return {rel:"ich selbst",caller:p,patient:p,age:rint(35,65),isSelf:true,phoneOnly:true,need:["kvd"],
+   open:["Ja, guten Abend, ich hab seit drei Tagen so Rückenschmerzen und mein Hausarzt hat zu."],event:"Ich hab mich beim Rasenmähen verhoben, seit drei Tagen tut der untere Rücken weh. Laufen geht, Taubheit oder so hab ich nicht.",
+   f:{count:"1",x:"Nein",a:"Frei",b:"Normal",c:"Unauffällig",d:"Wach / orientiert",e:"Rückenschmerzen seit 3 Tagen, keine neurologischen Ausfälle",psy:"Nein",danger:"nein",event:"Medizinischer Notfall"},
+   onset:"Seit drei Tagen.",hist:"Nichts Besonderes.",pain:"Unten im Rücken, so ein Ziehen.",extra:["Ich dachte, Sie können mir vielleicht was sagen.","Ich will ja nicht stören."]}}},
+ {id:"ph_fever",w:2,num:"112",loc:"home",phoneOnly:true,mk:()=>{const p=simPerson();return {rel:"ich selbst",caller:p,patient:p,age:rint(25,60),isSelf:true,phoneOnly:true,need:["kvd"],
+   open:["Hallo, ich hab Fieber und fühl mich total schlapp, was soll ich machen?"],event:"Ich hab seit gestern 38,5 Fieber, Halsschmerzen und Gliederschmerzen, wie eine Grippe. Luft krieg ich gut.",
+   f:{count:"1",x:"Nein",a:"Frei",b:"Normal",c:"Unauffällig",d:"Wach / orientiert",e:"Fieber 38,5, grippale Symptome",psy:"Nein",danger:"nein",event:"Medizinischer Notfall"},
+   onset:"Seit gestern.",hist:"Nein.",pain:"Hals und Glieder tun weh.",extra:["Mein Hausarzt hat erst Montag wieder auf."]}}},
+ {id:"ph_pharm",w:2,num:"112",loc:"home",phoneOnly:true,mk:()=>{const p=simPerson();return {rel:"ich selbst",caller:p,patient:p,age:rint(25,75),isSelf:true,phoneOnly:true,need:["pharmacy"],
+   open:["Ja hallo, entschuldigen Sie, ich bräuchte mal eine Apotheke, die jetzt noch aufhat."],event:"Ich brauche Fiebersaft für mein Kind, dem geht's aber eigentlich gut, nur Fieber. Welche Apotheke hat denn Notdienst?",
+   f:{count:"1",x:"Nein",a:"Frei",b:"Normal",c:"Unauffällig",d:"Wach / orientiert",e:"",psy:"Nein",danger:"nein",event:"Sonstiger Notfall"},
+   onset:"Seit heute Nachmittag.",hist:"",extra:["Ich hab im Internet nichts gefunden."]}}},
+ {id:"ph_police",w:2,num:"112",loc:"home",phoneOnly:true,mk:()=>{const p=simPerson();return {rel:"",caller:p,patient:p,age:rint(30,75),isSelf:true,phoneOnly:true,need:["police"],
+   open:["Hallo, bei meinen Nachbarn ist schon wieder so eine laute Party, ich kann nicht schlafen!"],event:"Nebenan läuft seit Stunden laute Musik, die grölen rum. Verletzt ist keiner, ich will einfach nur schlafen.",
+   f:{count:"0",x:"Nein",a:"Frei",b:"Normal",c:"Unauffällig",d:"Wach / orientiert",e:"",psy:"Nein",danger:"nein",event:"Sonstiger Notfall"},
+   onset:"Seit zehn Uhr schon.",hist:"",extra:["Jetzt ist es gleich eins!"]}}},
+ {id:"ph_smoke",w:2,num:"112",loc:"home",phoneOnly:true,mk:()=>{const p=simPerson();return {rel:"",caller:p,patient:p,age:rint(30,85),isSelf:true,phoneOnly:true,need:["battery"],
+   open:["Hallo, Feuerwehr? Mein Rauchmelder piept die ganze Zeit!"],event:"Der Rauchmelder im Flur piept so ungefähr jede Minute einmal kurz. Rauch ist nirgends, es riecht auch nicht verbrannt.",
+   f:{count:"0",x:"Nein",a:"Frei",b:"Normal",c:"Unauffällig",d:"Wach / orientiert",e:"",psy:"Nein",danger:"nein",event:"Sonstiger Notfall"},
+   onset:"Seit heute Abend.",hist:"",extra:["Brennt es jetzt oder nicht?","Der ist schon ein paar Jahre alt."]}}},
+ {id:"ph_cut",w:2,num:"112",loc:"home",phoneOnly:true,mk:()=>{const p=simPerson();return {rel:"ich selbst",caller:p,patient:p,age:rint(20,70),isSelf:true,phoneOnly:true,need:["pressure"],
+   open:["Hallo, ich hab mich beim Gemüseschneiden in den Finger geschnitten."],event:"Beim Zwiebelschneiden in die Fingerkuppe geschnitten. Das blutet so ein bisschen, ist aber nicht tief.",
+   f:{count:"1",x:"Nein",a:"Frei",b:"Normal",c:"Unauffällig",d:"Wach / orientiert",e:"kleine Schnittwunde Finger, leichte Blutung",psy:"Nein",danger:"nein",event:"Medizinischer Notfall"},
+   onset:"Gerade eben.",hist:"Nein, keine Blutverdünner.",pain:"Pocht ein bisschen am Finger.",extra:["Muss das genäht werden?"]}}},
+ {id:"ph_poison",w:1,num:"112",loc:"home",phoneOnly:true,mk:()=>{const p=simPerson();return {rel:"mein Kind",caller:simPerson("w"),patient:p,age:2,phoneOnly:true,need:["poison"],
+   open:["Hallo, mein Kind hat an einer Spülmaschinentablette geleckt, was muss ich tun?"],event:"Er hatte die Tablette in der Hand und hat dran geleckt, geschluckt hat er nichts, glaub ich. Er spielt ganz normal weiter.",
+   f:{count:"1",x:"Nein",a:"Frei",b:"Normal",c:"Unauffällig",d:"Wach / orientiert",e:"geleckt an Spülmaschinentablette, beschwerdefrei",psy:"Nein",danger:"nein",event:"Medizinischer Notfall"},
+   onset:"Vor zwei Minuten.",hist:"Er ist gesund.",extra:["Er hustet nicht und spuckt nicht.","Soll ich ihn zum Erbrechen bringen?"]}}},
+ {id:"ph_misdial",w:2,num:"112",loc:"home",phoneOnly:true,mk:()=>{const p=simPerson();return {rel:"",caller:p,patient:p,age:rint(20,80),isSelf:true,phoneOnly:true,misdial:true,need:[],
+   open:["… (Rascheln) … Hallo? Oh – Entschuldigung! Das war ein Versehen, das Handy war in der Tasche!"],event:"Nein, hier ist nichts passiert, das Handy war in der Tasche und hat von allein gewählt.",
+   f:{count:"0",x:"Nein",a:"Frei",b:"Normal",c:"Unauffällig",d:"Wach / orientiert",e:"",psy:"Nein",danger:"nein",event:"Sonstiger Notfall"},
+   onset:"",hist:"",extra:["Tut mir echt leid!"]}}}
 ];
 
 // Anrufer ruft für sich selbst an (statt für jemand anderen): erste Person, eigener Wortlaut
@@ -8102,7 +8178,81 @@ const SIM_SELF_RATE={acs:.4,dyspnoe:.35,fall:.35,anaph:.4,vu_light:.5,cut:.6};
 const SIM_FOLLOW_RATE=0.4;
 let simFollowQueue=[];
 
+
+// ─── Anrufer halten sich an die AAO (v5.07) ───────────────────────────────────────────────────
+// Jeder Übungsfall wird vorab durch die echte AAO-Bewertung geschickt (mit den Antworten, die der
+// Anrufer geben wird). So steht fest, was laut AAO alarmiert werden müsste („AAO-Soll“). Fälle,
+// zu denen keine AAO passt, werden nicht angeboten. Nach der Alarmierung gibt es einen Vergleich.
+const SIM_F2A={x:"x_massive",a:"a_airway",b:"b_breath",c:"c_circ",d:"d_disability",e:"e_exposure"};
+function simAnswersFromF(sim){
+ const a={callType:"112"}, f=(sim&&sim.d&&sim.d.f)||{};
+ for(const [k,v] of Object.entries(f)){if(v==null||String(v).trim()==="")continue;a[SIM_F2A[k]||k]=String(v)}
+ if(a.e_exposure==null&&a.x_massive)a.e_exposure="Unauffällig";
+ if(!a.event){const d=sim.d||{},t=String(d.event||"").toLowerCase();
+   a.event=(sim.loc&&sim.loc.kind==="water")?"Person im Wasser":d.fire||/brennt|feuer|rauch/.test(t)?"Feuer / Rauchentwicklung":d.cpr?"Reanimation":/unfall|zusammengestoßen|aufgefahren/.test(t)?"Verkehrsunfall":"Medizinischer Notfall"}
+ return a;
+}
+function simSollAao(sim){
+ if(!sim||sim.kt||!sim.d||!sim.d.f)return null;
+ const a=simAnswersFromF(sim); if(!a.event)return null;
+ const keep=db.currentCall, loc=sim.loc||{};
+ const fake={id:"aao-soll",answers:a,answerLabels:{},count:a.count||"1",history:[],location:loc.addr||loc.text||"",lat:loc.lat,lng:loc.lng,locationIsWater:!!(loc.water||loc.kind==="water"),createdAt:new Date().toISOString()};
+ let r=null;
+ try{db.currentCall=fake;evaluate();
+   const types={};(fake.proposal||[]).forEach(x=>{const t=x.type||"";if(t)types[t]=(types[t]||0)+1});
+   r={keyword:String(fake.keyword||""),aao:fake.aaoWinner||"",types,sr:!!fake.sr};
+ }catch(e){r=null}finally{db.currentCall=keep}
+ return r;
+}
+function simSollText(so){if(!so)return "–";const t=Object.entries(so.types||{}).map(([k,n])=>`${n>1?n+"× ":""}${k}`).join(", ");return `${so.keyword||so.aao||"ohne Stichwort"}${t?` (${t})`:" (kein Fahrzeug)"}`}
+// Nach der Alarmierung: Ist mit AAO-Soll vergleichen (nur Übungsanrufe)
+function simAaoCheck(c){
+ const s=c&&c.sim; if(!s||s.kt||s.aaoChecked)return;
+ const so=s.soll||simSollAao(s); s.aaoChecked=true; if(!so)return;
+ const ist={};(c.alarmedUnits||[]).forEach(id=>{const u=db.units.find(x=>String(x.id)===String(id));if(u&&u.type)ist[u.type]=(ist[u.type]||0)+1});
+ const miss=Object.entries(so.types||{}).filter(([t,n])=>(ist[t]||0)<n).map(([t,n])=>`${t}${n-(ist[t]||0)>1?" ×"+(n-(ist[t]||0)):""}`);
+ const more=Object.entries(ist).filter(([t,n])=>n>((so.types||{})[t]||0)).map(([t])=>t);
+ let a=`AAO-Soll laut Anruferangaben: ${simSollText(so)}`;
+ a+=miss.length?` · ⚠️ fehlt: ${miss.join(", ")}`:" · ✅ alle Soll-Fahrzeuge alarmiert";
+ if(more.length)a+=` · zusätzlich: ${more.join(", ")}`;
+ if(s.d.phoneOnly)a+=" · ℹ️ Dieser Anruf wäre auch telefonisch zu erledigen gewesen (Beratung/Weiterleitung).";
+ c.history=c.history||[]; c.history.push({q:"🎓 Übungs-Check AAO",a});
+ toast(miss.length?`AAO-Check: es fehlt ${miss.join(", ")}`:"AAO-Check: passt ✅");
+}
+// „📞 Telefonisch erledigt“ – Notruf ohne Rettungsmittel abschließen
+const PHONE_DONE=[["advice","Beratung am Telefon"],["kvd","An 116 117 verwiesen"],["police","An 110 verwiesen"],["pharmacy","Apotheken-Notdienst genannt"],["poison","Giftnotruf genannt"],["misdial","Fehlanruf / Versehen"]];
+function showModal(html){closeModal();const el=document.createElement("div");el.id="lstModal";el.style.cssText="position:fixed;inset:0;background:rgba(15,23,42,.55);z-index:2000;display:flex;align-items:flex-start;justify-content:center;padding:16px;overflow:auto";el.onclick=e=>{if(e.target===el)closeModal()};el.innerHTML=`<div class="card" style="max-width:460px;width:100%;margin:40px 0 0">${html}</div>`;document.body.appendChild(el)}
+function closeModal(){document.getElementById("lstModal")?.remove()}
+function closeByPhoneDialog(id){
+ const c=[db.currentCall,...(db.activeCalls||[])].find(x=>x&&String(x.id)===String(id)); if(!c)return;
+ showModal(`<h3>📞 Telefonisch erledigt</h3><p class="muted">Kein Rettungsmittel – der Notruf wird mit dem Ergebnis abgeschlossen.</p>
+  <div style="display:grid;gap:6px">${PHONE_DONE.map(([k,t])=>`<button onclick="closeByPhone('${esc(c.id)}','${k}')">${t}</button>`).join("")}</div>
+  <div class="row" style="justify-content:flex-end;margin-top:10px"><button onclick="closeModal()">Abbrechen</button></div>`);
+}
+function closeByPhone(id,why){
+ const c=[db.currentCall,...(db.activeCalls||[])].find(x=>x&&String(x.id)===String(id)); if(!c)return;
+ closeModal();
+ const label=(PHONE_DONE.find(x=>x[0]===why)||[,"Telefonisch erledigt"])[1];
+ c.history=c.history||[]; c.history.push({q:"📞 Telefonisch erledigt",a:label}); c.keyword=c.keyword||("TELEFONISCH – "+label); c.phoneDone=why;
+ const s=c.sim;
+ if(s&&!s.kt){
+   const so=s.soll||simSollAao(s), notes=[];
+   if(!s.d.phoneOnly)notes.push(`⚠️ Das war kein Fall fürs Telefon – laut AAO wäre ${simSollText(so)} nötig gewesen.`);
+   else{
+     const adv=(s.mem&&s.mem.adv)||[], miss=(s.d.need||[]).filter(n=>!adv.includes(n));
+     const NAME={cool:"Kühlen (lauwarmes Wasser)",nose:"Nasenbluten: Kopf nach vorne, Nasenflügel zudrücken",pressure:"Druck auf die Wunde / hochhalten",callback:"Wieder anrufen, wenn es schlimmer wird",kvd:"Ärztlicher Bereitschaftsdienst 116 117",police:"Polizei 110",pharmacy:"Apotheken-Notdienst",poison:"Giftnotruf",battery:"Rauchmelder-Batterie wechseln"};
+     notes.push(s.d.misdial&&why!=="misdial"?"ℹ️ Das war ein Fehlanruf (Hosentasche).":miss.length?`⚠️ Dem Anrufer fehlte noch ein Rat: ${miss.map(n=>NAME[n]||n).join("; ")}.`:"✅ Gut gelöst – der Anrufer weiß, was zu tun ist.");
+   }
+   c.history.push({q:"🎓 Übungs-Check",a:notes.join(" ")}); toast(notes[0]);
+ }
+ finishCall(c.id);
+}
 function simMakeCall(){
+ // Anrufer halten sich an die AAO: Fälle ohne passende AAO (kein Soll-Fahrzeug) werden übersprungen
+ for(let i=0;i<6;i++){const sim=simMakeCall0();if(!sim||sim.kt||sim.d.phoneOnly)return sim;const so=simSollAao(sim);if(so&&Object.keys(so.types).length){sim.soll=so;return sim}}
+ return simMakeCall0();
+}
+function simMakeCall0(){
  // Mit KI: bevorzugt ein von der KI frisch erfundener Fall (im Hintergrund vorbereitet)
  if(simAiReady()&&simAiCases.length&&!simMakeCall.noAi){const s=simAiCases.shift();s.created=Date.now();if(s.loc.geo)simGeocode(s);setTimeout(simAiFill,500);return s}
  // Krankentransporte (19222) rufen nicht automatisch an – nur Notrufe 112
@@ -8203,7 +8353,9 @@ function simAccept(simId){
  c.callerGpsPending=true;
  // selten bricht die Verbindung ab (Funkloch/Akku) – der Anrufer ruft dann gleich wieder an
  if(!s.isFollow&&!s.kt&&Math.random()<0.07)s.dropAt=Date.now()+rnd(60,200)*1000;
- simSay(c,pick(s.d.open));
+ // Der Disponent meldet sich zuerst – der Anrufer spricht erst danach (v5.07)
+ s.awaitGreeting=true; s.lastAt=Date.now();
+ if(!s.kt){const so=simSollAao(s);if(so)s.soll=so}
  save(); renderCallerBanner(); render("notruf");
 }
 // Folgeanruf dem ursprünglichen Einsatz zuordnen: Gespräch läuft dort weiter, Abfragepunkte ändern
@@ -8500,6 +8652,40 @@ function simCtxAnswer(c,part){
  for(const [re,fn] of SIM_CTX_Q)if(re.test(part)){const a=fn(c);if(a)return a}
  return null;
 }
+
+// ─── Anweisungen am Telefon verstehen (v5.07) ─────────────────────────────────────────────────
+// Der Anrufer bestätigt Ratschläge konkret und setzt sie um. Fälle, die am Telefon erledigt werden
+// können, haben Ziele (need); sind alle erfüllt, bedankt sich der Anrufer – man kann auflegen.
+const SIM_ADVICE=[
+ ["cool",/kühl|kaltes wasser|lauwarm|unter (das |fließendes )?wasser|kühlpack|kühlakku/,"Okay, ich halt das unter lauwarmes Wasser.",true],
+ ["nose",/kopf nach vorn|nach vorne beugen|nase zudrück|nasenflügel|nase zusammen|nacken kühlen/,"Okay, Kopf nach vorne und die Nase zudrücken. Macht er.",true],
+ ["pressure",/druckverband|drauf ?drücken|sauberes tuch|kompresse|pflaster|verband|hoch ?halten|hochlegen/,"Okay, ich drück ein sauberes Tuch drauf und halt die Hand hoch.",true],
+ ["callback",/wieder an(rufen|ruf)|melden sie sich|rufen sie (sofort |gleich )?(wieder |erneut )?an|wenn es schlimmer|wenn (sie|er) (schlecht )?luft|beobachten/,"Okay, ich pass auf und ruf sofort wieder an, wenn's schlimmer wird.",true],
+ ["kvd",/116 ?117|bereitschaftsdienst|ärztliche[nr]? bereitschaft|notdienstpraxis|bereitschaftspraxis/,"Ah, 116 117 – okay, da ruf ich an.",true],
+ ["police",/\b110\b|polizei (an|rufen|wählen|verständigen|informieren)|rufen sie die polizei|an die polizei/,"Ach so, dann ruf ich die Polizei an. Okay.",true],
+ ["pharmacy",/apotheke|notdienst.?apotheke|apotheken.?notdienst|aponet|22 ?8 ?33/,"Okay, dann guck ich nach der Notdienstapotheke.",true],
+ ["poison",/giftnotruf|giftinformation|giftzentrale|gift.?notruf|19 ?240/,"Okay, beim Giftnotruf ruf ich an.",true],
+ ["battery",/batterie|akku (wechseln|tauschen)|rauchmelder (abnehmen|tauschen|wechseln)|testknopf/,"Ach, die Batterie! Okay, dann wechsel ich die.",true],
+ ["nothing",/nichts (zu )?(essen|trinken)|nüchtern|kein(e|en)? butter|keine hausmittel|nicht (zum )?erbrechen/,"Okay, dann mach ich das nicht.",false],
+ ["legsup",/beine hoch|schocklage/,"Okay, die Beine sind hochgelegt.",false],
+ ["sit",/hinsetzen|setzen sie (ihn|sie|sich)|oberkörper hoch/,"Okay, ich hab ihn hingesetzt.",false],
+ ["doctor",/hausarzt|morgen zum arzt|arztpraxis|zum arzt gehen/,"Okay, dann geh ich zum Arzt.",false],
+ ["ambulance",/(ich )?schicke(n)? (ihnen )?(einen |den )?(rettungswagen|krankenwagen|rtw|notarzt)|rettungswagen (ist|kommt)|krankenwagen (ist|kommt)/,null,false]
+];
+function simAdviceAnswer(c,part){
+ const s=c.sim,d=s.d; s.mem=s.mem||{said:[],calm:0}; s.mem.adv=s.mem.adv||[];
+ for(const [k,re,ack] of SIM_ADVICE){
+   if(!re.test(part))continue;
+   if(k==="ambulance")return d.phoneOnly&&!d.misdial?pick(["Oh – ist das wirklich so schlimm? Ich dachte, Sie können mir am Telefon was sagen.","Muss das denn sein? So schlimm ist es eigentlich nicht."]):null;
+   if(!s.mem.adv.includes(k))s.mem.adv.push(k);
+   let a=ack;
+   if(k==="cool"&&/butter/.test(part))a+=" Und keine Butter, verstanden.";
+   if(d.phoneOnly&&(d.need||[]).length&&(d.need||[]).every(n=>s.mem.adv.includes(n))&&!s.resolved){s.resolved=true;a+=" "+pick(["Vielen Dank, dann mach ich das so!","Danke, das hilft mir schon. Tschüss!","Gut, dann weiß ich Bescheid. Danke schön!"])}
+   return d.isSelf||s.speaker==="patient"?a:simFix(s,a);
+ }
+ if(d.misdial&&!s.resolved&&/brauchen sie hilfe|alles in ordnung|ist (etwas|was) passiert|geht es ihnen gut|wirklich/.test(part)){s.resolved=true;return "Nein, nein, alles gut, das war wirklich nur ein Versehen. Entschuldigung!"}
+ return null;
+}
 function simAnswerSmart(c,text){
  const s=c.sim, d=s.d; s.mem=s.mem||{said:[],calm:0};
  const raw=String(text||"").trim(), norm=simNormText(raw);
@@ -8520,7 +8706,7 @@ function simAnswerSmart(c,text){
  const check=/(schauen|gucken|prüfen|sehen|fühlen) sie (mal |bitte )*(nach|ob)|gucken sie mal|schauen sie mal/.test(norm);
  for(const part of (parts.length?parts:[norm]).slice(0,3)){
    const ints=simIntents(part);
-   let ans=simCtxAnswer(c,part)||simKBAnswer(c,part)||simEnvAnswer(c,part);
+   let ans=simAdviceAnswer(c,part)||simCtxAnswer(c,part)||simKBAnswer(c,part)||simEnvAnswer(c,part);
    if(!ans&&ints.length){ans=simAnswerFor(c,part).replace(/^(Bitte schnell! |Oh Gott… )/,"");
      if(/^(Wie bitte\?|Das hab ich nicht verstanden\.|Äh… was meinen Sie genau\?|Das weiß ich nicht\.)$/.test(ans))ans=null}
    if(!ans)ans=simYesNo(c,part,raw);
@@ -8645,6 +8831,7 @@ DEIN FALL:
 - ${d.isSelf?"Du rufst für DICH SELBST an – du bist der Patient. Sprich in der Ich-Form.":d.passerby?"Du bist zufällig vorbeigekommen und kennst den Betroffenen nicht.":d.clinicCaller?"Du bist Pflegekraft auf Station 3 im Klinikum Wilhelmshaven.":d.rel?`Du rufst an für: ${d.rel}.`:"Du meldest ein Ereignis, das du beobachtest."}
 ${P.first&&!d.isSelf&&!d.fire?`- Betroffene Person: ${P.first} ${P.last}, ${P.g==="w"?"weiblich":"männlich"}${d.age!=null?`, ${d.age} Jahre`:""}.\n`:d.isSelf?`- Du bist ${d.age} Jahre alt.\n`:""}- Ort: ${s.loc.text}.
 - Was los ist: ${d.event}
+- Dein erster Satz, wenn die Leitstelle sich meldet: ${(d.open||[])[0]||""}${d.phoneOnly?"\n- Das ist eigentlich kein Fall für einen Rettungswagen; du hoffst auf einen Rat am Telefon und setzt Ratschläge um. Wenn du alles Nötige weißt, bedankst du dich.":""}
 ${lay?`- Zustand (in Laiensprache beschreiben): ${lay}${f.e?`; außerdem: ${f.e}`:""}.\n`:""}${d.pain?`- Beschwerden: ${d.pain}\n`:""}${d.onset?`- Seit wann: ${d.onset}\n`:""}${d.hist?`- Vorerkrankungen/Medikamente: ${d.hist}\n`:""}${d.danger?`- Gefahr vor Ort: ${d.danger}\n`:""}${d.inside?`- Personen im Gebäude: ${d.inside}\n`:""}${d.kt?`- Krankentransport: Ziel ${d.dest||"?"}, Transport ${d.mode||"?"}, Zeit ${d.time||"?"}, Unterlagen: ${d.doc||"?"}\n`:""}${d.notes?`- Vorgaben vom Ausbilder für deine Rolle: ${d.notes}\n`:""}${s.isFollow?`- Du hast vorhin schon einmal angerufen. Jetzt rufst du ERNEUT an, weil: ${s.why||"sich etwas verändert hat"}.\n`:""}${d.extra&&d.extra.length?`- Typische Sätze von dir: ${d.extra.join(" | ")}\n`:""}${alarmMin!=null?`- Die Leitstelle hat vor ${alarmMin} Minuten Hilfe losgeschickt.\n`:""}${c.rea&&c.rea.open&&reaMetroCall===String(c.id)?"- Ein Metronom piept im Takt; du drückst auf die Brust und zählst mit.\n":""}${s.cprStarted?"- Du machst gerade Herzdruckmassage.\n":""}${s.speaker==="patient"&&!d.isSelf?`- WICHTIG: Gerade hat der Anrufer das Telefon an die betroffene Person weitergegeben. Du sprichst jetzt ALS ${P.first} ${P.last} selbst (Ich-Form, ${d.age} Jahre), mit den Beschwerden oben, so wie es dein Zustand erlaubt.\n`:""}`;
 }
 function simAiMessages(c){
@@ -8664,6 +8851,15 @@ async function simAiCall(system,messages,maxTokens=200){
  }finally{clearTimeout(to)}
 }
 async function simReply(c,text){
+ if(c.sim.awaitGreeting){
+   c.sim.awaitGreeting=false;
+   if(c.sim.dropAt)c.sim.dropAt=Date.now()+rnd(60,200)*1000;
+   const open=pick(c.sim.d.open);
+   // Hat die Leitstelle gleich eine echte Frage gestellt, antwortet der Anrufer (hastig) darauf mit
+   const q=String(text).replace(/^.*?(notruf|leitstelle|feuerwehr|rettungsdienst)[^,.!?]*[,.!]?/i,"").trim();
+   if(q.length>6&&/\?|wo |was |wie /i.test(q)&&!simAiReady()){const extra=simAnswerSmart(c,q);if(extra&&!/weiß ich (leider )?nicht|wie meinen sie|versteh/i.test(extra)&&!c.sim.d.misdial)return open+" "+extra}
+   return open;
+ }
  const ints0=simIntents(text);
  if(ints0.includes("toPatient")||ints0.includes("toCaller"))return simAnswerFor(c,text); // Telefonübergabe regelbasiert (Zustand)
  if(simAiReady()){
@@ -8750,6 +8946,7 @@ async function simAiMakeCase(){
 Thema: ${topic}
 Ort (fest vorgegeben, so verwenden): ${loc.text}
 ${selfHint}
+Der Fall muss zu einer dieser AAOs der Leitstelle passen (die Angaben in "f" müssen deren Bedingungen erfüllen): ${(db.aao||[]).filter(x=>x.active!==false).slice(0,40).map(x=>x.keyword||x.name).join("; ")}.
 Variiere Alter, Geschlecht, Anzahl Betroffener (meist 1, manchmal 2–5), Schwere und Stimmung. Keine Suizid-/Selbstverletzungsthemen, keine Gewaltverbrechen.
 JSON-Felder:
 {"caller":{"first":"Vorname","last":"Nachname","g":"m|w"},"patient":{"first":"","last":"","g":"m|w"},"age":Zahl,
@@ -8794,7 +8991,7 @@ async function simAiSpontaneous(c){
 // spontane Sätze, wenn länger nichts gesagt wurde
 function simSpontaneous(){
  for(const c of allOpenCalls()){
-   if(!c.sim||c.phoneEnd||c.sim.typing||!simMine(c))continue;
+   if(!c.sim||c.phoneEnd||c.sim.typing||!simMine(c)||c.sim.awaitGreeting||c.sim.resolved)continue;
    if(simCallerEnd(c))continue;
    const s=c.sim; if(Date.now()-s.lastAt<rnd(28,45)*1000)continue;
    if(simAiReady()){if(Date.now()-s.lastAt>rnd(35,55)*1000)simAiSpontaneous(c);continue}
@@ -8902,7 +9099,7 @@ function simChatHTML(c){
   <div class="row between"><h3 style="margin:0">🗣️ Übungsanruf ${s.num==="19222"?"19222":"112"} ${simVoice?"– 🔊 Sprachmodus":"– 🔇 Textmodus"}</h3><small class="muted">${simAiReady()?`🤖 KI-Anrufer${s.d&&s.d.ai?" · Fall von der KI erfunden":""}`:`Stichwort-Anrufer · <a href="#" onclick="simAiDialog();return false">🤖 echte KI einrichten</a>`}</small></div>
   ${s.isFollow?`<div style="margin-top:6px;padding:6px 10px;border-radius:8px;background:#fef3c7;color:#92400e;font-weight:700">🔁 Erneuter Anruf – Rufnummer bekannt aus Einsatz #${esc(s.refCallId)}${ref?` (${esc(ref.keyword||"—")}, ${esc(ref.location||"")})`:" (Einsatz bereits abgeschlossen)"}
     ${ref?`<button style="margin-left:8px" onclick="simMergeFollow('${esc(String(c.id))}')">↩️ Zu Einsatz #${esc(String(ref.id))} übernehmen</button>`:""}</div>`:""}
-  <div id="simLog" style="max-height:${simVoice?"140":"260"}px;overflow:auto;margin-top:6px;padding:4px;background:#f8fafc;border-radius:8px">${simLogHTML(c)}</div>
+  <div id="simLog" style="max-height:${simVoice?"140":"260"}px;overflow:auto;margin-top:6px;padding:4px;background:#f8fafc;border-radius:8px">${s.awaitGreeting?`<div class="muted" style="padding:6px;font-weight:700">📞 Verbunden – Sie melden sich zuerst, z. B. „Notruf Feuerwehr und Rettungsdienst, wo genau ist der Notfallort?“</div>`:""}${simLogHTML(c)}</div>
   ${c.phoneEnd?`<div class="muted" style="margin-top:6px">📵 Aufgelegt.</div>`:simInputRowHTML(c,"simInput")}
  </div>`;
 }
