@@ -170,7 +170,7 @@ html[data-device="handy"] #floatDock{left:8px;right:8px;width:auto;top:auto;bott
 </head>
 <body>
 <div style="padding:6px 10px;font-size:11px;color:#94a3b8;font-weight:700;display:flex;flex-wrap:wrap;align-items:center;gap:10px;position:sticky;top:0;z-index:10;background:var(--bg)">
- <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v5.05</span>
+ <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v5.06</span>
  <span id="syncState"></span> <a id="deskTag" href="#" onclick="renameDesk();return false" title="Name dieses Platzes (für „offen an …“) – antippen zum Ändern" style="color:#64748b;font-weight:700;text-decoration:none"></a>
  <span id="simCtl" style="position:absolute;left:50%;transform:translateX(-50%);display:flex;gap:6px;align-items:center"></span>
  <a id="homeLink" href="#" onclick="render('leitstelle');return false" class="hidden" style="color:#64748b;text-decoration:underline;font-weight:600">🖥️ Leitstelle</a>
@@ -3369,7 +3369,28 @@ async function qsMaskSubmit(key){
 }
 
 // ─── „Zurück“: vorherige Antworten bleiben vorbelegt (v4.93) ─────────────────────────────────
-function qsWithPrefill(q){const h=questionHTML(q);setTimeout(()=>qsPrefill(q[0]),0);return h}
+function qsWithPrefill(q){const h=questionHTML(q);setTimeout(()=>qsPrefill(q[0]),0);return xabcdeJumpBar(q[0],h)+h}
+// XABCDE überspringen (v5.06): Sprung zu einem späteren Buchstaben – alles dazwischen gilt als unauffällig.
+const XABCDE_IDS=["x_massive","a_airway","b_breath","c_circ","d_disability","e_exposure"];
+const XABCDE_NORMAL={x_massive:"Nein",a_airway:"Frei",b_breath:"Normal",c_circ:"Unauffällig",d_disability:"Wach / orientiert",e_exposure:"Unauffällig"};
+function xabcdeJumpBar(id,html){
+ const c=db.currentCall; if(!c||c.kt)return "";
+ const i=XABCDE_IDS.indexOf(id); if(i<0||!needsXABCDE(c)||reaShortcutActive(c)||/wird übersprungen/.test(html))return "";
+ const later=XABCDE_IDS.slice(i+1).filter(k=>!(k in c.answers)&&!qsIsHidden(c,k));
+ const btn=(k)=>`<button type="button" onclick="xabcdeJump('${k}')" style="padding:4px 10px;font-weight:800" title="${XABCDE_IDS.slice(i,XABCDE_IDS.indexOf(k)).map(x=>x[0].toUpperCase()).join(", ")} als unauffällig übernehmen und zu ${k[0].toUpperCase()} springen">${k[0].toUpperCase()}</button>`;
+ return `<div class="row" style="gap:6px;align-items:center;margin-bottom:8px;font-size:13px;flex-wrap:wrap"><span class="muted" style="font-weight:700">Springen zu:</span>${later.map(btn).join("")}<button type="button" onclick="xabcdeJump(null)" style="padding:4px 10px">✓ Rest unauffällig</button><span class="muted" style="font-size:12px">(Übersprungenes gilt als unauffällig)</span></div>`;
+}
+async function xabcdeJump(target){
+ const c=db.currentCall; if(!c||qsMaskBusy)return;
+ const end=target?XABCDE_IDS.indexOf(target):XABCDE_IDS.length;
+ const todo=XABCDE_IDS.slice(0,end).filter(k=>!(k in c.answers));
+ if(!todo.length)return;
+ qsMaskBusy=true; qsMaskTag="xjump_"+Date.now();
+ try{for(const k of todo)await answer(k,XABCDE_NORMAL[k]);}
+ finally{qsMaskBusy=false;qsMaskTag=null}
+ c.history.push({q:"⏭️ XABCDE übersprungen",a:`${todo.map(k=>k[0].toUpperCase()).join(", ")} als unauffällig übernommen`,auto:true,mask:c.history[c.history.length-1]?.mask});
+ evaluate(); save(); notruf();
+}
 function qsPrefill(id){
  const c=db.currentCall, P=c&&c.prevAnswers; if(!P)return;
  const m=!c.kt&&qsMaskOf(id), ids=m?m.ids:[id]; let any=false;

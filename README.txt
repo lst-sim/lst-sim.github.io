@@ -1606,3 +1606,10 @@ Version 5.05:
   Text eingeben). Die Bedingung greift, wenn der Knopf gewählt wurde oder der Text vorkommt
   („a, b“ = a ODER b). Mit „🚑 NA-Indikation“ markierte Knöpfe ziehen weiterhin einen Notarzt.
 - Nur „Unauffällig“ (ohne weitere Befunde) zählt weiter als unauffälliges E (R0 möglich).
+
+Version 5.06:
+- XABCDE überspringen: Über jeder XABCDE-Frage steht „Springen zu: A B C D E“. Ein Tipp auf einen
+  späteren Buchstaben übernimmt alles dazwischen als unauffällig (X Nein, A Frei, B Normal,
+  C Unauffällig, D Wach / orientiert) und springt direkt dorthin. „✓ Rest unauffällig“ übernimmt
+  alle noch offenen Punkte inkl. E als unauffällig. Im Verlauf steht „⏭️ XABCDE übersprungen“;
+  „Zurück“ nimmt den ganzen Sprung zurück.
