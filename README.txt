@@ -1607,6 +1607,15 @@ Version 5.05:
   („a, b“ = a ODER b). Mit „🚑 NA-Indikation“ markierte Knöpfe ziehen weiterhin einen Notarzt.
 - Nur „Unauffällig“ (ohne weitere Befunde) zählt weiter als unauffälliges E (R0 möglich).
 
+Version 5.08:
+- D (Bewusstsein) mit Mehrfachauswahl: Bewusstseinsgetrübt, Bewusstlos, Krampfanfall und
+  Neurologisch auffällig antippen (mehrere möglich) und mit „✓ Weiter“ übernehmen. „Wach /
+  orientiert“ und „Unklar“ gelten wie bisher sofort mit einem Tipp. Gespeichert wird z. B.
+  „Bewusstseinsgetrübt; Krampfanfall“.
+- AAO-Bedingungen auf D passen, wenn einer der gewählten Werte passt. Bei der Bewertung zählt
+  der schwerste: Bewusstlos vor Krampfanfall/neurologisch vor Bewusstseinsgetrübt.
+- „Notruf ändern“: D als Häkchen-Liste. „Zurück“ behält die gewählten D-Knöpfe.
+
 Version 5.07:
 - Du beginnst das Gespräch: Nach dem Annehmen sagt der Übungsanrufer nichts, bis du dich meldest
   (z. B. „Notruf Feuerwehr und Rettungsdienst, wo genau ist der Notfallort?“). Stellst du gleich
