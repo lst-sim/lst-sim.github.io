@@ -1607,6 +1607,39 @@ Version 5.05:
   („a, b“ = a ODER b). Mit „🚑 NA-Indikation“ markierte Knöpfe ziehen weiterhin einen Notarzt.
 - Nur „Unauffällig“ (ohne weitere Befunde) zählt weiter als unauffälliges E (R0 möglich).
 
+Version 5.16:
+- Status 4 bei Ankunft für alle Fahrzeuge: Fahrzeuge, die einmal per Handy gesteuert wurden
+  („phoneControlled“), blieben für immer von der Automatik ausgenommen – vermutlich der Grund, warum
+  DRK-Fahrzeuge nicht auf 4 gingen. Jetzt gilt die Handy-Steuerung nur, solange das Fahrzeug-Handy
+  wirklich offen ist (Lebenszeichen alle 60 s, 5 min Toleranz).
+- Fahrzeug in mehreren offenen Einsätzen: zählt der jüngste Einsatz.
+- SK statt „schwer/leicht“: SK1 direkt transportieren (vor Ort 10–20 min), SK2 möglichst schnell
+  (12–25 min), SK3 wenn's passt (15–30 min, ggf. ambulant). PZC-Dringlichkeit = SK.
+- MANV:
+  • erstes Rettungsmittel meldet nach 2–4 min eine erste Lagemeldung, der OrgL nach 5–10 min das
+    Sichtungsergebnis: Betroffene gesamt, rot/gelb/grün/blau/schwarz – als SDS, im Verlauf und als
+    farbige Leiste direkt unter dem Einsatz (Übersicht und Einsatzkarte).
+  • Rettungsmittel übernehmen die Patienten in der Reihenfolge SK1 → SK2 → SK3 → blau; Kliniken
+    werden verteilt. Fehlen Transportmittel: „⚠️ x Pat. noch ohne Transportmittel – nachalarmieren!“
+  • Bereitstellungsraum: „OrgL legt fest“ (Standard, wenn ein OrgL alarmiert ist – er meldet den BR
+    per SDS, gesucht wird ein echter Parkplatz/Sportplatz in der Nähe aus OpenStreetMap) oder „BR
+    festlegen“ durch die Leitstelle (Adresse eingeben). Nachrückende Landfahrzeuge fahren zum BR.
+- Hubschrauber landen auf einer freien Fläche in der Nähe (Sportplatz/Park/Parkplatz aus
+  OpenStreetMap, sonst geschätzt ~150 m daneben) – steht unter dem Einsatz. Bei Einsätzen auf dem
+  Wasser fliegen Windenhubschrauber weiter direkt hin.
+- Feuerwehr, THW, DLRG, ELW, OrgL beenden ihre Arbeit nach realistischer Zeit (Brand 35–75 min,
+  größer 60–120, VU/TH 30–60, Wasser/Suche 40–90, Med. Notfall 15–30); Führung bleibt, bis alle
+  Patienten weg sind.
+- Einsätze werden automatisch abgeschlossen, wenn alle alarmierten Fahrzeuge 1 Minute lang wieder
+  frei sind (Status 1/2). Fahrzeuge, die schon im nächsten Einsatz sind, werden dabei nicht verändert.
+- Mehrere Anrufer: Unfälle/Ereignisse auf der Straße, am Strand oder im Wasser melden tagsüber oft
+  1–3 weitere Zeugen, abends 0–1, nachts selten. „Das ist uns schon bekannt“ → Zeuge verabschiedet
+  sich und legt auf.
+- „📎 Gleicher Ort wie ein offener Einsatz – zusammenführen?“ (Umkreis 350 m): Angaben des Anrufs
+  kommen in den Verlauf des Einsatzes, der zweite Notruf wird geschlossen. „Nein, eigener Einsatz“
+  blendet den Hinweis aus.
+- Boot in Not: Einsatzort „vor dem Strand …, etwa 300 Meter draußen auf dem Wasser“.
+
 Version 5.15:
 - Besatzungen arbeiten selbst: RTW, NKTW, KTW, RTH, ITH, KTH (nicht per Handy gesteuert) entscheiden
   am Einsatzort selbst – auch bei Übungsnotrufen (dort zählt der wahre Zustand des Patienten):
