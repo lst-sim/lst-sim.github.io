@@ -170,7 +170,7 @@ html[data-device="handy"] #floatDock{left:8px;right:8px;width:auto;top:auto;bott
 </head>
 <body>
 <div style="padding:6px 10px;font-size:11px;color:#94a3b8;font-weight:700;display:flex;flex-wrap:wrap;align-items:center;gap:10px;position:sticky;top:0;z-index:10;background:var(--bg)">
- <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v5.14</span>
+ <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v5.15</span>
  <span id="syncState"></span> <a id="deskTag" href="#" onclick="renameDesk();return false" title="Name dieses Platzes (für „offen an …“) – antippen zum Ändern" style="color:#64748b;font-weight:700;text-decoration:none"></a>
  <span id="simCtl" style="position:absolute;left:50%;transform:translateX(-50%);display:flex;gap:6px;align-items:center"></span>
  <a id="homeLink" href="#" onclick="render('leitstelle');return false" class="hidden" style="color:#64748b;text-decoration:underline;font-weight:600">🖥️ Leitstelle</a>
@@ -1486,6 +1486,8 @@ function autoAdvanceEnRoute(){
        const etaMs=(etaMinutesForDistance(u,km)||10)*60000;
        if(now-u.status3Since>=etaMs){setUnitStatus(u,"4");changed=true;}
      }
+   } else if(u.crew&&["4","7","8"].includes(status)){
+     // wird von crewTick() gesteuert (Besatzung entscheidet selbst, v5.15)
    } else if(status==="4" && u.status4Since){
      // Nach 20 Minuten am Einsatzort automatisch zur zugewiesenen Klinik losfahren, sofern
      // inzwischen eine IVENA-Zuweisung für dieses Fahrzeug vorliegt.
@@ -2861,6 +2863,7 @@ function dashboard(){
   <div class="card"><h2>Offene Einsätze</h2><div class="big">${calls.length}</div><p class="muted">Alarmierte und noch in Bearbeitung befindliche Notrufe.</p>
    <button onclick="openSdsCompose()" style="margin-top:10px;width:100%">✉️ SDS schreiben</button>
   </div>
+  ${sdsInHTML()}
  </aside></div>
  ${isHandyMode()?"":`<div class="card" id="funkBar" style="position:fixed;bottom:0;z-index:8;border-radius:14px 0 0 0;box-shadow:none;margin:0;border-right:none">
   ${funkGruppenPanel()}
@@ -4524,6 +4527,192 @@ function alarmProposal(){
  if(db.cloud?.enabled)setTimeout(()=>pushCallCloud(c),0);
  toast(c.proposedUnitIds.length?"Vorschlag im Simulator alarmiert – weiterer Notruf möglich":"Einsatz ohne verfügbare Fahrzeuge alarmiert – bitte Einsatzmittel nachfordern");
  render("leitstelle");
+}
+
+
+// ═══ Besatzungen arbeiten selbst (v5.15) ═════════════════════════════════════════════════════
+// Patiententransportierende Rettungsmittel (RTW, NKTW, KTW, RTH, ITH, KTH), die nicht von einem
+// echten Handy gesteuert werden, entscheiden am Einsatzort selbst: kein Patient / ambulant vor Ort
+// versorgt / Transport. Beim Transport melden sie den Patienten in IVENA an (PZC, Zielklinik,
+// Eintreffzeit) und schicken der Leitstelle eine SDS, was sie wo für wann angemeldet haben.
+// Zeiten (eigene Annahmen, keine amtlichen Werte): Versorgung vor Ort je nach Schwere 15–50 min,
+// Fahrt ins KH nach Entfernung (Sonderrechte nur bei Dringlichkeit 1), Übergabe in Status 8
+// 10–25 min, danach Status 1 und Rückfahrt zur Wache (wie bisher berechnet).
+// Gilt für alle Einsätze – auch für Übungsnotrufe (dort zählt der wahre Zustand des Patienten).
+const CREW_TRANSPORT=new Set(["RTW","NKTW","KTW","RTH","ITH","KTH"]);
+const CREW_RMI=[
+ [/reanim|herzstillstand|keine normale atmung.*bewusstlos/,"132"],
+ [/brust|herzinfarkt|druck auf der brust|engegefühl|ausstrahl/,"331"],
+ [/schlaganfall|lähmung|sprachstörung|mundwinkel|halbseit|verwaschen/,"421"],
+ [/krampf|epilep|zuckt/,"412"],
+ [/unterzucker|zucker|hypogly|diabet/,"393"],
+ [/anaphyla|allergi|wespe|biene|quaddel|schwellung/,"321"],
+ [/asthma|copd|spray|giemen/,"312"],
+ [/atemnot|luft|atmung|atmet schwer/,"311"],
+ [/verbrenn|verbrüh|herdplatte/,"281"],
+ [/ertrunk|ertrink|im wasser|badeunfall|schwimmer|untergegangen/,"288"],
+ [/unterkühl/,"287"],
+ [/rauchgas|rauch eingeatmet|qualm/,"360"],
+ [/eingeklemmt/,"213"],
+ [/unfall|zusammengestoß|aufgefahren|motorrad|fahrrad|radfahrer|überschlagen/,"214"],
+ [/hüfte|oberschenkel|schenkelhals/,"273"],
+ [/sturz|gestürzt|gefallen|hingefallen|bruch|gebrochen|fraktur|umgeknickt/,"272"],
+ [/schnitt|säge|blutet|starke blutung|wunde/,"271"],
+ [/kopf|platzwunde/,"224"],
+ [/bauch/,"353"],
+ [/fieber/,"325"],
+ [/kollaps|umgekippt|ohnmacht|synkope|zusammengebrochen/,"322"],
+ [/bewusstlos|reagiert nicht/,"414"],
+ [/alkohol|betrunken/,"361"],
+ [/tabletten.*(genommen|geschluckt)|vergift|intox|spülmaschinentablette/,"365"],
+ [/verwirrt|psych|durcheinander/,"435"],
+ [/wehen|geburt|blasensprung/,"536"],
+ [/rücken/,"254"],
+ [/nasenbluten/,"731"],
+ [/schwindel/,"415"]
+];
+function crewCaseInfo(call){
+ const S=call&&call.sim&&call.sim.d?call.sim.d:null, f=S&&S.f?S.f:null, A=call?.answers||{};
+ const g=(k,fk)=>String((f&&f[fk]!=null&&f[fk]!=="")?f[fk]:(A[k]||""));
+ const x=g("x_massive","x"), a=g("a_airway","a"), b=g("b_breath","b"), cc=g("c_circ","c"), d=g("d_disability","d");
+ const ev=String((f&&f.event)||A.event||"");
+ const text=[S&&S.event,f&&f.e,A.e_exposure,A.freeText,call?.keyword,ev].filter(Boolean).join(" ").toLowerCase();
+ const pats=Math.max(0,Number((f&&f.count)||A.personDanger||A.count||1)||0);
+ const rea=ev==="Reanimation"||!!(S&&S.cpr)||(/keine normale/i.test(b)&&/bewusstlos/i.test(d));
+ const critical=rea||x==="Ja"||/verlegt/i.test(a)||/keine normale/i.test(b)||/schock|relevante/i.test(cc)||/bewusstlos/i.test(d);
+ const urgent=!critical&&(/gefährdet/i.test(a)||/auffällig/i.test(b)||/auffällig/i.test(cc)||/krampf|getrübt|neuro/i.test(d)||/R1N1|NA-Indikation/.test(call?.keyword||"")||!!eNaIndication({answers:{e_exposure:text}}));
+ const minor=!critical&&!urgent&&(!!(S&&S.phoneOnly)||/^R0/.test(call?.keyword||"")||(/^(nein)?$/i.test(x)&&/^(frei)?$/i.test(a)&&/^(normal)?$/i.test(b)&&/^(unauffällig)?$/i.test(cc)&&/^(wach)?/i.test(d)));
+ const noPatient=pats===0||(S&&S.misdial)||(!rea&&!x&&!b&&!d&&["Feuer / Rauchentwicklung","Technische Hilfeleistung","Sonstiger Notfall","Vermisste Person"].includes(ev)&&!Number(A.personDanger||A.firePeople||A.trapped||0)&&!(f&&Number(f.count)));
+ const sev=rea?"rea":critical?"critical":urgent?"urgent":minor?"minor":"normal";
+ const age=Number.isFinite(Number(A.patientAge))&&A.patientAge!==""?Number(A.patientAge):(S&&Number.isFinite(Number(S.age))?Number(S.age):null);
+ const gender=/^m/i.test(A.patientGender||"")?"M":/^w/i.test(A.patientGender||"")?"W":(S&&S.patient&&S.patient.g)?(S.patient.g==="w"?"W":"M"):"";
+ let rmi=(CREW_RMI.find(([re])=>re.test(text))||[])[1]||(ev==="Verkehrsunfall"?"214":ev==="Person im Wasser"?"288":"329");
+ if(rmi==="214"&&critical)rmi="213";
+ if(rea)rmi="132";
+ return {sev,pats:Math.max(noPatient?0:1,pats),noPatient,age,gender,rmi,text,ev,trauma:/^2/.test(rmi),loc:call?.sim?.loc?.kind||(call?.locationIsWater?"water":"home")};
+}
+function crewDring(rmi,sev){const want=sev==="rea"||sev==="critical"?"1":sev==="minor"?"3":"2";const al=(pzcFind(rmi)||{allowed:"123"}).allowed;if(al.includes(want))return want;return [...al].sort((p,q)=>Math.abs(+p-+want)-Math.abs(+q-+want))[0]}
+function crewPickHospital(u,call,fach,dring){
+ const hs=(db.ivena||[]).filter(h=>String(h.status||"").toLowerCase()!=="rot");
+ const wantF=fach||"Innere Medizin";
+ const has=h=>(h.fachrichtungen||[]).includes(wantF)||((wantF==="Schockraum"||wantF==="Intensivmedizin")&&(h.fachrichtungen||[]).includes("Intensivmedizin"));
+ const score=h=>{const m=ivenaEtaMin(u,h,call,dring);return m==null?999:m};
+ let c=hs.filter(h=>has(h)&&!ivenaClosedInfo(h,wantF)).sort((p,q)=>score(p)-score(q));
+ if(c.length)return {h:c[0],zwang:false};
+ c=hs.filter(h=>!ivenaClosedInfo(h,wantF)).sort((p,q)=>score(p)-score(q)); if(c.length)return {h:c[0],zwang:false};
+ c=(db.ivena||[]).slice().sort((p,q)=>score(p)-score(q)); return c.length?{h:c[0],zwang:true}:null;
+}
+function crewSds(u,call,text){
+ db.sdsIn=db.sdsIn||[];
+ const m={id:Date.now()+Math.floor(Math.random()*1000),unitId:u.id,opta:u.opta||u.name||String(u.id),type:u.type,callId:call?String(call.id):"",text,time:new Date(Date.now()).toISOString(),read:false};
+ db.sdsIn.unshift(m); if(db.sdsIn.length>200)db.sdsIn.length=200;
+ toast(`📨 SDS ${m.opta}: ${text.slice(0,90)}${text.length>90?"…":""}`);
+ return m;
+}
+const hhmm=t=>new Date(t).toLocaleTimeString("de-DE",{hour:"2-digit",minute:"2-digit"});
+function crewPlan(u,call){
+ const info=crewCaseInfo(call), now=Date.now(), isNef=u.type==="NEF";
+ // welcher Patient? jedes Transportmittel übernimmt einen
+ const planned=(call.alarmedUnits||[]).map(id=>db.units.find(x=>String(x.id)===String(id))).filter(x=>x&&x!==u&&x.crew&&x.crew.callId===String(call.id)&&x.crew.patient!=null&&CREW_TRANSPORT.has(x.type));
+ if(isNef){
+   // RTW schon vor Ort und Patient kritisch → NEF begleitet; sonst nach Versorgung wieder frei
+   const rt=(call.alarmedUnits||[]).map(id=>db.units.find(x=>String(x.id)===String(id))).find(x=>x&&x.crew&&x.crew.mode==="transport"&&String(x.status)==="4"&&!x.crew.nefId&&x.crew.info&&["rea","critical"].includes(x.crew.info.sev));
+   if(rt){rt.crew.nefId=u.id;rt.crew.departAt=Math.max(rt.crew.departAt,now+rint(10,15)*60000);if(rt.crew.registerAt<now)rt.crew.registerAt=now;u.crew={callId:String(call.id),nef:true,follow:rt.id};return}
+   u.crew={callId:String(call.id),nef:true,releaseAt:now+rint(15,25)*60000};return}
+ const idx=planned.length;
+ if(info.noPatient||idx>=info.pats){u.crew={callId:String(call.id),mode:"none",doneAt:now+rint(info.noPatient?8:3,info.noPatient?20:8)*60000,info};return}
+ const homeP=info.sev==="minor"?0.7:info.sev==="normal"?0.2:0;
+ const dur={rea:[35,50],critical:[20,35],urgent:[18,28],normal:[15,25],minor:[15,25]}[info.sev];
+ const t=rint(dur[0],dur[1]);
+ if(Math.random()<homeP){u.crew={callId:String(call.id),mode:"home",patient:idx,doneAt:now+t*60000,info};return}
+ // weitere Patienten (2., 3. RTW …) sind andere Personen: eigenes Alter/Geschlecht, oft leichter verletzt
+ const inf=idx>0?{...info,age:rint(18,80),gender:Math.random()<0.5?"M":"W",sev:info.sev==="rea"?"critical":Math.random()<0.5?info.sev:"normal"}:info;
+ u.crew={callId:String(call.id),mode:"transport",patient:idx,departAt:now+t*60000,registerAt:now+Math.max(2,t-rint(3,7))*60000,info:inf};
+ // NEF auf demselben Einsatz: begleitet bei kritischen Patienten (sonst frei, wenn der RTW entschieden hat)
+ const nef=(call.alarmedUnits||[]).map(id=>db.units.find(x=>String(x.id)===String(id))).find(x=>x&&x.type==="NEF"&&!x.phoneControlled&&String(x.status)==="4"&&!(x.crew&&x.crew.follow));
+ if(nef){if(info.sev==="rea"||info.sev==="critical"){nef.crew={callId:String(call.id),nef:true,follow:u.id};u.crew.nefId=nef.id}else nef.crew={callId:String(call.id),nef:true,releaseAt:u.crew.registerAt+rint(0,3)*60000}}
+}
+function crewRegister(u,call){
+ const C=u.crew, info=C.info, dring=crewDring(info.rmi,info.sev), fach=pzcFachrichtung(info.rmi);
+ const pick=crewPickHospital(u,call,fach,dring); if(!pick){C.registered=true;return}
+ const h=pick.h, drive=ivenaEtaMin(u,h,call,dring)||15, etaT=Math.max(C.departAt,Date.now())+drive*60000;
+ const nef=C.nefId?db.units.find(x=>String(x.id)===String(C.nefId)):null;
+ const air=["RTH","ITH"].includes(u.type);
+ const age=info.age!=null?info.age:rint(info.sev==="minor"?20:45,88);
+ const flags={}; IVENA_FLAGS.forEach(([k])=>flags[k]=false);
+ flags.s=info.sev==="rea"||(info.sev==="critical"&&info.trauma); flags.r=info.sev==="rea"; flags.b=info.sev==="rea"; flags.n=!!nef||air; flags.ss=/schwanger/.test(info.text);
+ const pzc=pzcBuild(info.rmi,age,dring), vehicles=nef?[u,nef]:[u];
+ const a={id:Date.now()+Math.floor(Math.random()*999),hospitalId:h.id,hospitalName:h.name,fach,schockraum:flags.s,geschlecht:info.gender,alter:String(age),na:flags.n,
+   rmi:info.rmi,dringlichkeit:dring,pzc,flags,info:"",vehicleIds:vehicles.map(x=>x.id),vehicleLabels:vehicles.map(x=>`${x.opta||x.name} (${x.type})`),
+   eta:new Date(etaT).toISOString(),anlass:info.ev==="Verkehrsunfall"?"Verkehrsunfall":info.loc==="home"?"Häuslicher Einsatz":"Öffentlicher Raum",
+   ...(pick.zwang?{zwang:true}:{}),wasClosed:!!pick.zwang,createdAt:new Date().toISOString(),source:"crew",callId:String(call.id)};
+ db.ivenaAssignments=db.ivenaAssignments||[]; db.ivenaAssignments.unshift(a);
+ if(db.cloud?.enabled)try{cloudRequest(`ivenaAssignments/${encodeURIComponent(String(a.id))}`,"PUT",a)}catch(e){}
+ C.registered=true; C.asgId=a.id; C.hospId=h.id; C.drive=drive;
+ const lab=pzcRmiLabel(info.rmi);
+ crewSds(u,call,`Pat. ${info.gender||"?"}, ${age} J. – ${lab} – IVENA angemeldet: ${h.name}${fach?` (${fach})`:""}, PZC ${pzc}${flags.s?", Schockraum":""}${flags.n?", arztbegleitet":""}, Ankunft ca. ${hhmm(etaT)} Uhr${pick.zwang?" – ZWANGSZUWEISUNG":""}.`);
+ const call2=call; call2.history=call2.history||[]; call2.history.push({q:`🏥 IVENA (${u.opta||u.name})`,a:`${h.name} · PZC ${pzc} · an ${hhmm(etaT)}`});
+}
+function crewTick(){
+ const now=Date.now(); let changed=false;
+ for(const u of (db.units||[])){
+   if(u.phoneControlled)continue;
+   // mehrere Plätze: nur der Platz, der den Einsatz hat, steuert die Besatzung (sonst doppelte SDS/IVENA)
+   if(u.crew&&u.crew.owner&&u.crew.owner!==DEVICE_ID)continue;
+   const st=String(u.status), isT=CREW_TRANSPORT.has(u.type), isNef=u.type==="NEF";
+   if(!isT&&!isNef){if(u.crew&&!["4","7","8"].includes(st)){delete u.crew;changed=true}continue}
+   if(!["4","7","8"].includes(st)){if(u.crew){delete u.crew;changed=true}continue}
+   const call=findUnitCall(u);
+   if(st==="4"){
+     if(!call||call.kt)continue; // Krankentransporte: wie bisher von Hand
+     if(call.deskId&&call.deskId!==DEVICE_ID)continue;
+     if(!u.crew||u.crew.callId!==String(call.id)){
+       // vom Disponenten schon eine IVENA-Zuweisung für dieses Fahrzeug? → die gilt
+       const asg=findUnitHospitalAssignment(u);
+       if(asg&&new Date(asg.createdAt).getTime()>=(u.status4Since||0)-60000&&asg.source!=="crew"){u.crew={callId:String(call.id),mode:"transport",patient:0,departAt:(u.status4Since||now)+20*60000,registered:true,asgId:asg.id,hospId:asg.hospitalId,manual:true,owner:DEVICE_ID,info:crewCaseInfo(call)};changed=true;continue}
+       crewPlan(u,call); if(u.crew)u.crew.owner=DEVICE_ID; (call.alarmedUnits||[]).forEach(id=>{const x=db.units.find(y=>String(y.id)===String(id));if(x&&x.crew&&!x.crew.owner)x.crew.owner=DEVICE_ID}); changed=true; continue;
+     }
+     const C=u.crew;
+     if(C.nef){
+       if(C.follow){const rt=db.units.find(x=>String(x.id)===String(C.follow));if(!rt||!rt.crew||rt.crew.mode!=="transport"){delete C.follow;C.releaseAt=now+rint(2,5)*60000}}
+       else if(C.releaseAt&&now>=C.releaseAt){setUnitStatus(u,"1");delete u.crew;changed=true}
+       continue;
+     }
+     if(C.mode==="none"&&now>=C.doneAt){crewSds(u,call,C.info&&C.info.noPatient?"Kein Patient vor Ort – Einsatzende, wieder einsatzbereit.":"Kein weiterer Patient für uns – Einsatzende, wieder einsatzbereit.");setUnitStatus(u,"1");delete u.crew;changed=true;continue}
+     if(C.mode==="home"&&now>=C.doneAt){crewSds(u,call,`Pat. vor Ort versorgt, kein Transport notwendig (ambulant/Hausarzt). Einsatzende ${hhmm(now)} – wieder einsatzbereit.`);(call.history=call.history||[]).push({q:`🏠 ${u.opta||u.name}`,a:"Pat. vor Ort versorgt, kein Transport"});setUnitStatus(u,"1");delete u.crew;changed=true;continue}
+     if(C.mode==="transport"){
+       if(!C.registered&&now>=C.registerAt){crewRegister(u,call);changed=true}
+       if(C.registered&&now>=C.departAt){
+         const asg=(db.ivenaAssignments||[]).find(a=>String(a.id)===String(C.asgId));
+         const h=asg&&(db.ivena||[]).find(x=>String(x.id)===String(asg.hospitalId));
+         const drive=C.drive||(h?ivenaEtaMin(u,h,call,asg.dringlichkeit):null)||15;
+         const keep={...C,arriveAt:now+drive*60000};
+         setUnitStatus(u,"7"); u.crew=keep;
+         if(C.nefId){const n=db.units.find(x=>String(x.id)===String(C.nefId));if(n&&String(n.status)==="4"){setUnitStatus(n,"7");n.crew={callId:C.callId,nef:true,follow:u.id,arriveAt:keep.arriveAt,owner:DEVICE_ID};
+           if(asg&&!(asg.vehicleIds||[]).some(id=>String(id)===String(n.id))){asg.vehicleIds.push(n.id);asg.vehicleLabels.push(`${n.opta||n.name} (${n.type})`);asg.na=true;asg.flags=asg.flags||{};asg.flags.n=true}}}
+         changed=true;
+       }
+     }
+   }else if(st==="7"){
+     const C=u.crew; if(!C||!C.arriveAt)continue;
+     if(now>=C.arriveAt){const keep={...C,handoverAt:now+(C.nef?rint(8,15):C.info&&["rea","critical"].includes(C.info.sev)?rint(15,25):rint(10,20))*60000};setUnitStatus(u,"8");u.crew=keep;changed=true}
+   }else if(st==="8"){
+     const C=u.crew; if(!C)continue;
+     if(!C.handoverAt){C.handoverAt=now+rint(10,20)*60000;changed=true;continue}
+     if(now>=C.handoverAt){
+       if(!C.nef){const asg=(db.ivenaAssignments||[]).find(a=>String(a.id)===String(C.asgId));crewSds(u,call||{id:C.callId},`Pat. ${asg?`im ${asg.hospitalName} `:""}übergeben – wieder einsatzbereit.`)}
+       setUnitStatus(u,"1"); delete u.crew; changed=true;
+     }
+   }
+ }
+ if(changed){save();if(["leitstelle","mittel","ivena","ivenaZuweisungen","karte"].includes(currentPage)&&!uiLocked)render(currentPage)}
+}
+// ─── SDS-Eingang (Nachrichten der Fahrzeuge an die Leitstelle) ───
+function sdsInHTML(){
+ const list=(db.sdsIn||[]).slice(0,8), unread=(db.sdsIn||[]).filter(m=>!m.read).length;
+ return `<div class="card"><div class="row between"><h2 style="margin:0">📨 SDS-Eingang${unread?` <span class="pill" style="background:#dc2626;color:#fff">${unread}</span>`:""}</h2>${(db.sdsIn||[]).length?`<button style="font-size:12px;padding:3px 8px" onclick="(db.sdsIn||[]).forEach(m=>m.read=true);save();render('leitstelle')">✓ gelesen</button>`:""}</div>
+  ${list.length?list.map(m=>`<div style="border-top:1px solid var(--line);padding:6px 0;font-size:13px;${m.read?"opacity:.7":"font-weight:600"}"><b>${esc(m.opta)}</b> <small class="muted">${hhmm(m.time)}${m.callId?` · #${esc(m.callId)}`:""}</small><br>${esc(m.text)}</div>`).join(""):`<p class="muted" style="font-size:13px">Noch keine SDS von Fahrzeugen.</p>`}
+  ${(db.sdsIn||[]).length>8?`<small class="muted">… ${(db.sdsIn||[]).length-8} ältere</small> `:""}${(db.sdsIn||[]).length?`<button style="font-size:12px;padding:3px 8px;color:#b91c1c" onclick="if(confirm('Alle SDS im Eingang löschen?')){db.sdsIn=[];save();render('leitstelle')}">🗑 leeren</button>`:""}</div>`;
 }
 
 // ─── Telefonat-Leiste: läuft, solange der Notruf nicht aufgelegt wurde ───────────────────────
@@ -9789,6 +9978,7 @@ function floatTick(){
  renderFloat();
 }
 
+setInterval(()=>{try{if(!isTerminalLink&&!IS_MONITOR)crewTick()}catch(e){console.warn("crewTick",e)}},2000);
 setInterval(()=>{renderCallTimerBar();const clock=document.getElementById("clock");if(clock)clock.textContent=new Date().toLocaleTimeString("de-DE");if(!isTerminalLink){simTick();simSpontaneous();floatTick();simPreparedTick();if(Date.now()%15000<1000)deskHeartbeat()}if(IS_MONITOR)return;applyDutySchedule();autoReturnToStation();autoAdvanceEnRoute();updateWaitTimers()},1000);
 renderSimCtl();
 try{qsSyncRuleFields()}catch(e){}

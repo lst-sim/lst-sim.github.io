@@ -1607,6 +1607,28 @@ Version 5.05:
   („a, b“ = a ODER b). Mit „🚑 NA-Indikation“ markierte Knöpfe ziehen weiterhin einen Notarzt.
 - Nur „Unauffällig“ (ohne weitere Befunde) zählt weiter als unauffälliges E (R0 möglich).
 
+Version 5.15:
+- Besatzungen arbeiten selbst: RTW, NKTW, KTW, RTH, ITH, KTH (nicht per Handy gesteuert) entscheiden
+  am Einsatzort selbst – auch bei Übungsnotrufen (dort zählt der wahre Zustand des Patienten):
+  • kein Patient vor Ort / kein weiterer Patient → SDS, Status 1
+  • leicht (R0/unauffällig, Telefon-Fälle): meist ambulant vor Ort versorgt → SDS, Status 1
+  • sonst Transport: IVENA-Anmeldung durch die Besatzung (PZC aus Lage/Befund, Dringlichkeit nach
+    Schwere, Zielklinik = nächste passende Fachrichtung, die nicht abgemeldet ist; Schockraum,
+    reanimiert/beatmet, arztbegleitet; Eintreffzeit nach Fahrzeit) und SDS an die Leitstelle:
+    „Pat. M, 66 J. – Unklarer Brustschmerz – IVENA angemeldet: Klinikum Wilhelmshaven
+    (Kardiologie), PZC 331662, Ankunft ca. 00:30 Uhr.“
+  • NEF begleitet bei kritischen Patienten/Reanimation (fährt mit in 7/8), sonst nach der
+    Versorgung wieder frei. Mehrere RTW = mehrere Patienten (eigene Daten).
+  • Zeiten (eigene Annahmen): vor Ort 15–25 min (leicht/normal), 18–28 (dringend), 20–35
+    (kritisch), 35–50 (Reanimation); Status 7 = Fahrzeit (Sonderrechte nur bei Dringlichkeit 1);
+    Status 8 = Übergabe 10–20 min (kritisch 15–25, NEF 8–15); danach Status 1 → Rückfahrt.
+  • Hat der Disponent schon selbst eine IVENA-Zuweisung gemacht, gilt diese (wie bisher).
+  • Mehrere Plätze: nur der Platz mit dem Einsatz steuert die Besatzung (keine doppelten SDS).
+  • Krankentransporte (19222) bleiben wie bisher.
+- 📨 SDS-Eingang in der Leitstellen-Übersicht (neueste oben, ungelesene markiert, „gelesen“,
+  „leeren“); neue SDS erscheinen zusätzlich kurz als Hinweis. Im Einsatzverlauf steht die
+  IVENA-Anmeldung bzw. „vor Ort versorgt“.
+
 Version 5.14:
 - KI-Anrufer entfernt: kein 🤖-Knopf mehr, kein API-Schlüssel, ein gespeicherter Schlüssel wird
   vom Gerät gelöscht. Es gibt nur noch den eingebauten Anrufer (kostenlos, im Gerät).
