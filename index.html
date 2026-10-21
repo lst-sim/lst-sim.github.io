@@ -170,7 +170,7 @@ html[data-device="handy"] #floatDock{left:8px;right:8px;width:auto;top:auto;bott
 </head>
 <body>
 <div style="padding:6px 10px;font-size:11px;color:#94a3b8;font-weight:700;display:flex;flex-wrap:wrap;align-items:center;gap:10px;position:sticky;top:0;z-index:10;background:var(--bg)">
- <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v5.13</span>
+ <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v5.14</span>
  <span id="syncState"></span> <a id="deskTag" href="#" onclick="renameDesk();return false" title="Name dieses Platzes (für „offen an …“) – antippen zum Ändern" style="color:#64748b;font-weight:700;text-decoration:none"></a>
  <span id="simCtl" style="position:absolute;left:50%;transform:translateX(-50%);display:flex;gap:6px;align-items:center"></span>
  <a id="homeLink" href="#" onclick="render('leitstelle');return false" class="hidden" style="color:#64748b;text-decoration:underline;font-weight:600">🖥️ Leitstelle</a>
@@ -943,6 +943,7 @@ function render(page="leitstelle"){
  if(page==="ivena") ivena();
  if(page==="ivenaZuweisungen") ivenaZuweisungen();
  if(page==="nachbarLks") nachbarLks();
+ if(page==="protokolle") simProtoPage();
  const app=document.getElementById("app");
  if(app){
    const inner=app.innerHTML;
@@ -4545,6 +4546,7 @@ function hangUpCall(id,byCaller=false){
  const c=[db.currentCall,...(db.activeCalls||[])].find(x=>x&&String(x.id)===String(id));
  if(!c||c.phoneEnd)return;
  c.phoneEnd=Date.now();
+ if(c.sim)try{simProtoSave(c,byCaller)}catch(e){}
  if(c.sim){try{speechSynthesis.cancel()}catch(e){}if(typeof simRec!=="undefined"&&simRec)try{simRec.stop()}catch(e){}try{simMaybeFollow(c)}catch(e){}}
  if(typeof reaMetroCall!=="undefined"&&reaMetroCall===String(c.id))reaStopMetro();
  c.history=c.history||[];
@@ -4796,7 +4798,7 @@ const SYNC_CLIENT_ID=Math.random().toString(36).slice(2,10);
 // Rein gerätebezogene Anzeige-Einstellungen bleiben lokal.
 // v4.97: "currentCall" (der gerade an DIESEM Platz bearbeitete Notruf) ist je Gerät eigen. Er wird den
 // anderen Plätzen trotzdem live gezeigt – als Eintrag in activeCalls (siehe syncLocalSlots).
-const SYNC_EXCLUDE=new Set(["cloud","mittelOrgFilter","ivenaAreaFilter","ivenaViewMode","ivenaControlsOpen","currentCall"]);
+const SYNC_EXCLUDE=new Set(["cloud","mittelOrgFilter","ivenaAreaFilter","ivenaViewMode","ivenaControlsOpen","currentCall","simProtocols"]);
 // Dauerhafte Geräte-Kennung (für „wird an Platz … abgefragt“ und Übungsanrufe dieses Platzes)
 const DEVICE_ID=(()=>{try{let d=localStorage.getItem("lst-device-id");if(!d){d=Math.random().toString(36).slice(2,8);localStorage.setItem("lst-device-id",d)}return d}catch(e){return SYNC_CLIENT_ID}})();
 function deskName(){try{const n=localStorage.getItem("lst-desk-name");if(n)return n}catch(e){}return (typeof IS_MONITOR!=="undefined"&&IS_MONITOR?"Monitor ":"Platz ")+DEVICE_ID.slice(0,3).toUpperCase()}
@@ -8791,7 +8793,9 @@ const SIM_ADVICE=[
 ];
 function simAdviceAnswer(c,part){
  const s=c.sim,d=s.d; s.mem=s.mem||{said:[],calm:0}; s.mem.adv=s.mem.adv||[];
- for(const [k,re,ack] of SIM_ADVICE){
+ // Fragen („Wie heißt der Hausarzt?“) sind keine Anweisungen (v5.14)
+ const isQ=/^(wie|wo|wer|was|wann|welche[rsmn]?|wieso|warum|hat|hatte|ist|war|sind|haben|gibt|gab|heißt|kennen|wissen|nimmt|nehmen)\b/.test(String(part).trim());
+ if(!isQ)for(const [k,re,ack] of SIM_ADVICE){
    if(!re.test(part))continue;
    if(k==="ambulance")return d.phoneOnly&&!d.misdial?pick(["Oh – ist das wirklich so schlimm? Ich dachte, Sie können mir am Telefon was sagen.","Muss das denn sein? So schlimm ist es eigentlich nicht."]):null;
    if(!s.mem.adv.includes(k))s.mem.adv.push(k);
@@ -8903,9 +8907,11 @@ function simAnswerSmart(c,text){
  const check=/(schauen|gucken|prüfen|sehen|fühlen) sie (mal |bitte )*(nach|ob)|gucken sie mal|schauen sie mal/.test(norm);
  for(const part of (parts.length?parts:[norm]).slice(0,3)){
    const ints=simIntents(part);
-   let ans=simAdviceAnswer(c,part)||simCtxAnswer(c,part)||simKBAnswer(c,part)||simEnvAnswer(c,part);
+   // Von dir beigebrachte Antworten gehen vor (auch wenn der Anrufer sonst etwas Unpassendes sagen würde)
+   let ans=simLearnedAnswer(c,part,"user")||simAdviceAnswer(c,part)||simCtxAnswer(c,part)||simKBAnswer(c,part)||simEnvAnswer(c,part);
    if(!ans&&ints.length){ans=simAnswerFor(c,part).replace(/^(Bitte schnell! |Oh Gott… )/,"");
      if(/^(Wie bitte\?|Das hab ich nicht verstanden\.|Äh… was meinen Sie genau\?|Das weiß ich nicht\.)$/.test(ans))ans=null}
+   if(!ans)ans=simLearnedAnswer(c,part);
    if(!ans)ans=simYesNo(c,part,raw);
    if(!ans&&/^(bitte |gehen|holen|legen|machen|öffnen|schließen|bleiben|nehmen|setzen|halten|sagen|rufen|schicken|stellen|ziehen|decken)\b|\bsie (bitte )?(mal )?(die|den|das|ihn|sie|ihm|ihr)\b.*\b(auf|zu|hin|weg|raus|rein|hoch|runter)\b/.test(part))
      ans=pick(["Okay, mach ich.","Ja, Moment… okay.","Mach ich sofort.","Okay… so?"]);
@@ -8918,6 +8924,7 @@ function simAnswerSmart(c,text){
  }
  if(!out.length){
    // nicht verstanden: menschlich reagieren statt Standardsatz
+   const la=simLearnedAnswer(c,norm); if(la)return la;
    if(/\?$/.test(raw)||/^(wie|wo|was|wer|wann|warum|wieso|welche)/.test(norm))return pick(d.panic?["Was?! Ich… ich weiß nicht! Bitte schicken Sie einfach jemanden!","Ich versteh die Frage nicht, bitte schnell!"]:["Das weiß ich nicht genau.","Hm, das kann ich Ihnen nicht sagen.","Wie meinen Sie das?","Das weiß ich leider nicht."]);
    return simAnswerFor(c,raw);
  }
@@ -9003,7 +9010,8 @@ function simAnswerFor(c,text){
 const SIM_AI_KEY="lst-sim-ai";
 const SIM_AI_MODELS=[["claude-sonnet-5-5","Claude Sonnet 5.5 – natürlichste Gespräche (empfohlen)"],["claude-haiku-4-5-20251001","Claude Haiku 4.5 – schneller & günstiger"]];
 let simAi=(()=>{try{return Object.assign({on:false,key:"",model:SIM_AI_MODELS[0][0]},JSON.parse(localStorage.getItem(SIM_AI_KEY)||"{}"))}catch(e){return {on:false,key:"",model:SIM_AI_MODELS[0][0]}}})();
-function simAiReady(){return !!(simAi.on&&simAi.key)}
+function simAiReady(){return false} // v5.14: KI-Anrufer entfernt – nur noch der eingebaute Anrufer
+try{localStorage.removeItem("lst-sim-ai")}catch(e){}
 function simAiSave(){try{localStorage.setItem(SIM_AI_KEY,JSON.stringify(simAi))}catch(e){}}
 const SIM_LAY={x:{Ja:"es blutet stark"},a:{Gefährdet:"Atmung klingt gurgelig/röchelnd",Verlegt:"etwas steckt im Mund/Hals"},b:{Normal:"atmet normal",Auffällig:"atmet schwer und schnell, Atemnot","Keine normale Atmung":"atmet nicht normal, nur ab und zu ein Schnappen"},
  c:{Unauffällig:"Hautfarbe normal",Auffällig:"blass, kaltschweißig",Schockzeichen:"grau, eiskalt, sehr schwach",Unklar:"kann man nicht beurteilen"},
@@ -9074,6 +9082,9 @@ function simSay(c,text){
 }
 function simCallById(id){return allOpenCalls().find(x=>String(x.id)===String(id))}
 function simMine(c){return !!(c&&c.sim&&(!c.sim.owner||c.sim.owner===DEVICE_ID))}
+// Antworten, mit denen der Anrufer zeigt, dass er die Frage nicht verstanden hat / nichts weiß
+const SIM_FB_RE=/^(wie bitte\?|das hab ich nicht verstanden\.?|äh… was meinen sie genau\?|das weiß ich (leider |nicht genau|nicht)|das weiß ich nicht\.?|was\?! bitte, helfen sie mir einfach!|was meinen sie\? ich versteh das nicht!|hm, das kann ich ihnen nicht sagen\.?|wie meinen sie das\?|was\?! ich… ich weiß nicht!|ich versteh die frage nicht)/i;
+function simIsFallback(t){return SIM_FB_RE.test(String(t||"").replace(/^(Bitte schnell! |Oh Gott… |Bitte beeilen Sie sich! |Moment, ich guck… |Warten Sie… |Moment… )+/,"").trim())}
 async function simSendFrom(callId,inputId,preset){
  const c=simCallById(callId); if(!c||!c.sim||c.phoneEnd)return;
  const el=inputId?document.getElementById(inputId):null;
@@ -9083,7 +9094,7 @@ async function simSendFrom(callId,inputId,preset){
  save(); simRefresh();
  const t0=Date.now(); const ans=await simReply(c,text);
  const wait=Math.max(0,rnd(500,1200)-(Date.now()-t0));
- setTimeout(()=>{c.sim.typing=false;if(c.phoneEnd){simRefresh();return}simSay(c,ans);save();simRefresh()},wait);
+ setTimeout(()=>{c.sim.typing=false;if(c.phoneEnd){simRefresh();return}simSay(c,ans);const lm=c.sim.log[c.sim.log.length-1];if(lm&&lm.text===ans&&simIsFallback(ans))lm.fb=true;save();simRefresh()},wait);
 }
 function simSend(){const c=db.currentCall;if(c)simSendFrom(c.id,"simInput")}
 // Das Gespräch läuft, bis man selbst auflegt – oder der Anrufer: wenn die Einsatzkräfte da sind
@@ -9209,6 +9220,148 @@ function simSpontaneous(){
  }
 }
 
+
+// ─── Anruferprotokolle & Lernen (v5.14) ───────────────────────────────────────────────────────
+// Jedes Übungsgespräch wird beim Auflegen gespeichert (nur auf diesem Gerät, nach Tagen sortiert).
+// Regelmäßig (alle 5 min, nach jedem Gespräch, beim Öffnen) werden alle Protokolle durchgesehen:
+// Jede Frage, auf die der Anrufer „weiß ich nicht“ / „wie bitte?“ gesagt hat, landet in der
+// Lernliste. Wurde direkt danach dieselbe Frage anders gestellt und dann verstanden, lernt der
+// Anrufer das selbst („gemeint wie …“). Sonst kannst du die richtige Antwort eintragen.
+// Gelerntes gilt sofort für alle Anrufe (und wird mit den anderen Plätzen geteilt).
+const SIM_PROTO_MAX=400;
+function simDayKey(t){const d=new Date(t);return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`}
+function simProtoSave(c,byCaller){
+ const s=c.sim; if(!s||s.protoSaved||!(s.log||[]).length)return; s.protoSaved=true;
+ db.simProtocols=db.simProtocols||[];
+ const d=JSON.parse(JSON.stringify(s.d||{}));
+ const who=d.caller?`${d.caller.first||""} ${d.caller.last||""}`.trim():"";
+ db.simProtocols.push({id:s.id+"_"+Date.now().toString(36),day:simDayKey(c.phoneStart||Date.now()),start:c.phoneStart||Date.now(),end:Date.now(),callId:String(c.id),caseId:s.caseId,
+   title:c.keyword||(()=>{const f=(s.log||[]).find(m=>m.who!=="lst");const t=f?String(f.text).replace(/^(Hallo[?!,.…]*\s*|Ja,? hallo[,.]?\s*)/i,""):"";return t?(t.length>60?t.slice(0,58)+"…":t):((d.f&&d.f.event)||"Übungsanruf")})(),caller:who,rel:d.isSelf?"für sich selbst":(d.rel||""),loc:(s.loc&&s.loc.text)||"",phone:s.phone||"",follow:!!s.isFollow,endBy:byCaller?"Anrufer":"Leitstelle",
+   log:(s.log||[]).map(m=>({who:m.who,text:m.text,t:m.t,...(m.fb||(m.who!=="lst"&&simIsFallback(m.text))?{fb:true}:{})})),d});
+ if(db.simProtocols.length>SIM_PROTO_MAX)db.simProtocols.splice(0,db.simProtocols.length-SIM_PROTO_MAX);
+ save(); setTimeout(simLearnScan,500);
+}
+// ── Lernen ──
+const SIM_QSTOP=new Set(["der","die","das","den","dem","des","ein","eine","einen","einem","einer","und","oder","aber","ist","sind","hat","haben","sie","ihr","ihn","ihm","er","es","wir","ich","mal","bitte","noch","schon","auch","denn","doch","nicht","kein","keine","was","wie","wo","wer","wann","können","kann","gibt","mit","bei","von","zu","auf","in","im","an","am","um","für","ja","nein","so","dass","ob","jetzt","gerade","da","hier","dort"]);
+function simQWords(t){return simNorm(simNormText(t)).filter(w=>!SIM_QSTOP.has(w))}
+function simQKey(t){return simQWords(t).join(" ")}
+function simQSim(a,b){const A=new Set(a),B=new Set(b);if(!A.size||!B.size)return 0;let h=0;A.forEach(x=>{if(B.has(x))h++});return h/Math.max(A.size,B.size)}
+function simLearnedAnswer(c,text,only){
+ const list=db.simLearned||[]; if(!list.length||!c||!c.sim)return null;
+ const s=c.sim, w=simQWords(text); if(!w.length)return null;
+ let best=null,bs=0;
+ for(const L of list){if(L.off)continue;if(L.scope&&L.scope!=="*"&&L.scope!==s.caseId)continue;if(only==="user"&&!L.answer)continue;
+   const sc=simQSim(w,L.words||simQWords(L.q)); if(sc>bs){bs=sc;best=L}}
+ if(!best||bs<(w.length<=2?1:0.7))return null;
+ best.used=(best.used||0)+1;
+ if(best.answer){const t=best.answer.replace(/\{er\}/g,simHe(s)[1]).replace(/\{Er\}/g,simHe(s)[0]).replace(/\{ihm\}/g,simHe(s)[2]);return s.d.isSelf||s.speaker==="patient"?t:simFix(s,t)}
+ if(best.to&&!s._learn){s._learn=true;try{const a=simAnswerSmart(c,best.to);return simIsFallback(a)?null:a}finally{s._learn=false}}
+ return null;
+}
+// Offene Fragen aus allen Protokollen sammeln (auch: wird es inzwischen verstanden?)
+function simLearnItems(){
+ const items=new Map(), learned=db.simLearned||[];
+ for(const P of (db.simProtocols||[])){
+   const L=P.log||[];
+   for(let i=0;i<L.length-1;i++){
+     if(L[i].who!=="lst"||L[i+1].who==="lst"||!L[i+1].fb)continue;
+     const q=L[i].text, key=simQKey(q); if(!key)continue;
+     let it=items.get(key); if(!it){it={key,q,n:0,examples:[],caseIds:new Set(),hint:null};items.set(key,it)}
+     it.n++; it.caseIds.add(P.caseId); if(it.examples.length<3)it.examples.push({pid:P.id,day:P.day,ans:L[i+1].text,title:P.title});
+     // gleich danach anders gefragt und verstanden?
+     const n2=L[i+2], a2=L[i+3];
+     if(n2&&n2.who==="lst"&&a2&&a2.who!=="lst"&&!a2.fb&&!it.hint&&simQSim(simQWords(q),simQWords(n2.text))>0){it.hint={to:n2.text,ans:a2.text,shared:simQSim(simQWords(q),simQWords(n2.text))>0}}
+     it.proto=P;
+   }
+ }
+ const out=[];
+ for(const it of items.values()){
+   it.learned=learned.find(x=>x.key===it.key)||null;
+   out.push(it);
+ }
+ return out.sort((a,b)=>b.n-a.n);
+}
+// Läuft regelmäßig: lernt Umformulierungen automatisch, prüft, was inzwischen verstanden wird
+function simLearnScan(){
+ try{
+   db.simLearned=db.simLearned||[]; let changed=false;
+   for(const it of simLearnItems()){
+     if(it.learned)continue;
+     // 1) automatisch lernen: direkt danach umformuliert, verstanden, und Fragen haben ein Wort gemeinsam
+     if(it.hint&&it.hint.shared){db.simLearned.push({id:"l"+Date.now().toString(36)+Math.floor(Math.random()*999),key:it.key,q:it.q,words:simQWords(it.q),to:it.hint.to,scope:"*",by:"auto",at:Date.now()});changed=true;continue}
+     // 2) wird es mit dem heutigen Stand schon verstanden? (Fall aus dem Protokoll nachspielen)
+     const P=it.proto; if(!P||!P.d)continue;
+     const fake={id:"learn",sim:{id:"learn",caseId:P.caseId,d:JSON.parse(JSON.stringify(P.d)),log:[],mem:{said:[],calm:0},loc:{kind:"home",text:P.loc}},answers:{}};
+     let a=null; try{a=simAnswerSmart(fake,it.q)}catch(e){}
+     it.nowOk=a&&!simIsFallback(a)?a:null;
+     if(it.nowOk&&!it.okMarked){it.okMarked=true}
+   }
+   if(changed){save();toast("🧠 Anrufer hat aus den Protokollen dazugelernt")}
+   if(currentPage==="protokolle")simProtoPage();
+ }catch(e){}
+}
+setInterval(simLearnScan,5*60*1000); setTimeout(simLearnScan,8000);
+function simLearnSet(key,mode){
+ const it=simLearnItems().find(x=>x.key===key); if(!it)return;
+ db.simLearned=db.simLearned||[];
+ if(mode==="ignore"){db.simLearned.push({id:"l"+Date.now().toString(36),key,q:it.q,words:simQWords(it.q),ignore:true,off:true,scope:"*",by:"user",at:Date.now()})}
+ else if(mode==="hint"&&it.hint){db.simLearned.push({id:"l"+Date.now().toString(36),key,q:it.q,words:simQWords(it.q),to:it.hint.to,scope:"*",by:"user",at:Date.now()})}
+ else if(mode==="answer"){
+   const el=document.getElementById("la_"+simProtoSafe(key)), sc=document.getElementById("ls_"+simProtoSafe(key));
+   const t=String(el?.value||"").trim(); if(!t){toast("Bitte eintragen, was der Anrufer antworten soll");return}
+   db.simLearned.push({id:"l"+Date.now().toString(36),key,q:it.q,words:simQWords(it.q),answer:t,scope:sc&&sc.value!=="*"?sc.value:"*",by:"user",at:Date.now()});
+ }
+ save(); toast("🧠 Gelernt"); simProtoPage();
+}
+function simLearnDel(id){db.simLearned=(db.simLearned||[]).filter(x=>x.id!==id);save();simProtoPage()}
+// ── Seite ──
+let simProtoOpen=null, simProtoTab="tage";
+function simProtoSafe(k){return String(k).replace(/[^a-z0-9äöüß]/gi,"_")}
+function simProtoDelOne(id){if(!confirm("Dieses Protokoll löschen?"))return;db.simProtocols=(db.simProtocols||[]).filter(p=>p.id!==id);save();simProtoPage()}
+function simProtoDelDay(day){const n=(db.simProtocols||[]).filter(p=>p.day===day).length;if(!confirm(`Alle ${n} Protokolle vom ${simDayLabel(day)} löschen?`))return;db.simProtocols=(db.simProtocols||[]).filter(p=>p.day!==day);save();simProtoPage()}
+function simProtoDelAll(){if(!confirm("Wirklich ALLE Anruferprotokolle löschen?"))return;db.simProtocols=[];save();simProtoPage()}
+function simDayLabel(day){const [y,m,d]=day.split("-");const t=simDayKey(Date.now()),yd=simDayKey(Date.now()-864e5);return (day===t?"Heute, ":day===yd?"Gestern, ":"")+new Date(+y,+m-1,+d).toLocaleDateString("de-DE",{weekday:"short",day:"2-digit",month:"2-digit",year:"numeric"})}
+function simProtoMark(pid,i){const P=(db.simProtocols||[]).find(x=>x.id===pid);if(!P||!P.log[i])return;P.log[i].fb=!P.log[i].fb;P.log[i].marked=P.log[i].fb;save();simProtoPage();toast(P.log[i].fb?"❓ Als unpassend markiert – steht jetzt in der Lernliste":"Markierung entfernt")}
+function simProtoChat(P){
+ return (P.log||[]).map((m,i)=>`<div style="margin:3px 0;display:flex;${m.who==="lst"?"justify-content:flex-end":""}"><div style="max-width:85%;padding:5px 9px;border-radius:10px;font-size:14px;${m.who==="lst"?"background:#dbeafe;color:#1e3a8a":m.fb?"background:#fef3c7;color:#92400e;border:1px dashed #f59e0b":"background:#fee2e2;color:#7f1d1d"}"><small style="opacity:.6">${new Date(m.t).toLocaleTimeString("de-DE",{hour:"2-digit",minute:"2-digit",second:"2-digit"})} · ${m.who==="lst"?"Leitstelle":m.who==="patient"?"Patient":"Anrufer"}${m.fb?(m.marked?" · ❓ von dir als unpassend markiert":" · ❓ nicht verstanden"):""}</small><br>${esc(m.text)}${m.who!=="lst"&&i>0&&P.log[i-1].who==="lst"?` <button onclick="simProtoMark('${esc(P.id)}',${i})" title="${m.fb?"Markierung entfernen":"Antwort passte nicht zur Frage – in die Lernliste"}" style="font-size:11px;padding:1px 6px;margin-left:4px">${m.fb?"↩︎":"✗ passt nicht"}</button>`:""}</div></div>`).join("");
+}
+function simProtoPage(){
+ const all=(db.simProtocols||[]).slice().sort((a,b)=>b.start-a.start), days=[...new Set(all.map(p=>p.day))];
+ const items=simLearnItems(), open=items.filter(it=>!it.learned), learned=db.simLearned||[];
+ const tab=(k,l)=>`<button onclick="simProtoTab='${k}';simProtoPage()" style="${simProtoTab===k?"background:#1d4ed8;color:#fff;border-color:#1d4ed8":""}">${l}</button>`;
+ let body="";
+ if(simProtoTab==="tage"){
+   body=!all.length?`<p class="muted">Noch keine Protokolle. Jedes Übungsgespräch wird beim Auflegen hier gespeichert.</p>`:
+   `<div class="row" style="justify-content:flex-end;margin-bottom:6px"><button onclick="simProtoDelAll()" style="color:#b91c1c">🗑 Alle löschen</button></div>`+
+   days.map(day=>{const list=all.filter(p=>p.day===day), fbn=list.reduce((a,p)=>a+(p.log||[]).filter(m=>m.fb).length,0);
+     return `<details ${day===days[0]?"open":""} style="border:1px solid var(--line);border-radius:10px;margin:8px 0;padding:0 10px">
+      <summary style="cursor:pointer;padding:10px 0;font-weight:800">📁 ${esc(simDayLabel(day))} <span class="pill">${list.length} Gespräch${list.length===1?"":"e"}</span>${fbn?` <span class="pill" style="background:#fef3c7;color:#92400e">❓ ${fbn}× nicht verstanden</span>`:""}</summary>
+      <div class="row" style="justify-content:flex-end"><button onclick="simProtoDelDay('${day}')" style="color:#b91c1c;font-size:13px">🗑 Tag löschen</button></div>
+      ${list.map(P=>{const fb=(P.log||[]).filter(m=>m.fb).length, op=simProtoOpen===P.id;
+        return `<div style="border-top:1px solid var(--line);padding:8px 0">
+         <div class="row between" style="gap:8px;align-items:flex-start"><div style="cursor:pointer;flex:1;min-width:0" onclick="simProtoOpen=${op?"null":`'${esc(P.id)}'`};simProtoPage()">
+          <b>${op?"▾":"▸"} ${new Date(P.start).toLocaleTimeString("de-DE",{hour:"2-digit",minute:"2-digit"})} · ${esc(P.title)}</b>${P.follow?` <span class="pill">🔁 Folgeanruf</span>`:""}${fb?` <span class="pill" style="background:#fef3c7;color:#92400e">❓ ${fb}</span>`:""}<br>
+          <small class="muted">${esc(P.caller||"Anrufer")}${P.rel?` (${esc(P.rel)})`:""} · ${esc(P.loc)} · Einsatz #${esc(P.callId)} · ${fmtDur(P.end-P.start)} · aufgelegt: ${esc(P.endBy)}</small></div>
+          <button onclick="simProtoDelOne('${esc(P.id)}')" title="Protokoll löschen" style="color:#b91c1c">🗑</button></div>
+         ${op?`<div style="margin-top:6px;padding:6px;background:#f8fafc;border-radius:8px">${simProtoChat(P)}</div>`:""}</div>`}).join("")}</details>`}).join("");
+ }else{
+   const caseOpts=it=>[...it.caseIds].filter(Boolean).map(id=>`<option value="${esc(id)}">nur bei diesem Fall-Typ (${esc(id)})</option>`).join("");
+   body=`<p class="muted" style="margin-top:0">Fragen, auf die der Anrufer „weiß ich nicht“ oder „wie bitte?“ gesagt hat – aus allen Protokollen, alle 5 Minuten und nach jedem Gespräch neu durchgesehen. Wurde direkt danach dieselbe Frage anders gestellt und verstanden, lernt der Anrufer das selbst. Sonst kannst du hier die Antwort eintragen („{er}“ wird je nach Patient zu er/sie).</p>
+   <h3>❓ Offen (${open.length})</h3>${open.length?open.map(it=>`<div style="border:1px solid var(--line);border-radius:10px;padding:8px 10px;margin:8px 0">
+     <b>„${esc(it.q)}“</b> <span class="pill">${it.n}×</span>${it.nowOk?` <span class="pill" style="background:#dcfce7;color:#166534">✅ wird inzwischen verstanden</span>`:""}<br>
+     <small class="muted">Antwort war: „${esc(it.examples[0]?.ans||"")}“ · ${esc(it.examples[0]?.title||"")} · ${esc(simDayLabel(it.examples[0]?.day||simDayKey(Date.now())))}</small>
+     ${it.nowOk?`<div style="font-size:13px;margin-top:4px">Heute würde er sagen: „${esc(it.nowOk)}“</div>`:""}
+     ${it.hint?`<div style="font-size:13px;margin-top:6px">Danach hast du gefragt: „${esc(it.hint.to)}“ → verstanden („${esc(it.hint.ans)}“) <button style="font-size:12px;padding:3px 8px" onclick="simLearnSet('${esc(it.key)}','hint')">✔ Gleiche Bedeutung – lernen</button></div>`:""}
+     <div class="row" style="margin-top:6px;gap:6px;flex-wrap:wrap"><input id="la_${simProtoSafe(it.key)}" placeholder="So soll der Anrufer antworten, z. B. „Ja, {er} hat Diabetes.“" style="flex:1;min-width:200px">
+      <select id="ls_${simProtoSafe(it.key)}" style="width:auto"><option value="*">für alle Fälle</option>${caseOpts(it)}</select>
+      <button class="primary" onclick="simLearnSet('${esc(it.key)}','answer')">🧠 Lernen</button><button onclick="simLearnSet('${esc(it.key)}','ignore')" title="Nicht mehr anzeigen">Ignorieren</button></div></div>`).join(""):`<p class="muted">Nichts offen 👍</p>`}
+   <h3>🧠 Gelernt (${learned.filter(l=>!l.ignore).length})</h3>${learned.filter(l=>!l.ignore).length?`<table><thead><tr><th>Frage</th><th>Anrufer antwortet</th><th>Gilt für</th><th></th></tr></thead><tbody>${learned.filter(l=>!l.ignore).map(l=>`<tr><td>„${esc(l.q)}“<br><small class="muted">${l.by==="auto"?"🤖 automatisch gelernt":"✍️ von dir"} · ${new Date(l.at).toLocaleDateString("de-DE")}${l.used?` · ${l.used}× genutzt`:""}</small></td><td>${l.answer?esc(l.answer):`wie bei „${esc(l.to)}“`}</td><td>${l.scope==="*"?"alle Fälle":esc(l.scope)}</td><td><button onclick="simLearnDel('${esc(l.id)}')" style="color:#b91c1c">🗑</button></td></tr>`).join("")}</tbody></table>`:`<p class="muted">Noch nichts gelernt.</p>`}
+   ${learned.some(l=>l.ignore)?`<p class="muted" style="font-size:13px">${learned.filter(l=>l.ignore).length} Frage(n) ignoriert – <a href="#" onclick="db.simLearned=(db.simLearned||[]).filter(l=>!l.ignore);save();simProtoPage();return false">wieder anzeigen</a></p>`:""}`;
+ }
+ document.getElementById("app").innerHTML=`<div class="card"><div class="row between" style="flex-wrap:wrap;gap:8px"><h2 style="margin:0">📼 Anruferprotokolle</h2><div class="row" style="gap:6px">${tab("tage","📁 Nach Tagen ("+all.length+")")}${tab("lernen","🧠 Lernliste ("+open.length+")")}<button onclick="render('leitstelle')">Zur Übersicht</button></div></div>
+  <p class="muted" style="font-size:13px">Gespeichert nur auf diesem Gerät (max. ${SIM_PROTO_MAX} Gespräche, älteste fallen zuerst raus). Gelerntes gilt für alle Plätze.</p>${body}</div>`;
+}
+
 // ─── Sprache ─────────────────────────────────────────────────────────────────────────────────
 // iPad/iPhone: Sprachausgabe ist erst erlaubt, nachdem sie einmal direkt durch einen Tipp
 // gestartet wurde. Seit der Disponent zuerst spricht (v5.07), fiel dieser erste Tipp-Start weg –
@@ -9310,7 +9463,7 @@ function simChatHTML(c){
  setTimeout(()=>{const lg=document.getElementById("simLog");if(lg)lg.scrollTop=lg.scrollHeight;simMicLiveUpdate()},0);
  const ref=s.isFollow&&String(s.refCallId)!==String(c.id)?simCallById(s.refCallId):null;
  return `<div class="card" style="border:2px solid ${s.num==="19222"?"#1d4ed8":"#e30613"}">
-  <div class="row between"><h3 style="margin:0">🗣️ Übungsanruf ${s.num==="19222"?"19222":"112"} ${simVoice?"– 🔊 Sprachmodus":"– 🔇 Textmodus"}</h3><small class="muted">${simAiReady()?`🤖 KI-Anrufer${s.d&&s.d.ai?" · Fall von der KI erfunden":""}`:`Stichwort-Anrufer · <a href="#" onclick="simAiDialog();return false">🤖 echte KI einrichten</a>`}</small></div>
+  <div class="row between"><h3 style="margin:0">🗣️ Übungsanruf ${s.num==="19222"?"19222":"112"} ${simVoice?"– 🔊 Sprachmodus":"– 🔇 Textmodus"}</h3><small class="muted">Gespräch wird protokolliert · <a href="#" onclick="render('protokolle');return false">📼 Protokolle</a></small></div>
   ${s.isFollow?`<div style="margin-top:6px;padding:6px 10px;border-radius:8px;background:#fef3c7;color:#92400e;font-weight:700">🔁 Erneuter Anruf – Rufnummer bekannt aus Einsatz #${esc(s.refCallId)}${ref?` (${esc(ref.keyword||"—")}, ${esc(ref.location||"")})`:" (Einsatz bereits abgeschlossen)"}
     ${ref?`<button style="margin-left:8px" onclick="simMergeFollow('${esc(String(c.id))}')">↩️ Zu Einsatz #${esc(String(ref.id))} übernehmen</button>`:""}</div>`:""}
   <div id="simLog" style="max-height:${simVoice?"140":"260"}px;overflow:auto;margin-top:6px;padding:4px;background:#f8fafc;border-radius:8px">${s.awaitGreeting?`<div class="muted" style="padding:6px;font-weight:700">📞 Verbunden – Sie melden sich zuerst, z. B. „Notruf Feuerwehr und Rettungsdienst, wo genau ist der Notfallort?“</div>`:""}${simLogHTML(c)}</div>
@@ -9336,7 +9489,7 @@ function simCtlHTML(){
   <button onclick="simToggleOn()" title="Automatische Übungsnotrufe ${simOn?"ausschalten":"einschalten"}" style="font-size:12px;padding:4px 10px;border-radius:8px;font-weight:800;${simOn?"background:#16a34a;color:#fff;border:1px solid #16a34a":"background:#fff;color:#334155;border:1px solid var(--line)"}">🎲 <span class="simLbl">Übungsnotrufe </span>${simOn?"AN":"AUS"}</button>
   <button onclick="phoneHereToggle()" title="Anrufe vom Anrufer-Handy an diesem Platz ${phoneHere?"ausblenden":"anzeigen"} (${esc(deskName())})" style="font-size:12px;padding:4px 8px;border-radius:8px;font-weight:800;${phoneHere?"background:#e0f2fe;color:#075985;border:1px solid #7dd3fc":"background:#fff;color:#94a3b8;border:1px solid var(--line)"}">📞${phoneHere?"":"✕"}</button>
   <button onclick="simPrepDialog()" title="Eigenen Notruf vorbereiten (Parameter festlegen, Anrufer spielt ihn)" style="font-size:16px;padding:2px 8px;border-radius:8px;background:none;border:1px solid var(--line)">📝</button>
-  <button onclick="simAiDialog()" title="KI-Anrufer einrichten" style="font-size:16px;padding:2px 8px;border-radius:8px;${simAiReady()?"background:#ede9fe;border:1px solid #7c3aed":"background:none;border:1px solid var(--line)"}">🤖</button>`;
+  <button onclick="render('protokolle')" title="Anruferprotokolle (nach Tagen) und Lernliste" style="font-size:16px;padding:2px 8px;border-radius:8px;background:none;border:1px solid var(--line)">📼</button>`;
 }
 function phoneHereToggle(){
  phoneHere=!phoneHere; try{localStorage.setItem("lst-phone-here",phoneHere?"1":"0")}catch(e){}
@@ -9434,7 +9587,7 @@ function simPrepDialog(){
  el.style.cssText="position:fixed;inset:0;background:rgba(15,23,42,.55);z-index:2000;display:flex;align-items:flex-start;justify-content:center;padding:16px;overflow:auto";
  el.innerHTML=`<div class="card" style="max-width:720px;width:100%;margin:0" oninput="simPrepRead()" onchange="simPrepRead()">
   <div class="row between"><h2 style="margin:0">📝 Eigenen Notruf vorbereiten</h2><button onclick="document.getElementById('simPrepDlg').remove()">Schließen</button></div>
-  <p class="muted" style="font-size:13px">Du legst den Fall fest, der Anrufer spielt ihn. Leere Felder werden passend ergänzt. ${simAiReady()?"Mit 🤖 KI spielt der Anrufer frei nach deinen Vorgaben.":"Ohne 🤖 KI antwortet der Anrufer nach Stichworten aus deinen Angaben."}</p>
+  <p class="muted" style="font-size:13px">Du legst den Fall fest, der Anrufer spielt ihn. Leere Felder werden passend ergänzt. Der Anrufer antwortet nach Stichworten aus deinen Angaben.</p>
   <b style="display:block;margin-top:6px">Lage</b>
   ${g2(F("Was ist passiert?",sel("evt",QS_EVENTS))+F("Notfallort (Adresse)",inp("addr","z. B. Pelzerstraße 12, Varel – leer = zufällig"))+F("…oder Strand/Hafen",sel("water",[["","–"],...SIM_WATER.map((w,i)=>[String(i),w.n.replace(/^(am|auf) /,"")])])))}
   ${F("Schilderung des Anrufers",ta("event","z. B. Mein Mann hat seit 20 Minuten Druck auf der Brust, das zieht in den linken Arm.",2))}
@@ -9447,7 +9600,6 @@ function simPrepDialog(){
   ${g2(F("X – Blutung",sel("x",["Nein","Ja","Unklar"]))+F("A – Atemweg",sel("a",["Frei","Gefährdet","Verlegt","Unklar"]))+F("B – Atmung",sel("b",["Normal","Auffällig","Keine normale Atmung","Unklar"]))+F("C – Kreislauf",sel("c",["Unauffällig","Auffällig","Schockzeichen","Relevante Blutung","Unklar"]))+F("D – Bewusstsein",sel("d",["Wach / orientiert","Bewusstseinsgetrübt","Bewusstlos","Krampfanfall","Neurologisch auffällig","Unklar"]))+F("Psy",sel("psy",["Nein","Ja"])))}
   ${g2(F("E / Beschwerden",inp("e","z. B. Schmerzen linker Arm, kaltschweißig"))+F("Beschwerden in Ich-Form (wenn Patient spricht)",inp("pain","z. B. Mir drückt es auf der Brust"))+F("Vorerkrankungen/Medikamente",inp("hist","z. B. Bluthochdruck, Blutverdünner"))+F("Personen im Gebäude (Brand)",inp("inside","z. B. Oma im 1. OG")))}
   ${F("Sätze, die der Anrufer zwischendurch sagt (je Zeile einer)",ta("extra","Er schwitzt so stark!\nSoll ich die Tür aufmachen?",2))}
-  ${F("Hinweise nur für die KI (z. B. „versteht die Frage nach dem Ort erst beim zweiten Mal“)",ta("notes","",2))}
   <b style="display:block;margin-top:10px">Wann und wo klingelt es?</b>
   ${g2(F("Zeitpunkt",sel("when",[["now","sofort"],["in","in … Minuten"],["rand","zufällig innerhalb von … Minuten"]]))+F("Minuten",inp("mins","5","number"))+F("Platz",sel("target",desks.map(x=>[x.id,x.name+(x.id===DEVICE_ID?" (dieser)":"")]))))}
   <div class="row" style="justify-content:flex-end;margin-top:12px"><button onclick="simPrepDraft=null;simPrepDialog()">Leeren</button><button class="primary" onclick="simPrepSave()">📞 Notruf einplanen</button></div>

@@ -1607,6 +1607,26 @@ Version 5.05:
   („a, b“ = a ODER b). Mit „🚑 NA-Indikation“ markierte Knöpfe ziehen weiterhin einen Notarzt.
 - Nur „Unauffällig“ (ohne weitere Befunde) zählt weiter als unauffälliges E (R0 möglich).
 
+Version 5.14:
+- KI-Anrufer entfernt: kein 🤖-Knopf mehr, kein API-Schlüssel, ein gespeicherter Schlüssel wird
+  vom Gerät gelöscht. Es gibt nur noch den eingebauten Anrufer (kostenlos, im Gerät).
+- 📼 Anruferprotokolle (Knopf in der Kopfleiste und im Übungsanruf): Jedes Übungsgespräch wird beim
+  Auflegen gespeichert – Uhrzeit, Anrufer, Ort, Einsatz, Dauer, wer aufgelegt hat, das ganze
+  Gespräch. Sortiert in Tages-Ordnern (Heute/Gestern/Datum). Löschen: einzeln, ganzer Tag, alle.
+  Gespeichert nur auf diesem Gerät, höchstens 400 Gespräche (älteste fallen raus).
+- 🧠 Lernliste: Alle 5 Minuten, nach jedem Gespräch und beim Öffnen werden die Protokolle
+  durchgesehen. Jede Frage, auf die der Anrufer „weiß ich nicht“ / „wie bitte?“ gesagt hat, kommt
+  in die Lernliste. Unpassende Antworten (z. B. „Welche Blutgruppe?“ → „Blut seh ich keins“) kannst
+  du im Protokoll mit „✗ passt nicht“ selbst dazulegen.
+  • Automatisch gelernt wird, wenn du direkt danach dieselbe Frage anders gestellt hast (mindestens
+    ein gleiches Wort) und der Anrufer das dann verstanden hat – künftig versteht er beide Formen.
+  • Sonst trägst du ein, was der Anrufer antworten soll („{er}“ wird zu er/sie), für alle Fälle oder
+    nur für einen Fall-Typ. Deine Antworten haben Vorrang vor dem, was der Anrufer sonst sagen würde.
+  • Zeigt an, wenn eine Frage mit dem heutigen Stand inzwischen verstanden wird.
+  • Gelerntes ist löschbar und wird mit den anderen Plätzen geteilt.
+- Fehler behoben (aus v5.07): „Wie heißt der Hausarzt?“ wurde als Anweisung „zum Hausarzt“
+  verstanden. Fragen lösen keine Ratschlag-Bestätigung mehr aus.
+
 Version 5.13:
 - Übungsanrufer verstehen das Ende des Notrufs besser:
   • „Der RTW ist unterwegs, ca. 8 Minuten“ → wiederholt die Zeit („Acht Minuten, okay.“). Bei
