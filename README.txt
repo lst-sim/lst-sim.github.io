@@ -1607,6 +1607,12 @@ Version 5.05:
   („a, b“ = a ODER b). Mit „🚑 NA-Indikation“ markierte Knöpfe ziehen weiterhin einen Notarzt.
 - Nur „Unauffällig“ (ohne weitere Befunde) zählt weiter als unauffälliges E (R0 möglich).
 
+Version 5.20:
+- Notrufe zusammenführen: Der zweite Anruf wird nicht mehr aufgelegt, sondern gehalten (Telefon-
+  leiste orange „⏸️ Gehalten – zusammengeführt mit #…“, Öffnen/Auflegen wie gewohnt). Man landet
+  direkt in „📝 Notruf ändern“ des Einsatzes, in den zusammengeführt wurde. Erst beim Auflegen wird
+  der gehaltene Anruf abgelegt; in der Einsatzübersicht erscheint er nicht doppelt.
+
 Version 5.19:
 - Zahl-Bausteine beginnen überall bei 0 (auch „Wie viele Personen/Tiere sind betroffen?“).
 

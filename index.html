@@ -170,7 +170,7 @@ html[data-device="handy"] #floatDock{left:8px;right:8px;width:auto;top:auto;bott
 </head>
 <body>
 <div style="padding:6px 10px;font-size:11px;color:#94a3b8;font-weight:700;display:flex;flex-wrap:wrap;align-items:center;gap:10px;position:sticky;top:0;z-index:10;background:var(--bg)">
- <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v5.19</span>
+ <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v5.20</span>
  <span id="syncState"></span> <a id="deskTag" href="#" onclick="renameDesk();return false" title="Name dieses Platzes (für „offen an …“) – antippen zum Ändern" style="color:#64748b;font-weight:700;text-decoration:none"></a>
  <span id="simCtl" style="position:absolute;left:50%;transform:translateX(-50%);display:flex;gap:6px;align-items:center"></span>
  <a id="homeLink" href="#" onclick="render('leitstelle');return false" class="hidden" style="color:#64748b;text-decoration:underline;font-weight:600">🖥️ Leitstelle</a>
@@ -2757,7 +2757,7 @@ function incidentCard(c,isSelected){
  </div>`;
 }
 function openExternalRequest(kind,presetCallId){
- const calls=allOpenCalls().filter(c=>c.alarmTime||callDestinationPoint(c));
+ const calls=allOpenCalls().filter(c=>!c.mergedInto&&(c.alarmTime||callDestinationPoint(c)));
  if(!calls.length){toast("Noch kein Einsatz mit bekanntem Einsatzort vorhanden");return}
  const meta={
    polizei:{title:"👮 Fiktive Polizeileitstelle",unit:"Streifenwagen"},
@@ -2814,7 +2814,7 @@ function sprechwunschUnits(){
    .sort((a,b)=>(String(a.status)==="0"?0:1)-(String(b.status)==="0"?0:1));
 }
 function dashboard(){
- const calls=allOpenCalls();
+ const calls=allOpenCalls().filter(c=>!c.mergedInto); // zusammengeführte, noch gehaltene Anrufe nicht doppelt zeigen
  const sprech=sprechwunschUnits();
  const hasAlarmed=calls.some(c=>c.alarmTime);
  // Einsätze ohne Alarmierung (noch in Bearbeitung) und auf R0 (leichte Hilfeleistung ohne
@@ -4842,7 +4842,7 @@ async function heliPickLanding(c){
 function callTick(){
  const now=Date.now(); let changed=false;
  for(const c of allOpenCalls()){
-   if(c.kt||(c.deskId&&c.deskId!==DEVICE_ID))continue;
+   if(c.kt||c.mergedInto||(c.deskId&&c.deskId!==DEVICE_ID))continue;
    const us=callUnits(c);
    if(c.alarmTime&&us.some(isAirUnit)&&!c.heliLanding&&Number.isFinite(Number(c.lat)))heliPickLanding(c);
    if(c.alarmTime&&isManvCall(c)){
@@ -4890,7 +4890,7 @@ function sdsInHTML(){
 // ─── Notrufe am gleichen Ort zusammenführen (v5.16) ───────────────────────────────────────────
 function dupCallCandidates(c){
  if(!c||c.kt||c.mergeDismissed||!Number.isFinite(Number(c.lat)))return [];
- return allOpenCalls().filter(o=>o!==c&&String(o.id)!==String(c.id)&&!o.kt&&Number.isFinite(Number(o.lat))&&haversine(Number(c.lat),Number(c.lng),Number(o.lat),Number(o.lng))<=0.35);
+ return allOpenCalls().filter(o=>o!==c&&String(o.id)!==String(c.id)&&!o.kt&&!o.mergedInto&&Number.isFinite(Number(o.lat))&&haversine(Number(c.lat),Number(c.lng),Number(o.lat),Number(o.lng))<=0.35);
 }
 function dupCallBannerHTML(c){
  const list=dupCallCandidates(c); if(!list.length)return "";
@@ -4904,14 +4904,21 @@ function mergeCallInto(srcId,tgtId){
  const src=allOpenCalls().find(x=>String(x.id)===String(srcId)), tgt=allOpenCalls().find(x=>String(x.id)===String(tgtId));
  if(!src||!tgt)return;
  const info=(src.history||[]).filter(h=>!h.auto&&h.a&&!/^☎️|^📞|^📵/.test(h.q||"")).slice(0,12).map(h=>`${String(h.q).replace(/^[^A-Za-zÄÖÜäöü]+/,"").replace(/\?$/,"")}: ${h.a}`).join(" | ");
- tgt.history=tgt.history||[]; tgt.history.push({q:`📎 Weiterer Anruf zusammengeführt (#${src.id}${src.callerNumber&&src.sim?` · ${src.sim.phone}`:""})`,a:info||"keine weiteren Angaben"});
- if(src.phoneStart&&!src.phoneEnd)hangUpCall(src.id);
- src.mergedInto=String(tgt.id); src.endTime=new Date().toISOString(); src.keyword=(src.keyword?src.keyword+" ":"")+`→ zusammengeführt mit #${tgt.id}`;
- db.logs.unshift(src);
+ tgt.history=tgt.history||[]; tgt.history.push({q:`📎 Weiterer Anruf zusammengeführt (#${src.id}${src.sim?` · ${src.sim.phone}`:""})`,a:info||"keine weiteren Angaben"});
+ src.mergedInto=String(tgt.id); src.keyword=`→ zusammengeführt mit #${tgt.id}`;
+ (src.history=src.history||[]).push({q:"📎 Zusammengeführt",a:`mit Einsatz #${tgt.id}`});
+ // v5.20: der Anruf bleibt gehalten (Telefonleiste), bis aufgelegt wird – dann wird er abgelegt
+ if(!src.phoneStart||src.phoneEnd)simMergedFinalize(src);
+ else if(db.currentCall&&String(db.currentCall.id)===String(src.id))parkCurrentCall();
+ save(); toast(`📎 Notruf #${src.id} mit Einsatz #${tgt.id} zusammengeführt – Anruf wird gehalten`);
+ openCallEdit(tgt.id);
+}
+function simMergedFinalize(src){
+ if(!src||src._finalized)return; src._finalized=true;
+ src.endTime=new Date().toISOString(); db.logs.unshift(src);
  if(db.currentCall&&String(db.currentCall.id)===String(src.id))db.currentCall=null;
  db.activeCalls=(db.activeCalls||[]).filter(x=>String(x.id)!==String(src.id));
  if(db.cloud?.enabled)setTimeout(()=>{try{closeCallCloud(src)}catch(e){}},0);
- save(); toast(`📎 Notruf #${src.id} mit Einsatz #${tgt.id} zusammengeführt`); render("leitstelle");
 }
 
 // ─── Telefonat-Leiste: läuft, solange der Notruf nicht aufgelegt wurde ───────────────────────
@@ -4921,9 +4928,9 @@ function renderCallTimerBar(){
  const el=document.getElementById("callTimerBar"); if(!el)return;
  const list=(IS_MONITOR||isTerminalLink)?[]:phoneCalls();
  if(!list.length){if(el.innerHTML){el.innerHTML="";document.body.style.paddingTop=""}return}
- el.innerHTML=list.map(c=>`<div style="background:#16a34a;color:#fff;display:flex;align-items:center;gap:12px;padding:6px 12px;font-weight:700;box-shadow:0 2px 6px rgba(0,0,0,.25)">
+ el.innerHTML=list.map(c=>`<div style="background:${c.mergedInto?"#b45309":"#16a34a"};color:#fff;display:flex;align-items:center;gap:12px;padding:6px 12px;font-weight:700;box-shadow:0 2px 6px rgba(0,0,0,.25)">
    <span style="font-size:20px">📞</span>
-   <span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Telefonat ${c.kt?"Krankentransport":c.callerNumber&&c.callerNumber!=="112"?esc(c.callerNumber==="116117"?"116 117":c.callerNumber):"Notruf"} #${esc(c.id)}${c.location?` · ${esc(c.location)}`:""}</span>
+   <span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${c.mergedInto?`⏸️ Gehalten – zusammengeführt mit #${esc(c.mergedInto)}`:`Telefonat ${c.kt?"Krankentransport":c.callerNumber&&c.callerNumber!=="112"?esc(c.callerNumber==="116117"?"116 117":c.callerNumber):"Notruf"} #${esc(c.id)}`}${c.location?` · ${esc(c.location)}`:""}</span>
    <span style="font-variant-numeric:tabular-nums;font-size:20px">${fmtDur(Date.now()-c.phoneStart)}</span>
    ${db.currentCall&&String(db.currentCall.id)===String(c.id)?"":`<button style="padding:5px 10px" onclick="activateCallById('${esc(c.id)}');render('notruf')">Öffnen</button>`}
    <button style="background:#dc2626;color:#fff;border:none;padding:6px 14px;font-weight:800" onclick="hangUpCall('${esc(c.id)}')">📵 Auflegen</button>
@@ -4939,6 +4946,7 @@ function hangUpCall(id,byCaller=false){
  if(typeof reaMetroCall!=="undefined"&&reaMetroCall===String(c.id))reaStopMetro();
  c.history=c.history||[];
  c.history.push({q:byCaller?"📵 Anrufer hat aufgelegt":"📵 Telefonat beendet",a:`Dauer ${fmtDur(c.phoneEnd-c.phoneStart)}`});
+ if(c.mergedInto){simMergedFinalize(c);if(currentPage==="leitstelle"&&!uiLocked)setTimeout(()=>render("leitstelle"),0)}
  save();
  if(!byCaller&&c.callerId&&db.cloud?.enabled){
    cloudRequest(`callRequests/${encodeURIComponent(String(c.callerId))}`,"PUT",{status:"ended",callId:c.id,time:new Date().toISOString()});
