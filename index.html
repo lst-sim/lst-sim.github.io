@@ -170,7 +170,7 @@ html[data-device="handy"] #floatDock{left:8px;right:8px;width:auto;top:auto;bott
 </head>
 <body>
 <div style="padding:6px 10px;font-size:11px;color:#94a3b8;font-weight:700;display:flex;flex-wrap:wrap;align-items:center;gap:10px;position:sticky;top:0;z-index:10;background:var(--bg)">
- <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v5.23</span>
+ <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v5.24</span>
  <span id="syncState"></span> <a id="deskTag" href="#" onclick="renameDesk();return false" title="Name dieses Platzes (für „offen an …“) – antippen zum Ändern" style="color:#64748b;font-weight:700;text-decoration:none"></a>
  <span id="simCtl" style="position:absolute;left:50%;transform:translateX(-50%);display:flex;gap:6px;align-items:center"></span>
  <a id="homeLink" href="#" onclick="render('leitstelle');return false" class="hidden" style="color:#64748b;text-decoration:underline;font-weight:600">🖥️ Leitstelle</a>
@@ -2210,10 +2210,7 @@ function manageProposal(){
   <label style="margin-top:10px">Aktuell vorgeschlagen</label>
   ${proposal.length?proposal.map(u=>`<div class="row between" style="padding:8px 0;border-bottom:1px solid var(--line)"><span>${vehicleLabelBlock(u)}</span><button onclick="removeProposedUnit('${String(u.id)}')">🗑️ Entfernen</button></div>`).join(""):`<p class="muted">Noch keine Fahrzeuge vorgeschlagen.</p>`}
   <label style="margin-top:14px">Verfügbares Fahrzeug hinzufügen</label>
-  <select id="manualAddUnit">
-   <option value="">– Fahrzeug wählen –</option>
-   ${available.map(u=>`<option value="${u.id}">${esc(u.type)} · ${esc(u.opta||u.name)}${geographicRank(u)<999?` (ca. ${estimatedEtaMinutes(u)} min)`:""}</option>`).join("")}
-  </select>
+  ${unitPickHTML("manualAddUnit",available.map(u=>unitItem(u,"",geographicRank(u)<999?`ca. ${estimatedEtaMinutes(u)} min`:statusName(String(u.status)))))}
   <div class="row" style="margin-top:10px"><button class="primary" onclick="addManualUnit()">➕ Hinzufügen</button></div>
  </div>`;
 }
@@ -2465,10 +2462,10 @@ function resourcePickerCatsHTML(mode){
    return tabs+groups.map(g=>{
      const us=thw.filter(u=>thwGroup(u)===g&&!assigned.has(String(u.id))&&!["3","4","7"].includes(String(u.status)));
      const free=us.filter(u=>["1","2","8"].includes(String(u.status))&&!assigned.has(String(u.id)));
-     return `<div style="border:1px solid var(--line);border-radius:10px;padding:8px 10px;margin-bottom:8px">
-       <div class="row between" style="flex-wrap:wrap"><b>🛠️ ${esc(g)}</b><button class="primary" ${free.length?"":"disabled"} onclick="addThwGroup(${esc(JSON.stringify(g))},'${mode}')">Ganze Fachgruppe (${free.length})</button></div>
+     return `<details style="border:1px solid var(--line);border-radius:10px;padding:8px 10px;margin-bottom:8px">
+       <summary class="row between" style="flex-wrap:wrap;cursor:pointer;list-style:none"><b>▸ 🛠️ ${esc(g)}</b><button class="primary" ${free.length?"":"disabled"} onclick="event.preventDefault();event.stopPropagation();addThwGroup(${esc(JSON.stringify(g))},'${mode}')">Ganze Fachgruppe (${free.length})</button></summary>
        <div class="answer" style="margin-top:6px">${us.map(u=>{const ok=["1","2","8"].includes(String(u.status))&&!assigned.has(String(u.id));return `<button ${ok?"":"disabled"} onclick="addResourceUnitId('${u.id}','${mode}')">${esc(u.type)}<small style="display:block">${esc(u.opta||u.name)} · ${ok?dist(u):assigned.has(String(u.id))?"bereits im Einsatz":"Status "+esc(u.status)}</small></button>`}).join("")}</div>
-     </div>`;
+     </details>`;
    }).join("");
  }
  // Alle Fahrzeuge der Kategorie, nach Typ gruppiert – jedes einzeln wählbar, dazu "Nächstes freies".
@@ -2484,10 +2481,10 @@ function resourcePickerCatsHTML(mode){
    if(!us.length)return "";
    const typeArg=JSON.stringify(t).replace(/"/g,"'");
    const anyFree=us.some(u=>islandReachable(u)&&["1","2","8"].includes(String(u.status))&&!assigned.has(String(u.id)));
-   return `<div style="border:1px solid var(--line);border-radius:10px;padding:6px 10px;margin-bottom:6px">
-     <div class="row between" style="flex-wrap:wrap"><b>${esc(t)}</b><button style="padding:4px 10px;font-size:12px" ${anyFree?"":"disabled"} onclick="addResourceType(${typeArg},'${mode}',${esc(JSON.stringify(pickerCat))})">Nächstes freies</button></div>
+   return `<details style="border:1px solid var(--line);border-radius:10px;padding:6px 10px;margin-bottom:6px">
+     <summary class="row between" style="flex-wrap:wrap;cursor:pointer;list-style:none"><b>▸ ${esc(t)} <span class="pill">${us.length}</span></b><button style="padding:4px 10px;font-size:12px" ${anyFree?"":"disabled"} onclick="event.preventDefault();event.stopPropagation();addResourceType(${typeArg},'${mode}',${esc(JSON.stringify(pickerCat))})">Nächstes freies</button></summary>
      <div class="answer" style="margin-top:4px">${us.map(u=>{const reach=islandReachable(u);const ok=reach&&["1","2","8"].includes(String(u.status))&&!assigned.has(String(u.id));const abPl=ok&&isAB(u)?wlfPlanFor(u,callDestinationPoint(c,u)||incidentPoint(),c):null;const abBlocked=ok&&isAB(u)&&!abPl;return `<button ${ok&&!abBlocked?"":"disabled"} onclick="addResourceUnitId('${u.id}','${mode}')" style="padding:6px 10px">${esc(u.opta||u.name)}<small style="display:block">${isAB(u)&&ok?(abPl?`🚛 ${esc(abPl.wlf.opta||abPl.wlf.name)}${abPl.busy?` (von Einsatz #${esc(abPl.fromCallId)})`:""} · ca. ${Math.round(abPl.total)} min`:"🚛 kein WLF verfügbar"):""}${isAB(u)&&ok?"<br>":""}${esc(u.location||"")} · ${!reach?(unitOnIsland(u)?"🏝️ nur Insel":"🏝️ nicht auf die Insel"):ok?dist(u):assigned.has(String(u.id))?"bereits im Einsatz":"Status "+esc(u.status)}</small></button>`}).join("")}</div>
-   </div>`;
+   </details>`;
  }).join("");
 }
 function showResourcePicker(mode="additional"){
@@ -4877,10 +4874,11 @@ function callTick(){
 }
 
 // ─── SDS-Eingang (Nachrichten der Fahrzeuge an die Leitstelle) ───
+function sdsReplyTo(unitId){openSdsCompose();setTimeout(()=>{const b=document.querySelector(`[data-up="sdsTarget"][data-v="own:${unitId}"]`)||document.querySelector(`[data-up="sdsTarget"][data-v="neighbor:${unitId}"]`);if(b){b.closest("details")?.setAttribute("open","");unitPickSet("sdsTarget",b,"")}document.getElementById("sdsText")?.focus()},0)}
 function sdsInHTML(){
  const list=(db.sdsIn||[]).slice(0,8), unread=(db.sdsIn||[]).filter(m=>!m.read).length;
  return `<div class="card"><div class="row between"><h2 style="margin:0">📨 SDS-Eingang${unread?` <span class="pill" style="background:#dc2626;color:#fff">${unread}</span>`:""}</h2>${(db.sdsIn||[]).length?`<button style="font-size:12px;padding:3px 8px" onclick="(db.sdsIn||[]).forEach(m=>m.read=true);save();render('leitstelle')">✓ gelesen</button>`:""}</div>
-  ${list.length?list.map(m=>`<div style="border-top:1px solid var(--line);padding:6px 0;font-size:13px;${m.read?"opacity:.7":"font-weight:600"}"><b>${esc(m.opta)}</b> <small class="muted">${hhmm(m.time)}${m.callId?` · #${esc(m.callId)}`:""}</small><br>${esc(m.text)}</div>`).join(""):`<p class="muted" style="font-size:13px">Noch keine SDS von Fahrzeugen.</p>`}
+  ${list.length?list.map(m=>`<div style="border-top:1px solid var(--line);padding:6px 0;font-size:13px;${m.dir==="out"?"color:#1e3a8a;opacity:.8":m.read?"opacity:.7":"font-weight:600"}">${m.dir==="out"?"📤 an ":""}<b>${esc(m.opta)}</b> <small class="muted">${hhmm(m.time)}${m.callId?` · #${esc(m.callId)}`:""}</small>${m.dir!=="out"&&m.unitId!=null?` <button style="font-size:11px;padding:1px 6px" onclick="sdsReplyTo(${esc(JSON.stringify(String(m.unitId)))})" title="Antworten">↩️</button>`:""}<br>${m.re?`<small class="muted">↪ „${esc(m.re)}“</small><br>`:""}${esc(m.text)}</div>`).join(""):`<p class="muted" style="font-size:13px">Noch keine SDS.</p>`}
   ${(db.sdsIn||[]).length>8?`<small class="muted">… ${(db.sdsIn||[]).length-8} ältere</small> `:""}${(db.sdsIn||[]).length?`<button style="font-size:12px;padding:3px 8px;color:#b91c1c" onclick="if(confirm('Alle SDS im Eingang löschen?')){db.sdsIn=[];save();render('leitstelle')}">🗑 leeren</button>`:""}</div>`;
 }
 
@@ -5103,25 +5101,79 @@ function deleteUnit(id){
 }
 function setStatus(id,s){db.units.find(x=>x.id===id).status=s;save();toast("Status geändert")}
 
-function openSdsCompose(){
- const units=geoSortUnits(db.units);
- const neighbors=db.neighborUnits||[];
- document.getElementById("app").innerHTML=`<div class="card" style="max-width:480px;margin:30px auto">
+
+// ═══ Fahrzeug-Wähler mit aufklappbaren Kategorien (v5.24) ═══════════════════════════════════
+// Ersetzt die langen Auswahllisten: Kategorien (Organisation bzw. Nachbar-Kreis) sind zugeklappt,
+// darin nach Fahrzeugtyp sortiert. Der Wert landet in einem versteckten Feld mit derselben id –
+// bestehender Code (document.getElementById(id).value) funktioniert unverändert.
+function upCat(u){return u.district&&!u.org?`Nachbar-LK ${u.district}`:(u.org||"Sonstige")}
+function upIcon(cat){return (typeof ORG_ICON!=="undefined"&&ORG_ICON[cat])||(/^Nachbar/.test(cat)?"🚑":cat==="DRK"?"➕":"🚗")}
+function unitPickHTML(fid,items,{placeholder="– Fahrzeug wählen –",value="",cb="",extra=[]}={}){
+ // items: [{value,label,cat,type,meta}]
+ const cur=[...extra,...items].find(x=>String(x.value)===String(value));
+ const cats=[...new Set(items.map(x=>x.cat))].sort((a,b)=>{const ia=ORG_ORDER.indexOf(a),ib=ORG_ORDER.indexOf(b);return (ia<0?/^Nachbar/.test(a)?50:40:ia)-(ib<0?/^Nachbar/.test(b)?50:40:ib)||a.localeCompare(b,"de")});
+ const btn=x=>`<button type="button" class="upBtn${String(x.value)===String(value)?" primary":""}" data-up="${fid}" data-v="${esc(String(x.value))}" onclick="unitPickSet('${fid}',this,${esc(JSON.stringify(cb||""))})" style="text-align:left;padding:6px 10px;font-size:13px">${esc(x.label)}${x.meta?`<small style="display:block;opacity:.75">${esc(x.meta)}</small>`:""}</button>`;
+ return `<input type="hidden" id="${fid}" value="${esc(String(value??""))}">
+ <div id="${fid}_chosen" style="margin:4px 0 6px;font-weight:700">${cur?`✔ ${esc(cur.label)}`:`<span class="muted">${esc(placeholder)}</span>`}</div>
+ ${extra.length?`<div class="answer" style="margin-bottom:6px">${extra.map(btn).join("")}</div>`:""}
+ ${cats.map(cat=>{const list=items.filter(x=>x.cat===cat);const types=[...new Set(list.map(x=>x.type||""))].sort((a,b)=>a.localeCompare(b,"de"));
+   return `<details style="border:1px solid var(--line);border-radius:10px;margin:4px 0;padding:0 10px"><summary style="cursor:pointer;padding:8px 0;font-weight:800">${upIcon(cat)} ${esc(cat)} <span class="pill">${list.length}</span></summary>
+    ${types.map(t=>`<div style="margin:4px 0 8px"><div style="font-size:12px;font-weight:700;color:#475569">${esc(t||"Sonstige")}</div><div class="answer" style="margin-top:2px">${list.filter(x=>(x.type||"")===t).map(btn).join("")}</div></div>`).join("")}</details>`}).join("")}`;
+}
+function unitPickSet(fid,b,cb){
+ const el=document.getElementById(fid); if(el)el.value=b.dataset.v;
+ document.querySelectorAll(`[data-up="${fid}"]`).forEach(x=>x.classList.toggle("primary",x===b));
+ const ch=document.getElementById(fid+"_chosen"); if(ch)ch.innerHTML=`✔ ${esc(b.childNodes[0].textContent)}`;
+ if(cb)try{(new Function(cb))()}catch(e){}
+}
+function unitItem(u,valuePrefix="",meta=""){return {value:valuePrefix+u.id,label:u.opta||u.name,cat:upCat(u),type:u.type||"",meta}}
+
+// ═══ SDS: an alle schreiben, Fahrzeuge antworten (v5.24) ═════════════════════════════════════
+function sdsLog(entry){db.sdsIn=db.sdsIn||[];db.sdsIn.unshift({id:Date.now()+Math.floor(Math.random()*1000),time:new Date(Date.now()).toISOString(),read:true,...entry});if(db.sdsIn.length>300)db.sdsIn.length=300}
+function sdsUnitEta(u){
+ const call=findUnitCall(u); if(!call||String(u.status)!=="3"||!u.status3Since)return null;
+ const home=unitPoint(u), dest=callDestinationPoint(call,u); if(!home||!dest)return null;
+ const tot=etaMinutesForDistance(u,haversine(home[0],home[1],dest[0],dest[1])); if(tot==null)return null;
+ return Math.max(1,Math.round(tot-(Date.now()-u.status3Since)/60000));
+}
+function sdsAnswerFor(u,text,neighbor){
+ const t=String(text).toLowerCase(), st=String(u.status), call=neighbor?null:findUnitCall(u);
+ const where=st==="3"?(()=>{const m=sdsUnitEta(u);return `auf Anfahrt${call?` zu #${call.id}`:""}${m!=null?`, Eintreffen in ca. ${m} min`:""}`})():st==="4"?`am Einsatzort${call?` #${call.id}`:""}`:st==="7"?"Patient aufgenommen, auf dem Weg ins Krankenhaus":st==="8"?"am Zielort / Krankenhaus":st==="1"?"einsatzbereit über Funk":st==="2"?"einsatzbereit auf Wache":st==="6"?"außer Dienst":"—";
+ const C=u.crew, asg=!neighbor&&findUnitHospitalAssignment(u);
+ if(/abbruch|abbestell|einrücken|nicht mehr benötigt|rücken sie ein/.test(t))return st==="3"||st==="4"?"Verstanden, rücken ein.":"Verstanden.";
+ if(/status|wo (seid|sind) (ihr|sie)|position|standort|wo befind/.test(t))return `Status ${st} – ${where}.`;
+ if(/wie lange|eta|ankunft|eintreff|wann (seid|sind)|wann da/.test(t))return st==="3"?`Eintreffen in ca. ${sdsUnitEta(u)??"?"} min.`:st==="4"?"Sind bereits vor Ort.":st==="7"&&asg?`Ankunft ${asg.hospitalName} ca. ${hhmm(asg.eta)} Uhr.`:`Status ${st} – ${where}.`;
+ if(/klinik|krankenhaus|zielort|ziel\b|ivena/.test(t))return asg?`Zielklinik ${asg.hospitalName}, PZC ${asg.pzc||"–"}, an ca. ${hhmm(asg.eta)} Uhr.`:st==="4"?"Zielklinik noch nicht festgelegt, Versorgung läuft.":"Kein Patient an Bord.";
+ if(/patient|verletzt|lage|wie viele|zustand|sk ?\d|sichtung/.test(t)){
+   if(call&&call.manvReports&&call.manvReports.length){const R=call.manvReports.slice(-1)[0];return `Lage: ${R.total} Betroffene – ${R.rot} rot, ${R.gelb} gelb, ${R.gruen} grün, ${R.blau} blau, ${R.schwarz} schwarz.`}
+   if(st==="4"&&C&&C.info)return C.mode==="home"?"1 Pat., leicht verletzt/erkrankt, Versorgung vor Ort, voraussichtlich kein Transport.":C.mode==="none"?"Kein Patient für uns.":`1 Pat. ${C.info.gender||""}${C.info.age!=null?`, ${C.info.age} J.`:""} – ${pzcRmiLabel(C.info.rmi)||"in Versorgung"}${C.info.sk?`, SK${C.info.sk}`:""}, Transport geplant.`;
+   return st==="3"?"Noch nicht vor Ort, Lage folgt.":st==="4"?"Lageerkundung läuft, Meldung folgt.":"Kein Einsatz mit Patienten.";
+ }
+ if(/einsatzbereit|frei\b|verfügbar|könnt ihr|können sie (übernehmen|fahren)/.test(t))return ["1","2"].includes(st)?"Ja, einsatzbereit.":`Negativ, ${where}.`;
+ if(/melden|sprechwunsch|funk|rufen sie|kommen/.test(t))return "Verstanden, melden uns über Funk.";
+ if(/besatzung|qualifikation|notarzt an bord|na an bord/.test(t))return u.qualNow?`Besatzung: ${qualTokens(u.qualNow).join(" + ")}.`:"Besatzung wie gemeldet.";
+ if(/\?/.test(t))return "Rückfrage: bitte über Funk konkretisieren.";
+ return pick(["Verstanden.","Verstanden, wird erledigt.","Quittiert."]);
+}
+function sdsScheduleReply(u,text,neighbor){
+ if(!neighbor&&unitPhoneLive(u))return; // echte Besatzung am Handy antwortet selbst
+ const delay=rnd(8,35)*1000;
+ setTimeout(()=>{try{const ans=sdsAnswerFor(u,text,neighbor);sdsLog({dir:"in",unitId:u.id,opta:u.opta||u.name,type:u.type,text:ans,read:false,re:text});toast(`📨 SDS ${u.opta||u.name}: ${ans.slice(0,80)}`);save();if(currentPage==="leitstelle"&&!uiLocked)render("leitstelle")}catch(e){}},delay);
+}
+function openSdsCompose(pre){
+ const units=geoSortUnits(db.units).filter(u=>!u.neighborLoan), neighbors=db.neighborUnits||[];
+ const items=[...units.map(u=>unitItem(u,"own:",`${statusName(String(u.status))}${u.location?" · "+u.location:""}`)),...neighbors.map(nu=>({value:"neighbor:"+nu.id,label:nu.opta,cat:`Nachbar-LK ${nu.district}`,type:nu.type,meta:statusName(String(nu.status))}))];
+ const orgs=[...new Set(units.map(u=>u.org).filter(Boolean))];
+ const extra=[{value:"all:einsatz",label:"📢 Alle im Einsatz (Status 3/4/7/8)"},{value:"all:alle",label:"📢 Alle Fahrzeuge"},...orgs.map(o=>({value:"all:org:"+o,label:`📢 Alle ${o}`}))];
+ document.getElementById("app").innerHTML=`<div class="card" style="max-width:640px;margin:20px auto">
   <div class="row between"><h2>✉️ SDS schreiben</h2><button onclick="render('leitstelle')">Abbrechen</button></div>
-  <p class="muted">Kurznachricht (Short Data Service, wie im echten BOS-Digitalfunk) an ein Fahrzeug senden – erscheint auf dessen Fahrzeugterminal, inklusive Alarmton.</p>
-  <label>Empfänger</label>
-  <select id="sdsTarget" style="width:100%">
-   <option value="">– Fahrzeug wählen –</option>
-   <optgroup label="Eigene Fahrzeuge">
-    ${units.map(u=>`<option value="own:${esc(String(u.id))}">${esc(u.opta||u.name)} (${esc(u.location||"")})</option>`).join("")}
-   </optgroup>
-   ${neighbors.length?`<optgroup label="Externe Geräte (Nachbarlandkreise)">
-    ${neighbors.map(nu=>`<option value="neighbor:${esc(String(nu.id))}">${esc(nu.opta)} – ${esc(nu.district)}</option>`).join("")}
-   </optgroup>`:""}
-  </select>
-  <label style="margin-top:10px">Nachricht (max. 140 Zeichen)</label>
-  <textarea id="sdsText" rows="4" maxlength="140" style="width:100%;box-sizing:border-box" placeholder="Kurznachricht …"></textarea>
-  <div class="row" style="margin-top:12px">
+  <p class="muted">Kurznachricht an ein Fahrzeug oder an mehrere. Die Fahrzeuge antworten per SDS (erscheint im 📨 SDS-Eingang). Fahrzeuge mit offenem Fahrzeug-Handy antworten von dort selbst.</p>
+  <label>Nachricht (max. 140 Zeichen)</label>
+  <textarea id="sdsText" rows="3" maxlength="140" style="width:100%;box-sizing:border-box" placeholder="z. B. Status? / Wie lange noch? / Lage? / Zielklinik?">${esc(pre||"")}</textarea>
+  <div class="row" style="gap:6px;flex-wrap:wrap;margin-top:6px">${["Status?","Wie lange noch?","Lage?","Zielklinik?","Einsatzbereit?","Bitte über Funk melden.","Einsatzabbruch, rücken Sie ein."].map(t=>`<button type="button" style="font-size:12px;padding:3px 8px" onclick="document.getElementById('sdsText').value=${esc(JSON.stringify(t))}">${esc(t)}</button>`).join("")}</div>
+  <label style="margin-top:12px">Empfänger</label>
+  ${unitPickHTML("sdsTarget",items,{placeholder:"– Empfänger wählen –",extra})}
+  <div class="row" style="margin-top:12px;justify-content:flex-end">
    <button onclick="render('leitstelle')">Abbrechen</button>
    <button class="primary" onclick="sendSdsFromCompose()">📨 Senden</button>
   </div>
@@ -5132,6 +5184,18 @@ async function sendSdsFromCompose(){
  const text=(document.getElementById("sdsText")?.value||"").trim();
  if(!target){toast("Bitte einen Empfänger wählen");return}
  if(!text){toast("Bitte eine Nachricht eingeben");return}
+ if(target.startsWith("all:")){
+   const sel=target.slice(4), own=(db.units||[]).filter(u=>!u.neighborLoan&&String(u.status)!=="6");
+   const list=sel==="einsatz"?own.filter(u=>["3","4","7","8"].includes(String(u.status))):sel.startsWith("org:")?own.filter(u=>u.org===sel.slice(4)):own;
+   if(!list.length){toast("Keine passenden Fahrzeuge");return}
+   const sds={id:Date.now(),text,time:new Date().toISOString(),from:"Leitstelle"};
+   for(const u of list){u.sdsInbox=u.sdsInbox||[];u.sdsInbox.push(sds);if(db.cloud?.enabled)pushSdsCloud(u.id,sds).catch(()=>{})}
+   // Antworten: alle im Einsatz, von den übrigen nur ein paar (sonst 200 Quittungen)
+   const busy=list.filter(u=>["3","4","7","8"].includes(String(u.status))), rest=list.filter(u=>!busy.includes(u)).sort(()=>Math.random()-0.5).slice(0,Math.max(0,6-busy.length));
+   [...busy.slice(0,15),...rest].forEach(u=>sdsScheduleReply(u,text,false));
+   sdsLog({dir:"out",opta:sel==="einsatz"?"alle im Einsatz":sel.startsWith("org:")?"alle "+sel.slice(4):"alle Fahrzeuge",text:`${text} (${list.length} Empfänger)`});
+   save(); toast(`📨 SDS an ${list.length} Fahrzeuge gesendet`); render("leitstelle"); return;
+ }
  const [kind,rawId]=target.split(":");
  const sds={id:Date.now(),text,time:new Date().toISOString(),from:"Leitstelle"};
  if(kind==="neighbor"){
@@ -5141,6 +5205,7 @@ async function sendSdsFromCompose(){
    nu.sdsInbox.push(sds);
    save();
    await pushSdsCloud(`neighbor-${rawId}`,sds);
+   sdsLog({dir:"out",opta:nu.opta,text}); sdsScheduleReply(nu,text,true); save();
    toast(`SDS an ${nu.opta} (${nu.district}) gesendet`);
  }else{
    const u=db.units.find(x=>String(x.id)===String(rawId));
@@ -5149,6 +5214,7 @@ async function sendSdsFromCompose(){
    u.sdsInbox.push(sds);
    save();
    await pushSdsCloud(rawId,sds);
+   sdsLog({dir:"out",opta:u.opta||u.name,text}); sdsScheduleReply(u,text,false); save();
    toast(`SDS an ${u.opta||u.name} gesendet`);
  }
  render("leitstelle");
@@ -5620,6 +5686,7 @@ async function pollCloudUnits(){
  if(remoteFeedback){
    const allCalls=[...(db.currentCall?[db.currentCall]:[]),...(db.activeCalls||[])];
    for(const fb of Object.values(remoteFeedback)){
+     if(fb&&fb.kind==="sdsReply"&&fb.id!=null&&!(db.sdsIn||[]).some(m=>String(m.fbId)===String(fb.id))){sdsLog({dir:"in",fbId:fb.id,unitId:fb.unitId,opta:fb.unitLabel||String(fb.unitId),text:fb.text,read:false});toast(`📨 SDS ${fb.unitLabel}: ${String(fb.text).slice(0,80)}`);changed=true;continue}
      if(!fb||fb.id==null||!fb.callId)continue;
      const call=allCalls.find(c=>String(c.id)===String(fb.callId));
      if(!call)continue;
@@ -6499,7 +6566,7 @@ async function renderVehicleTerminal(unitId,dburl,sid){
      body.innerHTML=`${vehicleGeoWatchId?`<div style="font-size:10px;opacity:.8;margin-bottom:4px">📍 STANDORT LIVE</div>`:""}
       <div style="display:flex;justify-content:space-between;align-items:baseline"><b style="font-size:15px">${unit?esc(statusName(String(unit.status))):"—"}</b><span style="font-size:20px;font-weight:800">${unit?esc(String(unit.status)):"?"}</span></div>
       ${calls.length?calls.map(c=>`<div style="margin-top:6px;font-size:11px;border-top:1px solid #2a3325;padding-top:5px">🚨 ${esc(c.keyword||"Einsatz")}<br>📍 ${esc(c.location||"Ort unbekannt")}${c.staging&&c.staging.name&&!waterCapable(local)?`<br>🅿️ BR: ${esc(c.staging.name)}`:""}</div>`).join(""):`<div style="margin-top:6px;font-size:11px;opacity:.7">Kein aktueller Einsatz</div>`}
-      ${sdsList.length?`<div style="margin-top:6px;font-size:11px;border-top:1px solid #2a3325;padding-top:5px;color:#ffd966">✉️ SDS: ${esc(sdsList[0].text)}</div>`:""}`;
+      ${sdsList.length?`<div style="margin-top:6px;font-size:11px;border-top:1px solid #2a3325;padding-top:5px;color:#ffd966">✉️ SDS: ${esc(sdsList[0].text)} <button onclick="vehicleSdsReply('${esc(String(unitId))}','${dburl.replace(/'/g,"\\'")}','${sid.replace(/'/g,"\\'")}')" style="font-size:11px;padding:1px 6px">↩️ Antworten</button></div>`:""}`;
      const keypad=document.getElementById("vehicleKeypad");
      if(keypad)keypad.innerHTML=radioKeypadHTML(local,unit?.status,unitId,dburl,sid);
    }
@@ -6578,6 +6645,12 @@ function renderIvenaMini(hospitals){
   </table></div>
  </div>`;
 }
+async function vehicleSdsReply(unitId,dburl,sid){
+ const local=db.units.find(x=>String(x.id)===String(unitId));
+ const text=(prompt("SDS-Antwort an die Leitstelle:")||"").trim(); if(!text)return;
+ await pushFeedbackEntry(dburl,sid,{kind:"sdsReply",unitId,unitLabel:local?.opta||local?.name||unitId,text:text.slice(0,140)});
+ toast("SDS gesendet");
+}
 async function pushFeedbackEntry(dburl,sid,partial){
  const entry={id:Date.now()+Math.floor(Math.random()*1000),time:new Date().toISOString(),...partial};
  await vehicleFetch(dburl,sid,`orglFeedback/${encodeURIComponent(String(entry.id))}`,"PUT",entry);
@@ -6648,11 +6721,7 @@ async function openVehicleIvenaAssignment(unitId,dburl,sid,callId){
   <label>Zielklinik</label>
   <select id="vAsgHospital" onchange="ivenaFormRefresh('vAsg')">${hospitals.map(h=>`<option value="${h.id}">${esc(h.name)}${h.place?` (${esc(h.place)})`:""}</option>`).join("")}</select>
   <div class="formgrid">
-   ${isAnnounceType?`<div><label>Transportmittel (Status 4, optional)</label><select id="vAsgTransport" onchange="ivenaFormRefresh('vAsg')">
-     <option value="">– noch nicht festgelegt –</option>
-     ${allowSelf?`<option value="self">${esc(local?.opta||local?.name||unitId)} selbst (NEF)</option>`:""}
-     ${transportOptions.map(u=>`<option value="${u.id}">${esc(u.opta||u.name)} · ${esc(u.type)}</option>`).join("")}
-   </select></div>`:""}
+   ${isAnnounceType?`<div><label>Transportmittel (Status 4, optional)</label>${unitPickHTML("vAsgTransport",transportOptions.map(u=>unitItem(u,"")),{placeholder:"– noch nicht festgelegt –",cb:"ivenaFormRefresh('vAsg')",extra:[{value:"",label:"– noch nicht festgelegt –"},...(allowSelf?[{value:"self",label:`${local?.opta||local?.name||unitId} selbst (NEF)`}]:[])]})}</div>`:""}
   </div>
   ${pzcFieldsHTML("vAsg")}
   ${ivenaFlagsHTML("vAsg")}
@@ -7873,14 +7942,14 @@ function openIvenaAssignment(){
   <label>Zielklinik</label>
   <select id="asgHospital" onchange="ivenaFormRefresh('asg')">${hospitals.map(h=>`<option value="${h.id}">${esc(h.name)}${h.place?` (${esc(h.place)})`:""}</option>`).join("")}</select>
   <div class="formgrid">
-   <div><label>Transportmittel (Status 4)</label><select id="asgTransport" onchange="ivenaFormRefresh('asg')">${transportUnits.map(u=>`<option value="${u.id}">${esc(u.opta||u.name)} · ${esc(u.type)}${u.location?` (${esc(u.location)})`:""}</option>`).join("")}</select></div>
+   <div><label>Transportmittel (Status 4)</label>${unitPickHTML("asgTransport",transportUnits.map(u=>unitItem(u,"",u.location||"")),{value:transportUnits[0]?transportUnits[0].id:"",cb:"ivenaFormRefresh('asg')"})}</div>
   </div>
   ${pzcFieldsHTML("asg")}
   ${ivenaFlagsHTML("asg","asgOnN")}
   ${ivenaAnlassHTML("asg")}
   <div id="asgNefWrap" class="hidden">
    <label style="margin-top:10px">Begleitendes NEF/RTH (optional, Status 4)</label>
-   <select id="asgNef"><option value="">– kein separates Begleitfahrzeug –</option>${nefUnits.map(u=>`<option value="${u.id}">${esc(u.opta||u.name)} · ${esc(u.type)}${u.location?` (${esc(u.location)})`:""}</option>`).join("")}</select>
+   ${unitPickHTML("asgNef",nefUnits.map(u=>unitItem(u,"",u.location||"")),{placeholder:"– kein separates Begleitfahrzeug –",extra:[{value:"",label:"– kein separates Begleitfahrzeug –"}]})}
   </div>
   ${etaFieldsHTML("asg")}
   ${ivenaZwangHTML("asg")}
@@ -8405,7 +8474,7 @@ function funkPage(){
      ${list.length?list.map(x=>`<div class="row" style="justify-content:space-between;gap:6px;flex-wrap:nowrap;padding:2px 0;border-top:1px solid var(--line)">
        <span style="min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(x.u.opta||x.u.name)}">${x.u.funkGroup?"✳️ ":""}${esc(x.u.opta||x.u.name)} <small class="muted">${esc(x.u.type||"")}${x.n?" · "+esc(x.u.district):""}</small></span>
        <select onchange="funkSetUnit('${funkKey(x)}',this.value)" style="width:auto;font-size:12px;padding:2px 4px;max-width:120px" title="in andere Gruppe setzen">${opt(g)}</select></div>`).join(""):`<div class="muted">keine Fahrzeuge</div>`}
-     <select onchange="if(this.value)funkSetUnit(this.value,'${esc(g)}')" style="width:100%;margin-top:6px;font-size:12px;padding:3px"><option value="">＋ Fahrzeug in diese Gruppe setzen …</option>${all.filter(x=>funkUnitGroup(x.u,x.n)!==g).sort((a,b)=>String(a.u.opta||a.u.name).localeCompare(String(b.u.opta||b.u.name),"de")).map(x=>`<option value="${funkKey(x)}">${esc(x.u.opta||x.u.name)} (${esc(funkUnitGroup(x.u,x.n))})</option>`).join("")}</select>
+     <details style="margin-top:6px"><summary style="cursor:pointer;font-size:12px;font-weight:700">＋ Fahrzeug in diese Gruppe setzen …</summary>${unitPickHTML("funkAdd_"+g.replace(/\W/g,"_"),all.filter(x=>funkUnitGroup(x.u,x.n)!==g).map(x=>({value:funkKey(x),label:x.u.opta||x.u.name,cat:upCat(x.u),type:x.u.type||"",meta:funkUnitGroup(x.u,x.n)})),{placeholder:"Fahrzeug antippen",cb:`funkSetUnit(document.getElementById('funkAdd_${g.replace(/\W/g,"_")}').value,'${g}')`})}</details>
     </div></div>`;
  };
  const tabs=FUNK_DISTRICTS.map(([c,n])=>{const cnt=funkGroupsOf(c).reduce((a,g)=>a+(byGroup[g]||[]).length,0);return `<button onclick="funkOpenDistrict='${c}';render('funk')" title="${esc(n)}" style="${funkOpenDistrict===c?"background:#1d4ed8;color:#fff;border-color:#1d4ed8":""}">${c} <small>${cnt}</small></button>`}).join("");

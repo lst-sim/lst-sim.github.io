@@ -1607,6 +1607,21 @@ Version 5.05:
   („a, b“ = a ODER b). Mit „🚑 NA-Indikation“ markierte Knöpfe ziehen weiterhin einen Notarzt.
 - Nur „Unauffällig“ (ohne weitere Befunde) zählt weiter als unauffälliges E (R0 möglich).
 
+Version 5.24:
+- Fahrzeugauswahl überall in aufklappbaren Kategorien (Organisation bzw. Nachbar-LK, darin nach
+  Fahrzeugtyp): SDS-Empfänger, „Fahrzeuge vor Alarmierung bearbeiten“, IVENA-Zuweisung
+  (Transportmittel, Begleit-NEF), Fahrzeug-Handy (Transportmittel), Funkrufgruppen („＋ Fahrzeug in
+  diese Gruppe setzen“). Kategorien sind zu, bis man sie antippt. In „Rettungsmittel hinzufügen /
+  Nachforderung“ sind die Typen (RTW, NEF …) und THW-Fachgruppen jetzt ebenfalls zugeklappt;
+  „Nächstes freies“ bzw. „Ganze Fachgruppe“ geht weiter direkt.
+- SDS an alle: „Alle im Einsatz (Status 3/4/7/8)“, „Alle Fahrzeuge“, „Alle <Organisation>“ oder ein
+  einzelnes Fahrzeug; Schnelltexte (Status?, Wie lange noch?, Lage?, Zielklinik? …).
+- Fahrzeuge antworten per SDS (nach 8–35 s) passend zur Frage und zum echten Stand: Status und
+  Position, Eintreffzeit, Lage/Patient bzw. MANV-Sichtung, Zielklinik mit PZC und Ankunft,
+  einsatzbereit ja/nein, Besatzung; sonst „Verstanden“. Bei „an alle“ antworten alle im Einsatz und
+  ein paar weitere. Fahrzeuge mit offenem Fahrzeug-Handy antworten dort selbst („↩️ Antworten“).
+- SDS-Eingang zeigt gesendete (📤) und empfangene SDS mit Bezug zur Frage; ↩️ = direkt antworten.
+
 Version 5.23:
 - Funkrufgruppen: DLRG und DGzRS standardmäßig auf F (mit der Feuerwehr), Rettungsdienst und
   Luftrettung auf R, DRK und THW auf K.
