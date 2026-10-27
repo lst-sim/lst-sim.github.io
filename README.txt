@@ -1607,6 +1607,9 @@ Version 5.05:
   („a, b“ = a ODER b). Mit „🚑 NA-Indikation“ markierte Knöpfe ziehen weiterhin einen Notarzt.
 - Nur „Unauffällig“ (ohne weitere Befunde) zählt weiter als unauffälliges E (R0 möglich).
 
+Version 5.19:
+- Zahl-Bausteine beginnen überall bei 0 (auch „Wie viele Personen/Tiere sind betroffen?“).
+
 Version 5.18:
 - Übungsnotrufe „Tierrettung“ (Ereignis wie selbst angelegt: „Tierrettung“): höchstens einer pro
   Tag und Gerät, er kommt zufällig etwa bei jedem 12. Übungsnotruf. Fälle: Pferd im Graben,

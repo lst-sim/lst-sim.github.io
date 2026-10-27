@@ -170,7 +170,7 @@ html[data-device="handy"] #floatDock{left:8px;right:8px;width:auto;top:auto;bott
 </head>
 <body>
 <div style="padding:6px 10px;font-size:11px;color:#94a3b8;font-weight:700;display:flex;flex-wrap:wrap;align-items:center;gap:10px;position:sticky;top:0;z-index:10;background:var(--bg)">
- <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v5.18</span>
+ <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v5.19</span>
  <span id="syncState"></span> <a id="deskTag" href="#" onclick="renameDesk();return false" title="Name dieses Platzes (für „offen an …“) – antippen zum Ändern" style="color:#64748b;font-weight:700;text-decoration:none"></a>
  <span id="simCtl" style="position:absolute;left:50%;transform:translateX(-50%);display:flex;gap:6px;align-items:center"></span>
  <a id="homeLink" href="#" onclick="render('leitstelle');return false" class="hidden" style="color:#64748b;text-decoration:underline;font-weight:600">🖥️ Leitstelle</a>
@@ -3391,7 +3391,7 @@ function qsMaskHTML(c,m){
      return `${L}<input type="hidden" id="mk_${id}"><div style="display:flex;flex-wrap:wrap;gap:6px">${ch.map(([v,lab])=>`<button type="button" style="flex:1 1 0;min-width:84px" data-mk="${id}" data-v="${esc(v)}" onclick="qsMaskPick(this,'${id}',${esc(JSON.stringify(v))})">${esc(lab)}</button>`).join("")}</div>`;
    }
    if(id==="patientName")return `${L}<input id="mk_${id}" type="text" placeholder="falls bekannt">`;
-   return `${L}${numChipsHTML(id,"fill",{age:id==="patientAge",min:id==="count"?1:0})}<div class="row" style="margin-top:6px"><input id="mk_${id}" type="number" min="0" inputmode="numeric" style="flex:1" placeholder="${id==="patientAge"?"genaues Alter (falls bekannt)":"andere Zahl"}" oninput="document.querySelectorAll('[data-nc=&quot;${id}&quot;]').forEach(b=>b.classList.remove('primary'))"></div>`;
+   return `${L}${numChipsHTML(id,"fill",{age:id==="patientAge",min:0})}<div class="row" style="margin-top:6px"><input id="mk_${id}" type="number" min="0" inputmode="numeric" style="flex:1" placeholder="${id==="patientAge"?"genaues Alter (falls bekannt)":"andere Zahl"}" oninput="document.querySelectorAll('[data-nc=&quot;${id}&quot;]').forEach(b=>b.classList.remove('primary'))"></div>`;
  };
  return `<div class="suggest" style="background:#f8fafc;border-color:var(--line)" onkeydown="if(event.key==='Enter'&&event.target.tagName==='INPUT'){event.preventDefault();qsMaskSubmit('${m.key}')}">
    <h2 style="margin-top:0">${m.title}</h2>${vis.map(field).join("")}
@@ -3629,7 +3629,7 @@ function questionHTML(q){
  }
  if(type==="count"){
    const age=id==="patientAge";
-   return `<label>${label}</label>${numChipsHTML(id,"answer",{age,min:age?0:1})}
+   return `<label>${label}</label>${numChipsHTML(id,"answer",{age,min:0})}
     <div class="row" style="margin-top:8px"><input id="ans" type="number" min="0" inputmode="numeric" placeholder="${age?"genaues Alter":"andere Zahl"}" style="flex:1"><button class="primary" onclick="answer('${id}',document.getElementById('ans').value)">Übernehmen</button>${age?`<button onclick="answer('${id}','unbekannt')">Unbekannt</button>`:""}</div>`;
  }
  if(type==="text"){
