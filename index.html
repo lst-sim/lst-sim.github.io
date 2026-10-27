@@ -170,7 +170,7 @@ html[data-device="handy"] #floatDock{left:8px;right:8px;width:auto;top:auto;bott
 </head>
 <body>
 <div style="padding:6px 10px;font-size:11px;color:#94a3b8;font-weight:700;display:flex;flex-wrap:wrap;align-items:center;gap:10px;position:sticky;top:0;z-index:10;background:var(--bg)">
- <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v5.22</span>
+ <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v5.23</span>
  <span id="syncState"></span> <a id="deskTag" href="#" onclick="renameDesk();return false" title="Name dieses Platzes (für „offen an …“) – antippen zum Ändern" style="color:#64748b;font-weight:700;text-decoration:none"></a>
  <span id="simCtl" style="position:absolute;left:50%;transform:translateX(-50%);display:flex;gap:6px;align-items:center"></span>
  <a id="homeLink" href="#" onclick="render('leitstelle');return false" class="hidden" style="color:#64748b;text-decoration:underline;font-weight:600">🖥️ Leitstelle</a>
@@ -8370,7 +8370,8 @@ function funkGroupsOf(code){return [`${code} Anruf`,...["F","K","R"].flatMap(k=>
 function funkAllGroups(){return FUNK_DISTRICTS.flatMap(([c])=>funkGroupsOf(c))}
 function funkDefaultGroup(u,neighbor){
  const code=neighbor?(FUNK_NEIGHBOR_CODE[u.district]||"FRI"):"FRI";
- const k=u.org==="Feuerwehr"?"F":u.org==="Rettungsdienst"||u.org==="Luftrettung"||(neighbor&&["RTW","NEF","KTW","NKTW"].includes(u.type))?"R":"K";
+ // F: Feuerwehr, DLRG, DGzRS · R: Rettungsdienst, Luftrettung · K: DRK, THW und alle übrigen
+ const k=["Feuerwehr","DLRG","DGzRS"].includes(u.org)?"F":["Rettungsdienst","Luftrettung"].includes(u.org)||(neighbor&&!u.org)?"R":"K";
  return `${k} ${code} 1`;
 }
 function funkUnitGroup(u,neighbor){return u.funkGroup||funkDefaultGroup(u,neighbor)}

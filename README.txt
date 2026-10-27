@@ -1607,12 +1607,16 @@ Version 5.05:
   („a, b“ = a ODER b). Mit „🚑 NA-Indikation“ markierte Knöpfe ziehen weiterhin einen Notarzt.
 - Nur „Unauffällig“ (ohne weitere Befunde) zählt weiter als unauffälliges E (R0 möglich).
 
+Version 5.23:
+- Funkrufgruppen: DLRG und DGzRS standardmäßig auf F (mit der Feuerwehr), Rettungsdienst und
+  Luftrettung auf R, DRK und THW auf K.
+
 Version 5.22:
 - Neue Seite „📻 Funkrufgruppen“ (Seitenleiste): Kreise FRI, WST, OL, BRA, WTM, AUR, LER mit je
   „<Kreis> Anruf“ und F/K/R mit je 3 Gruppen (z. B. F FRI 1–3, K FRI 1–3, R FRI 1–3).
   • Gruppe antippen bzw. „Schalten“ = Leitstelle auf diese Gruppe schalten (🎙️), 🔈/🔊 = mithören.
-  • Jedes Fahrzeug steht in einer Gruppe: Standard nach Organisation (Feuerwehr → F, Rettungsdienst
-    → R, DLRG/DRK/THW → K) und Kreis (Nachbar-Fahrzeuge in ihrem Kreis, Gruppe 1). Umsetzen über die
+  • Jedes Fahrzeug steht in einer Gruppe: Standard nach Organisation (Feuerwehr, DLRG, DGzRS → F;
+    Rettungsdienst, Luftrettung → R; DRK, THW und übrige → K) und Kreis (Nachbar-Fahrzeuge in ihrem Kreis, Gruppe 1). Umsetzen über die
     Auswahl neben dem Fahrzeug oder „＋ Fahrzeug in diese Gruppe setzen“; ✳️ = umgesetzt;
     „↺ Alle zurück in Standardgruppe“. Sprechwünsche (Status 0/5) erscheinen in ihrer Gruppe mit ✓.
   • Reine Übungsanzeige, keine echte Funktechnik; keine Gruppennummern (TMO) hinterlegt.
