@@ -1607,6 +1607,23 @@ Version 5.05:
   („a, b“ = a ODER b). Mit „🚑 NA-Indikation“ markierte Knöpfe ziehen weiterhin einen Notarzt.
 - Nur „Unauffällig“ (ohne weitere Befunde) zählt weiter als unauffälliges E (R0 möglich).
 
+Version 5.26:
+- Rettungsmittel der Nachbarkreise eingepflegt (alle Kreise mit sichtbaren Rufgruppen außer FRI):
+  Ammerland 14, Wesermarsch 10, Wittmund 10, Leer 17, Aurich 20, Oldenburg Stadt 16, Oldenburg Land 7
+  (RTW, NEF, KTW, NKTW). Quelle: Wachenseiten auf bos-fahrzeuge.info (Stand Abruf 28.10.2026) –
+  gelistet ist, was dort eingetragen ist, nicht zwingend der komplette Bestand. Nicht aufgenommen:
+  Reserve-/Ersatzfahrzeuge, KdoW, ITW, Inselwachen (kommen nicht aufs Festland) und Fahrzeuge ohne
+  bekannte Wache (z. B. Akkon Wesermarsch 49/83-01). Bei neuen Wachen ist die Koordinate zunächst
+  nur die Ortsmitte; sie wird im Gerät einmal über die Adresse (OpenStreetMap) genauer bestimmt.
+  Adresse RW 3 Oldenburg = Klinikum Oldenburg (stand nicht auf der Quellseite).
+- Nachbar-Leitstellen rufen an (bei eingeschalteten Übungsnotrufen etwa alle 30–60 min): KRLS
+  Ostfriesland oder GOL bitten um RTW/NEF für einen Einsatz nahe der Kreisgrenze (lila Banner).
+  Annehmen → Anfrage lesen (im Sprachmodus vorgelesen) → Fahrzeug wählen (nach Fahrzeit sortiert)
+  → „Schicken (Amtshilfe)“ legt einen Einsatz „AMTSHILFE LK … – …“ an und alarmiert; danach läuft
+  alles automatisch (Status, Transport, IVENA, SDS, Abschluss). „Ablehnen“ oder nach 90 s
+  unbeantwortet → sie fragen woanders. Orte sind Ortsmitten (ungefähr).
+- Nachbar-LK-Seite: zusätzlich Aurich, Oldenburg (Stadt) und Oldenburg (Land).
+
 Version 5.25:
 - Funkrufgruppen: Fahrzeuge werden in den Gruppen nicht mehr aufgelistet – nur noch die Anzahl
   (und Sprechwünsche). Umsetzen weiter über „＋ Fahrzeug in diese Gruppe setzen“.

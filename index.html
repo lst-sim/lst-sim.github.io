@@ -170,7 +170,7 @@ html[data-device="handy"] #floatDock{left:8px;right:8px;width:auto;top:auto;bott
 </head>
 <body>
 <div style="padding:6px 10px;font-size:11px;color:#94a3b8;font-weight:700;display:flex;flex-wrap:wrap;align-items:center;gap:10px;position:sticky;top:0;z-index:10;background:var(--bg)">
- <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v5.25</span>
+ <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v5.26</span>
  <span id="syncState"></span> <a id="deskTag" href="#" onclick="renameDesk();return false" title="Name dieses Platzes (für „offen an …“) – antippen zum Ändern" style="color:#64748b;font-weight:700;text-decoration:none"></a>
  <span id="simCtl" style="position:absolute;left:50%;transform:translateX(-50%);display:flex;gap:6px;align-items:center"></span>
  <a id="homeLink" href="#" onclick="render('leitstelle');return false" class="hidden" style="color:#64748b;text-decoration:underline;font-weight:600">🖥️ Leitstelle</a>
@@ -560,7 +560,92 @@ const DEFAULTS_FRI_WHV={
   {id:11,name:"14-83-01",opta:"Rettung Ammerland 14/83-01",type:"RTW",district:"Ammerland",status:"1",crew:"2",skills:"Notfallrettung",verified:"BOS-Fahrzeuge",address:"Raiffeisenstraße 204, 26180 Rastede",lat:53.2412645,lng:8.1668705},
   {id:7,name:"84-83-01",opta:"Rettung Wesermarsch 84/83-01",type:"RTW",district:"Wesermarsch",status:"1",crew:"2",skills:"Notfallrettung",verified:"BOS-Fahrzeuge",address:"Albert-Schweitzer-Str. 43, 26954 Nordenham",lat:53.48318095482148,lng:8.465393119049054},
   {id:8,name:"84-83-02",opta:"Rettung Wesermarsch 84/83-02",type:"RTW",district:"Wesermarsch",status:"1",crew:"2",skills:"Notfallrettung",verified:"BOS-Fahrzeuge",address:"Albert-Schweitzer-Str. 43, 26954 Nordenham",lat:53.48318095482148,lng:8.465393119049054},
-  {id:12,name:"50-83-01",opta:"Akkon Wesermarsch 50/83-01",type:"RTW",district:"Wesermarsch",status:"1",crew:"2",skills:"Notfallrettung",verified:"BOS-Fahrzeuge",address:"Niedernstraße 9, 26936 Stadland (Rettungswache Schweierfeld)",lat:53.3992716629704,lng:8.386263932540885}
+  {id:12,name:"50-83-01",opta:"Akkon Wesermarsch 50/83-01",type:"RTW",district:"Wesermarsch",status:"1",crew:"2",skills:"Notfallrettung",verified:"BOS-Fahrzeuge",address:"Niedernstraße 9, 26936 Stadland (Rettungswache Schweierfeld)",lat:53.3992716629704,lng:8.386263932540885},
+  // v5.26: alle auf BOS-Fahrzeuge (Wachenseiten) gelisteten Rettungsmittel der Nachbarkreise, deren Rufgruppen sichtbar sind.
+  // Inselwachen (Langeoog, Spiekeroog, Juist, Norderney, Baltrum, Borkum) bewusst nicht – die kommen nicht aufs Festland.
+  // approxGeo = Koordinate nur ungefähr (Ortsmitte); wird im Gerät einmal über die Adresse genauer bestimmt.
+  {id:100,name:"15-82-02",opta:"Rettung Ammerland 15/82-02",type:"NEF",district:"Ammerland",status:"1",crew:"2",skills:"Notarzt",verified:"BOS-Fahrzeuge (Wachenseite)",address:"An der Hössen 16, 26655 Westerstede",lat:53.2551773,lng:7.91576714},
+  {id:101,name:"15-83-02",opta:"Rettung Ammerland 15/83-02",type:"RTW",district:"Ammerland",status:"1",crew:"2",skills:"Notfallrettung",verified:"BOS-Fahrzeuge (Wachenseite)",address:"An der Hössen 16, 26655 Westerstede",lat:53.2551773,lng:7.91576714},
+  {id:102,name:"15-93-01",opta:"Rettung Ammerland 15/93-01",type:"KTW",district:"Ammerland",status:"1",crew:"2",skills:"Krankentransport",verified:"BOS-Fahrzeuge (Wachenseite)",address:"An der Hössen 16, 26655 Westerstede",lat:53.2551773,lng:7.91576714},
+  {id:103,name:"15-93-02",opta:"Rettung Ammerland 15/93-02",type:"KTW",district:"Ammerland",status:"1",crew:"2",skills:"Krankentransport",verified:"BOS-Fahrzeuge (Wachenseite)",address:"An der Hössen 16, 26655 Westerstede",lat:53.2551773,lng:7.91576714},
+  {id:104,name:"14-93-01",opta:"Rettung Ammerland 14/93-01",type:"NKTW",district:"Ammerland",status:"1",crew:"2",skills:"Notfall-Krankentransport",verified:"BOS-Fahrzeuge (Wachenseite)",address:"Raiffeisenstraße 204, 26180 Rastede",lat:53.2412645,lng:8.1668705},
+  {id:105,name:"15-92-01",opta:"Rettung Ammerland 15/92-01",type:"KTW",district:"Ammerland",status:"1",crew:"2",skills:"Krankentransport",verified:"BOS-Fahrzeuge (Wachenseite)",address:"Raiffeisenstraße 204, 26180 Rastede",lat:53.2412645,lng:8.1668705},
+  {id:106,name:"13-83-01",opta:"Rettung Ammerland 13/83-01",type:"RTW",district:"Ammerland",status:"1",crew:"2",skills:"Notfallrettung",verified:"BOS-Fahrzeuge (Wachenseite)",address:"Industriestraße 37a, 26188 Edewecht",lat:53.127,lng:7.983,approxGeo:true},
+  {id:107,name:"13-93-01",opta:"Rettung Ammerland 13/93-01",type:"NKTW",district:"Ammerland",status:"1",crew:"2",skills:"Notfall-Krankentransport",verified:"BOS-Fahrzeuge (Wachenseite)",address:"Industriestraße 37a, 26188 Edewecht",lat:53.127,lng:7.983,approxGeo:true},
+  {id:108,name:"12-83-01",opta:"Rettungsdienst Ammerland 12/83-01",type:"RTW",district:"Ammerland",status:"1",crew:"2",skills:"Notfallrettung",verified:"BOS-Fahrzeuge (Wachenseite)",address:"Käthe-Kruse-Straße 1, 26160 Bad Zwischenahn",lat:53.183,lng:8.006,approxGeo:true},
+  {id:109,name:"12-83-02",opta:"Rettungsdienst Ammerland 12/83-02",type:"RTW",district:"Ammerland",status:"1",crew:"2",skills:"Notfallrettung",verified:"BOS-Fahrzeuge (Wachenseite)",address:"Käthe-Kruse-Straße 1, 26160 Bad Zwischenahn",lat:53.183,lng:8.006,approxGeo:true},
+  {id:110,name:"12-93-01",opta:"Rettungsdienst Ammerland 12/93-01",type:"KTW",district:"Ammerland",status:"1",crew:"2",skills:"Krankentransport",verified:"BOS-Fahrzeuge (Wachenseite)",address:"Käthe-Kruse-Straße 1, 26160 Bad Zwischenahn",lat:53.183,lng:8.006,approxGeo:true},
+  {id:111,name:"85-83-01",opta:"Rettung Wesermarsch 85/83-01",type:"RTW",district:"Wesermarsch",status:"1",crew:"2",skills:"Notfallrettung",verified:"BOS-Fahrzeuge (Wachenseite)",address:"Max-Planck-Str. 2, 26919 Brake",lat:53.326,lng:8.47,approxGeo:true},
+  {id:112,name:"85-83-02",opta:"Rettung Wesermarsch 85/83-02",type:"RTW",district:"Wesermarsch",status:"1",crew:"2",skills:"Notfallrettung",verified:"BOS-Fahrzeuge (Wachenseite)",address:"Max-Planck-Str. 2, 26919 Brake",lat:53.326,lng:8.47,approxGeo:true},
+  {id:113,name:"85-93-01",opta:"Rettung Wesermarsch 85/93-01",type:"KTW",district:"Wesermarsch",status:"1",crew:"2",skills:"Krankentransport",verified:"BOS-Fahrzeuge (Wachenseite)",address:"Max-Planck-Str. 2, 26919 Brake",lat:53.326,lng:8.47,approxGeo:true},
+  {id:114,name:"85-82-01",opta:"Rettung Wesermarsch 85/82-01",type:"NEF",district:"Wesermarsch",status:"1",crew:"2",skills:"Notarzt",verified:"BOS-Fahrzeuge (Wachenseite)",address:"Claussenstr. 3, 26919 Brake",lat:53.33,lng:8.478,approxGeo:true},
+  {id:115,name:"84-92-01",opta:"Rettung Wesermarsch 84/92-01",type:"KTW",district:"Wesermarsch",status:"1",crew:"2",skills:"Krankentransport",verified:"BOS-Fahrzeuge (Wachenseite)",address:"Albert-Schweitzer-Str. 43, 26954 Nordenham",lat:53.48318095482148,lng:8.465393119049054},
+  {id:116,name:"84-93-01",opta:"Rettung Wesermarsch 84/93-01",type:"NKTW",district:"Wesermarsch",status:"1",crew:"2",skills:"Notfall-Krankentransport",verified:"BOS-Fahrzeuge (Wachenseite)",address:"Albert-Schweitzer-Str. 43, 26954 Nordenham",lat:53.48318095482148,lng:8.465393119049054},
+  {id:117,name:"86-83-01",opta:"Rettung Wesermarsch 86/83-01",type:"RTW",district:"Wesermarsch",status:"1",crew:"2",skills:"Notfallrettung",verified:"BOS-Fahrzeuge (Wachenseite)",address:"Wurpstraße 5, 26931 Elsfleth",lat:53.237,lng:8.458,approxGeo:true},
+  {id:118,name:"80-93-01",opta:"Rettung Wittmund 80/93-01",type:"KTW",district:"Wittmund",status:"1",crew:"2",skills:"Krankentransport",verified:"BOS-Fahrzeuge (Wachenseite)",address:"Schloßstraße 11, 26409 Wittmund",lat:53.573624,lng:7.784572},
+  {id:119,name:"80-93-02",opta:"Rettung Wittmund 80/93-02",type:"KTW",district:"Wittmund",status:"1",crew:"2",skills:"Krankentransport",verified:"BOS-Fahrzeuge (Wachenseite)",address:"Schloßstraße 11, 26409 Wittmund",lat:53.573624,lng:7.784572},
+  {id:120,name:"82-93-01",opta:"Rettung Wittmund 82/93-01",type:"NKTW",district:"Wittmund",status:"1",crew:"2",skills:"Notfall-Krankentransport",verified:"BOS-Fahrzeuge (Wachenseite)",address:"Jeverstraße 28 A, 26327 Esens",lat:53.635804,lng:7.6171504},
+  {id:121,name:"81-83-01",opta:"Rettung Wittmund 81/83-01",type:"RTW",district:"Wittmund",status:"1",crew:"2",skills:"Notfallrettung",verified:"BOS-Fahrzeuge (Wachenseite)",address:"Industriestraße 2-4, 26446 Friedeburg",lat:53.452,lng:7.838,approxGeo:true},
+  {id:122,name:"84-83-01",opta:"Rettung Wittmund 84/83-01",type:"RTW",district:"Wittmund",status:"1",crew:"2",skills:"Notfallrettung",verified:"BOS-Fahrzeuge (Wachenseite)",address:"Closterstraße 4, 26556 Westerholt",lat:53.596,lng:7.457,approxGeo:true},
+  {id:123,name:"84-83-02",opta:"Rettung Wittmund 84/83-02",type:"RTW",district:"Wittmund",status:"1",crew:"2",skills:"Notfallrettung",verified:"BOS-Fahrzeuge (Wachenseite)",address:"Closterstraße 4, 26556 Westerholt",lat:53.596,lng:7.457,approxGeo:true},
+  {id:124,name:"83-83-01",opta:"Rettung Wittmund 83/83-01",type:"RTW",district:"Wittmund",status:"1",crew:"2",skills:"Notfallrettung",verified:"BOS-Fahrzeuge (Wachenseite)",address:"Ostfriesenstraße 3, 26427 Neuharlingersiel",lat:53.699,lng:7.703,approxGeo:true},
+  {id:125,name:"40-83-02",opta:"Rotkreuz Leer 40/83-02",type:"RTW",district:"Leer",status:"1",crew:"2",skills:"Notfallrettung",verified:"BOS-Fahrzeuge (Wachenseite)",address:"Heisfelder Straße 141, 26789 Leer",lat:53.2388829,lng:7.4551846},
+  {id:126,name:"40-83-03",opta:"Rotkreuz Leer 40/83-03",type:"RTW",district:"Leer",status:"1",crew:"2",skills:"Notfallrettung",verified:"BOS-Fahrzeuge (Wachenseite)",address:"Heisfelder Straße 141, 26789 Leer",lat:53.2388829,lng:7.4551846},
+  {id:127,name:"40-83-04",opta:"Rotkreuz Leer 40/83-04",type:"RTW",district:"Leer",status:"1",crew:"2",skills:"Notfallrettung",verified:"BOS-Fahrzeuge (Wachenseite)",address:"Heisfelder Straße 141, 26789 Leer",lat:53.2388829,lng:7.4551846},
+  {id:128,name:"40-83-05",opta:"Rotkreuz Leer 40/83-05",type:"RTW",district:"Leer",status:"1",crew:"2",skills:"Notfallrettung",verified:"BOS-Fahrzeuge (Wachenseite)",address:"Heisfelder Straße 141, 26789 Leer",lat:53.2388829,lng:7.4551846},
+  {id:129,name:"40-83-06",opta:"Rotkreuz Leer 40/83-06",type:"RTW",district:"Leer",status:"1",crew:"2",skills:"Notfallrettung",verified:"BOS-Fahrzeuge (Wachenseite)",address:"Heisfelder Straße 141, 26789 Leer",lat:53.2388829,lng:7.4551846},
+  {id:130,name:"40-93-01",opta:"Rotkreuz Leer 40/93-01",type:"KTW",district:"Leer",status:"1",crew:"2",skills:"Krankentransport",verified:"BOS-Fahrzeuge (Wachenseite)",address:"Heisfelder Straße 141, 26789 Leer",lat:53.2388829,lng:7.4551846},
+  {id:131,name:"40-93-02",opta:"Rotkreuz Leer 40/93-02",type:"KTW",district:"Leer",status:"1",crew:"2",skills:"Krankentransport",verified:"BOS-Fahrzeuge (Wachenseite)",address:"Heisfelder Straße 141, 26789 Leer",lat:53.2388829,lng:7.4551846},
+  {id:132,name:"40-93-03",opta:"Rotkreuz Leer 40/93-03",type:"KTW",district:"Leer",status:"1",crew:"2",skills:"Krankentransport",verified:"BOS-Fahrzeuge (Wachenseite)",address:"Heisfelder Straße 141, 26789 Leer",lat:53.2388829,lng:7.4551846},
+  {id:133,name:"44-83-01",opta:"Rotkreuz Leer 44/83-01",type:"RTW",district:"Leer",status:"1",crew:"2",skills:"Notfallrettung",verified:"BOS-Fahrzeuge (Wachenseite)",address:"1. Südwieke 45, 26817 Rhauderfehn",lat:53.127,lng:7.613,approxGeo:true},
+  {id:134,name:"44-83-02",opta:"Rotkreuz Leer 44/83-02",type:"RTW",district:"Leer",status:"1",crew:"2",skills:"Notfallrettung",verified:"BOS-Fahrzeuge (Wachenseite)",address:"1. Südwieke 45, 26817 Rhauderfehn",lat:53.127,lng:7.613,approxGeo:true},
+  {id:135,name:"44-93-01",opta:"Rotkreuz Leer 44/93-01",type:"NKTW",district:"Leer",status:"1",crew:"2",skills:"Notfall-Krankentransport",verified:"BOS-Fahrzeuge (Wachenseite)",address:"1. Südwieke 45, 26817 Rhauderfehn",lat:53.127,lng:7.613,approxGeo:true},
+  {id:136,name:"43-83-01",opta:"Rotkreuz Leer 43/83-01",type:"RTW",district:"Leer",status:"1",crew:"2",skills:"Notfallrettung",verified:"BOS-Fahrzeuge (Wachenseite)",address:"Oldenburger Straße 24, 26835 Hesel",lat:53.304,lng:7.598,approxGeo:true},
+  {id:137,name:"43-83-02",opta:"Rotkreuz Leer 43/83-02",type:"RTW",district:"Leer",status:"1",crew:"2",skills:"Notfallrettung",verified:"BOS-Fahrzeuge (Wachenseite)",address:"Oldenburger Straße 24, 26835 Hesel",lat:53.304,lng:7.598,approxGeo:true},
+  {id:138,name:"43-93-01",opta:"Rotkreuz Leer 43/93-01",type:"NKTW",district:"Leer",status:"1",crew:"2",skills:"Notfall-Krankentransport",verified:"BOS-Fahrzeuge (Wachenseite)",address:"Oldenburger Straße 24, 26835 Hesel",lat:53.304,lng:7.598,approxGeo:true},
+  {id:139,name:"80-82-01",opta:"Rettung Aurich 80/82-01",type:"NEF",district:"Aurich",status:"1",crew:"2",skills:"Notarzt",verified:"BOS-Fahrzeuge (Wachenseite)",address:"Egelser Straße 28, 26605 Aurich",lat:53.478,lng:7.497,approxGeo:true},
+  {id:140,name:"80-83-01",opta:"Rettung Aurich 80/83-01",type:"RTW",district:"Aurich",status:"1",crew:"2",skills:"Notfallrettung",verified:"BOS-Fahrzeuge (Wachenseite)",address:"Egelser Straße 28, 26605 Aurich",lat:53.478,lng:7.497,approxGeo:true},
+  {id:141,name:"80-83-02",opta:"Rettung Aurich 80/83-02",type:"RTW",district:"Aurich",status:"1",crew:"2",skills:"Notfallrettung",verified:"BOS-Fahrzeuge (Wachenseite)",address:"Egelser Straße 28, 26605 Aurich",lat:53.478,lng:7.497,approxGeo:true},
+  {id:142,name:"80-83-03",opta:"Rettung Aurich 80/83-03",type:"RTW",district:"Aurich",status:"1",crew:"2",skills:"Notfallrettung",verified:"BOS-Fahrzeuge (Wachenseite)",address:"Egelser Straße 28, 26605 Aurich",lat:53.478,lng:7.497,approxGeo:true},
+  {id:143,name:"80-83-04",opta:"Rettung Aurich 80/83-04",type:"RTW",district:"Aurich",status:"1",crew:"2",skills:"Notfallrettung",verified:"BOS-Fahrzeuge (Wachenseite)",address:"Egelser Straße 28, 26605 Aurich",lat:53.478,lng:7.497,approxGeo:true},
+  {id:144,name:"81-82-01",opta:"Rettung Aurich 81/82-01",type:"NEF",district:"Aurich",status:"1",crew:"2",skills:"Notarzt",verified:"BOS-Fahrzeuge (Wachenseite)",address:"Osterstraße 110-113, 26506 Norden",lat:53.594,lng:7.215,approxGeo:true},
+  {id:145,name:"81-83-01",opta:"Rettung Aurich 81/83-01",type:"RTW",district:"Aurich",status:"1",crew:"2",skills:"Notfallrettung",verified:"BOS-Fahrzeuge (Wachenseite)",address:"Osterstraße 110-113, 26506 Norden",lat:53.594,lng:7.215,approxGeo:true},
+  {id:146,name:"81-83-02",opta:"Rettung Aurich 81/83-02",type:"RTW",district:"Aurich",status:"1",crew:"2",skills:"Notfallrettung",verified:"BOS-Fahrzeuge (Wachenseite)",address:"Osterstraße 110-113, 26506 Norden",lat:53.594,lng:7.215,approxGeo:true},
+  {id:147,name:"81-83-03",opta:"Rettung Aurich 81/83-03",type:"RTW",district:"Aurich",status:"1",crew:"2",skills:"Notfallrettung",verified:"BOS-Fahrzeuge (Wachenseite)",address:"Osterstraße 110-113, 26506 Norden",lat:53.594,lng:7.215,approxGeo:true},
+  {id:148,name:"81-83-04",opta:"Rettung Aurich 81/83-04",type:"RTW",district:"Aurich",status:"1",crew:"2",skills:"Notfallrettung",verified:"BOS-Fahrzeuge (Wachenseite)",address:"Osterstraße 110-113, 26506 Norden",lat:53.594,lng:7.215,approxGeo:true},
+  {id:149,name:"81-83-05",opta:"Rettung Aurich 81/83-05",type:"RTW",district:"Aurich",status:"1",crew:"2",skills:"Notfallrettung",verified:"BOS-Fahrzeuge (Wachenseite)",address:"Osterstraße 110-113, 26506 Norden",lat:53.594,lng:7.215,approxGeo:true},
+  {id:150,name:"81-93-01",opta:"Rettung Aurich 81/93-01",type:"KTW",district:"Aurich",status:"1",crew:"2",skills:"Krankentransport",verified:"BOS-Fahrzeuge (Wachenseite)",address:"Osterstraße 110-113, 26506 Norden",lat:53.594,lng:7.215,approxGeo:true},
+  {id:151,name:"84-83-01",opta:"Rettung Aurich 84/83-01",type:"RTW",district:"Aurich",status:"1",crew:"2",skills:"Notfallrettung",verified:"BOS-Fahrzeuge (Wachenseite)",address:"Nordweg 2, 26629 Großefehn",lat:53.405,lng:7.606,approxGeo:true},
+  {id:152,name:"84-83-02",opta:"Rettung Aurich 84/83-02",type:"RTW",district:"Aurich",status:"1",crew:"2",skills:"Notfallrettung",verified:"BOS-Fahrzeuge (Wachenseite)",address:"Nordweg 2, 26629 Großefehn",lat:53.405,lng:7.606,approxGeo:true},
+  {id:153,name:"84-83-03",opta:"Rettung Aurich 84/83-03",type:"RTW",district:"Aurich",status:"1",crew:"2",skills:"Notfallrettung",verified:"BOS-Fahrzeuge (Wachenseite)",address:"Nordweg 2, 26629 Großefehn",lat:53.405,lng:7.606,approxGeo:true},
+  {id:154,name:"82-83-01",opta:"Rettung Aurich 82/83-01",type:"RTW",district:"Aurich",status:"1",crew:"2",skills:"Notfallrettung",verified:"BOS-Fahrzeuge (Wachenseite)",address:"Ringstraße 55, 26624 Südbrookmerland",lat:53.479,lng:7.393,approxGeo:true},
+  {id:155,name:"82-83-02",opta:"Rettung Aurich 82/83-02",type:"RTW",district:"Aurich",status:"1",crew:"2",skills:"Notfallrettung",verified:"BOS-Fahrzeuge (Wachenseite)",address:"Ringstraße 55, 26624 Südbrookmerland",lat:53.479,lng:7.393,approxGeo:true},
+  {id:156,name:"83-83-01",opta:"Rettung Aurich 83/83-01",type:"RTW",district:"Aurich",status:"1",crew:"2",skills:"Notfallrettung",verified:"BOS-Fahrzeuge (Wachenseite)",address:"Cankebeerstraße 39, 26553 Dornum",lat:53.651,lng:7.378,approxGeo:true},
+  {id:157,name:"85-83-01",opta:"Rettung Aurich 85/83-01",type:"RTW",district:"Aurich",status:"1",crew:"2",skills:"Notfallrettung",verified:"BOS-Fahrzeuge (Wachenseite)",address:"Schatthausstraße 29, 26736 Krummhörn",lat:53.437,lng:7.088,approxGeo:true},
+  {id:158,name:"85-83-02",opta:"Rettung Aurich 85/83-02",type:"RTW",district:"Aurich",status:"1",crew:"2",skills:"Notfallrettung",verified:"BOS-Fahrzeuge (Wachenseite)",address:"Schatthausstraße 29, 26736 Krummhörn",lat:53.437,lng:7.088,approxGeo:true},
+  {id:159,name:"02-83-01",opta:"Florian Oldenburg 02/83-01",type:"RTW",district:"Oldenburg (Stadt)",status:"1",crew:"2",skills:"Notfallrettung",verified:"BOS-Fahrzeuge (Wachenseite)",address:"Schützenhofstraße 14-16, 26133 Oldenburg",lat:53.128,lng:8.228,approxGeo:true},
+  {id:160,name:"02-83-02",opta:"Florian Oldenburg 02/83-02",type:"RTW",district:"Oldenburg (Stadt)",status:"1",crew:"2",skills:"Notfallrettung",verified:"BOS-Fahrzeuge (Wachenseite)",address:"Schützenhofstraße 14-16, 26133 Oldenburg",lat:53.128,lng:8.228,approxGeo:true},
+  {id:161,name:"02-83-03",opta:"Florian Oldenburg 02/83-03",type:"RTW",district:"Oldenburg (Stadt)",status:"1",crew:"2",skills:"Notfallrettung",verified:"BOS-Fahrzeuge (Wachenseite)",address:"Schützenhofstraße 14-16, 26133 Oldenburg",lat:53.128,lng:8.228,approxGeo:true},
+  {id:162,name:"02-83-04",opta:"Florian Oldenburg 02/83-04",type:"RTW",district:"Oldenburg (Stadt)",status:"1",crew:"2",skills:"Notfallrettung",verified:"BOS-Fahrzeuge (Wachenseite)",address:"Schützenhofstraße 14-16, 26133 Oldenburg",lat:53.128,lng:8.228,approxGeo:true},
+  {id:163,name:"03-83-01",opta:"Florian Oldenburg 03/83-01",type:"RTW",district:"Oldenburg (Stadt)",status:"1",crew:"2",skills:"Notfallrettung",verified:"BOS-Fahrzeuge (Wachenseite)",address:"Rahel-Straus-Straße 10, 26133 Oldenburg (Klinikum, RW 3)",lat:53.13,lng:8.226,approxGeo:true},
+  {id:164,name:"50-83-01",opta:"Akkon Oldenburg 50/83-01",type:"RTW",district:"Oldenburg (Stadt)",status:"1",crew:"2",skills:"Notfallrettung",verified:"BOS-Fahrzeuge (Wachenseite)",address:"Alte Fleiwa 2a, 26121 Oldenburg",lat:53.156,lng:8.186,approxGeo:true},
+  {id:165,name:"50-83-02",opta:"Akkon Oldenburg 50/83-02",type:"RTW",district:"Oldenburg (Stadt)",status:"1",crew:"2",skills:"Notfallrettung",verified:"BOS-Fahrzeuge (Wachenseite)",address:"Alte Fleiwa 2a, 26121 Oldenburg",lat:53.156,lng:8.186,approxGeo:true},
+  {id:166,name:"50-83-03",opta:"Akkon Oldenburg 50/83-03",type:"RTW",district:"Oldenburg (Stadt)",status:"1",crew:"2",skills:"Notfallrettung",verified:"BOS-Fahrzeuge (Wachenseite)",address:"Alte Fleiwa 2a, 26121 Oldenburg",lat:53.156,lng:8.186,approxGeo:true},
+  {id:167,name:"50-93-01",opta:"Akkon Oldenburg 50/93-01",type:"NKTW",district:"Oldenburg (Stadt)",status:"1",crew:"2",skills:"Notfall-Krankentransport",verified:"BOS-Fahrzeuge (Wachenseite)",address:"Alte Fleiwa 2a, 26121 Oldenburg",lat:53.156,lng:8.186,approxGeo:true},
+  {id:168,name:"50-92-03",opta:"Akkon Oldenburg 50/92-03",type:"KTW",district:"Oldenburg (Stadt)",status:"1",crew:"2",skills:"Krankentransport",verified:"BOS-Fahrzeuge (Wachenseite)",address:"Alte Fleiwa 2a, 26121 Oldenburg",lat:53.156,lng:8.186,approxGeo:true},
+  {id:169,name:"50-92-04",opta:"Akkon Oldenburg 50/92-04",type:"KTW",district:"Oldenburg (Stadt)",status:"1",crew:"2",skills:"Krankentransport",verified:"BOS-Fahrzeuge (Wachenseite)",address:"Alte Fleiwa 2a, 26121 Oldenburg",lat:53.156,lng:8.186,approxGeo:true},
+  {id:170,name:"50-92-05",opta:"Akkon Oldenburg 50/92-05",type:"KTW",district:"Oldenburg (Stadt)",status:"1",crew:"2",skills:"Krankentransport",verified:"BOS-Fahrzeuge (Wachenseite)",address:"Alte Fleiwa 2a, 26121 Oldenburg",lat:53.156,lng:8.186,approxGeo:true},
+  {id:171,name:"50-92-06",opta:"Akkon Oldenburg 50/92-06",type:"KTW",district:"Oldenburg (Stadt)",status:"1",crew:"2",skills:"Krankentransport",verified:"BOS-Fahrzeuge (Wachenseite)",address:"Alte Fleiwa 2a, 26121 Oldenburg",lat:53.156,lng:8.186,approxGeo:true},
+  {id:172,name:"50-92-07",opta:"Akkon Oldenburg 50/92-07",type:"KTW",district:"Oldenburg (Stadt)",status:"1",crew:"2",skills:"Krankentransport",verified:"BOS-Fahrzeuge (Wachenseite)",address:"Alte Fleiwa 2a, 26121 Oldenburg",lat:53.156,lng:8.186,approxGeo:true},
+  {id:173,name:"50-92-08",opta:"Akkon Oldenburg 50/92-08",type:"KTW",district:"Oldenburg (Stadt)",status:"1",crew:"2",skills:"Krankentransport",verified:"BOS-Fahrzeuge (Wachenseite)",address:"Alte Fleiwa 2a, 26121 Oldenburg",lat:53.156,lng:8.186,approxGeo:true},
+  {id:174,name:"50-92-09",opta:"Akkon Oldenburg 50/92-09",type:"KTW",district:"Oldenburg (Stadt)",status:"1",crew:"2",skills:"Krankentransport",verified:"BOS-Fahrzeuge (Wachenseite)",address:"Alte Fleiwa 2a, 26121 Oldenburg",lat:53.156,lng:8.186,approxGeo:true},
+  {id:175,name:"60-83-01",opta:"Johannes Oldenburg-Land 60/83-01",type:"RTW",district:"Oldenburg (Land)",status:"1",crew:"2",skills:"Notfallrettung",verified:"BOS-Fahrzeuge (Wachenseite)",address:"Urneburger Straße 6a, 27777 Ganderkesee",lat:53.034,lng:8.546,approxGeo:true},
+  {id:176,name:"60-83-02",opta:"Johannes Oldenburg-Land 60/83-02",type:"RTW",district:"Oldenburg (Land)",status:"1",crew:"2",skills:"Notfallrettung",verified:"BOS-Fahrzeuge (Wachenseite)",address:"Urneburger Straße 6a, 27777 Ganderkesee",lat:53.034,lng:8.546,approxGeo:true},
+  {id:177,name:"60-92-01",opta:"Johannes Oldenburg-Land 60/92-01",type:"KTW",district:"Oldenburg (Land)",status:"1",crew:"2",skills:"Krankentransport",verified:"BOS-Fahrzeuge (Wachenseite)",address:"Urneburger Straße 6a, 27777 Ganderkesee",lat:53.034,lng:8.546,approxGeo:true},
+  {id:178,name:"63-82-1",opta:"Johannes Oldenburg-Land 63/82-1",type:"NEF",district:"Oldenburg (Land)",status:"1",crew:"2",skills:"Notarzt",verified:"BOS-Fahrzeuge (Wachenseite)",address:"Deekenstraße 14-16, 27793 Wildeshausen",lat:52.895,lng:8.433,approxGeo:true},
+  {id:179,name:"63-83-1",opta:"Johannes Oldenburg-Land 63/83-1",type:"RTW",district:"Oldenburg (Land)",status:"1",crew:"2",skills:"Notfallrettung",verified:"BOS-Fahrzeuge (Wachenseite)",address:"Deekenstraße 14-16, 27793 Wildeshausen",lat:52.895,lng:8.433,approxGeo:true},
+  {id:180,name:"63-83-2",opta:"Johannes Oldenburg-Land 63/83-2",type:"RTW",district:"Oldenburg (Land)",status:"1",crew:"2",skills:"Notfallrettung",verified:"BOS-Fahrzeuge (Wachenseite)",address:"Deekenstraße 14-16, 27793 Wildeshausen",lat:52.895,lng:8.433,approxGeo:true},
+  {id:181,name:"52-83-01",opta:"Akkon Oldenburg-Land 52/83-01",type:"RTW",district:"Oldenburg (Land)",status:"1",crew:"2",skills:"Notfallrettung",verified:"BOS-Fahrzeuge (Wachenseite)",address:"Parkstraße 53c, 27798 Hude",lat:53.108,lng:8.465,approxGeo:true}
  ]
 };
 
@@ -2671,7 +2756,7 @@ function renderVehicleFeedbackBadges(c){
    return `<div style="margin-top:8px;background:#fee2e2;color:#991b1b;padding:6px 10px;border-radius:8px;font-size:12px"><b>${icon} ${esc(fb.unitLabel||"Fahrzeug")}${tag}:</b> ${esc(fb.text)} <span style="opacity:.7">· ${new Date(fb.time).toLocaleTimeString("de-DE",{hour:"2-digit",minute:"2-digit"})}</span></div>`;
  }).join("");
 }
-const NEIGHBOR_LEITSTELLE={Wittmund:"ostfriesland",Leer:"ostfriesland",Ammerland:"gol",Wesermarsch:"gol"};
+const NEIGHBOR_LEITSTELLE={Wittmund:"ostfriesland",Leer:"ostfriesland",Aurich:"ostfriesland",Ammerland:"gol",Wesermarsch:"gol","Oldenburg (Stadt)":"gol","Oldenburg (Land)":"gol"};
 function nearestOwnUnitKm(call){
  // Kürzeste Entfernung eines FREIEN eigenen RTW/NEF (Status 1 oder 2) zum Einsatzort.
  // null = kein Einsatzort bekannt oder kein einziges eigenes RTW/NEF vorhanden.
@@ -5728,13 +5813,106 @@ async function pollCloudUnits(){
  }
 }
 let phoneHere=(()=>{try{return localStorage.getItem("lst-phone-here")!=="0"}catch(e){return true}})();
+
+// ═══ Nachbar-Fahrzeuge: Koordinaten genauer machen (v5.26) ════════════════════════════════════
+// Neu eingepflegte Wachen haben zunächst nur die ungefähre Ortsmitte. Einmal pro Gerät wird die
+// Adresse über OpenStreetMap (Nominatim) gesucht – langsam (1 Anfrage / 1,5 s), wie es Nominatim verlangt.
+async function neighborGeoRefine(){
+ const todo=[...new Set((db.neighborUnits||[]).filter(u=>u.approxGeo&&!u.geoTried).map(u=>u.address))];
+ for(const addr of todo){
+   try{
+     const q=String(addr).replace(/\s*\(.*\)\s*$/,"");
+     const rows=await (await fetch(`https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&countrycodes=de&q=${encodeURIComponent(q)}`,{headers:{"Accept":"application/json"}})).json();
+     (db.neighborUnits||[]).filter(u=>u.address===addr).forEach(u=>{u.geoTried=true;if(rows&&rows[0]){u.lat=Number(rows[0].lat);u.lng=Number(rows[0].lon);delete u.approxGeo}});
+     save();
+   }catch(e){(db.neighborUnits||[]).filter(u=>u.address===addr).forEach(u=>u.geoTried=true)}
+   await new Promise(res=>setTimeout(res,1500));
+ }
+}
+setTimeout(()=>{if(!isTerminalLink)neighborGeoRefine()},12000);
+
+// ═══ Nachbar-Leitstellen fragen Fahrzeuge an (v5.26) ═════════════════════════════════════════
+// Ab und zu (bei eingeschalteten Übungsnotrufen etwa alle 30–60 min) ruft die KRLS Ostfriesland
+// oder die GOL an und bittet um ein Rettungsmittel für einen Einsatz im eigenen Kreis nahe der
+// Grenze. Annehmen → Fahrzeug wählen → wird als Amtshilfe-Einsatz alarmiert (läuft dann wie jeder
+// Einsatz: Status 3/4, Transport, IVENA, SDS, Abschluss). Orte = Ortsmitte (ungefähr).
+const NB_REQ_PLACES=[
+ ["Wittmund","Friedeburg",53.452,7.838],["Wittmund","Wittmund",53.577,7.781],["Wittmund","Esens",53.648,7.613],["Wittmund","Carolinensiel",53.690,7.802],
+ ["Aurich","Wiesmoor",53.414,7.733],["Aurich","Aurich",53.472,7.483],
+ ["Ammerland","Rastede",53.245,8.198],["Ammerland","Wiefelstede",53.257,8.116],["Ammerland","Westerstede",53.257,7.928],["Ammerland","Apen",53.220,7.805],
+ ["Wesermarsch","Jade",53.338,8.243],["Wesermarsch","Ovelgönne",53.343,8.383],["Wesermarsch","Brake",53.333,8.483],
+ ["Leer","Remels (Uplengen)",53.304,7.744],["Oldenburg (Stadt)","Oldenburg-Ohmstede",53.163,8.233]];
+const NB_REQ_REASONS=["alle eigenen RTW sind gebunden","Ihr Fahrzeug ist schneller an der Einsatzstelle","wir haben einen größeren Einsatz und brauchen Unterstützung","unser NEF ist im Einsatz"];
+const NB_REQ_KW=[["RTW","R1_Med. Notfall"],["RTW","R1_Sturz"],["RTW","R1_Atemnot"],["NEF","R1N1_Kreislauf Schwer – NEF-Nachforderung"],["RTW+NEF","R1N1_Bewusstlos"],["RTW","R1_VU"]];
+let nbReqNextAt=0;
+function nbReqTick(){
+ if(!simOn||isTerminalLink||IS_MONITOR)return;
+ const now=Date.now();
+ if(!nbReqNextAt){nbReqNextAt=now+rnd(20,45)*60000;return}
+ db.nbRequests=(db.nbRequests||[]).filter(r=>{if(r.state==="ringing"&&now-r.ringAt>90000){toast(`📵 Anfrage der ${r.lstName} nicht angenommen – sie fragen woanders`);(db.nbReqLog=db.nbReqLog||[]).unshift({...r,state:"verpasst",at:now});return false}return true});
+ if(now<nbReqNextAt)return;
+ nbReqNextAt=now+rnd(30,60)*60000;
+ const [district,place,lat,lng]=pick(NB_REQ_PLACES), [need,kw]=pick(NB_REQ_KW), lst=NEIGHBOR_LEITSTELLE[district]||"gol";
+ const r={id:"nb"+now.toString(36),district,place,lat:lat+rnd(-0.004,0.004),lng:lng+rnd(-0.004,0.004),need,kw,reason:pick(NB_REQ_REASONS),lst,lstName:lst==="ostfriesland"?"KRLS Ostfriesland":"Großleitstelle Oldenburger Land",state:"ringing",ringAt:now};
+ db.nbRequests=[...(db.nbRequests||[]),r]; save(); renderCallerBanner();
+ toast(`📞 ${r.lstName} ruft an`); if(typeof simVoice!=="undefined"&&simVoice&&typeof simRingTone==="function")simRingTone();
+}
+setInterval(()=>{try{nbReqTick()}catch(e){}},5000);
+function nbReqBannerHTML(r){
+ return `<div class="card" style="background:#7c3aed;color:#fff;border:none;margin-bottom:8px;display:flex;align-items:center;justify-content:space-between;gap:12px">
+  <div class="row" style="gap:10px"><span style="font-size:26px">☎️</span><div><b>${esc(r.lstName)} – Anfrage Fahrzeug</b><br><span style="opacity:.9">Amtsleitung · LK ${esc(r.district)}</span></div></div>
+  <button class="primary" style="background:#fff;color:#7c3aed" onclick="nbReqAccept('${r.id}')">✅ Annehmen</button></div>`;
+}
+function nbReqAccept(id){
+ const r=(db.nbRequests||[]).find(x=>x.id===id); if(!r)return;
+ r.state="talking"; save(); renderCallerBanner();
+ const need=r.need==="RTW+NEF"?["RTW","NEF"]:[r.need];
+ const text=`${r.lstName}, Moin. Wir haben einen Einsatz in ${r.place}, LK ${r.district}: ${r.kw.replace(/^R\d(N\d)?_/,"")}. ${r.reason[0].toUpperCase()+r.reason.slice(1)}. Könnt ihr uns ${need.length>1?"einen RTW und ein NEF":need[0]==="NEF"?"ein NEF":"einen RTW"} schicken?`;
+ if(typeof simVoice!=="undefined"&&simVoice)try{const u=new SpeechSynthesisUtterance(text);u.lang="de-DE";speechSynthesis.speak(u)}catch(e){}
+ const free=(db.units||[]).filter(u=>!u.neighborLoan&&need.includes(u.type)&&["1","2"].includes(String(u.status))&&islandReachable(u));
+ const eta=u=>{const p=unitPoint(u);return p?Math.round(etaMinutesForDistance(u,haversine(p[0],p[1],r.lat,r.lng))||0):null};
+ const items=free.map(u=>({...unitItem(u,"",`ca. ${eta(u)??"?"} min bis ${r.place}`),eta:eta(u)})).sort((a,b)=>(a.eta??999)-(b.eta??999));
+ document.getElementById("app").innerHTML=`<div class="card" style="max-width:680px;margin:20px auto;border:2px solid #7c3aed">
+  <h2 style="margin-top:0">☎️ ${esc(r.lstName)}</h2>
+  <div class="suggest" style="background:#f5f3ff;border-color:#c4b5fd;font-size:16px">„${esc(text)}“</div>
+  <p class="muted" style="font-size:13px">Einsatzort: ${esc(r.place)} (LK ${esc(r.district)}, Ortsmitte – ungefähr). Gewünscht: ${esc(need.join(" + "))}.</p>
+  <label>Fahrzeug(e) schicken${items[0]?` – am schnellsten: ${esc(items[0].label)}`:""}</label>
+  ${items.length?unitPickHTML("nbReqUnit",items,{placeholder:"– Fahrzeug wählen –",value:items[0].value}):`<p style="color:#b91c1c;font-weight:700">Kein passendes Fahrzeug frei.</p>`}
+  ${need.length>1&&items.some(i=>i.type==="NEF")?`<label style="display:flex;gap:8px;align-items:center;margin-top:8px;font-weight:600"><input type="checkbox" id="nbReqBoth" checked style="width:auto"> zusätzlich das nächste freie ${need.find(t=>t!==(items[0]&&items[0].type))||"NEF"} mitschicken</label>`:""}
+  <div class="row" style="margin-top:12px;justify-content:flex-end;gap:8px">
+   <button onclick="nbReqDecline('${r.id}')">❌ Ablehnen – nichts frei</button>
+   ${items.length?`<button class="primary" onclick="nbReqSend('${r.id}')">🚨 Schicken (Amtshilfe)</button>`:""}
+  </div></div>`;
+ uiLocked=true;
+}
+function nbReqDecline(id){
+ const r=(db.nbRequests||[]).find(x=>x.id===id); if(!r)return;
+ db.nbRequests=db.nbRequests.filter(x=>x.id!==id); (db.nbReqLog=db.nbReqLog||[]).unshift({...r,state:"abgelehnt",at:Date.now()});
+ save(); uiLocked=false; toast(`${r.lstName}: „Alles klar, dann fragen wir woanders.“`); render("leitstelle");
+}
+function nbReqSend(id){
+ const r=(db.nbRequests||[]).find(x=>x.id===id); if(!r)return;
+ const first=db.units.find(u=>String(u.id)===String(document.getElementById("nbReqUnit")?.value)); if(!first){toast("Bitte ein Fahrzeug wählen");return}
+ const units=[first];
+ if(document.getElementById("nbReqBoth")?.checked){const other=r.need==="RTW+NEF"?(first.type==="RTW"?"NEF":"RTW"):null;if(other){const p=[r.lat,r.lng];const o=(db.units||[]).filter(u=>!u.neighborLoan&&u.type===other&&["1","2"].includes(String(u.status))&&islandReachable(u)).map(u=>{const q=unitPoint(u);return {u,km:q?haversine(q[0],q[1],p[0],p[1]):999}}).sort((a,b)=>a.km-b.km)[0];if(o)units.push(o.u)}}
+ const now=new Date().toISOString(), cid=String(Date.now()).slice(-6);
+ const c={id:cid,location:`${r.place} (LK ${r.district})`,lat:r.lat,lng:r.lng,count:"1",answers:{callType:"112",event:/VU/.test(r.kw)?"Verkehrsunfall":"Medizinischer Notfall",count:"1",personDanger:"1",trapped:"0",x_massive:"Nein",a_airway:"Frei",b_breath:/Atemnot/.test(r.kw)?"Auffällig":"Normal",c_circ:/Kreislauf/.test(r.kw)?"Schockzeichen":"Unauffällig",d_disability:/Bewusstlos/.test(r.kw)?"Bewusstlos":"Wach / orientiert",e_exposure:/Sturz/.test(r.kw)?"Sturz, Schmerzen Hüfte":/VU/.test(r.kw)?"Prellungen nach Verkehrsunfall":"Unauffällig"},keyword:`AMTSHILFE LK ${r.district} – ${r.kw}`,suggestion:units.map(u=>`${u.opta||u.name} – ${u.type}`).join(" · "),
+   createdAt:now,alarmTime:now,alarmedUnits:units.map(u=>u.id),proposedUnitIds:units.map(u=>u.id),amtshilfe:r.district,sr:true,
+   history:[{q:`☎️ Anfrage ${r.lstName}`,a:`${r.kw} in ${r.place} – ${r.reason}`},{q:"🚨 Alarmierung (Amtshilfe)",a:units.map(u=>u.opta||u.name).join(", ")}]};
+ units.forEach(u=>setUnitStatus(u,"3"));
+ db.activeCalls=[...(db.activeCalls||[]),c];
+ db.nbRequests=db.nbRequests.filter(x=>x.id!==id); (db.nbReqLog=db.nbReqLog||[]).unshift({...r,state:"übernommen",units:units.map(u=>u.opta||u.name),at:Date.now()});
+ if(db.cloud?.enabled)setTimeout(()=>{try{pushCallCloud(c)}catch(e){}},0);
+ save(); uiLocked=false; toast(`🚨 Amtshilfe: ${units.map(u=>u.opta||u.name).join(", ")} → ${r.place}`); render("leitstelle");
+}
 function renderCallerBanner(){
  const el=document.getElementById("callerRequestBanner");
  if(!el)return;
  const reqs=phoneHere?(db.pendingCallerRequests||[]):[];
  // Alle klingelnden Anrufe nach Anrufzeit sortieren – der am längsten wartende steht oben (v5.04)
  const items=[...((typeof simPending!=="undefined"?simPending:[]).map(x=>({t:x.ringAt||x.created||Date.now(),html:simBannerHTML([x])}))),
-  ...reqs.map(r=>({t:r.time?new Date(r.time).getTime():Date.now(),html:callerReqHTML(r)}))].sort((a,b)=>a.t-b.t);
+  ...reqs.map(r=>({t:r.time?new Date(r.time).getTime():Date.now(),html:callerReqHTML(r)})),
+  ...(db.nbRequests||[]).filter(r=>r.state==="ringing").map(r=>({t:r.ringAt,html:nbReqBannerHTML(r)}))].sort((a,b)=>a.t-b.t);
  el.innerHTML=items.map((it,i)=>it.html.replace('<div class="row" style="gap:10px">',`<div class="row" style="gap:10px"><span style="font:800 13px system-ui;background:rgba(255,255,255,.25);border-radius:999px;padding:2px 8px;white-space:nowrap" title="Reihenfolge nach Anrufzeit">${items.length>1?(i+1)+". · ":""}${new Date(it.t).toLocaleTimeString("de-DE")}</span>`)).join("");
 }
 function callerReqHTML(r){
@@ -8433,7 +8611,7 @@ function funkGruppenPanel(){
 // Fahrzeuge stehen in einer Gruppe (Standard nach Organisation/Kreis) und lassen sich umsetzen.
 // Übungsanzeige ohne echte Funktechnik.
 const FUNK_DISTRICTS=[["FRI","Friesland"],["WST","Ammerland (Westerstede)"],["OL","Oldenburg"],["BRA","Wesermarsch (Brake)"],["WTM","Wittmund"],["AUR","Aurich"],["LER","Leer"]];
-const FUNK_NEIGHBOR_CODE={Wittmund:"WTM",Leer:"LER",Ammerland:"WST",Wesermarsch:"BRA",Oldenburg:"OL",Aurich:"AUR"};
+const FUNK_NEIGHBOR_CODE={Wittmund:"WTM",Leer:"LER",Ammerland:"WST",Wesermarsch:"BRA",Oldenburg:"OL","Oldenburg (Stadt)":"OL","Oldenburg (Land)":"OL",Aurich:"AUR"};
 const FUNK_KINDS=[["F","Feuerwehr","#e30613","#fff"],["K","Katastrophenschutz / Hilfsorganisationen","#0d6efd","#fff"],["R","Rettungsdienst","#f4c20d","#111"]];
 function funkGroupsOf(code){return [`${code} Anruf`,...["F","K","R"].flatMap(k=>[1,2,3].map(n=>`${k} ${code} ${n}`))]}
 function funkAllGroups(){return FUNK_DISTRICTS.flatMap(([c])=>funkGroupsOf(c))}
@@ -8489,11 +8667,11 @@ function funkPage(){
  </div>`;
 }
 function nachbarLks(){
- const districts=["Wittmund","Leer","Ammerland","Wesermarsch"];
+ const districts=["Wittmund","Aurich","Leer","Ammerland","Wesermarsch","Oldenburg (Stadt)","Oldenburg (Land)"];
  const openCalls=allOpenCalls().filter(c=>c.alarmTime);
  document.getElementById("app").innerHTML=`<div class="card">
   <h2>🚑 Rettungsmittel der Nachbarlandkreise</h2>
-  <p class="muted">Übungsansicht der Nachbarlandkreise Wittmund, Leer, Ammerland und Wesermarsch. Status wird von der Übungsleitung manuell gepflegt – keine echte Live-Anbindung an die dortigen Leitstellen. Bei Bedarf können darüber Rettungsmittel bei der jeweils zuständigen Leitstelle angefragt werden.</p>
+  <p class="muted">Übungsansicht der Nachbarlandkreise Wittmund, Aurich, Leer, Ammerland, Wesermarsch und Oldenburg (Stadt und Land). Status wird von der Übungsleitung manuell gepflegt – keine echte Live-Anbindung an die dortigen Leitstellen. Bei Bedarf können darüber Rettungsmittel bei der jeweils zuständigen Leitstelle angefragt werden.</p>
  </div>
  ${districts.map(d=>{
    const units=db.neighborUnits.filter(u=>u.district===d);
