@@ -170,7 +170,7 @@ html[data-device="handy"] #floatDock{left:8px;right:8px;width:auto;top:auto;bott
 </head>
 <body>
 <div style="padding:6px 10px;font-size:11px;color:#94a3b8;font-weight:700;display:flex;flex-wrap:wrap;align-items:center;gap:10px;position:sticky;top:0;z-index:10;background:var(--bg)">
- <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v5.24</span>
+ <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v5.25</span>
  <span id="syncState"></span> <a id="deskTag" href="#" onclick="renameDesk();return false" title="Name dieses Platzes (für „offen an …“) – antippen zum Ändern" style="color:#64748b;font-weight:700;text-decoration:none"></a>
  <span id="simCtl" style="position:absolute;left:50%;transform:translateX(-50%);display:flex;gap:6px;align-items:center"></span>
  <a id="homeLink" href="#" onclick="render('leitstelle');return false" class="hidden" style="color:#64748b;text-decoration:underline;font-weight:600">🖥️ Leitstelle</a>
@@ -8471,9 +8471,7 @@ function funkPage(){
     </div>
     <div style="padding:6px 8px;font-size:13px;max-height:380px;overflow:auto">
      ${sw.length?sw.map(x=>`<div class="status ${statusClass(x.u.status)}" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">${String(x.u.status)==="0"?"🚨 ":"🗣️ "}${esc(x.u.opta||x.u.name)}<button onclick="confirmSprechwunsch(${x.u.id});render('funk')" style="padding:1px 7px;background:rgba(255,255,255,.4);border:none;color:inherit;font-weight:800">✓</button></div>`).join(""):""}
-     ${list.length?list.map(x=>`<div class="row" style="justify-content:space-between;gap:6px;flex-wrap:nowrap;padding:2px 0;border-top:1px solid var(--line)">
-       <span style="min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(x.u.opta||x.u.name)}">${x.u.funkGroup?"✳️ ":""}${esc(x.u.opta||x.u.name)} <small class="muted">${esc(x.u.type||"")}${x.n?" · "+esc(x.u.district):""}</small></span>
-       <select onchange="funkSetUnit('${funkKey(x)}',this.value)" style="width:auto;font-size:12px;padding:2px 4px;max-width:120px" title="in andere Gruppe setzen">${opt(g)}</select></div>`).join(""):`<div class="muted">keine Fahrzeuge</div>`}
+     <div class="muted">${list.length?`${list.length} Fahrzeug${list.length===1?"":"e"} in dieser Gruppe${list.some(x=>x.u.funkGroup)?` (davon ${list.filter(x=>x.u.funkGroup).length} umgesetzt)`:""}`:"keine Fahrzeuge"}</div>
      <details style="margin-top:6px"><summary style="cursor:pointer;font-size:12px;font-weight:700">＋ Fahrzeug in diese Gruppe setzen …</summary>${unitPickHTML("funkAdd_"+g.replace(/\W/g,"_"),all.filter(x=>funkUnitGroup(x.u,x.n)!==g).map(x=>({value:funkKey(x),label:x.u.opta||x.u.name,cat:upCat(x.u),type:x.u.type||"",meta:funkUnitGroup(x.u,x.n)})),{placeholder:"Fahrzeug antippen",cb:`funkSetUnit(document.getElementById('funkAdd_${g.replace(/\W/g,"_")}').value,'${g}')`})}</details>
     </div></div>`;
  };
@@ -8483,7 +8481,7 @@ function funkPage(){
  document.getElementById("app").innerHTML=`<div class="card">
   <div class="row between" style="flex-wrap:wrap;gap:8px"><h2 style="margin:0">📻 Funkrufgruppen</h2>
    <div class="row" style="gap:6px;align-items:center"><span>Leitstelle geschaltet: <b style="font-family:'Courier New',monospace">🎙️ ${esc(active)}</b></span>${watch.length?`<span class="muted">· mithören: ${watch.map(esc).join(", ")}</span>`:""}</div></div>
-  <p class="muted" style="font-size:13px">Gruppe antippen = Leitstelle darauf schalten, 🔈 = mithören. Fahrzeuge stehen in ihrer Standardgruppe (nach Organisation und Kreis) und lassen sich mit der Auswahl daneben umsetzen (✳️ = umgesetzt). Übungsanzeige ohne echte Funktechnik.</p>
+  <p class="muted" style="font-size:13px">Gruppe antippen = Leitstelle darauf schalten, 🔈 = mithören. Fahrzeuge stehen in ihrer Standardgruppe (nach Organisation und Kreis, Gruppe 1) und lassen sich über „＋ Fahrzeug in diese Gruppe setzen“ umsetzen. Übungsanzeige ohne echte Funktechnik.</p>
   <div class="row" style="gap:6px;flex-wrap:wrap">${tabs}${moved?`<button onclick="if(confirm('Alle ${moved} umgesetzten Fahrzeuge zurück in ihre Standardgruppe?')){funkAllUnits().forEach(x=>delete x.u.funkGroup);save();render('funk')}" style="margin-left:auto;font-size:12px">↺ Alle zurück in Standardgruppe</button>`:""}</div>
   <h3 style="margin:12px 0 6px">${esc((FUNK_DISTRICTS.find(x=>x[0]===code)||[])[1]||code)}</h3>
   <div style="margin-bottom:10px">${card(gs[0])}</div>

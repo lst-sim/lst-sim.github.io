@@ -1607,6 +1607,10 @@ Version 5.05:
   („a, b“ = a ODER b). Mit „🚑 NA-Indikation“ markierte Knöpfe ziehen weiterhin einen Notarzt.
 - Nur „Unauffällig“ (ohne weitere Befunde) zählt weiter als unauffälliges E (R0 möglich).
 
+Version 5.25:
+- Funkrufgruppen: Fahrzeuge werden in den Gruppen nicht mehr aufgelistet – nur noch die Anzahl
+  (und Sprechwünsche). Umsetzen weiter über „＋ Fahrzeug in diese Gruppe setzen“.
+
 Version 5.24:
 - Fahrzeugauswahl überall in aufklappbaren Kategorien (Organisation bzw. Nachbar-LK, darin nach
   Fahrzeugtyp): SDS-Empfänger, „Fahrzeuge vor Alarmierung bearbeiten“, IVENA-Zuweisung
