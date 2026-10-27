@@ -170,7 +170,7 @@ html[data-device="handy"] #floatDock{left:8px;right:8px;width:auto;top:auto;bott
 </head>
 <body>
 <div style="padding:6px 10px;font-size:11px;color:#94a3b8;font-weight:700;display:flex;flex-wrap:wrap;align-items:center;gap:10px;position:sticky;top:0;z-index:10;background:var(--bg)">
- <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v5.21</span>
+ <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v5.22</span>
  <span id="syncState"></span> <a id="deskTag" href="#" onclick="renameDesk();return false" title="Name dieses Platzes (für „offen an …“) – antippen zum Ändern" style="color:#64748b;font-weight:700;text-decoration:none"></a>
  <span id="simCtl" style="position:absolute;left:50%;transform:translateX(-50%);display:flex;gap:6px;align-items:center"></span>
  <a id="homeLink" href="#" onclick="render('leitstelle');return false" class="hidden" style="color:#64748b;text-decoration:underline;font-weight:600">🖥️ Leitstelle</a>
@@ -622,7 +622,7 @@ const isTerminalLink=(()=>{
  return !!(p.get("vehicle")||p.get("neighbor")||p.get("caller"));
 })();
 const NAV_PAGES_ALL=[
- ["leitstelle","🖥️ Leitstelle"],["notruf","📞 Notruf"],["karte","🗺️ Karte"],["mittel","🚤 Fahrzeuge"],["aao","🧠 AAO"],["ivena","🏥 IVENA"],["ivenaZuweisungen","📋 IVENA-Zuweisungen"],["nachbarLks","🚑 Nachbar LKs"]
+ ["leitstelle","🖥️ Leitstelle"],["notruf","📞 Notruf"],["karte","🗺️ Karte"],["mittel","🚤 Fahrzeuge"],["aao","🧠 AAO"],["ivena","🏥 IVENA"],["ivenaZuweisungen","📋 IVENA-Zuweisungen"],["nachbarLks","🚑 Nachbar LKs"],["funk","📻 Funkrufgruppen"]
 ];
 // Zusatz-Monitor (per QR vom Hauptplatz geöffnet): vollwertige Leitstellen-Oberfläche, die ihren
 // kompletten Zustand in Echtzeit mit dem Hauptplatz und allen anderen Monitoren teilt.
@@ -944,6 +944,7 @@ function render(page="leitstelle"){
  if(page==="ivenaZuweisungen") ivenaZuweisungen();
  if(page==="nachbarLks") nachbarLks();
  if(page==="protokolle") simProtoPage();
+ if(page==="funk") funkPage();
  const app=document.getElementById("app");
  if(app){
    const inner=app.innerHTML;
@@ -8356,6 +8357,68 @@ function funkGroupPanel(letter){
 }
 function funkGruppenPanel(){
  return `<div class="row" style="gap:8px;margin-top:10px">${["F","K","R"].map(funkGroupPanel).join("")}</div>`;
+}
+
+// ═══ Funkrufgruppen (v5.22) ═══════════════════════════════════════════════════════════════════
+// Je Kreis: „<Kreis> Anruf“ und F/K/R mit je 3 Gruppen. Die Leitstelle schaltet ihre Gruppe(n);
+// Fahrzeuge stehen in einer Gruppe (Standard nach Organisation/Kreis) und lassen sich umsetzen.
+// Übungsanzeige ohne echte Funktechnik.
+const FUNK_DISTRICTS=[["FRI","Friesland"],["WST","Ammerland (Westerstede)"],["OL","Oldenburg"],["BRA","Wesermarsch (Brake)"],["WTM","Wittmund"],["AUR","Aurich"],["LER","Leer"]];
+const FUNK_NEIGHBOR_CODE={Wittmund:"WTM",Leer:"LER",Ammerland:"WST",Wesermarsch:"BRA",Oldenburg:"OL",Aurich:"AUR"};
+const FUNK_KINDS=[["F","Feuerwehr","#e30613","#fff"],["K","Katastrophenschutz / Hilfsorganisationen","#0d6efd","#fff"],["R","Rettungsdienst","#f4c20d","#111"]];
+function funkGroupsOf(code){return [`${code} Anruf`,...["F","K","R"].flatMap(k=>[1,2,3].map(n=>`${k} ${code} ${n}`))]}
+function funkAllGroups(){return FUNK_DISTRICTS.flatMap(([c])=>funkGroupsOf(c))}
+function funkDefaultGroup(u,neighbor){
+ const code=neighbor?(FUNK_NEIGHBOR_CODE[u.district]||"FRI"):"FRI";
+ const k=u.org==="Feuerwehr"?"F":u.org==="Rettungsdienst"||u.org==="Luftrettung"||(neighbor&&["RTW","NEF","KTW","NKTW"].includes(u.type))?"R":"K";
+ return `${k} ${code} 1`;
+}
+function funkUnitGroup(u,neighbor){return u.funkGroup||funkDefaultGroup(u,neighbor)}
+function funkAllUnits(){return [...(db.units||[]).filter(u=>!u.neighborLoan).map(u=>({u,n:false})),...(db.neighborUnits||[]).map(u=>({u,n:true}))]}
+function funkKey(x){return (x.n?"n":"u")+":"+x.u.id}
+function funkSetUnit(key,group){
+ const x=funkAllUnits().find(y=>funkKey(y)===key); if(!x)return;
+ if(!group||group===funkDefaultGroup(x.u,x.n))delete x.u.funkGroup; else x.u.funkGroup=group;
+ save(); toast(`📻 ${x.u.opta||x.u.name} → ${group}`); render('funk');
+}
+let funkOpenDistrict="FRI";
+function funkSelect(g){db.funkActive=g;save();render('funk');toast(`📻 Leitstelle geschaltet auf ${g}`)}
+function funkToggleWatch(g){db.funkWatch=db.funkWatch||[];const i=db.funkWatch.indexOf(g);if(i>=0)db.funkWatch.splice(i,1);else db.funkWatch.push(g);save();render('funk')}
+function funkPage(){
+ const active=db.funkActive||"FRI Anruf", watch=db.funkWatch||[], all=funkAllUnits();
+ const byGroup={}; all.forEach(x=>{const g=funkUnitGroup(x.u,x.n);(byGroup[g]=byGroup[g]||[]).push(x)});
+ const groups=funkAllGroups();
+ const opt=(sel)=>groups.map(g=>`<option ${g===sel?"selected":""}>${esc(g)}</option>`).join("");
+ const card=(g)=>{
+   const k=g.split(" ")[0], kind=FUNK_KINDS.find(x=>x[0]===k), bg=kind?kind[2]:"#334155", fg=kind?kind[3]:"#fff";
+   const list=(byGroup[g]||[]).sort((a,b)=>String(a.u.opta||a.u.name).localeCompare(String(b.u.opta||b.u.name),"de"));
+   const sw=list.filter(x=>!x.n&&["0","5"].includes(String(x.u.status)));
+   const isA=active===g, isW=watch.includes(g);
+   return `<div style="border:2px solid ${isA?"#111":"var(--line)"};border-radius:10px;overflow:hidden;background:var(--panel)">
+    <div style="background:${bg};color:${fg};padding:8px 10px;display:flex;justify-content:space-between;align-items:center;gap:6px;font-family:'Courier New',monospace;font-weight:800">
+     <span style="cursor:pointer" onclick="funkSelect('${esc(g)}')" title="Leitstelle auf diese Gruppe schalten">${isA?"🎙️ ":""}${esc(g)}</span>
+     <span style="display:flex;gap:4px"><button onclick="funkToggleWatch('${esc(g)}')" title="${isW?"nicht mehr mithören":"mithören"}" style="padding:2px 7px;background:rgba(255,255,255,.35);border:none;color:inherit">${isW?"🔊":"🔈"}</button>${isA?"":`<button onclick="funkSelect('${esc(g)}')" style="padding:2px 7px;background:rgba(255,255,255,.35);border:none;color:inherit;font-weight:800">Schalten</button>`}</span>
+    </div>
+    <div style="padding:6px 8px;font-size:13px;max-height:380px;overflow:auto">
+     ${sw.length?sw.map(x=>`<div class="status ${statusClass(x.u.status)}" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">${String(x.u.status)==="0"?"🚨 ":"🗣️ "}${esc(x.u.opta||x.u.name)}<button onclick="confirmSprechwunsch(${x.u.id});render('funk')" style="padding:1px 7px;background:rgba(255,255,255,.4);border:none;color:inherit;font-weight:800">✓</button></div>`).join(""):""}
+     ${list.length?list.map(x=>`<div class="row" style="justify-content:space-between;gap:6px;flex-wrap:nowrap;padding:2px 0;border-top:1px solid var(--line)">
+       <span style="min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(x.u.opta||x.u.name)}">${x.u.funkGroup?"✳️ ":""}${esc(x.u.opta||x.u.name)} <small class="muted">${esc(x.u.type||"")}${x.n?" · "+esc(x.u.district):""}</small></span>
+       <select onchange="funkSetUnit('${funkKey(x)}',this.value)" style="width:auto;font-size:12px;padding:2px 4px;max-width:120px" title="in andere Gruppe setzen">${opt(g)}</select></div>`).join(""):`<div class="muted">keine Fahrzeuge</div>`}
+     <select onchange="if(this.value)funkSetUnit(this.value,'${esc(g)}')" style="width:100%;margin-top:6px;font-size:12px;padding:3px"><option value="">＋ Fahrzeug in diese Gruppe setzen …</option>${all.filter(x=>funkUnitGroup(x.u,x.n)!==g).sort((a,b)=>String(a.u.opta||a.u.name).localeCompare(String(b.u.opta||b.u.name),"de")).map(x=>`<option value="${funkKey(x)}">${esc(x.u.opta||x.u.name)} (${esc(funkUnitGroup(x.u,x.n))})</option>`).join("")}</select>
+    </div></div>`;
+ };
+ const tabs=FUNK_DISTRICTS.map(([c,n])=>{const cnt=funkGroupsOf(c).reduce((a,g)=>a+(byGroup[g]||[]).length,0);return `<button onclick="funkOpenDistrict='${c}';render('funk')" title="${esc(n)}" style="${funkOpenDistrict===c?"background:#1d4ed8;color:#fff;border-color:#1d4ed8":""}">${c} <small>${cnt}</small></button>`}).join("");
+ const code=funkOpenDistrict, gs=funkGroupsOf(code);
+ const moved=all.filter(x=>x.u.funkGroup).length;
+ document.getElementById("app").innerHTML=`<div class="card">
+  <div class="row between" style="flex-wrap:wrap;gap:8px"><h2 style="margin:0">📻 Funkrufgruppen</h2>
+   <div class="row" style="gap:6px;align-items:center"><span>Leitstelle geschaltet: <b style="font-family:'Courier New',monospace">🎙️ ${esc(active)}</b></span>${watch.length?`<span class="muted">· mithören: ${watch.map(esc).join(", ")}</span>`:""}</div></div>
+  <p class="muted" style="font-size:13px">Gruppe antippen = Leitstelle darauf schalten, 🔈 = mithören. Fahrzeuge stehen in ihrer Standardgruppe (nach Organisation und Kreis) und lassen sich mit der Auswahl daneben umsetzen (✳️ = umgesetzt). Übungsanzeige ohne echte Funktechnik.</p>
+  <div class="row" style="gap:6px;flex-wrap:wrap">${tabs}${moved?`<button onclick="if(confirm('Alle ${moved} umgesetzten Fahrzeuge zurück in ihre Standardgruppe?')){funkAllUnits().forEach(x=>delete x.u.funkGroup);save();render('funk')}" style="margin-left:auto;font-size:12px">↺ Alle zurück in Standardgruppe</button>`:""}</div>
+  <h3 style="margin:12px 0 6px">${esc((FUNK_DISTRICTS.find(x=>x[0]===code)||[])[1]||code)}</h3>
+  <div style="margin-bottom:10px">${card(gs[0])}</div>
+  ${FUNK_KINDS.map(([k,name])=>`<div style="margin:10px 0 4px;font-weight:800">${k} – ${esc(name)}</div><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:8px">${gs.filter(g=>g.startsWith(k+" ")).map(card).join("")}</div>`).join("")}
+ </div>`;
 }
 function nachbarLks(){
  const districts=["Wittmund","Leer","Ammerland","Wesermarsch"];
