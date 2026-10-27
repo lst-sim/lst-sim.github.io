@@ -1607,6 +1607,9 @@ Version 5.05:
   („a, b“ = a ODER b). Mit „🚑 NA-Indikation“ markierte Knöpfe ziehen weiterhin einen Notarzt.
 - Nur „Unauffällig“ (ohne weitere Befunde) zählt weiter als unauffälliges E (R0 möglich).
 
+Version 5.21:
+- Funkrufgruppen-Leiste (F/K/R Fri …) unten in der Leitstellen-Übersicht entfernt.
+
 Version 5.20:
 - Notrufe zusammenführen: Der zweite Anruf wird nicht mehr aufgelegt, sondern gehalten (Telefon-
   leiste orange „⏸️ Gehalten – zusammengeführt mit #…“, Öffnen/Auflegen wie gewohnt). Man landet

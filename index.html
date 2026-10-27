@@ -170,7 +170,7 @@ html[data-device="handy"] #floatDock{left:8px;right:8px;width:auto;top:auto;bott
 </head>
 <body>
 <div style="padding:6px 10px;font-size:11px;color:#94a3b8;font-weight:700;display:flex;flex-wrap:wrap;align-items:center;gap:10px;position:sticky;top:0;z-index:10;background:var(--bg)">
- <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v5.20</span>
+ <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v5.21</span>
  <span id="syncState"></span> <a id="deskTag" href="#" onclick="renameDesk();return false" title="Name dieses Platzes (für „offen an …“) – antippen zum Ändern" style="color:#64748b;font-weight:700;text-decoration:none"></a>
  <span id="simCtl" style="position:absolute;left:50%;transform:translateX(-50%);display:flex;gap:6px;align-items:center"></span>
  <a id="homeLink" href="#" onclick="render('leitstelle');return false" class="hidden" style="color:#64748b;text-decoration:underline;font-weight:600">🖥️ Leitstelle</a>
@@ -2875,10 +2875,7 @@ function dashboard(){
   </div>
   ${sdsInHTML()}
  </aside></div>
- ${isHandyMode()?"":`<div class="card" id="funkBar" style="position:fixed;bottom:0;z-index:8;border-radius:14px 0 0 0;box-shadow:none;margin:0;border-right:none">
-  ${funkGruppenPanel()}
- </div>
- <div id="funkSpacer" style="height:170px"></div>`}`;
+ `; // v5.21: Funkrufgruppen-Leiste entfernt (auf Wunsch)
 }
 function isHandyMode(){return document.documentElement.getAttribute("data-device")==="handy"}
 function alignFunkBar(){
