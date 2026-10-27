@@ -170,7 +170,7 @@ html[data-device="handy"] #floatDock{left:8px;right:8px;width:auto;top:auto;bott
 </head>
 <body>
 <div style="padding:6px 10px;font-size:11px;color:#94a3b8;font-weight:700;display:flex;flex-wrap:wrap;align-items:center;gap:10px;position:sticky;top:0;z-index:10;background:var(--bg)">
- <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v5.16</span>
+ <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v5.17</span>
  <span id="syncState"></span> <a id="deskTag" href="#" onclick="renameDesk();return false" title="Name dieses Platzes (für „offen an …“) – antippen zum Ändern" style="color:#64748b;font-weight:700;text-decoration:none"></a>
  <span id="simCtl" style="position:absolute;left:50%;transform:translateX(-50%);display:flex;gap:6px;align-items:center"></span>
  <a id="homeLink" href="#" onclick="render('leitstelle');return false" class="hidden" style="color:#64748b;text-decoration:underline;font-weight:600">🖥️ Leitstelle</a>
@@ -2246,7 +2246,8 @@ const CALL_EDIT_OPTIONS={
  xyn:["Nein","Ja","Unklar"], xairway:["Frei","Gefährdet","Verlegt","Unklar"], xbreathing:["Normal","Auffällig","Keine normale Atmung","Unklar"],
  xcirc:["Unauffällig","Auffällig","Schockzeichen","Relevante Blutung","Sonstiges","Unklar"],
  xdisability:["Wach / orientiert","Bewusstseinsgetrübt","Bewusstlos","Krampfanfall","Neurologisch auffällig","Unklar"],
- ynPsy:["Ja","Nein"], ynQ:["Ja","Nein","?"], gender:["M","W","Divers","Unbekannt"], waterState:["Lebenszeichen","Vermisst","Bergung"], yn:["ja","nein","unbekannt"]
+ ynPsy:["Ja","Nein"], ynQ:["Ja","Nein","?"], gender:["M","W","Divers","Unbekannt"], waterState:["Lebenszeichen","Vermisst","Bergung"], yn:["ja","nein","unbekannt"],
+ fireKind:["Feuerschein","Offene große Flammen","Brandgeruch","Rauchentwicklung"], fireObject:["Einfamilienhaus","Mehrfamilienhaus","Fabrik","Wald/Wiese","Kleinbrand"]
 };
 function openCallEdit(id){
  const c=activateCallById(id); if(!c){toast("Einsatz nicht gefunden");return}
@@ -2979,7 +2980,8 @@ function qsCustomHTML(q,c){
  if(opts)return `<label>${esc(label)}</label><div class="answer">${opts.map(v=>`<button onclick="answer('${id}',${esc(JSON.stringify(v))})">${esc(v)}</button>`).join("")}</div>`;
  if(cq.kind==="textarea")return `<label>${esc(label)}</label><textarea id="ans" rows="4" style="width:100%;box-sizing:border-box"></textarea><div class="row" style="margin-top:8px"><button class="primary" onclick="answer('${id}',document.getElementById('ans').value)">Antwort übernehmen</button><button onclick="answer('${id}','keine Angabe')">Keine Angabe</button></div>`;
  const num=cq.kind==="number";
- return `<label>${esc(label)}</label><div class="row"><input id="ans" type="${num?"number":"text"}" autofocus style="flex:1"><button class="primary" onclick="answer('${id}',document.getElementById('ans').value)">Antwort übernehmen</button>${num?["0","1","2"].map(n=>`<button onclick="answer('${id}','${n}')">${n}</button>`).join(""):`<button onclick="answer('${id}','keine Angabe')">Keine Angabe</button>`}</div>`;
+ if(num)return `<label>${esc(label)}</label>${numChipsHTML(id,"answer")}<div class="row" style="margin-top:8px"><input id="ans" type="number" inputmode="numeric" placeholder="andere Zahl" style="flex:1"><button class="primary" onclick="answer('${id}',document.getElementById('ans').value)">Übernehmen</button></div>`;
+ return `<label>${esc(label)}</label><div class="row"><input id="ans" type="text" autofocus style="flex:1"><button class="primary" onclick="answer('${id}',document.getElementById('ans').value)">Antwort übernehmen</button></div>`;
 }
 // eigene Fragen auch als AAO-Bedingung anbieten
 function qsSyncRuleFields(){
@@ -3056,7 +3058,19 @@ function qsReset(key){
 // Jede Antwort hat einen angezeigten Text und eine Bedeutung („zählt als“ = Standardwert, auf den
 // Stichwort/AAO/Reanimation reagieren). „Eigene Antwort“ wird unverändert gespeichert und wirkt nur
 // über eigene AAO-Bedingungen. Bei E sind die Antworten Schnellknöpfe zum Freitext.
-const QS_ANS_EDIT={x_massive:"xyn",a_airway:"xairway",b_breath:"xbreathing",c_circ:"xcirc",d_disability:"xdisability",e_exposure:"equick"};
+// ─── Zahl-Bausteine (v5.17): überall, wo für die Abfrage eine Zahl nötig ist ─────────────────
+const NUM_CHIPS=["0","1","2","3","4","5","6","8","10","15","20"];
+const AGE_CHIPS=[["0","Säugling"],["3","Kleinkind"],["8","Kind ~8"],["14","Jugendl."],["20","20"],["30","30"],["40","40"],["50","50"],["60","60"],["70","70"],["80","80"],["90","90+"]];
+function numChipsHTML(id,mode,{min=0,age=false,max=null}={}){
+ // mode "answer": Antippen beantwortet sofort; "fill": füllt das Feld mk_<id> und markiert den Baustein
+ const list=age?AGE_CHIPS:NUM_CHIPS.filter(n=>Number(n)>=min).map(n=>[n,n]);
+ const on=(v)=>mode==="answer"?`answer('${id}','${v}')`:`numChipFill('${id}','${v}',this)`;
+ return `<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px">${list.map(([v,l])=>`<button type="button" class="numChip" data-nc="${id}" data-v="${v}" onclick="${on(v)}" style="min-width:${age?"64":"46"}px;padding:8px 10px;font-weight:800">${esc(l)}</button>`).join("")}</div>`;
+}
+function numChipFill(id,v,btn){const el=document.getElementById("mk_"+id);if(el)el.value=v;document.querySelectorAll(`[data-nc="${id}"]`).forEach(b=>b.classList.toggle("primary",b===btn))}
+const QS_ANS_EDIT={x_massive:"xyn",a_airway:"xairway",b_breath:"xbreathing",c_circ:"xcirc",d_disability:"xdisability",e_exposure:"equick",
+ // v5.17: auch alle anderen Auswahlfragen
+ event:"event112",fireKind:"fireKind",fireObject:"fireObject",water:"ynQ",waterState:"waterState",psy:"ynPsy",patientGender:"gender"};
 const QS_E_DEFAULT=["Unauffällig","unklar"];
 let qsAnsOpen=new Set();
 function qsStdValues(id){const t=QS_ANS_EDIT[id];return t==="equick"?[]:(CALL_EDIT_OPTIONS[t]||[])}
@@ -3072,8 +3086,10 @@ function qsAnswerPick(id,i){
  qsPendingLabel=(!a.own&&a.label!==a.value)?{id,label:a.label}:null;
  answer(id,v);
 }
+const QS_ANS_ICON={event:{"Medizinischer Notfall":"🚑","Reanimation":"❤️","Feuer / Rauchentwicklung":"🔥","Verkehrsunfall":"🚗","Technische Hilfeleistung":"🛠️","Person im Wasser":"🌊","Vermisste Person":"🛸","Sonstiger Notfall":"❓"},waterState:{"Lebenszeichen":"🟢","Vermisst":"🔍","Bergung":"⚫"}};
 function qsAnswerButtonsHTML(id,label){
- return `<label>${label}</label><div class="answer">${qsAnswerList(id).map((a,i)=>`<button onclick="qsAnswerPick('${id}',${i})">${esc(a.label)}</button>`).join("")}</div>`;
+ const ic=QS_ANS_ICON[id]||{};
+ return `<label>${label}</label><div class="answer">${qsAnswerList(id).map((a,i)=>`<button onclick="qsAnswerPick('${id}',${i})">${!a.own&&ic[a.value]?ic[a.value]+" ":""}${esc(a.label)}</button>`).join("")}</div>`;
 }
 function qsAnsEdit(id,fn){
  const cfg=qsCfg("112"); cfg.answers=cfg.answers||{};
@@ -3119,7 +3135,7 @@ function qsEditorHTML(){
    return `<div style="display:flex;gap:8px;align-items:flex-start;padding:8px 0;border-bottom:1px solid var(--line);${hidden?"opacity:.5":""}">
      <div style="display:flex;flex-direction:column;gap:2px"><button style="padding:2px 8px" title="nach oben" onclick="qsMove(${kAttr},-1)" ${i===0?"disabled":""}>▲</button><button style="padding:2px 8px" title="nach unten" onclick="qsMove(${kAttr},1)" ${i===list.length-1?"disabled":""}>▼</button></div>
      <div style="flex:1;min-width:0"><div class="row" style="flex-wrap:nowrap;gap:6px"><b style="width:22px;text-align:right">${i+1}.</b><input style="flex:1;min-width:0" value="${esc(label)}" onchange="qsSetLabel(${kAttr},this.value)">${changed?`<button title="Standardtext wiederherstellen" onclick="qsSetLabel(${kAttr},'')">↺</button>`:""}</div>
-      <div style="margin:4px 0 0 28px">${info}${hidden?` <span class="pill" style="background:#fee2e2;color:#991b1b">ausgeblendet – wird als „nicht erhoben“ übersprungen</span>`:""}</div>${extra?`<div style="margin-left:28px">${extra}</div>`:""}${key==="112"&&QS_ANS_EDIT[id]?`<div style="margin-left:28px">${qsAnsEditorHTML(id)}</div>`:""}</div>
+      <div style="margin:4px 0 0 28px">${info}${hidden?` <span class="pill" style="background:#fee2e2;color:#991b1b">ausgeblendet – wird als „nicht erhoben“ übersprungen</span>`:""}</div>${extra?`<div style="margin-left:28px">${extra}</div>`:""}${key==="112"&&QS_ANS_EDIT[id]?`<div style="margin-left:28px">${id==="fireKind"?`<div style="font-size:12px;font-weight:700;margin-top:4px">🔥 Was ist zu sehen?</div>${qsAnsEditorHTML("fireKind")}<div style="font-size:12px;font-weight:700;margin-top:4px">🏠 Was brennt?</div>${qsAnsEditorHTML("fireObject")}`:qsAnsEditorHTML(id)}</div>`:""}</div>
      <div style="display:flex;gap:4px">${locked?"":`<button title="${hidden?"wieder fragen":"ausblenden"}" onclick="qsToggleHidden(${kAttr})">${hidden?"🚫":"👁️"}</button>`}${cq?`<button title="löschen" onclick="qsDeleteCustom(${kAttr})">🗑️</button>`:""}</div>
    </div>`;
  }).join("");
@@ -3370,10 +3386,12 @@ function qsMaskHTML(c,m){
  }
  const field=id=>{
    const L=`<label style="margin-top:10px">${esc(labels[id]||id)}${["psy","patientName","patientAge","patientGender"].includes(id)?` <span class="muted" style="font-weight:500">(optional)</span>`:id==="count"?` <span class="muted" style="font-weight:500">(optional – leer = 1)</span>`:""}</label>`;
-   if(QS_MASK_CHOICES[id])return `${L}<input type="hidden" id="mk_${id}"><div style="display:flex;flex-wrap:wrap;gap:6px">${QS_MASK_CHOICES[id].map(v=>`<button type="button" style="flex:1 1 0;min-width:84px" data-mk="${id}" onclick="qsMaskPick(this,'${id}',${esc(JSON.stringify(v))})">${esc(v)}</button>`).join("")}</div>`;
+   if(QS_MASK_CHOICES[id]){
+     const own=qsAnswers(id), ch=own?own.map(a=>[a.own?a.label:a.value,a.label]):QS_MASK_CHOICES[id].map(v=>[v,v]);
+     return `${L}<input type="hidden" id="mk_${id}"><div style="display:flex;flex-wrap:wrap;gap:6px">${ch.map(([v,lab])=>`<button type="button" style="flex:1 1 0;min-width:84px" data-mk="${id}" data-v="${esc(v)}" onclick="qsMaskPick(this,'${id}',${esc(JSON.stringify(v))})">${esc(lab)}</button>`).join("")}</div>`;
+   }
    if(id==="patientName")return `${L}<input id="mk_${id}" type="text" placeholder="falls bekannt">`;
-   const quick=id==="patientAge"?"":["0","1","2","3"].filter(n=>!(id==="count"&&n==="0")).map(n=>`<button type="button" onclick="document.getElementById('mk_${id}').value='${n}'">${n}</button>`).join("");
-   return `${L}<div class="row"><input id="mk_${id}" type="number" min="0" inputmode="numeric" style="flex:1" placeholder="${id==="patientAge"?"Jahre, falls bekannt":"Anzahl"}">${quick}</div>`;
+   return `${L}${numChipsHTML(id,"fill",{age:id==="patientAge",min:id==="count"?1:0})}<div class="row" style="margin-top:6px"><input id="mk_${id}" type="number" min="0" inputmode="numeric" style="flex:1" placeholder="${id==="patientAge"?"genaues Alter (falls bekannt)":"andere Zahl"}" oninput="document.querySelectorAll('[data-nc=&quot;${id}&quot;]').forEach(b=>b.classList.remove('primary'))"></div>`;
  };
  return `<div class="suggest" style="background:#f8fafc;border-color:var(--line)" onkeydown="if(event.key==='Enter'&&event.target.tagName==='INPUT'){event.preventDefault();qsMaskSubmit('${m.key}')}">
    <h2 style="margin-top:0">${m.title}</h2>${vis.map(field).join("")}
@@ -3421,7 +3439,7 @@ function patCountBar(id,html){
  const n=Number(c.answers.count)||1;
  const b=k=>`<button type="button" onclick="setPatCount(${k})" style="padding:4px 12px;font-weight:800;${n===k?"background:#1d4ed8;color:#fff;border-color:#1d4ed8":""}">${k}</button>`;
  return `<div class="row" style="gap:6px;align-items:center;margin-bottom:8px;font-size:13px;flex-wrap:wrap;background:#eff6ff;border-radius:8px;padding:6px 8px">
-  <span style="font-weight:700;color:#1e3a8a">👥 Patienten <span class="muted" style="font-weight:500">(optional)</span>:</span>${b(1)}${b(2)}${b(3)}
+  <span style="font-weight:700;color:#1e3a8a">👥 Patienten <span class="muted" style="font-weight:500">(optional)</span>:</span>${b(1)}${b(2)}${b(3)}<span style="color:#94a3b8">|</span>${[4,5,6,8,10,15,20].map(k=>`<button type="button" onclick="setPatCount(${k})" style="padding:4px 10px;font-weight:800;border-color:#fca5a5;color:#b91c1c">${k}</button>`).join("")}
   <input id="patCountIn" type="number" min="4" inputmode="numeric" placeholder="mehr …" style="width:80px;padding:4px 6px" onkeydown="if(event.key==='Enter'){event.preventDefault();setPatCount(this.value)}">
   <button type="button" onclick="setPatCount(document.getElementById('patCountIn').value)" style="padding:4px 10px">OK</button>
   <span class="muted">ab 4 → MANV</span></div>`;
@@ -3493,7 +3511,8 @@ function qsPrefill(id){
    const pv=P[k]; if(!pv)continue; const v=String(pv.v??"");
    if(m){
      const inp=document.getElementById("mk_"+k);
-     const btn=[...document.querySelectorAll(`[data-mk="${k}"]`)].find(b=>b.textContent.trim()===v);
+     const btn=[...document.querySelectorAll(`[data-mk="${k}"]`)].find(b=>b.dataset.v===v||b.textContent.trim()===v);
+     document.querySelectorAll(`[data-nc="${k}"]`).forEach(b=>b.classList.toggle("primary",b.dataset.v===v));
      if(btn){qsMaskPick(btn,k,v);any=true}
      else if(inp&&inp.type==="checkbox"){inp.checked=v==="ja";if(v==="ja")any=true}
      else if(inp&&inp.type!=="hidden"&&v!=="unbekannt"){inp.value=v;any=true}
@@ -3548,8 +3567,10 @@ function questionHTML(q){
    if(!fire)return skip("nicht zutreffend");
    window._fireSel={kind:"",obj:""};
    const grp=(key,list)=>`<div class="answer">${list.map(([v,ic])=>`<button data-fg="${key}" data-v="${esc(v)}" onclick="fireDetailPick('${key}',this)">${ic} ${esc(v)}</button>`).join("")}</div>`;
-   return `<label>🔥 Was ist zu sehen?</label>${grp("kind",FIRE_KINDS)}
-    <label style="margin-top:12px">🏠 Was brennt?</label>${grp("obj",FIRE_OBJECTS)}
+   const fl=(qid,base)=>{const own=qsAnswers(qid);if(!own)return base;const ic=Object.fromEntries(base);return own.map(a=>[a.own?a.label:a.value,(ic[a.value]&&!a.own?ic[a.value]+" ":"")+""]).map(([v,i],k)=>[v,i,own[k].label])};
+   const grp2=(key,list)=>`<div class="answer">${list.map(([v,ic,lab])=>`<button data-fg="${key}" data-v="${esc(v)}" onclick="fireDetailPick('${key}',this)">${lab?`${ic}${esc(lab)}`:`${ic} ${esc(v)}`}</button>`).join("")}</div>`;
+   return `<label>🔥 Was ist zu sehen?</label>${grp2("kind",fl("fireKind",FIRE_KINDS))}
+    <label style="margin-top:12px">🏠 Was brennt?</label>${grp2("obj",fl("fireObject",FIRE_OBJECTS))}
     <div class="row" style="margin-top:12px"><button class="primary" onclick="fireDetailSubmit()">✔ Weiter</button><span class="muted" style="font-size:12px">Nicht Gewähltes wird als „k.A.“ übernommen.</span></div>`;
  }
  if(type==="ynTech"&&!tech)return skip("nicht zutreffend");
@@ -3561,7 +3582,7 @@ function questionHTML(q){
    if(["Reanimation","Medizinischer Notfall","Person im Wasser","Verkehrsunfall"].includes(e))return skip(String(Math.max(1,Number(c?.answers?.count)||1)));
  }
  if(type==="ynTech"||type==="ynFire"||type==="ynPersonDanger"){
-   return `<label>${label}</label><div class="row"><input id="ans" type="number" min="0" autofocus style="flex:1"><button class="primary" onclick="answer('${id}',document.getElementById('ans').value)">Antwort übernehmen</button>${["0","1","2","3"].map(n=>`<button onclick="answer('${id}','${n}')">${n}</button>`).join("")}</div>`;
+   return `<label>${label}</label>${numChipsHTML(id,"answer")}<div class="row" style="margin-top:8px"><input id="ans" type="number" min="0" inputmode="numeric" placeholder="andere Zahl" style="flex:1"><button class="primary" onclick="answer('${id}',document.getElementById('ans').value)">Übernehmen</button><button onclick="answer('${id}','unbekannt')">Unbekannt</button></div>`;
  }
 
  if(["x_massive","a_airway","b_breath","c_circ","d_disability","e_exposure"].includes(id) && reaShortcutActive(c))
@@ -3606,9 +3627,14 @@ function questionHTML(q){
     <div class="coords" id="notrufMapCoords" style="margin-bottom:8px">Noch kein Ort auf der Karte gewählt</div>
     <div class="row"><input id="ans" type="text" placeholder="…oder Ort manuell eingeben" style="flex:1"><button class="primary" onclick="answer('location',document.getElementById('ans').value)">Antwort übernehmen</button></div>`;
  }
- if(type==="text"||type==="count"){
-   const quick=id==="count"?`<button onclick="answer('${id}','1')">1</button><button onclick="answer('${id}','2')">2</button>`:"";
-   return `<label>${label}</label><div class="row"><input id="ans" type="${type==="count"?"number":"text"}" autofocus style="flex:1"><button class="primary" onclick="answer('${id}',document.getElementById('ans').value)">Antwort übernehmen</button>${quick}</div>`;
+ if(type==="count"){
+   const age=id==="patientAge";
+   return `<label>${label}</label>${numChipsHTML(id,"answer",{age,min:age?0:1})}
+    <div class="row" style="margin-top:8px"><input id="ans" type="number" min="0" inputmode="numeric" placeholder="${age?"genaues Alter":"andere Zahl"}" style="flex:1"><button class="primary" onclick="answer('${id}',document.getElementById('ans').value)">Übernehmen</button>${age?`<button onclick="answer('${id}','unbekannt')">Unbekannt</button>`:""}</div>`;
+ }
+ if(type==="text"){
+   const quick="";
+   return `<label>${label}</label><div class="row"><input id="ans" type="text" autofocus style="flex:1"><button class="primary" onclick="answer('${id}',document.getElementById('ans').value)">Antwort übernehmen</button>${quick}</div>`;
  }
  if(type==="textarea"){
    const ph=id==="freeText"?"Freie Schilderung des Anrufers, zusätzliche Angaben, Besonderheiten …":"z. B. Verletzungen, Schmerzen, Haut, Temperatur, Unfallmechanismus, Vergiftung …";
@@ -3618,6 +3644,7 @@ function questionHTML(q){
     <div class="row" style="margin-top:10px"><button class="primary" onclick="eSubmit()">Antwort übernehmen</button></div>`;
    return `<label>${label}</label><textarea id="ans" rows="6" placeholder="${ph}" style="width:100%;box-sizing:border-box"></textarea><div class="row" style="margin-top:8px"><button class="primary" onclick="answer('${id}',document.getElementById('ans').value)">Antwort übernehmen</button>${id==="freeText"?`<button onclick="answer('${id}','')">Keine weiteren Angaben</button>`:""}</div>`;
  }
+ if(["event","water","waterState","psy","patientGender"].includes(id)&&qsAnswers(id)&&!c?.kt)return qsAnswerButtonsHTML(id,label)+(id==="psy"?`<div class="answer"><button onclick="answer('psy','nicht erhoben')">Überspringen</button></div>`:"");
  if(type==="waterState") return `<label>${label}</label><div class="answer">
    <button onclick="answer('${id}','Lebenszeichen')">🟢 Mit Lebenszeichen (sichtbar/ansprechbar)</button>
    <button onclick="answer('${id}','Vermisst')">🔍 Vermisst (wird gesucht)</button>
@@ -6859,6 +6886,8 @@ const AAO_RULE_FIELDS={
  fireKind:{label:"Feuer – was ist zu sehen",values:["Feuerschein","Offene große Flammen","Brandgeruch","Rauchentwicklung","k.A."]},
  fireObject:{label:"Feuer – was brennt",values:["Einfamilienhaus","Mehrfamilienhaus","Fabrik","Wald/Wiese","Kleinbrand","k.A."]},
  psy:{label:"Psy Problem",values:["Ja","Nein"]},
+ water:{label:"Person im Wasser (Abfrage)",values:["Ja","Nein","?"]},
+ patientGender:{label:"Geschlecht",values:["M","W","Divers","Unbekannt"]},
  x_massive:{label:"X – kritische Blutung",values:["Nein","Ja","Unklar"]},
  a_airway:{label:"A – Atemweg",values:["Frei","Gefährdet","Verlegt","Unklar"]},
  b_breath:{label:"B – Atmung",values:["Normal","Auffällig","Keine normale Atmung","Unklar"]},

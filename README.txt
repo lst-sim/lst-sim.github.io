@@ -1607,6 +1607,19 @@ Version 5.05:
   („a, b“ = a ODER b). Mit „🚑 NA-Indikation“ markierte Knöpfe ziehen weiterhin einen Notarzt.
 - Nur „Unauffällig“ (ohne weitere Befunde) zählt weiter als unauffälliges E (R0 möglich).
 
+Version 5.17:
+- Zahl-Bausteine überall, wo die Abfrage eine Zahl braucht: Betroffene, eingeklemmt/eingeschlossen,
+  durch Feuer bedroht, verletzt/gefährdet (0 1 2 3 4 5 6 8 10 15 20), Alter (Säugling, Kleinkind,
+  Kind, Jugendl., 20 … 90+ und „Unbekannt“), eigene Zahl-Fragen und die Patientenzahl bei X
+  (1–3, 4–20 → MANV). Einzelfragen: Antippen beantwortet sofort; in Masken wird der Baustein
+  markiert. Das Zahlenfeld bleibt für andere Werte.
+- Antworten bearbeiten jetzt für alle Auswahlfragen (AAO-Seite → Notrufabfrage → „✏️ Antworten
+  bearbeiten“): Was ist passiert, Feuer (was ist zu sehen / was brennt), Person im Wasser, Zustand im
+  Wasser, Psy, Geschlecht – zusätzlich zu XABCDE. Text ändern, Reihenfolge, löschen, neue Antworten
+  („zählt als“ Standardwert oder eigene Antwort). Eigene Antworten stehen sofort als AAO-Bedingung
+  zur Auswahl. Neue AAO-Bedingungen: „Person im Wasser (Abfrage)“ und „Geschlecht“.
+- Nicht dabei: „Weitere Gefahren“ (ist nur ein Häkchen im Freitext).
+
 Version 5.16:
 - Status 4 bei Ankunft für alle Fahrzeuge: Fahrzeuge, die einmal per Handy gesteuert wurden
   („phoneControlled“), blieben für immer von der Automatik ausgenommen – vermutlich der Grund, warum
