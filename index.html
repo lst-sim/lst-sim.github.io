@@ -170,7 +170,7 @@ html[data-device="handy"] #floatDock{left:8px;right:8px;width:auto;top:auto;bott
 </head>
 <body>
 <div style="padding:6px 10px;font-size:11px;color:#94a3b8;font-weight:700;display:flex;flex-wrap:wrap;align-items:center;gap:10px;position:sticky;top:0;z-index:10;background:var(--bg)">
- <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v5.17</span>
+ <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v5.18</span>
  <span id="syncState"></span> <a id="deskTag" href="#" onclick="renameDesk();return false" title="Name dieses Platzes (für „offen an …“) – antippen zum Ändern" style="color:#64748b;font-weight:700;text-decoration:none"></a>
  <span id="simCtl" style="position:absolute;left:50%;transform:translateX(-50%);display:flex;gap:6px;align-items:center"></span>
  <a id="homeLink" href="#" onclick="render('leitstelle');return false" class="hidden" style="color:#64748b;text-decoration:underline;font-weight:600">🖥️ Leitstelle</a>
@@ -8569,6 +8569,49 @@ const SIM_CASES=[
    f:{event:"Technische Hilfeleistung",count:"0",trapped:"0",danger:"ja",x:"",a:"",b:"",c:"",d:"",e:""},
    onset:"Gerade eben, bei dem Wind.",hist:"",danger:"Das ist hinter einer Kurve, da fahren die Autos voll drauf zu!",
    extra:["Ich hab jetzt mein Warndreieck aufgestellt."]}}},
+ // ── Tierrettung (v5.18): höchstens 1 pro Tag, w:0 = nicht im normalen Zufall ──
+ {id:"tier_pferd",w:0,tier:true,num:"112",loc:"road",mk:()=>{const p=simPerson("m");return {rel:"",caller:simPerson(),patient:p,age:40,animal:"Pferd",
+   an:{hurt:"Das sieht man nicht genau, es hat sich wohl am Bein was aufgeschürft.",alive:"Ja, das lebt, das schnaubt und strampelt.",owner:"Die Besitzerin ist hier, die steht neben mir.",vet:"Der Tierarzt ist angerufen, der braucht aber noch eine halbe Stunde.",size:"Ein großes Warmblut, bestimmt 600 Kilo."},
+   open:["Hallo, hier steckt ein Pferd im Graben fest und kommt nicht mehr raus!"],
+   event:"Ein Pferd ist von der Weide aus in den Graben neben der Straße gerutscht. Es steht bis zum Bauch im Wasser und Schlamm und kommt allein nicht mehr hoch.",
+   f:{event:"Tierrettung",count:"0",trapped:"0",danger:"ja",x:"",a:"",b:"",c:"",d:"",e:""},
+   onset:"Seit vielleicht einer halben Stunde, die Besitzerin ist auch schon hier.",hist:"",danger:"Das Pferd tritt um sich, da geht keiner mehr ran.",
+   extra:["Die Besitzerin weint die ganze Zeit.","Es wird langsam ganz zittrig.","Ein Tierarzt ist angerufen, der braucht aber noch."]}}},
+ {id:"tier_kuh",w:0,tier:true,num:"112",loc:"road",mk:()=>{const p=simPerson("w");return {rel:"",caller:simPerson("m"),patient:p,age:55,animal:"Kuh",
+   an:{hurt:"Verletzt glaub ich nicht, aber die ist schon ganz erschöpft.",alive:"Ja, die lebt, die muht ab und zu.",owner:"Das ist meine, ich bin der Landwirt.",vet:"Den Tierarzt hab ich auch angerufen.",size:"Eine ausgewachsene Milchkuh, so 650 Kilo."},
+   open:["Moin, bei mir ist eine Kuh in den Graben gefallen, die kriegen wir allein nicht raus."],
+   event:"Ich bin Landwirt, eine Kuh ist beim Weidewechsel in den Entwässerungsgraben gerutscht und liegt auf der Seite im Schlamm.",
+   f:{event:"Tierrettung",count:"0",trapped:"0",danger:"nein",x:"",a:"",b:"",c:"",d:"",e:""},
+   onset:"Vor einer Stunde ungefähr.",hist:"",danger:"",
+   extra:["Mit dem Trecker kommen wir da nicht ran, das ist zu weich.","Die ist tragend, die kalbt bald."]}}},
+ {id:"tier_hund_eis",w:0,tier:true,num:"112",loc:"water",mk:()=>{const p=simPerson("m");return {rel:"",caller:simPerson("w"),patient:p,age:35,animal:"Hund",panic:true,
+   an:{hurt:"Weiß ich nicht, er ist ja im Wasser!",alive:"Ja, er paddelt noch, aber immer langsamer!",owner:"Das ist mein Hund!",vet:"Nein, daran hab ich noch gar nicht gedacht.",size:"Ein Labrador, so 30 Kilo."},
+   open:["Hilfe, mein Hund ist ins Wasser gefallen und kommt nicht mehr raus!"],
+   event:"Mein Hund ist hinter einer Ente her ins Wasser gesprungen und kommt an den Steinen nicht mehr hoch. Er paddelt und wird immer schwächer.",
+   f:{event:"Tierrettung",count:"0",trapped:"0",danger:"ja",x:"",a:"",b:"",c:"",d:"",e:""},
+   onset:"Gerade eben!",hist:"",danger:"Ich will eigentlich hinterherspringen!",
+   extra:["Soll ich reinspringen?","Er geht immer wieder kurz unter!","Er heißt Balu, er ist schon zwölf."]}}},
+ {id:"tier_katze",w:0,tier:true,num:"112",loc:"home",mk:()=>{const p=simPerson("w");return {rel:"",caller:simPerson("w"),patient:p,age:70,animal:"Katze",
+   an:{hurt:"Ich glaube nicht, die sitzt da nur und miaut.",alive:"Ja, die miaut ja die ganze Zeit.",owner:"Das ist unsere Katze, die Mimi.",vet:"Nein, wieso, die ist ja nicht krank.",size:"Eine ganz normale Hauskatze."},
+   open:["Guten Tag, unsere Katze sitzt seit gestern oben im Baum und kommt nicht mehr runter."],
+   event:"Die Katze sitzt ganz oben in der Birke im Garten, bestimmt zehn Meter hoch, und miaut die ganze Zeit. Seit gestern Abend.",
+   f:{event:"Tierrettung",count:"0",trapped:"0",danger:"nein",x:"",a:"",b:"",c:"",d:"",e:""},
+   onset:"Seit gestern Abend.",hist:"",danger:"",
+   extra:["Wir haben schon Futter hingestellt, aber sie kommt nicht.","Mein Mann wollte mit der Leiter hoch, aber das lass ich nicht zu."]}}},
+ {id:"tier_reh",w:0,tier:true,num:"112",loc:"road",mk:()=>{const p=simPerson("m");return {rel:"",caller:simPerson(),patient:p,age:30,animal:"Reh",
+   an:{hurt:"Ja, am Hinterbein blutet es etwas, der Draht hat sich da reingeschnitten.",alive:"Ja, das zappelt ja noch.",owner:"Das ist doch ein wildes Reh, das gehört keinem.",vet:"Nein, ich weiß gar nicht, wer da zuständig ist.",size:"Ein normales Reh, nicht so groß."},
+   open:["Hallo, hier hat sich ein Reh im Zaun verfangen, das zappelt total."],
+   event:"Ein Reh hängt mit dem Hinterbein im Weidezaun an der Straße fest und zappelt. Es blutet ein bisschen am Bein.",
+   f:{event:"Tierrettung",count:"0",trapped:"0",danger:"nein",x:"",a:"",b:"",c:"",d:"",e:""},
+   onset:"Wir sind gerade vorbeigefahren und haben angehalten.",hist:"",danger:"",
+   extra:["Soll ich versuchen, es zu befreien?","Wer ist denn für so was zuständig, der Jäger?"]}}},
+ {id:"tier_schaf",w:0,tier:true,num:"112",loc:"water",mk:()=>{const p=simPerson("m");return {rel:"",caller:simPerson(),patient:p,age:45,animal:"Schaf",
+   an:{hurt:"Sehe ich von hier nicht.",alive:"Ja, aber es bewegt sich kaum noch.",owner:"Das gehört wohl zum Schäfer hier am Deich, der ist aber nicht da.",vet:"Nein.",size:"Ein normales Schaf, mit dickem nassem Fell."},
+   open:["Hallo, unten am Deich liegt ein Schaf im Wasser im Graben und kommt nicht raus."],
+   event:"Ein Schaf ist am Deichfuß in den Graben gerutscht, das Fell ist voll Wasser und es kann sich nicht mehr hochziehen.",
+   f:{event:"Tierrettung",count:"0",trapped:"0",danger:"nein",x:"",a:"",b:"",c:"",d:"",e:""},
+   onset:"Ich hab's gerade beim Spazierengehen gesehen.",hist:"",danger:"",
+   extra:["Der Schäfer ist nicht zu sehen.","Das bewegt sich kaum noch."]}}},
  {id:"swimmer",w:4,num:"112",loc:"water",mk:()=>{const p=simPerson(),age=rint(10,70);return {rel:"ein Schwimmer",caller:simPerson(),patient:p,age,panic:true,
    open:["Hilfe, da draußen ist ein Schwimmer in Not, der winkt und geht immer wieder unter!"],
    event:"Ein Schwimmer ist ziemlich weit draußen, der winkt mit den Armen und geht immer wieder unter. Die Strömung zieht ihn weg.",
@@ -8763,7 +8806,7 @@ function closeByPhone(id,why){
 function simMakeCall(){
  // Anrufer halten sich an die AAO: Fälle ohne passende AAO (kein Soll-Fahrzeug) werden übersprungen
  let sim=null;
- for(let i=0;i<6;i++){const x=simMakeCall0();if(!x||x.kt||x.d.phoneOnly){sim=x;break}const so=simSollAao(x);if(so&&Object.keys(so.types).length){x.soll=so;sim=x;break}}
+ for(let i=0;i<6;i++){const x=simMakeCall0();if(!x||x.kt||x.d.phoneOnly||/^tier_/.test(x.caseId)){sim=x;break}const so=simSollAao(x);if(so&&Object.keys(so.types).length){x.soll=so;sim=x;break}}
  if(!sim)sim=simMakeCall0();
  try{simQueueWitnesses(sim)}catch(e){}
  return sim;
@@ -8789,13 +8832,18 @@ function simQueueWitnesses(sim){
    simFollowQueue.push({at:Date.now()+rnd(20,110)*1000+i*rnd(15,60)*1000,sim:w});
  }
 }
+// Tierrettung: höchstens eine pro Tag (pro Gerät), sonst nach Zufall bei etwa jedem 12. Notruf
+function simTierDue(){try{const d=simDayKey(Date.now());return localStorage.getItem("lst-sim-tier-day")!==d&&Math.random()<0.085}catch(e){return false}}
+function simTierMark(){try{localStorage.setItem("lst-sim-tier-day",simDayKey(Date.now()))}catch(e){}}
 function simMakeCall0(){
  // Mit KI: bevorzugt ein von der KI frisch erfundener Fall (im Hintergrund vorbereitet)
  if(simAiReady()&&simAiCases.length&&!simMakeCall.noAi){const s=simAiCases.shift();s.created=Date.now();if(s.loc.geo)simGeocode(s);setTimeout(simAiFill,500);return s}
  // Krankentransporte (19222) rufen nicht automatisch an – nur Notrufe 112
- const pool=SIM_CASES.filter(c=>!c.kt);
+ const pool=SIM_CASES.filter(c=>!c.kt&&c.w>0);
  const tot=pool.reduce((a,c)=>a+c.w,0); let r=Math.random()*tot, cs=pool[0];
  for(const c of pool){r-=c.w;if(r<=0){cs=c;break}}
+ if(!simMakeCall0.noTier&&simTierDue()){cs=pick(SIM_CASES.filter(c=>c.tier));simTierMark()}
+ if(simMakeCall0.forceCase){cs=SIM_CASES.find(c=>c.id===simMakeCall0.forceCase)||cs;simMakeCall0.forceCase=null}
  const d=cs.mk();
  if(SIM_SELF[cs.id]&&Math.random()<(SIM_SELF_RATE[cs.id]||0.4)){
    const v=SIM_SELF[cs.id](d);
@@ -9309,6 +9357,22 @@ function simEndgame(c,text){
  const cap=x=>x.replace(/(^|[.!?]\s+)([a-zäöü])/g,(m,a,b)=>a+b.toUpperCase());
  return {text:cap(out.join(" ")),rest:rest.join(" ")};
 }
+
+// ─── Tierrettung: Antworten rund ums Tier (v5.18) ─────────────────────────────────────────────
+function simAnimalAnswer(c,part){
+ const d=c.sim.d; if(!d.animal||!d.an)return null; const A=d.an, t=String(part).toLowerCase();
+ if(/verletzt|blutet|wunde|verwund/.test(t)&&!/mensch|person|jemand|leute|sie selbst/.test(t))return A.hurt;
+ if(/lebt|am leben|atmet|bewegt (es|er|sie) sich|noch da/.test(t))return A.alive;
+ if(/besitzer|halter|wem gehört|eigentümer|gehört (das|der|die)/.test(t))return A.owner;
+ if(/tierarzt|tierärzt|jäger|förster|tierheim/.test(t))return A.vet;
+ if(/wie groß|wie schwer|welche rasse|was für ein/.test(t))return A.size;
+ if(/nicht (selbst |alleine? )?(ins wasser|rein|hinterher|springen|hoch ?klettern|auf die leiter|anfassen|befreien|ran)|bleiben sie (weg|zurück|auf abstand)|abstand|nicht selbst/.test(t))
+   return d.animal==="Hund"?"Okay … okay, ich spring nicht. Aber bitte beeilen Sie sich!":d.animal==="Katze"?"Nein, nein, mein Mann bleibt unten.":"Okay, wir bleiben weg.";
+ if(/beruhig|ruhig halten|leine|festhalten|zureden|decke/.test(t))return d.animal==="Pferd"?"Die Besitzerin redet die ganze Zeit mit ihm.":"Okay, ich versuch's.";
+ if(/wasser|graben|tief|schlamm/.test(t)&&/wie|ist|steht/.test(t))return c.sim.loc&&c.sim.loc.kind==="home"?"Nein, mit Wasser hat das nichts zu tun.":"Das ist schon tief, und unten ist alles Schlamm.";
+ if(/tier/.test(t)&&/haben sie|gibt es|sind da/.test(t))return `Nur ${d.animal==="Katze"?"die Katze":d.animal==="Kuh"?"die Kuh":"das "+d.animal}.`;
+ return null;
+}
 function simAnswerSmart(c,text){
  const s=c.sim, d=s.d; s.mem=s.mem||{said:[],calm:0};
  if(!s._eg){const eg=simEndgame(c,text);
@@ -9334,7 +9398,7 @@ function simAnswerSmart(c,text){
  for(const part of (parts.length?parts:[norm]).slice(0,3)){
    const ints=simIntents(part);
    // Von dir beigebrachte Antworten gehen vor (auch wenn der Anrufer sonst etwas Unpassendes sagen würde)
-   let ans=simLearnedAnswer(c,part,"user")||simAdviceAnswer(c,part)||simCtxAnswer(c,part)||simKBAnswer(c,part)||simEnvAnswer(c,part);
+   let ans=simLearnedAnswer(c,part,"user")||simAnimalAnswer(c,part)||simAdviceAnswer(c,part)||simCtxAnswer(c,part)||simKBAnswer(c,part)||simEnvAnswer(c,part);
    if(!ans&&ints.length){ans=simAnswerFor(c,part).replace(/^(Bitte schnell! |Oh Gott… )/,"");
      if(/^(Wie bitte\?|Das hab ich nicht verstanden\.|Äh… was meinen Sie genau\?|Das weiß ich nicht\.)$/.test(ans))ans=null}
    if(!ans)ans=simLearnedAnswer(c,part);

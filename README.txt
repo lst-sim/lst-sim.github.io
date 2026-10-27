@@ -1607,6 +1607,16 @@ Version 5.05:
   („a, b“ = a ODER b). Mit „🚑 NA-Indikation“ markierte Knöpfe ziehen weiterhin einen Notarzt.
 - Nur „Unauffällig“ (ohne weitere Befunde) zählt weiter als unauffälliges E (R0 möglich).
 
+Version 5.18:
+- Übungsnotrufe „Tierrettung“ (Ereignis wie selbst angelegt: „Tierrettung“): höchstens einer pro
+  Tag und Gerät, er kommt zufällig etwa bei jedem 12. Übungsnotruf. Fälle: Pferd im Graben,
+  Kuh im Graben, Hund im Wasser an den Steinen, Katze im Baum, Reh im Weidezaun, Schaf im Graben
+  am Deich. Keine verletzten Menschen.
+- Der Anrufer beantwortet Fragen zum Tier (verletzt? lebt es? wem gehört es? Tierarzt/Jäger?
+  wie groß?) und reagiert auf „Gehen Sie nicht selbst rein/hinterher“.
+- Tierrettungs-Anrufe werden auch ohne passende AAO angeboten (eigenes Ereignis); der AAO-Check
+  nach der Alarmierung zeigt, was laut AAO zu alarmieren war.
+
 Version 5.17:
 - Zahl-Bausteine überall, wo die Abfrage eine Zahl braucht: Betroffene, eingeklemmt/eingeschlossen,
   durch Feuer bedroht, verletzt/gefährdet (0 1 2 3 4 5 6 8 10 15 20), Alter (Säugling, Kleinkind,
