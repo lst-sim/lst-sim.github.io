@@ -1607,6 +1607,21 @@ Version 5.05:
   („a, b“ = a ODER b). Mit „🚑 NA-Indikation“ markierte Knöpfe ziehen weiterhin einen Notarzt.
 - Nur „Unauffällig“ (ohne weitere Befunde) zählt weiter als unauffälliges E (R0 möglich).
 
+Version 5.28:
+- Eigene Szenarien (beliebig viele, löschbar): Auf der Szenario-Auswahl („🔀 Szenario wechseln“)
+  „＋ Neues Szenario anlegen“, ✏️ Bearbeiten, 🗑️ Löschen (löscht auch den Spielstand).
+  • Name, Landkreis/Gebiet, Kurzzeichen (für die Funkrufgruppen, z. B. CUX).
+  • Karte: Ort suchen; „🏠 Wache setzen“ / „🏥 Klinik setzen“ und auf die Karte tippen; Marker
+    verschiebbar. Der Kartenausschnitt beim Speichern ist der Start-Ausschnitt der Leitstelle.
+  • Je Wache Organisation und beliebig viele Fahrzeuge: Typ, Anzahl, Funkrufname-Anfang
+    (z. B. „Rettung Cuxhaven 1/83-“ → …-01, -02 …).
+  • Kliniken mit Fachrichtungen (für IVENA und Transporte).
+  • Jedes Szenario hat einen eigenen, getrennten Spielstand. AAO = Standard-AAO (änderbar).
+  • Übungsnotrufe kommen aus dem Umkreis der Wachen; Straße/Ort per Rückwärtssuche (OSM).
+    Keine Wasser-Fälle (keine Gewässerdaten), keine Nachbarkreise/-anfragen.
+  • Gespeichert nur auf diesem Gerät; Monitore/Fahrzeug-Handys bekommen die Daten über die
+    Live-Verbindung.
+
 Version 5.27:
 - Nachbarkreise fahren eigene Einsätze: Ihre Rettungsmittel durchlaufen selbstständig 3 → 4 → (7 → 8)
   → 1 → 2. Gebunden ist je Kreis etwa 40 % tagsüber (8–20 Uhr), 28 % morgens/abends, 15 % nachts
