@@ -170,7 +170,7 @@ html[data-device="handy"] #floatDock{left:8px;right:8px;width:auto;top:auto;bott
 </head>
 <body>
 <div style="padding:6px 10px;font-size:11px;color:#94a3b8;font-weight:700;display:flex;flex-wrap:wrap;align-items:center;gap:10px;position:sticky;top:0;z-index:10;background:var(--bg)">
- <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v5.26</span>
+ <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v5.27</span>
  <span id="syncState"></span> <a id="deskTag" href="#" onclick="renameDesk();return false" title="Name dieses Platzes (für „offen an …“) – antippen zum Ändern" style="color:#64748b;font-weight:700;text-decoration:none"></a>
  <span id="simCtl" style="position:absolute;left:50%;transform:translateX(-50%);display:flex;gap:6px;align-items:center"></span>
  <a id="homeLink" href="#" onclick="render('leitstelle');return false" class="hidden" style="color:#64748b;text-decoration:underline;font-weight:600">🖥️ Leitstelle</a>
@@ -2247,6 +2247,83 @@ function alarmNeighborUnit(neighborUnitId,callId){
  toast(`${nu.opta} alarmiert – auf der Karte sichtbar`);
  render(currentPage==="nachbarLks"?"nachbarLks":"leitstelle");
 }
+
+// ═══ Nachbarkreise fahren eigene Einsätze; Fahrzeuge nur über deren Leitstelle (v5.27) ══════
+// Die Rettungsmittel der Nachbarkreise sind nicht immer frei: je nach Tageszeit ist ein Teil im
+// eigenen Einsatz (3 → 4 → 7 → 8 → 1 → 2). Von Hand gesetzte Status bleiben 60 min unangetastet.
+function nbBusyTarget(){const h=new Date().getHours();return h>=8&&h<20?0.40:h>=6&&h<22?0.28:0.15}
+function nbSimTick(){
+ if(isTerminalLink||IS_MONITOR||!(db.neighborUnits||[]).length)return;
+ const now=Date.now(); let changed=false;
+ const ok=u=>!(u.manualUntil&&now<u.manualUntil)&&!(u.terminalSeen&&now-Number(u.terminalSeen)<5*60000);
+ // laufende eigene Einsätze weiterschalten
+ for(const u of db.neighborUnits){
+   const J=u.ownJob; if(!J||!ok(u))continue;
+   if(now<J.next)continue;
+   const st=String(u.status);
+   if(st==="3"){u.status="4";J.next=now+rint(u.type==="NEF"?15:15,u.type==="NEF"?30:30)*60000}
+   else if(st==="4"){if(u.type==="NEF"||Math.random()<0.3){u.status="1";J.next=now+rint(5,15)*60000}else{u.status="7";J.next=now+rint(10,25)*60000}}
+   else if(st==="7"){u.status="8";J.next=now+rint(10,20)*60000}
+   else if(st==="8"){u.status="1";J.next=now+rint(5,15)*60000}
+   else if(st==="1"){u.status="2";delete u.ownJob}
+   else delete u.ownJob;
+   changed=true;
+ }
+ // neue eigene Einsätze, bis der Anteil der gebundenen Fahrzeuge zur Tageszeit passt
+ const dists=[...new Set(db.neighborUnits.map(u=>u.district))];
+ for(const d of dists){
+   const us=db.neighborUnits.filter(u=>u.district===d&&["RTW","NEF","KTW","NKTW"].includes(u.type));
+   const busy=us.filter(u=>!["1","2"].includes(String(u.status))).length;
+   if(busy/us.length>=nbBusyTarget()||Math.random()>0.25)continue;
+   const free=us.filter(u=>["1","2"].includes(String(u.status))&&ok(u)&&!u.ownJob); if(!free.length)continue;
+   const u=pick(free); u.status="3"; u.ownJob={next:now+rint(4,14)*60000,started:now}; changed=true;
+ }
+ if(changed){save();if(currentPage==="nachbarLks"&&!uiLocked)render("nachbarLks")}
+}
+setInterval(()=>{try{nbSimTick()}catch(e){}},30000); setTimeout(()=>{try{for(let i=0;i<6;i++)nbSimTick()}catch(e){}},4000);
+// Anfrage an die Nachbar-Leitstelle (Telefon) – Antwort nach 20–60 s
+function nbOutRequest(callId,kind,{unitId=null,type="RTW"}={}){
+ const call=allOpenCalls().find(c=>String(c.id)===String(callId)); if(!call){toast("Einsatz nicht gefunden");return}
+ const name=kind==="ostfriesland"?"KRLS Ostfriesland":"GOL";
+ const want=unitId!=null?(db.neighborUnits||[]).find(n=>String(n.id)===String(unitId)):null;
+ (call.history=call.history||[]).push({q:`📞 Anfrage an ${name}`,a:want?`${want.opta} (${want.district})`:`1× ${type}`});
+ call.nbPending=(call.nbPending||0)+1; save();
+ toast(`📞 ${name} wird angefragt …`);
+ if(currentPage!=="leitstelle")render("leitstelle");
+ setTimeout(()=>{try{nbOutAnswer(call.id,kind,want?want.id:null,type)}catch(e){console.warn(e)}},rnd(20,60)*1000);
+}
+function nbOutAnswer(callId,kind,unitId,type){
+ const call=allOpenCalls().find(c=>String(c.id)===String(callId)); if(!call)return;
+ call.nbPending=Math.max(0,(call.nbPending||1)-1);
+ const name=kind==="ostfriesland"?"KRLS Ostfriesland":"GOL";
+ const dists=Object.entries(NEIGHBOR_LEITSTELLE).filter(([,k])=>k===kind).map(([d])=>d);
+ const dest=callDestinationPoint(call);
+ const free=(db.neighborUnits||[]).filter(u=>dists.includes(u.district)&&u.type===type&&["1","2"].includes(String(u.status))&&Number.isFinite(u.lat));
+ let nu=unitId!=null?free.find(u=>String(u.id)===String(unitId)):null;
+ const freeInDist=d=>free.filter(u=>u.district===d).length;
+ let txt;
+ if(unitId!=null&&!nu){
+   // gewünschtes Fahrzeug inzwischen gebunden – anderes anbieten?
+   const alt=dest?free.map(u=>({u,eta:neighborEtaFor(u,dest).eta})).sort((a,b)=>a.eta-b.eta)[0]:null;
+   if(alt&&freeInDist(alt.u.district)>1){nu=alt.u;txt=`Das angefragte Fahrzeug ist inzwischen im Einsatz – wir schicken euch stattdessen ${nu.opta}.`}
+   else txt="Das angefragte Fahrzeug ist inzwischen selbst im Einsatz, und mehr können wir gerade nicht abgeben.";
+ }else if(!nu){
+   const best=dest?free.map(u=>({u,eta:neighborEtaFor(u,dest).eta})).sort((a,b)=>a.eta-b.eta)[0]:null;
+   if(best&&freeInDist(best.u.district)>1)nu=best.u; else txt=best?`Wir haben im LK ${best.u.district} nur noch einen freien ${type}, den müssen wir behalten.`:`Wir haben gerade selbst keinen ${type} frei.`;
+ }else if(freeInDist(nu.district)<=1&&Math.random()<0.6){txt=`Das ist unser letzter freier ${type} im LK ${nu.district} – den können wir leider nicht abgeben.`;nu=null}
+ if(nu){
+   const loaned=loanNeighborUnit(nu); setUnitStatus(loaned,"3");
+   appendUnitToCall(call,loaned,`Nachbar-LK ${nu.district}`);
+   call.alarmedUnits=call.alarmedUnits||[]; if(!call.alarmedUnits.some(id=>String(id)===String(loaned.id)))call.alarmedUnits.push(loaned.id);
+   if(!call.neighborUnitId)call.neighborUnitId=loaned.id;
+   const eta=dest?Math.round(neighborEtaFor(nu,dest).eta):null;
+   txt=(txt?txt+" ":"")+`${nu.opta} ist alarmiert${eta?`, ca. ${eta} min`:""}.`;
+   call.history.push({q:`🤝 ${name}: Zusage`,a:txt});
+ }else call.history.push({q:`❌ ${name}: Absage`,a:txt});
+ sdsLog({dir:"in",opta:name,callId:String(call.id),text:`📞 ${txt}`,read:false});
+ toast(`📞 ${name}: ${txt}`); save();
+ if(["leitstelle","nachbarLks","karte"].includes(currentPage)&&!uiLocked)render(currentPage);
+}
 function openNeighborUnitPickerForCall(kind,callId){
  const call=allOpenCalls().find(c=>String(c.id)===String(callId));
  if(!call){toast("Einsatz nicht gefunden");return}
@@ -2256,11 +2333,12 @@ function openNeighborUnitPickerForCall(kind,callId){
    .map(u=>({u,eta:dest&&Number.isFinite(u.lat)&&Number.isFinite(u.lng)?Math.round(neighborEtaFor(u,dest).eta):null}))
    .sort((a,b)=>(a.eta??999)-(b.eta??999)).map(x=>({...x.u,_eta:x.eta}));
  document.getElementById("app").innerHTML=`<div class="card">
-  <div class="row between"><h2>🚨 Fahrzeug für Einsatz #${esc(call.id)} alarmieren</h2><button onclick="render('leitstelle')">Zurück</button></div>
-  <p class="muted">Alarmiertes Fahrzeug erscheint danach auf unserer Karte wie ein eigenes Fahrzeug (Status 3, Standort sichtbar). Sortiert nach Ankunftszeit.</p>
+  <div class="row between"><h2>📞 Rettungsmittel bei ${kind==="ostfriesland"?"der KRLS Ostfriesland":"der GOL"} anfragen – Einsatz #${esc(call.id)}</h2><button onclick="render('leitstelle')">Zurück</button></div>
+  <p class="muted">Die Nachbar-Leitstelle entscheidet selbst und alarmiert ihr Fahrzeug – oder sagt ab, wenn sie es selbst braucht. Sagt sie zu, erscheint das Fahrzeug bei uns wie ein eigenes (Status 3, auf der Karte). Angezeigt sind nur freie Fahrzeuge, sortiert nach Ankunftszeit.</p>
+  <div class="row" style="gap:6px;flex-wrap:wrap;margin-bottom:8px"><button onclick="nbOutRequest('${esc(String(call.id))}','${kind}',{type:'RTW'})">📞 Irgendeinen RTW anfragen</button><button onclick="nbOutRequest('${esc(String(call.id))}','${kind}',{type:'NEF'})">📞 Irgendein NEF anfragen</button></div>
   ${candidates.length?candidates.map(u=>`<div class="row between" style="padding:8px 0;border-bottom:1px solid var(--line)">
      <div><b>${esc(u.opta)}</b><div class="muted">${esc(u.district)} · ${esc(u.type)} · ${esc(u.address||"")}</div>${u._eta!=null?`<div style="font-weight:800;${own==null||u._eta<own?"color:#15803d":"color:#b45309"}">⏱️ ~${u._eta} min bis zum Einsatzort${own!=null?(u._eta<own?` – ${own-u._eta} min schneller als eigenes RTW/NEF (~${own} min)`:` – eigenes RTW/NEF ist schneller (~${own} min)`):" – kein eigenes RTW/NEF frei"}</div>`:""}</div>
-     <button class="primary" onclick="alarmNeighborUnit(${u.id},'${esc(String(call.id))}')">🚨 Alarmieren</button>
+     <button class="primary" onclick="nbOutRequest('${esc(String(call.id))}','${kind}',{unitId:${u.id},type:'${esc(u.type)}'})">📞 Anfragen</button>
     </div>`).join(""):`<p class="muted">Kein freies Fahrzeug in den zuständigen Nachbarlandkreisen.</p>`}
  </div>`;
 }
@@ -2849,7 +2927,7 @@ function openExternalRequest(kind,presetCallId){
  }[kind];
  document.getElementById("app").innerHTML=`<div class="card">
   <div class="row between"><h2>${meta.title}</h2><button onclick="render('leitstelle')">Abbrechen</button></div>
-  <p class="muted">Fiktive externe Schnittstelle – rein zu Übungszwecken, keine echte Alarmierung, keine Simulation der angeforderten Fahrzeuge in dieser App.</p>
+  <p class="muted">${kind==="polizei"?"Fiktive externe Schnittstelle – rein zu Übungszwecken.":"Übung: Die Nachbar-Leitstelle prüft ihre freien Fahrzeuge und sagt zu oder ab (Antwort nach ca. 20–60 s)."}</p>
   <label>Einsatz auswählen</label>
   <select id="extCallId">${calls.map(c=>`<option value="${esc(String(c.id))}" ${presetCallId&&String(presetCallId)===String(c.id)?"selected":""}>#${esc(c.id)} – ${esc(c.keyword||"Einsatz")} (${esc(c.location||"Ort unbekannt")})</option>`).join("")}</select>
   <label style="margin-top:10px">Anzahl ${meta.unit}</label>
@@ -4618,17 +4696,11 @@ function alarmProposal(){
  }
  const now=new Date();
  c.alarmedUnits=c.alarmedUnits||[];
- // Vorgeschlagene Nachbar-LK-Fahrzeuge mit alarmieren
- for(const nid of (c.neighborProposal||[])){
-   const nu=(db.neighborUnits||[]).find(n=>String(n.id)===String(nid));
-   if(!nu||!["1","2"].includes(String(nu.status)))continue;
-   const loaned=loanNeighborUnit(nu);
-   c.proposedUnitIds.push(loaned.id);
-   if(!c.neighborUnitId)c.neighborUnitId=loaned.id;
-   c.history=c.history||[];
-   c.history.push({q:`🤝 Nachbar-Fahrzeug alarmiert (${nu.district})`,a:`${nu.opta}`});
- }
+ // v5.27: Nachbar-LK-Fahrzeuge werden NICHT direkt alarmiert – die zuständige Leitstelle muss
+ // angefragt werden (sie entscheidet und alarmiert selbst). Vorschläge werden automatisch angefragt.
+ const nbAsk=(c.neighborProposal||[]).map(nid=>(db.neighborUnits||[]).find(n=>String(n.id)===String(nid))).filter(Boolean);
  c.neighborProposal=[];
+ setTimeout(()=>nbAsk.forEach(nu=>nbOutRequest(c.id,NEIGHBOR_LEITSTELLE[nu.district],{unitId:nu.id,type:nu.type})),300);
  for(const id of c.proposedUnitIds){
    const u=db.units.find(x=>x.id===id);
    if(!u)continue;
@@ -5852,7 +5924,10 @@ function nbReqTick(){
  db.nbRequests=(db.nbRequests||[]).filter(r=>{if(r.state==="ringing"&&now-r.ringAt>90000){toast(`📵 Anfrage der ${r.lstName} nicht angenommen – sie fragen woanders`);(db.nbReqLog=db.nbReqLog||[]).unshift({...r,state:"verpasst",at:now});return false}return true});
  if(now<nbReqNextAt)return;
  nbReqNextAt=now+rnd(30,60)*60000;
- const [district,place,lat,lng]=pick(NB_REQ_PLACES), [need,kw]=pick(NB_REQ_KW), lst=NEIGHBOR_LEITSTELLE[district]||"gol";
+ // bevorzugt der Kreis, in dem gerade die meisten Rettungsmittel gebunden sind
+ const busyShare=d=>{const us=(db.neighborUnits||[]).filter(u=>u.district===d&&["RTW","NEF"].includes(u.type));return us.length?us.filter(u=>!["1","2"].includes(String(u.status))).length/us.length:0};
+ const cand=NB_REQ_PLACES.map(p=>({p,w:0.2+busyShare(p[0])})); let rr=Math.random()*cand.reduce((a,x)=>a+x.w,0), chosen=cand[0].p; for(const x of cand){rr-=x.w;if(rr<=0){chosen=x.p;break}}
+ const [district,place,lat,lng]=chosen, [need,kw]=pick(NB_REQ_KW), lst=NEIGHBOR_LEITSTELLE[district]||"gol";
  const r={id:"nb"+now.toString(36),district,place,lat:lat+rnd(-0.004,0.004),lng:lng+rnd(-0.004,0.004),need,kw,reason:pick(NB_REQ_REASONS),lst,lstName:lst==="ostfriesland"?"KRLS Ostfriesland":"Großleitstelle Oldenburger Land",state:"ringing",ringAt:now};
  db.nbRequests=[...(db.nbRequests||[]),r]; save(); renderCallerBanner();
  toast(`📞 ${r.lstName} ruft an`); if(typeof simVoice!=="undefined"&&simVoice&&typeof simRingTone==="function")simRingTone();
@@ -8558,7 +8633,7 @@ function ivena(){
 function setNeighborUnitStatus(id,status){
  const u=db.neighborUnits.find(x=>String(x.id)===String(id));
  if(!u)return;
- u.status=String(status);
+ u.status=String(status); u.manualUntil=Date.now()+60*60000; delete u.ownJob;
  save();
  render("nachbarLks");
 }
@@ -8693,7 +8768,7 @@ function nachbarLks(){
         </select>
        </td>
        <td>
-        ${["1","2"].includes(String(u.status))&&openCalls.length?`<button onclick="openNeighborUnitPickerForCall('${kind}','${esc(String(openCalls[0].id))}')">🚨 Alarmieren</button>`:""}
+        ${["1","2"].includes(String(u.status))&&openCalls.length?`<button onclick="openNeighborUnitPickerForCall('${kind}','${esc(String(openCalls[0].id))}')">📞 Anfragen</button>`:""}
         <button onclick="showNeighborQR('${esc(String(u.id))}')">📱 Link / QR</button>
        </td>
       </tr>`).join("")}

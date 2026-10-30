@@ -1607,6 +1607,19 @@ Version 5.05:
   („a, b“ = a ODER b). Mit „🚑 NA-Indikation“ markierte Knöpfe ziehen weiterhin einen Notarzt.
 - Nur „Unauffällig“ (ohne weitere Befunde) zählt weiter als unauffälliges E (R0 möglich).
 
+Version 5.27:
+- Nachbarkreise fahren eigene Einsätze: Ihre Rettungsmittel durchlaufen selbstständig 3 → 4 → (7 → 8)
+  → 1 → 2. Gebunden ist je Kreis etwa 40 % tagsüber (8–20 Uhr), 28 % morgens/abends, 15 % nachts
+  (eigene Annahme). Auf der Nachbar-LK-Seite sieht man den Status; von Hand gesetzte Status bleiben
+  60 min unangetastet.
+- Nachbar-Fahrzeuge gibt es nur noch über die zuständige Leitstelle (KRLS Ostfriesland / GOL):
+  „📞 Anfragen“ (bestimmtes Fahrzeug oder „irgendeinen RTW/NEF“). Nach 20–60 s kommt die Antwort:
+  Zusage (sie alarmieren, das Fahrzeug erscheint bei uns in Status 3) oder Absage (z. B. letzter
+  freier RTW im Kreis, angefragtes Fahrzeug inzwischen selbst im Einsatz – dann ggf. Ersatz).
+  Antwort im Einsatzverlauf, im SDS-Eingang und als Hinweis. Schlägt die AAO ein Nachbar-Fahrzeug
+  vor, wird es beim Alarmieren automatisch angefragt statt direkt alarmiert.
+- Anfragen der Nachbarn an uns kommen bevorzugt aus dem Kreis, der gerade am stärksten gebunden ist.
+
 Version 5.26:
 - Rettungsmittel der Nachbarkreise eingepflegt (alle Kreise mit sichtbaren Rufgruppen außer FRI):
   Ammerland 14, Wesermarsch 10, Wittmund 10, Leer 17, Aurich 20, Oldenburg Stadt 16, Oldenburg Land 7
