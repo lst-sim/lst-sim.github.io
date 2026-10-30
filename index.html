@@ -170,7 +170,7 @@ html[data-device="handy"] #floatDock{left:8px;right:8px;width:auto;top:auto;bott
 </head>
 <body>
 <div style="padding:6px 10px;font-size:11px;color:#94a3b8;font-weight:700;display:flex;flex-wrap:wrap;align-items:center;gap:10px;position:sticky;top:0;z-index:10;background:var(--bg)">
- <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v5.28</span>
+ <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v5.29</span>
  <span id="syncState"></span> <a id="deskTag" href="#" onclick="renameDesk();return false" title="Name dieses Platzes (für „offen an …“) – antippen zum Ändern" style="color:#64748b;font-weight:700;text-decoration:none"></a>
  <span id="simCtl" style="position:absolute;left:50%;transform:translateX(-50%);display:flex;gap:6px;align-items:center"></span>
  <a id="homeLink" href="#" onclick="render('leitstelle');return false" class="hidden" style="color:#64748b;text-decoration:underline;font-weight:600">🖥️ Leitstelle</a>
@@ -701,7 +701,22 @@ const SCENARIOS={
 // diesem Gerät (localStorage). Jedes Szenario hat seinen eigenen, getrennten Spielstand.
 const CS_KEY="lst-custom-scenarios";
 function csLoad(){try{return JSON.parse(localStorage.getItem(CS_KEY)||"[]")}catch(e){return []}}
-function csSave(list){try{localStorage.setItem(CS_KEY,JSON.stringify(list))}catch(e){alert("Speichern nicht möglich (Speicher voll?)")}}
+function csSave(list){try{localStorage.setItem(CS_KEY,JSON.stringify(list));localStorage.setItem(CS_KEY+"-stamp",new Date().toISOString())}catch(e){alert("Speichern nicht möglich (Speicher voll?)")}}
+// v5.29: eigene Szenarien zusätzlich in der Datenbank – auf allen Geräten verfügbar (neuester Stand gewinnt)
+function csCloudURL(){let u="https://dlrg-lst-default-rtdb.europe-west1.firebasedatabase.app";try{const c=JSON.parse(localStorage.getItem("dlrg-jet-cloud-shared")||"null");if(c&&c.databaseURL)u=String(c.databaseURL)}catch(e){}u=u.trim().replace(/\/+$/,"").replace(/\.json$/,"");return /^https:\/\//.test(u)?`${u}/sessions/LST-SIM-STANDARD/customScenarios.json`:null}
+async function csPush(){
+ const u=csCloudURL(); if(!u)return false;
+ try{const r=await fetch(u,{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify({stamp:localStorage.getItem(CS_KEY+"-stamp")||new Date().toISOString(),json:JSON.stringify(csLoad())})});return r.ok}catch(e){return false}
+}
+async function csPull(){
+ const u=csCloudURL(); if(!u)return false;
+ try{const r=await fetch(u,{cache:"no-store"});if(!r.ok)return false;const v=await r.json();if(!v||!v.stamp||!v.json)return false;
+   const local=localStorage.getItem(CS_KEY+"-stamp")||"";
+   if(v.stamp>local){localStorage.setItem(CS_KEY,v.json);localStorage.setItem(CS_KEY+"-stamp",v.stamp);return true}
+   if(local>v.stamp)csPush();
+ }catch(e){}
+ return false;
+}
 const CS_ORGS=["Rettungsdienst","Feuerwehr","DLRG","DRK","THW","Luftrettung","DGzRS"];
 const CS_TYPES={Rettungsdienst:["RTW","NEF","KTW","NKTW","ITW","OrgL/LNA"],Feuerwehr:["HLF","LF","TLF","DLK","RW","ELW","ELW1","MTW","GW-L1","WLF","TSF"],DLRG:["RTB","MZB","GW Wasserrettung","GW Taucher","MTW","ELW1"],DRK:["RTW","KTW","MTW","GW-San","ELW1","RTB"],THW:["MTW","GKW","MzKW","ELW"],Luftrettung:["RTH","ITH"],DGzRS:["SRK","SRB"]};
 const CS_SKILLS={RTW:"Notfallrettung",NEF:"Notarzt",KTW:"Krankentransport",NKTW:"Notfall-Krankentransport",ITW:"Intensivtransport",RTH:"Notarzt, Luftrettung",ITH:"Intensivtransport, Luftrettung",RTB:"Wasserrettung",MZB:"Wasserrettung",SRK:"Seenotrettung",SRB:"Seenotrettung",HLF:"Brandbekämpfung, Technische Hilfeleistung",LF:"Brandbekämpfung",TLF:"Brandbekämpfung",DLK:"Hubrettung",RW:"Technische Hilfeleistung"};
@@ -715,6 +730,7 @@ function csBuildDefaults(cs){
  const ivena=(cs.hospitals||[]).map((h,i)=>({id:i+1,name:h.name,place:cs.district||cs.label,area:cs.label,status:"grün",note:"",closures:[],fachrichtungen:(h.fach&&h.fach.length?h.fach:["Innere Medizin","Chirurgie"]),lat:h.lat,lng:h.lng}));
  return {units,aao:DEFAULTS_FRI_WHV.aao,ivena,neighborUnits:[]};
 }
+setTimeout(()=>{try{csPull()}catch(e){}},3000); // neuere Szenarien aus der Datenbank holen (gelten ab dem nächsten Öffnen)
 csLoad().forEach(cs=>{SCENARIOS["custom-"+cs.id]={label:"⭐ "+cs.label,storageKey:"dlrg-jet-custom-"+cs.id,defaults:csBuildDefaults(cs),custom:cs,center:cs.center}});
 // Monitore/Terminals auf anderen Geräten kennen das Szenario nicht – Platzhalter, Daten kommen per Sync
 (()=>{const sc=new URLSearchParams(location.search).get("scenario");if(sc&&/^custom-/.test(sc)&&!SCENARIOS[sc])SCENARIOS[sc]={label:"Eigenes Szenario",storageKey:"dlrg-jet-"+sc,defaults:{units:[],aao:DEFAULTS_FRI_WHV.aao,ivena:[],neighborUnits:[]}}})();
@@ -722,17 +738,18 @@ const csEsc=s=>String(s??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":
 let csDraft=null, csMap=null, csMode="", csMarkers=[];
 function csNew(){csDraft={id:Date.now().toString(36),label:"Neues Szenario",district:"",code:"",center:[53.3965,8.1364],zoom:11,wachen:[],hospitals:[]};csEditor()}
 function csEdit(id){const c=csLoad().find(x=>x.id===id);if(!c)return;csDraft=JSON.parse(JSON.stringify(c));csEditor()}
-function csDelete(id){
+async function csDelete(id){
  const c=csLoad().find(x=>x.id===id); if(!c||!confirm(`Szenario „${c.label}“ mit allen Daten löschen?`))return;
- csSave(csLoad().filter(x=>x.id!==id)); try{localStorage.removeItem("dlrg-jet-custom-"+id);if(localStorage.getItem("dlrg-jet-scenario")==="custom-"+id)localStorage.removeItem("dlrg-jet-scenario")}catch(e){}
+ csSave(csLoad().filter(x=>x.id!==id)); await csPush(); try{localStorage.removeItem("dlrg-jet-custom-"+id);if(localStorage.getItem("dlrg-jet-scenario")==="custom-"+id)localStorage.removeItem("dlrg-jet-scenario")}catch(e){}
  location.reload();
 }
-function csStore(start){
+async function csStore(start){
  const d=csDraft; if(!d)return;
  d.label=String(d.label||"").trim()||"Eigenes Szenario";
  if(!d.wachen.length&&!confirm("Noch keine Wache angelegt – trotzdem speichern?"))return;
  if(csMap){const c=csMap.getCenter();d.center=[c.lat,c.lng];d.zoom=csMap.getZoom()}
  const list=csLoad().filter(x=>x.id!==d.id); list.push(d); csSave(list);
+ const ok=await csPush(); if(!ok)alert("Lokal gespeichert – in der Datenbank konnte nicht gespeichert werden (keine Internetverbindung?). Wird beim nächsten Öffnen nachgeholt.");
  if(start){try{localStorage.removeItem("dlrg-jet-custom-"+d.id)}catch(e){};localStorage.setItem("dlrg-jet-scenario","custom-"+d.id)}
  location.reload();
 }
@@ -834,7 +851,9 @@ if(!isTerminalLink && !IS_MONITOR && (!currentScenarioId||!SCENARIOS[currentScen
   <h3 style="margin:18px 0 6px">⭐ Eigene Szenarien</h3>
   ${csLoad().map(cs=>`<div class="row" style="gap:6px;margin-top:8px;flex-wrap:nowrap"><button class="primary" style="flex:1;text-align:left;padding:12px" onclick="chooseScenario('custom-${cs.id}')">${csEsc(cs.label)}<small style="display:block;font-weight:500;opacity:.85">${csEsc(cs.district||"")} · ${csCount(cs)} Fahrzeuge · ${(cs.wachen||[]).length} Wachen · ${(cs.hospitals||[]).length} Kliniken</small></button><button title="Bearbeiten" onclick="csEdit('${cs.id}')">✏️</button><button title="Löschen" onclick="csDelete('${cs.id}')">🗑️</button></div>`).join("")||`<p class="muted" style="font-size:13px">Noch keine.</p>`}
   <button style="width:100%;margin-top:10px;padding:12px" onclick="csNew()">＋ Neues Szenario anlegen</button>
+  <p class="muted" style="font-size:12px;margin-top:8px">☁️ Eigene Szenarien werden in der Datenbank gespeichert und stehen auf allen Geräten zur Verfügung.</p>
  </div>`;
+ csPull().then(ch=>{if(ch&&!csDraft)location.reload()});
  throw new Error("Warte auf Szenario-Auswahl");
 }
 if(!currentScenarioId||!SCENARIOS[currentScenarioId])currentScenarioId="fri-whv";

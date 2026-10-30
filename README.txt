@@ -1607,6 +1607,12 @@ Version 5.05:
   („a, b“ = a ODER b). Mit „🚑 NA-Indikation“ markierte Knöpfe ziehen weiterhin einen Notarzt.
 - Nur „Unauffällig“ (ohne weitere Befunde) zählt weiter als unauffälliges E (R0 möglich).
 
+Version 5.29:
+- Eigene Szenarien werden zusätzlich in der Datenbank gespeichert und stehen auf allen Geräten zur
+  Verfügung (Szenario-Auswahl lädt den neuesten Stand; neuester Stand gewinnt). Anlegen, Ändern und
+  Löschen gelten überall. Ohne Internet wird lokal gespeichert und beim nächsten Öffnen nachgeholt.
+  Der Spielstand eines Szenarios läuft wie bisher über die Live-Verbindung der Sitzung.
+
 Version 5.28:
 - Eigene Szenarien (beliebig viele, löschbar): Auf der Szenario-Auswahl („🔀 Szenario wechseln“)
   „＋ Neues Szenario anlegen“, ✏️ Bearbeiten, 🗑️ Löschen (löscht auch den Spielstand).
