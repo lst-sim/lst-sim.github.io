@@ -1607,6 +1607,21 @@ Version 5.05:
   („a, b“ = a ODER b). Mit „🚑 NA-Indikation“ markierte Knöpfe ziehen weiterhin einen Notarzt.
 - Nur „Unauffällig“ (ohne weitere Befunde) zählt weiter als unauffälliges E (R0 möglich).
 
+Version 5.31:
+- Anrufer verstehen deutlich mehr: Umgangssprache („Isser noch bei sich?“, „Kriegt er Luft?“,
+  „Medis?“, „Jahrgang?“, „Wo seid ihr?“), viele Synonyme und Umschreibungen, Rechtschreib- und
+  Tippfehler, getrennt erkannte Wörter („an sprechbar“, „Rück ruf nummer“) und Wörter, die nur
+  ähnlich klingen.
+- Unbekannte Wörter: Der Satz wird zuerst so genommen, wie er gesagt wurde; erst wenn nichts passt,
+  wird korrigiert. Passt dann immer noch nichts, errät der Anrufer das Thema aus den erkennbaren
+  Wörtern und antwortet darauf (manchmal mit Rückfrage „Ob er atmet? …“).
+- Neue Antworten: Sprachstörung, hängender Mundwinkel, Lähmung/Kribbeln, liegt noch am Boden,
+  Krampfanfall, Trinken, Hautausschlag/Glastest, Impfungen, Defi in der Nähe.
+- Fehler behoben: „weiter“ wurde zu „Wetter“, „Kleine“ zu „kühlen“, „gestoßen“ zu „gestochen“
+  korrigiert; „wegdrückbar“ löste Herzdruckmassage aus; „Was war los, bevor er umgefallen ist?“
+  wurde als Sturzfrage beantwortet; „Seit wann?“ wurde doppelt beantwortet; Nachfragen zum
+  letzten Thema überdeckten einen Themenwechsel (z. B. „Wo ist die Unfallstelle?“ → „Am Kopf.“).
+
 Version 5.30:
 - Anrufer klingen menschlicher: jede Person bekommt eine eigene Stimme (die natürlichsten deutschen
   Stimmen des Geräts zuerst, passend zu Geschlecht und Alter), eigene Tonhöhe und eigenes Tempo.

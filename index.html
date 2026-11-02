@@ -170,7 +170,7 @@ html[data-device="handy"] #floatDock{left:8px;right:8px;width:auto;top:auto;bott
 </head>
 <body>
 <div style="padding:6px 10px;font-size:11px;color:#94a3b8;font-weight:700;display:flex;flex-wrap:wrap;align-items:center;gap:10px;position:sticky;top:0;z-index:10;background:var(--bg)">
- <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v5.30</span>
+ <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v5.31</span>
  <span id="syncState"></span> <a id="deskTag" href="#" onclick="renameDesk();return false" title="Name dieses Platzes (für „offen an …“) – antippen zum Ändern" style="color:#64748b;font-weight:700;text-decoration:none"></a>
  <span id="simCtl" style="position:absolute;left:50%;transform:translateX(-50%);display:flex;gap:6px;align-items:center"></span>
  <a id="homeLink" href="#" onclick="render('leitstelle');return false" class="hidden" style="color:#64748b;text-decoration:underline;font-weight:600">🖥️ Leitstelle</a>
@@ -9500,7 +9500,7 @@ const SIM_INTENTS=[
  ["chest",/oberk(ö|oe)rper frei|frei machen|ausziehen|kleidung/],
  ["hands",/handballen|h(ä|ae)nde (auf|in)/],
  ["keep",/nicht aufh(ö|oe)ren|weiter ?machen|machen sie weiter/],
- ["cpr",/dr(ü|ue)ck|herzdruck|reanim|brustkorb|mitte der brust|hundert|zählen/],
+ ["cpr",/(?<![a-zäöüß])dr(ü|ue)ck|herzdruck|reanim|brustkorb|mitte der brust|hundert|zählen/],
  ["side",/seitenlage|auf die seite/],
  ["calm",/ruhig|beruhig|keine sorge/],
  ["help",/hilfe (ist|kommt)|unterwegs|schicke|kommen gleich|ist alarmiert|rettungsdienst kommt|rettungswagen kommt|feuerwehr kommt/],
@@ -9550,20 +9550,161 @@ function simFix(s,t){const [He,he]=simHe(s);if(he==="er")return String(t);return
 // Versteht Tippfehler und Umschreibungen, mehrere Fragen in einem Satz, Rückfragen („wie bitte?“),
 // Bestätigungen, Ja/Nein-Fragen zu Details des Falls und Anweisungen. Merkt sich, was schon gesagt
 // wurde, wiederholt sich nicht wörtlich und wird ruhiger, wenn man ihn beruhigt.
-const SIM_VOCAB=["polizei","hausarzt","wetter","parkplatz","zufahrt","kennzeichen","strömung","rettungsschwimmer","nachbarn","fahrzeuge","richtung","verkehr","kleidung","badekappe","entfernung","erbrochen","übergeben","fieber","temperatur","lächeln","bewegen","aufstehen","schlüssel","blutverdünner","allergien","diabetiker","schwanger","gewicht","gestürzt","hingefallen","umgefallen","buchstabieren","bläulich","haustür","ansprechbar","bewusstlos","bewusstsein","reagiert","atmet","atmung","atmen","luft","blutet","blutung","schmerzen","vorerkrankungen","medikamente","tabletten","adresse","hausnummer","stockwerk","etage","eingeklemmt","eingeschlossen","verletzt","verletzte","brennt","rauch","feuer","flammen","passiert","notfallort","strasse","straße","telefonnummer","rückrufnummer","geschlecht","schwindelig","kaltschweißig","blass","herzdruckmassage","seitenlage","lautsprecher","defibrillator","krankenhaus","personen","betroffen","gefahren","gefährlich","benzin","wasser","schwimmer","allergie","diabetes","zucker","schlaganfall","krampfanfall","bewegen","sprechen","antwortet"];
+const SIM_VOCAB=["gestoßen","angeschlagen","aufgeschlagen","gestochen","familienname","gesichtsfarbe","sprachstörung","mundwinkel","bewusstseinslage","rückrufnummer","blutverdünner","verletzung","verletzungen","ohnmächtig","atemnot","luftnot","röchelt","schnappt","krampft","zittert","unterzucker","blutzucker","insulin","herzinfarkt","brustschmerzen","bauchschmerzen","kopfschmerzen","rückenschmerzen","übelkeit","erbrechen","durchfall","schwindel","verwirrt","orientiert","gelähmt","lähmung","kribbeln","sprachstörung","verwaschen","mundwinkel","gesicht","lippen","schwitzt","schüttelfrost","fruchtblase","geburt","wehen","platzwunde","gebrochen","knochenbruch","ausgerenkt","umgekippt","zusammengebrochen","verkehrsunfall","unfall","motorrad","fahrrad","fußgänger","lastwagen","traktor","explosion","gasgeruch","stromschlag","ertrunken","ertrinkt","untergegangen","rettungsring","strand","hafen","marcumar","allergisch","herzschrittmacher","operation","pflegedienst","pflegeheim","anschrift","postleitzahl","ortsteil","erdgeschoss","obergeschoss","dachgeschoss","keller","hinterhaus","klingel","eingang","treppenhaus","aufzug","fahrstuhl","kreuzung","autobahn","kilometer","ausfahrt","handynummer","nachname","vorname","geburtsjahr","jahrgang","männlich","weiblich","betroffene","patienten","patientin","patient","angehörige","passanten","ersthelfer","feuerwehr","rettungswagen","rettungsdienst","notarzt","hubschrauber","beatmen","beatmung","hinlegen","aufsetzen","hochlegen","zudecken","kühlen","druckverband","unterwegs","alarmiert","wiederholen","verstanden","schmerz","medikament","vorerkrankung","bewusstlosigkeit","krampfanfall","zuckerkrank","verbrennung","verbrüht","vergiftung","geschluckt","gestochen","gebissen","schwanger","erstickt","verschluckt","pulsschlag","herzschlag","blutdruck","schlaganfall","hustet","husten","ansprechen","angesprochen","geschüttelt","schläfrig","benommen","eingeschlafen","aufwachen","geschehen","vorgefallen","geschwollen","schwellung","ausschlag","juckreiz","quaddeln","wespe","biene","zecke","hundebiss","polizei","hausarzt","wetter","parkplatz","zufahrt","kennzeichen","strömung","rettungsschwimmer","nachbarn","fahrzeuge","richtung","verkehr","kleidung","badekappe","entfernung","erbrochen","übergeben","fieber","temperatur","lächeln","bewegen","aufstehen","schlüssel","blutverdünner","allergien","diabetiker","schwanger","gewicht","gestürzt","hingefallen","umgefallen","buchstabieren","bläulich","haustür","ansprechbar","bewusstlos","bewusstsein","reagiert","atmet","atmung","atmen","luft","blutet","blutung","schmerzen","vorerkrankungen","medikamente","tabletten","adresse","hausnummer","stockwerk","etage","eingeklemmt","eingeschlossen","verletzt","verletzte","brennt","rauch","feuer","flammen","passiert","notfallort","strasse","straße","telefonnummer","rückrufnummer","geschlecht","schwindelig","kaltschweißig","blass","herzdruckmassage","seitenlage","lautsprecher","defibrillator","krankenhaus","personen","betroffen","gefahren","gefährlich","benzin","wasser","schwimmer","allergie","diabetes","zucker","schlaganfall","krampfanfall","bewegen","sprechen","antwortet"];
 function simLev(a,b){if(Math.abs(a.length-b.length)>2)return 9;const m=a.length,n=b.length;let prev=Array.from({length:n+1},(_,j)=>j);for(let i=1;i<=m;i++){const cur=[i];for(let j=1;j<=n;j++)cur[j]=Math.min(prev[j]+1,cur[j-1]+1,prev[j-1]+(a[i-1]===b[j-1]?0:1));prev=cur}return prev[n]}
-function simNormText(t){
+function simNormText(t,fuzzy){
+ if(fuzzy===undefined)fuzzy=true;
  const x=String(t||"").toLowerCase().replace(/[^\wäöüß\s?]/g," ").replace(/\?/g," ? ");
  const key=w=>w.replace(/ß/g,"ss");
  const vocab=SIM_VOCAB.map(v=>[v,key(v)]);
- return x.split(/\s+/).map(w=>{
+ return simJoinSplit(x.split(/\s+/).map(w=>SIM_SHORT_FIX[w]||w).join(" ")).split(/\s+/).map(w=>{
    if(w.length<5)return w;
    const cands=[w,w.replace(/ae/g,"ä").replace(/oe/g,"ö").replace(/ue/g,"ü")];
    let best=null,bd=9;
    for(const cw of cands){const k=key(cw);for(const [v,vk] of vocab){if(k===vk)return v;const dd=simLev(k,vk);if(dd<bd){bd=dd;best=v}}}
-   return bd<=(w.length>=9?2:1)?best:w;
+   if(!fuzzy||SIM_KEEP.has(w))return w;
+   if(bd<=(w.length>=9?2:1))return best;
+   // Klingt wie ein bekanntes Wort (z. B. „Adresse“ ↔ „Addrese“, „bewustlos“) – gleicher Anfang nötig
+   if(w.length>=6&&!SIM_STOP.has(w)){const kw=simKoeln(w);if(kw.length>=3){const hit=SIM_VOCAB.find(v=>v[0]===w[0]&&Math.abs(v.length-w.length)<=3&&simKoeln(v)===kw);if(hit)return hit}}
+   return w;
  }).join(" ").replace(/\s+\?/g,"?").trim();
 }
+// ─── v5.31: Verständnis – Umgangssprache, Synonyme, Tippfehler, Laut-Ähnlichkeit, Themen-Raten ───
+// 1) simCanon: viele Formulierungen → eine Form, die die Antwortregeln kennen
+// 2) Wortkorrektur: großer Wortschatz, Tippfehler (Levenshtein) und Klang (Kölner Phonetik)
+// 3) simGuessQ: Wenn trotzdem nichts passt, wird aus den erkennbaren Wörtern das Thema geraten
+const SIM_LB="(?<![a-zäöüß])", SIM_RB="(?![a-zäöüß])";
+const SIM_W=src=>new RegExp(SIM_LB+"(?:"+src+")"+SIM_RB,"g");
+const SIM_PT_W="kleine|kleiner|säugling|enkel|enkelin|patientin|patient|betroffene|betroffener|verletzte|verletzter|person|herr|dame|mann|frau|kind|junge|mädchen|baby|vater|papa|mutter|mama|oma|opa|sohn|tochter|nachbar|nachbarin|kollege|kollegin|freund|freundin|partner|partnerin|bruder|schwester|ehemann|ehefrau|schwiegermutter|schwiegervater|bewohner|bewohnerin|fahrer|fahrerin|schwimmer|schwimmerin";
+const SIM_PT_FEM=/^(patientin|betroffene|verletzte|person|dame|frau|mädchen|mutter|mama|oma|tochter|nachbarin|kollegin|freundin|partnerin|schwester|ehefrau|schwiegermutter|bewohnerin|fahrerin|schwimmerin)$/;
+const SIM_PT_VERB="ist|hat|atmet|kann|blutet|reagiert|spricht|redet|nimmt|bekommt|kriegt|war|hatte|liegt|sitzt|steht|bewegt|schwitzt|antwortet|sieht|wirkt|macht|trinkt|isst|hört|öffnet|zittert|krampft|wiegt|braucht|leidet|klagt|fühlt|merkt|weiß|kommt|bleibt|wird";
+const SIM_CANON=[
+ // Umgangssprache / Zusammenziehungen
+ ["isser","ist er"],["issie","ist sie"],["isse","ist sie"],["hatter","hat er"],["hatse","hat sie"],["kanner","kann er"],["kannse","kann sie"],["wars","war es"],["gibts|gibt's","gibt es"],["gehts|geht's","geht es"],
+ ["wieviele|wieviel|wie viel","wie viele"],["nen","einen"],["nich|nit","nicht"],["nix","nichts"],["garnicht","gar nicht"],["kriegt","bekommt"],["kriegen","bekommen"],["kucken|kuckt","gucken"],
+ ["krankenwagen|krankenauto|sanka|rtw","rettungswagen"],["nef|notarztwagen|doc","notarzt"],["heli|helikopter|rettungshubschrauber|christoph","hubschrauber"],["sanis|sanitäter|rettungsdienstler","rettungsdienst"],
+ // Atmung
+ ["bekommt (er|sie) (noch |denn |überhaupt )*(genug |gut |schlecht |richtig )?luft","atmet $1"],["bekommen sie (noch |gut |genug )?luft","atmen sie"],
+ ["schnauft|schnappt|japst|hechelt|keucht|ringt nach luft|ziehts? (er|sie)? ?luft","atmet"],
+ ["atemnot|luftnot|kurzatmig|kurzluftig|keine luft|wenig luft|schwer luft","atemnot"],
+ ["(hebt|senkt|bewegt) sich (der |die )?(brustkorb|brust|bauch)|brustkorb (heben|bewegen|hebt)","atmet er"],
+ ["röchelt|röcheln|gurgelt|schnarcht","atmet er komisch"],
+ // Bewusstsein
+ ["(ist|bleibt) (er|sie) (noch |denn |überhaupt )*(da|bei sich|bei bewusstsein|klar|orientiert|wach|ansprechbar|bei verstand|zu sich gekommen)","ist $2 ansprechbar"],
+ ["kann man mit (ihm|ihr) (noch )?(reden|sprechen)|(reagiert|antwortet) (er|sie) (auf|wenn) (sie|ansprache|ansprechen|anfassen|schütteln|rütteln)","ist er ansprechbar"],
+ ["(zeigt|gibt) (er|sie) (eine |irgendeine |noch )*reaktion","reagiert $2"],
+ ["ohnmächtig|weggetreten|weg getreten|ohne bewusstsein|k ?o","bewusstlos"],
+ // Sturz / Kollaps
+ ["zusammengebrochen|zusammengesackt|zusammengeklappt|kollabiert|weggesackt|abgeklappt|umgekippt|gestolpert|ausgerutscht|runtergefallen|abgestürzt|hingeflogen|hingeknallt","gestürzt"],
+ // Adresse / Ort
+ ["unfallstelle|unglücksstelle|einsatzstelle|notfallstelle|anschrift|wohnadresse|einsatzadresse|einsatzort|unfallort|unglücksort|ereignisort|notfall ort|genaue adresse|postleitzahl|plz","adresse"],
+ ["wo (genau )?(sind|befinden|stehen|seid|wohnen|wohnt) (sie|ihr|er|sie) ?(sich)?( gerade| jetzt| denn| genau)?","wo genau adresse"],
+ ["in welchem (ort|dorf|stadtteil|ortsteil)|welche (gemeinde|ortschaft|stadt)|welcher ort","welcher ort"],
+ ["welche[rnms]? (stock|etage)|wievielte[nr]? (stock|etage)|in welchem stock|welches stockwerk","stockwerk"],
+ // Alter / Name / Nummer
+ ["jahrgang|geburtsjahr|geburtsdatum|wann (ist|wurde|war) (er|sie) geboren|wie jung|schätzen sie (das alter|wie alt)|ungefähres alter|alter ungefähr","wie alt"],
+ ["hei(s|ss)t","heißt"],["wie lang","wie lange"],["isst (er|sie)","ist $1"],["hei(s|ss)en","heißen"],["mit wem (sprechen|spreche|rede|reden) ich|wer (spricht|ist am telefon|ist dran|ist da|sind sie)|wie (ist )?ihr (nach|vor|voller )?name|ihr (nach|vor)name|wie heißen sie (denn )?mit nachnamen","wie heißen sie"],
+ ["unter welcher nummer|wie erreiche ich sie|sind sie erreichbar|wie können wir sie (zurück|an)rufen|zurückrufen|rückrufen|ihre (handy|telefon|mobil)?nummer|von welcher nummer","rückrufnummer"],
+ // Medikamente / Vorgeschichte
+ ["medis|pillen|arzneien|arzneimittel|arznei|medikation|dauermedikation|medikamentenplan|medikationsplan|medikamentenliste","medikamente"],
+ ["nimmt (er|sie) (regelmäßig |irgendwelche |irgendwas |etwas |was |sonst |noch )+(ein|regelmäßig)?","nimmt $1 medikamente"],
+ ["krankengeschichte|grunderkrankung(en)?|vorerkrankt|chronisch krank|bekannte (erkrankungen|krankheiten)|ist (irgendwas|was|etwas) bekannt|leidet (er|sie) an|herzkrank|herzprobleme|probleme mit dem herzen|was am herzen","vorerkrankungen"],
+ // Schmerzen
+ ["aua|wehtun|weh tun|wehwehchen","schmerzen"],["schädel|birne|rübe|kopp","kopf"],["brummt (der |ihm |ihr )?kopf|kopfweh|kopfschmerz","kopfschmerzen"],["tut (ihm|ihr|ihnen|es|dir) (was |etwas |irgendwas |irgendwo )*weh","hat er schmerzen"],
+ ["brennen in der brust|brennt (es )?in der brust|druck auf der brust|engegefühl|druckgefühl|enge in der brust","schmerzen in der brust"],
+ ["stechen|sticht|stechende|ziehende|krampfartig|krämpfe im bauch","schmerzen"],
+ // Blutung
+ ["blutverlust|viel blut|stark (am )?bluten|blutüberströmt|blutend|blutige","blutet"],["platzwunde|schnittwunde|offene wunde|stichwunde|wunde","blutet"],
+ // Seit wann
+ ["wie lange (schon|geht das schon|hat er das schon|hat sie das schon)|ab wann|wann (hat|fing) (das|es) (angefangen|an)|wann ging (das|es) los|seit wie viele[nr]? (minuten|stunden)|vor wie langer zeit|seit welche[mr] (zeit|uhrzeit)|seit wann (genau )?(ist|hat|geht)","seit wann"],
+ // Was ist passiert
+ ["was ist (denn )?(los|geschehen|vorgefallen|der grund|das problem)|was gibt es|worum (geht|handelt) es( sich)?|was kann ich für sie tun|wie kann ich (ihnen )?helfen|warum rufen sie an|weshalb rufen sie an|wieso rufen sie an|was liegt vor|was haben sie für einen notfall|was für ein notfall|was ist ihr notfall|erzählen sie (mal|bitte)?|beschreiben sie","was ist passiert"],
+ // Anzahl
+ ["sind (noch |da )?(mehr|weitere|andere) (leute|personen|menschen|verletzte|betroffene)|ist (noch )?(jemand|wer) (anders |sonst )?(verletzt|betroffen)|nur (eine?|ein) (person|verletzter|patient)|mehr als (eine?|einer)|wie viele (leute|menschen|personen|betroffene|patienten)","wie viele verletzte"],
+ // Kreislauf
+ ["bleich|käseweiß|kreidebleich|weiß im gesicht|grau im gesicht|aschfahl|fahl","blass"],["schwitzt (er|sie)|kalter schweiß|nassgeschwitzt","ist er kaltschweißig"],
+ // Erbrechen
+ ["kotzt|gekotzt|kotzen|erbricht|erbrechen|übergibt sich|spuckt|gespuckt","erbrochen"],
+ // Gefahr / Feuer / Eingeklemmt
+ ["ist es (da )?sicher|sind sie (in )?sicherheit|droht (eine )?gefahr|gasgeruch|riecht (es )?nach gas","gefahr"],
+ ["qualmt|kokelt|lodert|steht in flammen|brennt lichterloh","brennt"],
+ ["kommt (er|sie|jemand) (nicht |allein |selbst )*raus|eingesperrt|festgeklemmt|eingequetscht|steckt (er|sie|jemand|wer|einer)? ?fest|stecken (die )?(leute|personen)? ?fest|feststeckt","eingeklemmt"],
+ // Geschlecht
+ ["junge oder mädchen|männlich oder weiblich|herr oder dame|ist es ein mann|ist es eine frau","mann oder frau"],
+ // Hilfe unterwegs / Beruhigen
+ ["auf dem weg|losgeschickt|ist raus|sind raus|ist alarmiert|sind alarmiert|fährt los|fahren los","unterwegs"],
+ ["keine panik|alles wird gut|wir kriegen das hin|wir schaffen das","beruhigen sie sich"]
+].map(([a,b])=>[SIM_W(a),b]);
+const SIM_KEEP=new Set("weiter wieder leider bitte danke gerade wirklich schnell langsam schon immer nichts etwas vielleicht genau natürlich sicher alles einfach wohnung zimmer telefon mitte richtig schlimm besser schlechter gleich sofort warten machen gemacht sagen fragen kommen kommt gehen liegen sitzen stehen wissen glauben denken sehen schauen gucken hören legen drücken zählen halten bleiben aufhören fest tief minuten stunden sekunden heute morgen gestern abend nacht später vorher nachher bevor nachdem wieso warum weshalb welche welcher welches irgendwelche irgendwas irgendwo jemand niemand keiner leute menschen kinder kleine kleiner kleinen brummt trinkt trinken essen isst schläft schlafen weint schreit hustet niest friert zittert wetter mutter vater bruder schwester tochter schwester freund freundin nachbar kollege brille hilft helfen rufen sprich sprechen redet reden brennt erklärt können müssen sollen dürfen wollen möchte werden worden wurde hatte hätte wäre würde könnte".split(" "));
+let SIM_VSET=null;
+const SIM_SHORT_FIX={wiee:"wie",wei:"wie",wie:"wie",woe:"wo",waas:"was",wass:"was",nohc:"noch",ncoh:"noch",nochh:"noch",hatt:"hat",ahat:"hat",udn:"und",unf:"und",ist:"ist",isz:"ist",its:"ist",sit:"ist",atmt:"atmet",atment:"atmet",ahlt:"alt",alr:"alt",slt:"alt",ser:"der",dei:"die",sei:"sie",dsa:"das",wre:"wer",wnan:"wann",wan:"wann"};
+function simJoinSplit(t){ // Spracherkennung trennt gern: „an sprechbar“, „bewusst los“, „rück ruf nummer“
+ SIM_VSET=SIM_VSET||new Set(SIM_VOCAB);
+ const w=String(t).split(" "), out=[];
+ for(let i=0;i<w.length;i++){
+   if(i+2<w.length&&SIM_VSET.has(w[i]+w[i+1]+w[i+2])){out.push(w[i]+w[i+1]+w[i+2]);i+=2;continue}
+   if(i+1<w.length&&w[i].length>=2&&SIM_VSET.has(w[i]+w[i+1])){out.push(w[i]+w[i+1]);i++;continue}
+   out.push(w[i]);
+ }
+ return out.join(" ");
+}
+function simCanon(t){
+ let x=" "+simJoinSplit(String(t||""))+" ";
+ x=x.replace(new RegExp("^ ("+SIM_PT_VERB+") (der|die|ihr|ihre|ihren|dein|deine|das) ("+SIM_PT_W+")"+SIM_RB),(m,v,a,n)=>` ${v} ${a==="die"||a==="ihre"||SIM_PT_FEM.test(n)?"sie":"er"}`);
+ for(const [re,r] of SIM_CANON)x=x.replace(re,r);
+ return x.replace(/\s+/g," ").trim();
+}
+// Kölner Phonetik (für Wörter, die klingen wie ein bekanntes Wort)
+function simKoeln(w){
+ w=String(w).toLowerCase().replace(/ä/g,"a").replace(/ö/g,"o").replace(/ü/g,"u").replace(/ß/g,"s").replace(/ph/g,"f").replace(/[^a-z]/g,"");
+ let code="";
+ for(let i=0;i<w.length;i++){const c=w[i],p=w[i-1]||"",n=w[i+1]||"";let d="";
+   if("aeijouy".includes(c))d="0";else if(c==="h")d="-";else if(c==="b")d="1";else if(c==="p")d=n==="h"?"3":"1";
+   else if(c==="d"||c==="t")d="csz".includes(n)?"8":"2";else if("fvw".includes(c))d="3";else if("gkq".includes(c))d="4";
+   else if(c==="c")d=i===0?("ahkloqrux".includes(n)?"4":"8"):("sz".includes(p)?"8":"ahkoqux".includes(n)?"4":"8");
+   else if(c==="x")d="ckq".includes(p)?"8":"48";else if(c==="l")d="5";else if("mn".includes(c))d="6";else if(c==="r")d="7";else if("sz".includes(c))d="8";
+   code+=d}
+ code=code.replace(/-/g,"").replace(/(\d)\1+/g,"$1");
+ return code?code[0]+code.slice(1).replace(/0/g,""):"";
+}
+// Themen raten, wenn sonst nichts verstanden wurde
+const SIM_TOPICS=[
+ ["breath",["atm","atem","luft","pust","schnauf","keuch","röchel","japs"],h=>`Atmet ${h} normal?`,h=>`Ob ${h} atmet?`],
+ ["conscious",["bewusst","ansprech","reagier","wach","ohnmacht","ohnmächt","augen","reaktion"],h=>`Ist ${h} ansprechbar?`,h=>`Ob ${h} ansprechbar ist?`],
+ ["loc",["adress","straß","strass","hausnummer","wohn","stock","etage","klingel","ortsteil","standort","wohnort","notfallort"],h=>"Wo genau ist der Notfallort?",h=>"Wo wir sind?"],
+ ["event",["passier","geschehen","notfall","problem","vorgefallen"],h=>"Was ist passiert?",h=>"Was passiert ist?"],
+ ["age",["alter","jahre","geboren","jahrgang"],h=>`Wie alt ist ${h}?`,h=>"Wie alt?"],
+ ["name",["name","heißen","heissen"],h=>"Wie heißen Sie?",h=>"Mein Name?"],
+ ["pain",["schmerz","weh","stech","beschwerd"],h=>`Hat ${h} Schmerzen?`,h=>"Ob es wehtut?"],
+ ["bleed",["blut","wund"],h=>`Blutet ${h}?`,h=>"Ob es blutet?"],
+ ["hist",["krank","vorerkrank","herz","zucker","diabet","allerg","vorgeschicht"],h=>`Hat ${h} Vorerkrankungen?`,h=>"Vorerkrankungen?"],
+ ["meds",["medi","tablett","pille","arznei"],h=>`Nimmt ${h} Medikamente?`,h=>"Medikamente?"],
+ ["onset",["seit","lange","angefang","anfang","beginn"],h=>"Seit wann ist das so?",h=>"Seit wann?"],
+ ["count",["viele","anzahl","mehrere","weitere","leute","verletzt","betroffen"],h=>"Wie viele Verletzte gibt es?",h=>"Wie viele?"],
+ ["phone",["nummer","telefon","handy","erreich","rückruf"],h=>"Wie ist Ihre Rückrufnummer?",h=>"Meine Nummer?"],
+ ["danger",["gefahr","gefähr","sicher","gas","strom","explo"],h=>"Gibt es Gefahren vor Ort?",h=>"Ob es gefährlich ist?"],
+ ["fire",["brand","brenn","feuer","rauch","flamm","qualm"],h=>"Brennt es noch?",h=>"Das Feuer?"],
+ ["trapped",["klemm","eingeschloss","eingesperr"],h=>"Ist jemand eingeklemmt?",h=>"Ob jemand eingeklemmt ist?"],
+ ["circ",["blass","schweiß","schwitz","farbe","puls","kreislauf","schwindel"],h=>`Ist ${h} blass oder kaltschweißig?`,h=>"Wie er aussieht?"],
+ ["vomit",["erbroch","übergeb","kotz","übel","brech"],h=>`Hat ${h} erbrochen?`,h=>"Ob er sich übergeben hat?"]
+];
+function simGuessQ(c,part){
+ const words=String(part).replace(/\?/g," ").split(/\s+/).filter(w=>w.length>=3&&!SIM_STOP.has(w)&&!SIM_QSTOP_G.has(w));
+ if(!words.length)return null;
+ let best=null,bs=0;
+ for(const [k,stems,q,echo] of SIM_TOPICS){
+   let sc=0;
+   for(const w of words)for(const st of stems){
+     if(w.startsWith(st)||(st.length>=5&&w.includes(st))){sc+=2;break}
+     if(st.length>=4&&w.length>=st.length&&simLev(w.slice(0,st.length),st)<=1){sc+=1;break}
+   }
+   if(sc>bs){bs=sc;best=[k,q,echo]}
+ }
+ if(!best||bs<2)return null;
+ const h=simHe(c.sim)[1];
+ return {topic:best[0],q:best[1](h),echo:best[2](h)};
+}
+const SIM_QSTOP_G=new Set(["bitte","gerade","einfach","genau","schnell","wissen","können","sagen","haben","machen","mal","denn","noch","schon"]);
 const SIM_STOP=new Set("der die das den dem des ein eine einen einem einer und oder aber ist sind war hat haben hatte sie er es ihr ihm ihn ich wir mir mich dich du noch schon auch nicht kein keine mal bitte gerade jetzt denn doch ganz sehr irgendwie irgendwas etwas was wie wo wer wann warum gibt geben gibt's dort hier da so zu im in am an auf aus bei mit von vor nach für über unter seit ob wenn dass sein seine seiner ihre ihren können kann könnte haben habt wird werden wurde".split(" "));
 function simFactCorpus(s){const d=s.d,f=d.f||{};return [d.event,f.e,d.hist,d.pain,d.danger,d.inside,d.onset,...(d.extra||[]),...((s.log||[]).filter(m=>m.who!=="lst").map(m=>m.text))].filter(Boolean).join(" . ")}
 function simYesNo(c,norm,raw){
@@ -9612,6 +9753,15 @@ function simKB(s){
 }
 const SIM_KB_Q=[
  [/augen (auf|offen|zu)|öffnet .*augen|macht .*augen/,(s,kb,me,H,h)=>me?"Ja, die Augen hab ich auf.":kb.conscious==="no"?`Nein, die Augen sind zu, ${h} reagiert gar nicht!`:kb.conscious==="half"?"Mal auf, mal zu… so ganz schläfrig.":"Ja, die Augen sind auf."],
+ [/sprachstörung|verwaschen|lallt|nuschelt|undeutlich|redet (er|sie)? ?komisch|spricht (er|sie)? ?komisch|wortfindung/,(s,kb,me,H,h)=>kb.slurred?"Ja, das klingt total verwaschen, man versteht kaum was.":kb.conscious==="no"?`${H} sagt doch gar nichts!`:"Nein, sprechen tut er ganz normal."],
+ [/mund(winkel)? (hängt|schief)|hängt (der |ein )?mund|gesicht (hängt|schief|verzogen)|schiefes gesicht|hängende[nr]? mund/,(s,kb,me,H,h)=>kb.stroke?"Ja! Der rechte Mundwinkel hängt runter!":"Nein, das Gesicht sieht normal aus."],
+ [/lähm|gelähmt|schwäche|schwach (im|in der|am)|kribbel|taub|gefühl (im|in der|in den)/,(s,kb,me,H,h)=>kb.stroke?"Ja, der rechte Arm ist ganz schwach, und das kribbelt da wohl.":"Nein, bewegen kann er alles."],
+ [/liegt (er|sie) (noch|immer noch|jetzt)( am| auf dem)?( boden)?|(am|auf dem) boden (liegen|liegt)/,(s,kb,me,H,h)=>me?(kb.fell?"Ja, ich lieg immer noch hier.":"Nein, ich sitz."):kb.fell||kb.conscious==="no"?`Ja, ${h} liegt noch ${kb.room||"am Boden"}.`:"Nein, er sitzt jetzt."],
+ [/defi|\baed\b|defibrillator/,(s,kb,me,H,h)=>kb.aed],
+ [/krampf|gekrampft|zuckungen|zuckt|epilep/,(s,kb,me,H,h)=>(s.d.f||{}).d==="Krampfanfall"||/krampf|zuck/i.test([s.d.event,(s.d.f||{}).e].join(" "))?"Ja, das hat richtig gezuckt, so ein, zwei Minuten.":"Nein, gekrampft hat er nicht."],
+ [/trinkt (er|sie)|isst (er|sie)|essen (und|oder) trinken|getrunken (hat|heute)|flüssigkeit/,(s,kb,me,H,h)=>kb.fever||/kind|baby|säugling/i.test(String(s.d.rel))?"Kaum, nur ein paar Schlucke.":"Ja, eigentlich normal."],
+ [/ausschlag|flecken|pünktchen|punkte auf der haut|wegdrück|glastest|glas (drauf|test)/,(s,kb,me,H,h)=>/ausschlag|flecken|punkte|petech/i.test([s.d.event,(s.d.f||{}).e,s.d.pain].join(" "))?"Ja, da sind so kleine rote Punkte, die gehen nicht weg, wenn ich drücke!":"Nein, Ausschlag hat er keinen."],
+ [/geimpft|impfung/,(s,kb,me,H,h)=>"Ja, alle normalen Impfungen hat er."],
  [/(lächeln|grinsen|zähne zeigen)/,(s,kb,me,H,h)=>kb.stroke?`Moment… ${h} versucht's… der Mundwinkel hängt auf der rechten Seite runter!`:"Ja… das geht, sieht normal aus."],
  [/(beide )?arme? (hoch)?(heben|hochhalten|ausstrecken|nach vorne)/,(s,kb,me,H,h)=>kb.stroke?"Der rechte Arm sinkt sofort wieder runter, der linke geht.":kb.conscious==="no"?`${H} kann doch gar nichts machen!`:"Beide Arme gehen hoch, ja."],
  [/(satz|nachsprechen|sagen sie .* nach|wiederholen lassen)/,(s,kb,me,H,h)=>kb.slurred?"Das klingt total verwaschen, man versteht kaum was.":kb.conscious==="no"?`${H} sagt gar nichts!`:"Ja, das sagt er ganz normal nach."],
@@ -9629,7 +9779,7 @@ const SIM_KB_Q=[
  [/schwanger/,(s,kb,me,H,h)=>"Nein, schwanger ist sie nicht."],
  [/wiegt|gewicht|kilo/,(s,kb,me,H,h)=>`So ungefähr ${kb.weight} Kilo.`],
  [/kopf (gestoßen|angeschlagen|aufgeschlagen|verletzt)|auf den kopf/,(s,kb,me,H,h)=>kb.head?"Ja, am Kopf hat er was abbekommen.":kb.fell?"Ich glaub nicht, aber ich hab's nicht gesehen.":"Nein."],
- [/gestürzt|hingefallen|umgefallen|gefallen\b/,(s,kb,me,H,h)=>kb.fell?"Ja, er ist umgefallen.":"Nein, gestürzt ist er nicht."],
+ [/^(?!(was|wie|warum|wieso|weshalb) ).*(gestürzt|hingefallen|umgefallen|gefallen\b)/,(s,kb,me,H,h)=>kb.fell?"Ja, er ist umgefallen.":"Nein, gestürzt ist er nicht."],
  [/zuletzt (gesund|normal|unauffällig)|wann (haben|hatten) sie (ihn|sie) zuletzt|letzte(s)? mal normal/,(s,kb,me,H,h)=>s.d.onset||"Vor einer halben Stunde war noch alles normal."],
  [/hund|katze|tiere?\b|haustier/,(s,kb,me,H,h)=>kb.pets||"Nein, Tiere haben wir keine."],
  [/wie schreibt|buchstabier/,(s,kb,me,H,h)=>{const n=(me||s.d.passerby||s.d.fire?s.d.caller:s.d.patient).last||"";return n.split("").join("-").toUpperCase()+"."}],
@@ -9732,6 +9882,8 @@ function simBodyPart(s){const t=[s.d.f&&s.d.f.e,s.d.pain,s.d.event].join(" ").to
 function simTopicFollow(c,part){
  const s=c.sim,d=s.d,f=d.f||{},t=s.mem&&s.mem.topic; if(!t)return null;
  if(part.split(/\s+/).length>7)return null;
+ // Themenwechsel erkennbar → keine Nachfrage zum alten Thema
+ if(/adresse|straße|strasse|notfallort|welcher ort|stockwerk|verletzte|betroffen|leute|personen|wie alt|name|heißt|heißen|nummer|medikament|vorerkrank|seit wann/.test(part))return null;
  const all=[f.e,d.pain,d.event].join(" ").toLowerCase();
  if(t==="pain"){
    if(/wo (genau|tut|hat|sind)|welche stelle|an welcher|^wo\??$/.test(part)){const b=simBodyPart(s);return b?`Hier ${b}${/brust/.test(b)&&/arm/.test(all)?", und das zieht in den linken Arm":""}.`:"Das ist so überall irgendwie."}
@@ -9906,7 +10058,7 @@ function simAnswerSmart(c,text){
    if(eg){let extra="";if(eg.rest){s._eg=true;try{extra=simAnswerSmart(c,eg.rest)}finally{s._eg=false}}
      if(/wie bitte|nicht verstanden|wie meinen|versteh/i.test(extra))extra="";
      return [eg.text,extra].filter(Boolean).join(" ")}}
- const raw=String(text||"").trim(), norm=simNormText(raw);
+ const raw=String(text||"").trim(), norm=simCanon(simNormText(raw,false));
  const lastCaller=[...s.log].reverse().find(m=>m.who!=="lst");
  // Beruhigen senkt die Aufregung
  if(/ruhig|beruhig|keine sorge|tief durchatmen|sie machen das gut|das schaffen sie/.test(norm)){s.mem.calm++;if(s.mem.calm>=2)d.panic=false}
@@ -9922,13 +10074,19 @@ function simAnswerSmart(c,text){
  const parts=norm.split(/\?|\s(?:und|außerdem|ausserdem|sowie)\s(?=(?:wie|wo|was|wer|wann|ist|hat|atmet|blutet|seit|gibt|können|kann|sind)\b)/).map(x=>x.trim()).filter(x=>x.length>2);
  const out=[];
  const check=/(schauen|gucken|prüfen|sehen|fühlen) sie (mal |bitte )*(nach|ob)|gucken sie mal|schauen sie mal/.test(norm);
- for(const part of (parts.length?parts:[norm]).slice(0,3)){
-   const ints=simIntents(part);
-   // Von dir beigebrachte Antworten gehen vor (auch wenn der Anrufer sonst etwas Unpassendes sagen würde)
-   let ans=simLearnedAnswer(c,part,"user")||simAnimalAnswer(c,part)||simAdviceAnswer(c,part)||simCtxAnswer(c,part)||simKBAnswer(c,part)||simEnvAnswer(c,part);
-   if(!ans&&ints.length){ans=simAnswerFor(c,part).replace(/^(Bitte schnell! |Oh Gott… )/,"");
-     if(/^(Wie bitte\?|Das hab ich nicht verstanden\.|Äh… was meinen Sie genau\?|Das weiß ich nicht\.)$/.test(ans))ans=null}
+ for(let part of (parts.length?parts:[norm]).slice(0,3)){
+   // Erst den Satz so nehmen, wie er gesagt wurde; nur wenn nichts passt, mit Tippfehler-/Klang-Korrektur
+   const tryPart=pp=>{const ii=simIntents(pp);
+     // Von dir beigebrachte Antworten gehen vor (auch wenn der Anrufer sonst etwas Unpassendes sagen würde)
+     let a=simLearnedAnswer(c,pp,"user")||simAnimalAnswer(c,pp)||simAdviceAnswer(c,pp)||simCtxAnswer(c,pp)||simKBAnswer(c,pp)||simEnvAnswer(c,pp);
+     if(!a&&ii.length){a=simAnswerFor(c,pp).replace(/^(Bitte schnell! |Oh Gott… )/,"");
+       if(/^(Wie bitte\?|Das hab ich nicht verstanden\.|Äh… was meinen Sie genau\?|Das weiß ich nicht\.)$/.test(a))a=null}
+     return [a,ii]};
+   let [ans,ints]=tryPart(part);
+   if(!ans){const pf=simCanon(simNormText(part,true));if(pf!==part){const r=tryPart(pf);if(r[0]){ans=r[0];ints=r[1];part=pf}}}
    if(!ans)ans=simLearnedAnswer(c,part);
+   if(!ans&&!s._guess){const g=simGuessQ(c,part);
+     if(g&&simCanon(simNormText(g.q))!==part){s._guess=true;try{const a=simAnswerSmart(c,g.q);if(a&&!simIsFallback(a))ans=(Math.random()<0.4?g.echo+" ":"")+a}finally{s._guess=false}}}
    if(!ans)ans=simYesNo(c,part,raw);
    if(!ans&&/^(bitte |gehen|holen|legen|machen|öffnen|schließen|bleiben|nehmen|setzen|halten|sagen|rufen|schicken|stellen|ziehen|decken)\b|\bsie (bitte )?(mal )?(die|den|das|ihn|sie|ihm|ihr)\b.*\b(auf|zu|hin|weg|raus|rein|hoch|runter)\b/.test(part))
      ans=pick(["Okay, mach ich.","Ja, Moment… okay.","Mach ich sofort.","Okay… so?"]);
@@ -10020,7 +10178,7 @@ function simAnswerFor(c,text){
    }
  }
  if(!out.length)out.push(pick(d.panic?["Was?! Bitte, helfen Sie mir einfach!","Was meinen Sie? Ich versteh das nicht!"]:["Wie bitte?","Das hab ich nicht verstanden.","Äh… was meinen Sie genau?","Das weiß ich nicht."]));
- return panic+out.join(" ");
+ return panic+[...new Set(out)].join(" ");
 }
 
 // ─── KI-Anrufer (Brücke zu Claude, eigener API-Schlüssel nur auf diesem Gerät) ────────────────
