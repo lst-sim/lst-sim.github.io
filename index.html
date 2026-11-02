@@ -170,7 +170,7 @@ html[data-device="handy"] #floatDock{left:8px;right:8px;width:auto;top:auto;bott
 </head>
 <body>
 <div style="padding:6px 10px;font-size:11px;color:#94a3b8;font-weight:700;display:flex;flex-wrap:wrap;align-items:center;gap:10px;position:sticky;top:0;z-index:10;background:var(--bg)">
- <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v5.29</span>
+ <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v5.30</span>
  <span id="syncState"></span> <a id="deskTag" href="#" onclick="renameDesk();return false" title="Name dieses Platzes (für „offen an …“) – antippen zum Ändern" style="color:#64748b;font-weight:700;text-decoration:none"></a>
  <span id="simCtl" style="position:absolute;left:50%;transform:translateX(-50%);display:flex;gap:6px;align-items:center"></span>
  <a id="homeLink" href="#" onclick="render('leitstelle');return false" class="hidden" style="color:#64748b;text-decoration:underline;font-weight:600">🖥️ Leitstelle</a>
@@ -10073,6 +10073,8 @@ async function simAiCall(system,messages,maxTokens=200){
  }finally{clearTimeout(to)}
 }
 async function simReply(c,text){
+ text=simFromPlatt(text);
+ if(!c.sim.awaitGreeting){const hd=simAskHochdeutsch(c,text);if(hd)return hd}
  if(c.sim.awaitGreeting){
    c.sim.awaitGreeting=false;
    if(c.sim.dropAt)c.sim.dropAt=Date.now()+rnd(60,200)*1000;
@@ -10094,8 +10096,10 @@ async function simReply(c,text){
 // ─── Gespräch ─────────────────────────────────────────────────────────────────────────────────
 function simSay(c,text){
  if(!simMine(c))return;
- c.sim.log.push({who:c.sim.speaker==="patient"?"patient":"caller",text,t:Date.now()}); c.sim.lastAt=Date.now();
- if(simVoice)simSpeak(c,text);
+ const shown=simPlattify(text,simPlattLvl(c)); const m={who:c.sim.speaker==="patient"?"patient":"caller",text:shown,t:Date.now()};
+ if(shown!==text)m.orig=text; if(simIsFallback(text))m.fb=true;
+ c.sim.log.push(m); c.sim.lastAt=Date.now();
+ if(simVoice)simSpeak(c,shown);
 }
 function simCallById(id){return allOpenCalls().find(x=>String(x.id)===String(id))}
 function simMine(c){return !!(c&&c.sim&&(!c.sim.owner||c.sim.owner===DEVICE_ID))}
@@ -10111,7 +10115,7 @@ async function simSendFrom(callId,inputId,preset){
  save(); simRefresh();
  const t0=Date.now(); const ans=await simReply(c,text);
  const wait=Math.max(0,rnd(500,1200)-(Date.now()-t0));
- setTimeout(()=>{c.sim.typing=false;if(c.phoneEnd){simRefresh();return}simSay(c,ans);const lm=c.sim.log[c.sim.log.length-1];if(lm&&lm.text===ans&&simIsFallback(ans))lm.fb=true;save();simRefresh()},wait);
+ setTimeout(()=>{c.sim.typing=false;if(c.phoneEnd){simRefresh();return}simSay(c,ans);const lm=c.sim.log[c.sim.log.length-1];if(lm&&(lm.orig||lm.text)===ans&&simIsFallback(ans))lm.fb=true;save();simRefresh()},wait);
 }
 function simSend(){const c=db.currentCall;if(c)simSendFrom(c.id,"simInput")}
 // Das Gespräch läuft, bis man selbst auflegt – oder der Anrufer: wenn die Einsatzkräfte da sind
@@ -10254,7 +10258,7 @@ function simProtoSave(c,byCaller){
  const who=d.caller?`${d.caller.first||""} ${d.caller.last||""}`.trim():"";
  db.simProtocols.push({id:s.id+"_"+Date.now().toString(36),day:simDayKey(c.phoneStart||Date.now()),start:c.phoneStart||Date.now(),end:Date.now(),callId:String(c.id),caseId:s.caseId,
    title:c.keyword||(()=>{const f=(s.log||[]).find(m=>m.who!=="lst");const t=f?String(f.text).replace(/^(Hallo[?!,.…]*\s*|Ja,? hallo[,.]?\s*)/i,""):"";return t?(t.length>60?t.slice(0,58)+"…":t):((d.f&&d.f.event)||"Übungsanruf")})(),caller:who,rel:d.isSelf?"für sich selbst":(d.rel||""),loc:(s.loc&&s.loc.text)||"",phone:s.phone||"",follow:!!s.isFollow,endBy:byCaller?"Anrufer":"Leitstelle",
-   log:(s.log||[]).map(m=>({who:m.who,text:m.text,t:m.t,...(m.fb||(m.who!=="lst"&&simIsFallback(m.text))?{fb:true}:{})})),d});
+   log:(s.log||[]).map(m=>({who:m.who,text:m.text,t:m.t,...(m.fb||(m.who!=="lst"&&simIsFallback(m.orig||m.text))?{fb:true}:{})})),d});
  if(db.simProtocols.length>SIM_PROTO_MAX)db.simProtocols.splice(0,db.simProtocols.length-SIM_PROTO_MAX);
  save(); setTimeout(simLearnScan,500);
 }
@@ -10389,17 +10393,179 @@ function simSpeechUnlock(){
  try{if(!("speechSynthesis" in window))return;const u=new SpeechSynthesisUtterance(" ");u.volume=0;u.lang="de-DE";speechSynthesis.speak(u);simSpeechUnlocked=true}catch(e){}
 }
 document.addEventListener("pointerdown",()=>{if(simVoice)simSpeechUnlock()},{capture:true});
+// ─── v5.30: Stimmen wie Menschen – Persönlichkeit, Aufregung, Plattdeutsch ──────────────────────
+// Jede Person (Anrufer / Patient) bekommt einmalig: Alter, Platt-Stufe (0 Hochdeutsch,
+// 1 Missingsch – Hochdeutsch mit Platt-Einschlag, 2 richtiges Platt), Stimme, Tonhöhe, Tempo.
+const SIM_KEY_PLATT="lst-sim-platt", SIM_KEY_VOFF="lst-sim-voice-off";
+let simPlattMode=(()=>{try{return localStorage.getItem(SIM_KEY_PLATT)||"1"}catch(e){return "1"}})(); // 0 aus · 1 ab und zu · 2 oft
+function simHash(s){let h=7;for(const ch of String(s))h=(h*31+ch.charCodeAt(0))>>>0;return h}
+function simPersonOf(c){const d=c.sim.d;return c.sim.speaker==="patient"&&d.patient?d.patient:(d.caller||d.patient||{})}
+function simPersonAge(c,p){
+ if(p.age!=null)return p.age;
+ const d=c.sim.d, rel=String(d.rel||"").toLowerCase(), pa=d.age!=null?d.age:50;
+ p.age=(d.isSelf||p===d.patient)?(d.age!=null?d.age:rint(25,80))
+  :/kind|sohn|tochter|baby|enkel/.test(rel)?(pa<18?rint(24,48):rint(Math.min(80,pa+20),Math.min(92,pa+32)))
+  :/vater|mutter|papa|mama|opa|oma/.test(rel)?Math.max(18,pa-rint(22,34))
+  :/mann|frau|partner|freund/.test(rel)?Math.max(18,pa+rint(-6,6))
+  :rint(19,84);
+ return p.age;
+}
+function simPlattLvl(c,p){
+ if(simPlattMode==="0")return 0;
+ p=p||simPersonOf(c); if(!p)return 0;
+ if(p.platt==null){
+   const d=c.sim.d, age=simPersonAge(c,p), f=simPlattMode==="2"?2.3:1;
+   let pr=age<14?0:age>=65?0.33:age>=45?0.14:0.05; pr=Math.min(0.85,pr*f);
+   if(c.sim.kt||d.kt||d.witness&&age<40)pr*=0.3;
+   p.platt=Math.random()<pr?(Math.random()<(age>=65?0.5:age>=30?0.25:0)?2:1):0;
+ }
+ return p.platt;
+}
+// Hochdeutsch → Platt (Wortweise; Groß-/Kleinschreibung bleibt erhalten)
+const SIM_PLATT_PH=[[/\bauf dem Boden\b/gi,"op'n Grund"],[/\bauf den Boden\b/gi,"op'n Grund"],[/\bkeine Ahnung\b/gi,"keen Ahnung"],[/\bein bisschen\b/gi,"en büschen"],[/\bgar nicht\b/gi,"gor nich"],[/\btut weh\b/gi,"deit weh"],[/\bguten Tag\b/gi,"Moin"],[/\bum Gottes willen\b/gi,"um Gotts Willen"],[/\bwie geht's\b/gi,"wo geiht dat"]];
+const SIM_PLATT_W=Object.fromEntries(("ich:ik mich:mi mir:mi dich:di dir:di er:he ihn:em ihm:em sie:se ihnen:se wir:wi es:dat das:dat dass:dat was:wat wer:well "+
+ "mein:mien meine:mien meinen:mien meinem:mien meiner:mien dein:dien deine:dien sein:sien seine:sien seinen:sien seinem:sien ihr:ehr ihre:ehr ihren:ehr ihrem:ehr unser:uns unsere:uns sich:sik "+
+ "der:de die:de den:de dem:de ein:en eine:en einen:en einem:en einer:en kein:keen keine:keen keinen:keen "+
+ "ist:is bin:bün bist:büst sind:sünd war:weer waren:weern gewesen:west hab:heff habe:heff hat:hett haben:hebbt hatte:harr wird:warrt werden:warrn muss:mutt müssen:mööt möchte:much gibt:gifft "+
+ "gefallen:fullen hingefallen:henfullen umgefallen:umfullen gestürzt:fullen liegt:liggt liegen:liggen atmet:pust atmen:pusten blutet:bloot tut:deit redet:snackt reden:snacken spricht:snackt sprechen:snacken "+
+ "sagt:seggt sagen:seggen gesagt:seggt weiß:weet wissen:weten glaube:glööv glaub:glööv gucken:kieken guck:kiek gucke:kiek schau:kiek sieht:süht "+
+ "komme:kumm komm:kumm kommt:kummt kommen:kamen gekommen:kamen gehe:gah geh:gah geht:geiht gehen:gahn laufen:lopen läuft:löppt steht:steiht stehen:stahn sitzt:sitt schläft:slöppt "+
+ "trinken:drinken getrunken:drunken essen:eten gegessen:eten machen:maken macht:maakt mache:maak mach:maak gemacht:maakt holen:halen warten:töven warte:töv "+
+ "helfen:helpen hilft:hölpt hilfe:hülp brauche:bruuk brauch:bruuk braucht:bruukt brauchen:bruken "+
+ "schnell:gau sofort:glieks gleich:glieks jetzt:nu schon:al wieder:weer immer:jümmer heute:vundaag gestern:güstern eben:jüst gerade:jüst vorhin:vörhen da:dor dort:dor drinnen:binnen draußen:buten oben:baven unten:ünnen "+
+ "bei:bi von:vun für:för über:över unter:ünner nach:na aus:ut auf:op zu:to zum:to'n vom:vun'n im:in'n ins:in't am:an'n und:un aber:aver weil:wiel ob:of "+
+ "nicht:nich nichts:nix zwei:twee drei:dree vier:veer fünf:fiev viel:veel viele:veel alles:allens etwas:wat bisschen:büschen sehr:bannig ganz:heel wirklich:würklich "+
+ "gut:good schlecht:slecht schlimm:slimm klein:lütt kleine:lütte kleiner:lütte kleinen:lütten groß:groot alt:oolt alte:ole tot:doot kalt:koolt nass:natt heiß:hitt "+
+ "frau:fru kinder:kinner vater:vadder mutter:mudder sohn:söhn tochter:dochter bruder:broder schwester:süster nachbar:naver nachbarin:naversch leute:lüüd mensch:minsch arzt:dokter doktor:dokter "+
+ "haus:huus hause:huus küche:köök treppe:trepp garten:goorn wasser:water feuer:füer rauch:rook kopf:kopp bein:been beine:been fuß:foot herz:hart bauch:buuk brust:bost rücken:rüch auge:oog augen:oogen "+
+ "zeit:tiet tag:dag moment:momang tier:deert katze:katt kuh:koh pferd:peerd schaf:schaap schmerzen:pien schmerz:pien blut:bloot "+
+ "ja:jo nein:nee hallo:moin tschüss:tschüüs").split(" ").map(x=>x.split(":")));
+const SIM_PLATT_L={hallo:"moin",ja:"jo",nein:"nee",nicht:"nich",nichts:"nix",das:"dat",was:"wat",ist:"is",etwas:"wat",bisschen:"büschen"};
+function simCase(src,rep){return src[0]===src[0].toUpperCase()&&src[0]!==src[0].toLowerCase()?rep[0].toUpperCase()+rep.slice(1):rep}
+function simPlattify(text,lvl){
+ if(!lvl)return text; let t=String(text);
+ if(lvl>=2)SIM_PLATT_PH.forEach(([re,r])=>{t=t.replace(re,m=>simCase(m,r))});
+ const map=lvl>=2?SIM_PLATT_W:SIM_PLATT_L;
+ return t.replace(/[A-Za-zÄÖÜäöüß]+/g,w=>{const r=map[w.toLowerCase()];return r?simCase(w,r):w});
+}
+// Platt vom Disponenten verstehen (falls man selbst Platt schnackt)
+const SIM_PLATT_IN=Object.fromEntries(("wat:was dat:das is:ist nich:nicht nix:nichts ik:ich mi:mir di:dir he:er se:sie wi:wir hett:hat hebbt:haben heff:habe bün:bin büst:bist sünd:sind weer:war jo:ja nee:nein "+
+ "kummt:kommt kamen:kommen pust:atmet pusten:atmen snackt:spricht snacken:sprechen seggt:sagt seggen:sagen weet:weiß kiek:schau kieken:schauen gau:schnell glieks:gleich nu:jetzt al:schon "+
+ "bi:bei vun:von op:auf ut:aus to:zu un:und aver:aber keen:kein en:ein mien:mein dien:dein sien:sein ehr:ihr em:ihn fru:frau huus:haus kopp:kopf been:bein bloot:blut pien:schmerzen bost:brust buuk:bauch "+
+ "water:wasser füer:feuer rook:rauch straat:straße passeert:passiert passert:passiert well:wer oolt:alt lütt:klein bannig:sehr slimm:schlimm slecht:schlecht good:gut liggt:liegt fullen:gefallen deit:tut "+
+ "maakt:macht maak:mach maken:machen töv:warte töven:warten dokter:arzt hülp:hilfe helpen:helfen bruukt:braucht geiht:geht gahn:gehen schall:soll").split(" ").map(x=>x.split(":")));
+function simFromPlatt(text){return String(text).replace(/[A-Za-zÄÖÜäöüß']+/g,w=>{if(w.length>1&&w===w.toUpperCase())return w;const r=SIM_PLATT_IN[w.toLowerCase()];return r?simCase(w,r):w})}
+// Wie aufgeregt ist die sprechende Person gerade? 0 ruhig … 3 völlig aufgelöst
+function simEmo(c){
+ const s=c.sim,d=s.d; if(s.kt||d.kt)return 0;
+ if(d.phoneOnly||d.misdial)return d.panic?1:0;
+ const urg=simUrgent(d); let e=urg?2:1; if(d.panic)e++;
+ if((d.witness||d.passerby)&&!d.panic&&e>=2)e--;
+ if(s.speaker==="patient"&&!d.isSelf)e=Math.min(e,1);
+ e-=Math.min(2,(s.mem&&s.mem.calm)||0); if(c.alarmTime&&!d.cpr)e--;
+ return Math.max(0,Math.min(3,e));
+}
+// Stimme wählen: beste deutsche Stimmen zuerst (Natural/Online/Premium/Erweitert), passend zum Geschlecht,
+// verschiedene Anrufer bekommen möglichst verschiedene Stimmen.
+const SIM_V_F=/anna|petra|helena|katja|hedda|marlene|vicki|amala|seraphina|louisa|elke|gisela|klarissa|maja|tanja|ingrid|leni|sabina|steffi|grandma|sandy|shelley|google deutsch|female|frau|weiblich/i;
+const SIM_V_M=/markus|yannick|conrad|killian|florian|bernd|christoph|kasper|\bkai\b|klaus|ralf|stefan|hans|viktor|jonas|\bjan\b|martin|grandpa|eddy|reed|rocko|\bmale\b|\bmann\b|männlich/i;
+const SIM_V_FUN=/grandma|grandpa|eddy|reed|rocko|sandy|shelley|\bflo\b|bad news|good news|bells|boing|bubbles|cellos|jester|organ|superstar|trinoids|whisper|wobble|zarvox|albert/i;
+function simVoiceOff(){try{return JSON.parse(localStorage.getItem(SIM_KEY_VOFF)||"[]")}catch(e){return []}}
+function simDeVoices(all){const off=all?[]:simVoiceOff();try{return speechSynthesis.getVoices().filter(v=>/^de/i.test(v.lang)&&!off.includes(v.name))}catch(e){return []}}
+function simVoiceScore(v,age){
+ const n=v.name;let s=0;
+ if(/natural|neural/i.test(n))s+=6;else if(/online/i.test(n))s+=5;
+ if(/premium/i.test(n))s+=5;else if(/enhanced|erweitert|verbessert/i.test(n))s+=3;
+ if(/google/i.test(n))s+=2; if(/^de[-_]DE/i.test(v.lang))s+=1;
+ if(SIM_V_FUN.test(n))s+=(age>=74&&/grandma|grandpa/i.test(n))?4:-4;
+ return s;
+}
+function simVoiceFor(c,p){
+ const all=simDeVoices(); if(!all.length)return null;
+ if(p.vname){const v=all.find(x=>x.name===p.vname);if(v)return v}
+ const fem=p.g==="w", age=simPersonAge(c,p);
+ let cand=all.filter(v=>fem?SIM_V_F.test(v.name):SIM_V_M.test(v.name));
+ const gOk=cand.length>0; if(!gOk)cand=all;
+ const sc=cand.map(v=>[v,simVoiceScore(v,age)]), max=Math.max(...sc.map(x=>x[1]));
+ const top=sc.filter(x=>x[1]>=max-1).map(x=>x[0]);
+ const v=top[simHash((p.first||"")+(p.last||"")+c.sim.id)%top.length];
+ p.vname=v.name; p.vGenderOk=gOk; return v;
+}
+// Text für die Sprachausgabe „menschlich“ machen: Stocken, Wiederholen, Ausrufe, Füllwörter
+function simSpeakParts(c,text,e,pl,age){
+ const sents=(String(text).match(/[^.!?…]+[.!?…]*/g)||[String(text)]).map(x=>x.trim()).filter(Boolean);
+ const out=[]; const P=Math.random;
+ if(e>=3&&P()<0.55)out.push(pick(pl>=2?["Oh Gott, oh Gott!","Mien Gott, mien Gott!","Bitte! Bitte!","Och nee, och nee!"]:["Oh Gott, oh Gott!","Bitte! Bitte!","Oh nein, oh nein!","Hilfe, bitte!"]));
+ else if(e===2&&P()<0.25)out.push(pick(pl>=2?["Oh Gott!","Mien Gott!","Bitte!"]:["Oh Gott!","Bitte!","Oh nein!"]));
+ sents.forEach((s,i)=>{
+   let x=s;
+   if(e>=2&&P()<(e>=3?0.4:0.2)){const m=x.match(/^([A-Za-zÄÖÜäöüß]{1,5})\s+(.*)$/);if(m)x=`${m[1]}… ${m[1].toLowerCase()} ${m[2]}`}
+   if(e<=1&&i===0&&P()<(age>=70?0.3:0.15))x=pick(pl>=2?["Jo, also, ","Tja, ","Na, "]:["Äh, ","Ähm, ","Also, ","Tja, "])+x[0].toLowerCase()+x.slice(1);
+   out.push(x);
+   if(e>=3&&/!$/.test(x)&&x.split(" ").length<=4&&P()<0.4)out.push(x);
+ });
+ return out;
+}
 function simSpeak(c,text){
  try{
    if(!("speechSynthesis" in window))return;
-   const u=new SpeechSynthesisUtterance(text); u.lang="de-DE";
-   const voices=speechSynthesis.getVoices().filter(v=>/^de/i.test(v.lang));
-   const fem=(c.sim.speaker==="patient"&&c.sim.d.patient?c.sim.d.patient:c.sim.d.caller).g==="w";
-   const v=voices.find(v=>fem?/anna|petra|helena|katja|hedda|marlene|vicki|female|frau/i.test(v.name):/markus|yannick|conrad|stefan|hans|male|mann/i.test(v.name))||voices[0];
-   if(v)u.voice=v;
-   u.pitch=fem?1.15:0.85; u.rate=c.sim.d.panic?1.15:1.0; u.onend=()=>{simSpeakEnd=Date.now()};
-   speechSynthesis.speak(u);
+   const p=simPersonOf(c), age=simPersonAge(c,p), fem=p.g==="w";
+   const e=simEmo(c), pl=simPlattLvl(c,p), v=simVoiceFor(c,p);
+   if(p.vp==null){p.vp=1+(simHash(p.first+"p")%17-8)/100;p.vr=1+(simHash(p.last+"r")%15-7)/100}
+   let pitch=p.vp+(v&&!p.vGenderOk?(fem?0.18:-0.22):0)+(age>=72?-0.07:age<16?0.25:0)+e*0.06;
+   let rate=p.vr+(age>=75?-0.12:age>=65?-0.06:0)+e*0.08+(pl>=2?-0.03:0);
+   const parts=simSpeakParts(c,text,e,pl,age);
+   parts.forEach((t,i)=>{
+     const u=new SpeechSynthesisUtterance(t); u.lang="de-DE"; if(v)u.voice=v;
+     const j=(Math.random()-0.5)*0.08*(1+e);
+     u.pitch=Math.max(0.5,Math.min(2,pitch+j+(e>=2&&/!$/.test(t)?0.08:0)));
+     u.rate=Math.max(0.6,Math.min(1.6,rate+(Math.random()-0.5)*0.04*(1+e)));
+     u.onend=()=>{simSpeakEnd=Date.now()};
+     speechSynthesis.speak(u);
+   });
  }catch(e){}
+}
+try{if("speechSynthesis" in window)speechSynthesis.addEventListener("voiceschanged",()=>{if(document.getElementById("simVoiceDlg"))simVoiceDialog()})}catch(e){}
+// Einstellungen: Stimmen auswählen/probehören, Plattdeutsch-Anteil
+function simVoiceDialog(){
+ const vs=simDeVoices(true), off=simVoiceOff();
+ const row=v=>{const sc=simVoiceScore(v,40), g=SIM_V_F.test(v.name)?"♀":SIM_V_M.test(v.name)?"♂":"?";
+   return `<label style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--line)"><input type="checkbox" ${off.includes(v.name)?"":"checked"} onchange="simVoiceToggle(${esc(JSON.stringify(v.name))},this.checked)" style="width:auto">
+   <span style="flex:1">${sc>=5?"⭐ ":""}${esc(v.name)} <small class="muted">${g} · ${esc(v.lang)}</small></span>
+   <button type="button" onclick="event.preventDefault();simVoiceTry(${esc(JSON.stringify(v.name))},0)" title="ruhig">▶︎</button><button type="button" onclick="event.preventDefault();simVoiceTry(${esc(JSON.stringify(v.name))},3)" title="aufgeregt">😱</button></label>`};
+ const chip=(k,l)=>`<button onclick="simPlattSet('${k}')" class="${simPlattMode===k?"primary":""}">${l}</button>`;
+ showModal(`<div id="simVoiceDlg"><h3 style="margin-top:0">🗣️ Anrufer-Stimmen</h3>
+  <label>Plattdeutsch</label><div class="row" style="gap:6px;flex-wrap:wrap">${chip("0","Aus")}${chip("1","Ab und zu")}${chip("2","Oft")}</div>
+  <p class="muted" style="font-size:13px">Vor allem ältere Anrufer schnacken dann Platt – manche nur mit Platt-Einschlag, manche richtig. Sagen Sie „Können Sie Hochdeutsch sprechen?“, dann versuchen sie es. Sie dürfen selbst auch Platt schnacken.</p>
+  <button onclick="simVoiceTry(null,3,true)" style="margin-bottom:10px">😱 Probe: aufgeregter Anrufer auf Platt</button>
+  <label>Verwendete Stimmen (${vs.length} deutsche auf diesem Gerät)</label>
+  <div style="max-height:260px;overflow:auto">${vs.map(row).join("")||'<p class="muted">Keine deutschen Stimmen gefunden.</p>'}</div>
+  <p class="muted" style="font-size:13px;margin-top:10px"><b>⭐ = besonders natürlich.</b> Bessere Stimmen bekommen Sie so:<br>
+  • <b>iPad/iPhone:</b> Einstellungen → Bedienungshilfen → Gesprochene Inhalte → Stimmen → Deutsch → z. B. „Anna“, „Helena“, „Markus“, „Yannick“ in der Version <i>Premium</i> oder <i>Erweitert</i> laden. Danach die Seite neu laden.<br>
+  • <b>Windows:</b> Im Browser <i>Microsoft Edge</i> öffnen – dort gibt es die sehr menschlich klingenden „Natural“-Stimmen (Katja, Conrad, Amala, Killian …).<br>
+  • <b>Android/Chrome:</b> „Google Deutsch“ ist voreingestellt; weitere Stimmen unter Einstellungen → Sprachausgabe.</p>
+  <div class="row" style="justify-content:flex-end"><button onclick="closeModal()">Schließen</button></div></div>`);
+}
+function simVoiceToggle(name,on){let off=simVoiceOff().filter(n=>n!==name);if(!on)off.push(name);try{localStorage.setItem(SIM_KEY_VOFF,JSON.stringify(off))}catch(e){}}
+function simPlattSet(k){simPlattMode=k;try{localStorage.setItem(SIM_KEY_PLATT,k)}catch(e){}simVoiceDialog()}
+function simVoiceTry(name,e,platt){
+ try{
+   speechSynthesis.cancel(); simSpeechUnlock();
+   const vs=simDeVoices(true); const v=name?vs.find(x=>x.name===name):null;
+   const g=v&&SIM_V_M.test(v.name)?"m":"w";
+   const p={g,first:"Probe",last:name||"x",age:platt?72:45,platt:platt?2:0,vname:v?v.name:undefined};
+   const fake={sim:{id:"probe"+Math.random(),d:{caller:p,patient:{g:"m"},cpr:e>=3,panic:e>=3,rel:"mein Mann",age:74},mem:{calm:0}}};
+   const raw=e>=3?"Hallo! Mein Mann ist umgefallen, er atmet nicht mehr! Bitte schnell! Kommen Sie schnell!":"Hallo, guten Tag. Mein Mann hat seit heute Morgen Bauchschmerzen und ihm ist schlecht.";
+   simSpeak(fake,simPlattify(raw,p.platt));
+ }catch(x){}
+}
+function simAskHochdeutsch(c,text){
+ const t=String(text).toLowerCase(), p=simPersonOf(c), lvl=simPlattLvl(c,p);
+ if(!lvl)return null;
+ if(!(/hochdeutsch|kein(e)? platt|nicht (so )?platt|kein(en)? dialekt/.test(t)||(lvl>=2&&/verstehe? (sie|dich|das|ihn|kein wort) nicht|wie bitte|nicht verstanden/.test(t))))return null;
+ p.platt=lvl-1;
+ const last=c.sim.log.filter(m=>m.who!=="lst").slice(-1)[0], again=last?String(last.orig||last.text).replace(/^((hallo|moin|guten tag|ja|ähm…|äh,|oh gott…|bitte schnell!|bitte beeilen sie sich!)[,!.]?\s*)+/i,""):"";
+ return (lvl>=2?pick(["Jo, jo, ik versöök dat. Also","Och so – jo, ik snack mal anners. Also"]):pick(["Ach so, ja, Entschuldigung, ich bin das so gewohnt. Also","Ja, ja, entschuldigen Sie. Also"]))+(again?": "+again:".");
 }
 // Sprachmodus: Mikrofon hört dauerhaft zu, solange ein Übungsanruf läuft – man kann jederzeit
 // sprechen (auch dazwischen: der Anrufer verstummt dann). Alles Gesagte landet im Gesprächsprotokoll.
@@ -10505,6 +10671,7 @@ function simCtlHTML(){
  return `<button onclick="simToggleVoice()" title="${simVoice?"Sprachmodus – antippen für Textmodus":"Textmodus – antippen für Sprachmodus"}" style="font-size:20px;padding:2px 8px;background:none;border:1px solid var(--line);border-radius:8px">${simVoice?"🔊":"🔇"}</button>
   <button onclick="simToggleOn()" title="Automatische Übungsnotrufe ${simOn?"ausschalten":"einschalten"}" style="font-size:12px;padding:4px 10px;border-radius:8px;font-weight:800;${simOn?"background:#16a34a;color:#fff;border:1px solid #16a34a":"background:#fff;color:#334155;border:1px solid var(--line)"}">🎲 <span class="simLbl">Übungsnotrufe </span>${simOn?"AN":"AUS"}</button>
   <button onclick="phoneHereToggle()" title="Anrufe vom Anrufer-Handy an diesem Platz ${phoneHere?"ausblenden":"anzeigen"} (${esc(deskName())})" style="font-size:12px;padding:4px 8px;border-radius:8px;font-weight:800;${phoneHere?"background:#e0f2fe;color:#075985;border:1px solid #7dd3fc":"background:#fff;color:#94a3b8;border:1px solid var(--line)"}">📞${phoneHere?"":"✕"}</button>
+  ${simVoice?`<button onclick="simVoiceDialog()" title="Anrufer-Stimmen und Plattdeutsch" style="font-size:16px;padding:2px 8px;border-radius:8px;background:none;border:1px solid var(--line)">🗣️</button>`:""}
   <button onclick="simPrepDialog()" title="Eigenen Notruf vorbereiten (Parameter festlegen, Anrufer spielt ihn)" style="font-size:16px;padding:2px 8px;border-radius:8px;background:none;border:1px solid var(--line)">📝</button>
   <button onclick="render('protokolle')" title="Anruferprotokolle (nach Tagen) und Lernliste" style="font-size:16px;padding:2px 8px;border-radius:8px;background:none;border:1px solid var(--line)">📼</button>`;
 }

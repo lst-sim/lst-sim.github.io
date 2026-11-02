@@ -1607,6 +1607,18 @@ Version 5.05:
   („a, b“ = a ODER b). Mit „🚑 NA-Indikation“ markierte Knöpfe ziehen weiterhin einen Notarzt.
 - Nur „Unauffällig“ (ohne weitere Befunde) zählt weiter als unauffälliges E (R0 möglich).
 
+Version 5.30:
+- Anrufer klingen menschlicher: jede Person bekommt eine eigene Stimme (die natürlichsten deutschen
+  Stimmen des Geräts zuerst, passend zu Geschlecht und Alter), eigene Tonhöhe und eigenes Tempo.
+- Aufregung je nach Lage: bei schlimmen Sachen (Reanimation, Bewusstlosigkeit, Panik) sprechen sie
+  schneller und höher, stocken („Er… er atmet nicht!“), rufen „Oh Gott, oh Gott!“, wiederholen sich.
+  Beruhigen und „Hilfe ist unterwegs“ senken die Aufregung. Ruhige Anrufer sagen auch mal „Äh, …“.
+- Plattdeutsch: vor allem ältere Anrufer schnacken Platt – mal nur mit Platt-Einschlag, mal richtig.
+  Bitte um Hochdeutsch („Können Sie Hochdeutsch sprechen?“) wird befolgt. Platt vom Disponenten wird
+  verstanden („Wat is passeert?“).
+- Neuer Knopf 🗣️ (im Sprachmodus): Plattdeutsch Aus / Ab und zu / Oft, Stimmen an-/abwählen und
+  probehören, Hinweise wie man bessere Stimmen bekommt (iPad: Premium-Stimmen laden; Windows: Edge).
+
 Version 5.29:
 - Eigene Szenarien werden zusätzlich in der Datenbank gespeichert und stehen auf allen Geräten zur
   Verfügung (Szenario-Auswahl lädt den neuesten Stand; neuester Stand gewinnt). Anlegen, Ändern und
