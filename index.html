@@ -170,7 +170,7 @@ html[data-device="handy"] #floatDock{left:8px;right:8px;width:auto;top:auto;bott
 </head>
 <body>
 <div style="padding:6px 10px;font-size:11px;color:#94a3b8;font-weight:700;display:flex;flex-wrap:wrap;align-items:center;gap:10px;position:sticky;top:0;z-index:10;background:var(--bg)">
- <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v5.33</span>
+ <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v5.34</span>
  <span id="syncState"></span> <a id="deskTag" href="#" onclick="renameDesk();return false" title="Name dieses Platzes (für „offen an …“) – antippen zum Ändern" style="color:#64748b;font-weight:700;text-decoration:none"></a>
  <span id="simCtl" style="position:absolute;left:50%;transform:translateX(-50%);display:flex;gap:6px;align-items:center"></span>
  <a id="homeLink" href="#" onclick="render('leitstelle');return false" class="hidden" style="color:#64748b;text-decoration:underline;font-weight:600">🖥️ Leitstelle</a>
@@ -829,7 +829,7 @@ const isTerminalLink=(()=>{
  return !!(p.get("vehicle")||p.get("neighbor")||p.get("caller"));
 })();
 const NAV_PAGES_ALL=[
- ["leitstelle","🖥️ Leitstelle"],["notruf","📞 Notruf"],["karte","🗺️ Karte"],["mittel","🚤 Fahrzeuge"],["aao","🧠 AAO"],["ivena","🏥 IVENA"],["ivenaZuweisungen","📋 IVENA-Zuweisungen"],["nachbarLks","🚑 Nachbar LKs"],["funk","📻 Funkrufgruppen"]
+ ["leitstelle","🖥️ Leitstelle"],["notruf","📞 Notruf"],["karte","🗺️ Karte"],["mittel","🚤 Fahrzeuge"],["aao","🧠 AAO"],["ivena","🏥 IVENA"],["ivenaZuweisungen","📋 IVENA-Zuweisungen"],["nachbarLks","🚑 Nachbar LKs"],["funk","📻 Funkrufgruppen"],["manv","🚨 MANV"]
 ];
 // Zusatz-Monitor (per QR vom Hauptplatz geöffnet): vollwertige Leitstellen-Oberfläche, die ihren
 // kompletten Zustand in Echtzeit mit dem Hauptplatz und allen anderen Monitoren teilt.
@@ -1159,6 +1159,7 @@ function render(page="leitstelle"){
  if(page==="nachbarLks") nachbarLks();
  if(page==="protokolle") simProtoPage();
  if(page==="funk") funkPage();
+ if(page==="manv") manvPage();
  const app=document.getElementById("app");
  if(app){
    const inner=app.innerHTML;
@@ -1479,7 +1480,7 @@ function simulatedUnitPosition(u){
    const call=findUnitCall(u);
    const hp=asg&&hospitalPoint(asg.hospitalId);
    const cp=!hp&&call&&callDestinationPoint(call,u);
-   const start=hp||cp;
+   const start=hp||cp||(u.cover&&u.coverFrom&&!call?u.coverFrom:null);
    if(!start)return null; // kein erkennbarer vorheriger Ort -> einfach an der Wache
    const totalMs=(u.status2Due&&u.status1Since)?(u.status2Due-u.status1Since):8*60000;
    const startMs=u.status1Since||Date.now();
@@ -2238,12 +2239,13 @@ function islandReachable(u){
 }
 // DRK-Rettungswagen/-KTW sind Hintergrunddienst: nie automatisch vorschlagen, nur manuell
 // (Reiter DRK) oder wenn ausdrücklich die Organisation DRK angefordert ist.
-function drkBackground(u){return u&&u.org==="DRK"&&["RTW","KTW","NKTW","NEF"].includes(u.type)}
+function drkBackground(u){return u&&u.org==="DRK"&&["RTW","KTW","NKTW","NEF"].includes(u.type)&&!AVAIL_MANV}
+let AVAIL_MANV=false; // v5.34: beim MANV gehören auch die DRK-Hintergrund-Rettungsmittel in den Vorschlag
 function availableUnits(type,org=null){
  const orgOk=u=>!org||u.org===org||(org==="DLRG"&&u.wasserrettung);
- const prim=nearestFirst(db.units.filter(u=>!u.neighborLoan&&(!type||u.type===type)&&orgOk(u)&&(org==="DRK"||!drkBackground(u))&&["1","2"].includes(u.status)&&islandReachable(u)));
+ const prim=nearestFirst(db.units.filter(u=>(!u.neighborLoan||u.cover)&&(!type||u.type===type)&&orgOk(u)&&(org==="DRK"||!drkBackground(u))&&["1","2"].includes(u.status)&&islandReachable(u)));
  if(prim.length)return prim;
- return nearestFirst(db.units.filter(u=>!u.neighborLoan&&(!type||u.type===type)&&orgOk(u)&&(org==="DRK"||!drkBackground(u))&&u.status==="8"&&islandReachable(u)));
+ return nearestFirst(db.units.filter(u=>(!u.neighborLoan||u.cover)&&(!type||u.type===type)&&orgOk(u)&&(org==="DRK"||!drkBackground(u))&&u.status==="8"&&islandReachable(u)));
 }
 function chooseOne(type,org=null){return availableUnits(type,org)[0]||null}
 
@@ -2305,9 +2307,9 @@ function thwGroup(u){return String(u.fachgruppe||THW_GROUP_DEFAULT[u.opta]||"Ohn
 function chooseAvailableByType(type,org=null){
  const types=Array.isArray(type)?type:[type];
  const orgOk=u=>!org||u.org===org;
- const primary=nearestFirst(db.units.filter(u=>!u.neighborLoan&&orgOk(u)&&(org==="DRK"||!drkBackground(u))&&islandReachable(u)&&types.includes(u.type) && ["1","2"].includes(String(u.status))));
+ const primary=nearestFirst(db.units.filter(u=>(!u.neighborLoan||u.cover)&&orgOk(u)&&(org==="DRK"||!drkBackground(u))&&islandReachable(u)&&types.includes(u.type) && ["1","2"].includes(String(u.status))));
  if(primary.length)return primary[0];
- const fallback=nearestFirst(db.units.filter(u=>!u.neighborLoan&&orgOk(u)&&(org==="DRK"||!drkBackground(u))&&islandReachable(u)&&types.includes(u.type) && String(u.status)==="8"));
+ const fallback=nearestFirst(db.units.filter(u=>(!u.neighborLoan||u.cover)&&orgOk(u)&&(org==="DRK"||!drkBackground(u))&&islandReachable(u)&&types.includes(u.type) && String(u.status)==="8"));
  return fallback[0]||null;
 }
 // Wasserrettungszug Friesland: Das Führungsfahrzeug (Pelikan Friesland 71/11-01, ELW1) wird
@@ -2351,6 +2353,56 @@ function loanNeighborUnit(nu){
  db.units.push(loaned);
  nu.status="3";
  return loaned;
+}
+// v5.34: MANV – Nachbar-Fahrzeug direkt alarmieren (ohne Anfrage), Nachbar-LST bekommt eine Info
+function manvNbAlarm(call,nu,coverFor){
+ const lst=NEIGHBOR_LEITSTELLE[nu.district]==="ostfriesland"?"KRLS Ostfriesland":"GOL";
+ const loaned=loanNeighborUnit(nu);
+ if(coverFor){
+   // Gebietsabsicherung: fährt an unsere Wache und steht dort für neue Einsätze bereit
+   Object.assign(loaned,{cover:true,coverCallId:String(call.id),coverFor:coverFor.name,location:coverFor.name,homeLat:coverFor.pt[0],homeLng:coverFor.pt[1],coverFrom:[nu.lat,nu.lng]});
+   delete loaned.lat; delete loaned.lng;
+   const km=haversine(nu.lat,nu.lng,coverFor.pt[0],coverFor.pt[1]);
+   loaned.status="1"; loaned.status1Since=Date.now(); loaned.status2Due=Date.now()+Math.max(4,Math.round(2+km/70*60))*60000;
+   (call.history=call.history||[]).push({q:`🛡️ Gebietsabsicherung (${lst})`,a:`${nu.opta} aus LK ${nu.district} → Wache ${coverFor.name}, ca. ${Math.round((loaned.status2Due-Date.now())/60000)} min`});
+ }else{
+   setUnitStatus(loaned,"3"); appendUnitToCall(call,loaned,`Nachbar-LK ${nu.district} (MANV)`);
+   call.alarmedUnits=call.alarmedUnits||[]; if(!call.alarmedUnits.some(id=>String(id)===String(loaned.id)))call.alarmedUnits.push(loaned.id);
+   (call.history=call.history||[]).push({q:`🚑 MANV: Nachbar-LK direkt alarmiert`,a:`${nu.opta} (LK ${nu.district}) – ${lst} informiert`});
+ }
+ call.manvNbInfo=call.manvNbInfo||{}; call.manvNbInfo[lst]=(call.manvNbInfo[lst]||0)+1;
+ return loaned;
+}
+// Gebietsabsicherung: jede eigene RTW-/NEF-Wache ohne freies Fahrzeug bekommt eins aus den Nachbarkreisen
+function manvAreaCover(callId){
+ const call=allOpenCalls().find(c=>String(c.id)===String(callId)); if(!call)return;
+ const own=db.units.filter(u=>!u.neighborLoan&&["RTW","NEF"].includes(u.type)&&!u.island&&String(u.status)!=="6"&&(u.org==="Rettungsdienst"||u.org==="DRK"));
+ const wachen=new Map(); own.forEach(u=>{const k=u.type+"|"+(u.location||"?");if(!wachen.has(k))wachen.set(k,{type:u.type,name:u.location||"?",units:[],pt:unitPoint(u)});wachen.get(k).units.push(u)});
+ const usedN=new Set(); let n=0;
+ for(const w of wachen.values()){
+   if(!w.pt)continue;
+   if(w.units.some(u=>["1","2"].includes(String(u.status))))continue; // dort ist noch eins frei
+   if(db.units.some(u=>u.cover&&u.coverFor===w.name&&u.type===w.type))continue;
+   const free=(db.neighborUnits||[]).filter(x=>x.type===w.type&&["1","2"].includes(String(x.status))&&!usedN.has(String(x.id))&&Number.isFinite(x.lat));
+   const keepsOne=x=>free.filter(y=>y.district===x.district).length>1;
+   const cand=free.filter(keepsOne).map(x=>({x,km:haversine(w.pt[0],w.pt[1],x.lat,x.lng)})).sort((a,b)=>a.km-b.km)[0];
+   if(!cand){(call.history=call.history||[]).push({q:"🛡️ Gebietsabsicherung",a:`Wache ${w.name} (${w.type}): kein Nachbar-Fahrzeug mehr frei`});continue}
+   usedN.add(String(cand.x.id)); manvNbAlarm(call,cand.x,w); n++;
+ }
+ const info=Object.entries(call.manvNbInfo||{}).map(([l,k])=>`${l}: ${k} Fahrzeug${k>1?"e":""}`).join(" · ");
+ if(info){sdsLog({dir:"in",opta:"Nachbar-Leitstellen",callId:String(call.id),text:`🚨 MANV-Info bestätigt – ${info}${n?` (davon ${n} zur Gebietsabsicherung)`:""}`,read:false});toast(`🚑 MANV: Nachbarkreise direkt alarmiert – ${info}`)}
+ save(); if(["leitstelle","karte","mittel","nachbarLks"].includes(currentPage)&&!uiLocked)render(currentPage);
+}
+// MANV beendet → Gebietsabsicherung fährt heim (wenn frei; sonst nach dem laufenden Einsatz)
+function manvCoverRelease(callId){
+ let changed=false;
+ db.units.filter(u=>u.cover&&String(u.coverCallId)===String(callId)).forEach(u=>{
+   const busy=allOpenCalls().some(o=>String(o.id)!==String(callId)&&(o.alarmedUnits||[]).some(id=>String(id)===String(u.id)));
+   if(busy){u.coverEnd=true;return}
+   const orig=(db.neighborUnits||[]).find(n=>String(n.id)===String(u.neighborUnitId)); if(orig)orig.status="1";
+   db.units=db.units.filter(x=>String(x.id)!==String(u.id)); changed=true;
+ });
+ return changed;
 }
 function alarmNeighborUnit(neighborUnitId,callId){
  const call=allOpenCalls().find(c=>String(c.id)===String(callId));
@@ -4232,6 +4284,10 @@ function goBackNotruf(){
 }
 function evaluate(){
  applyDutySchedule();
+ AVAIL_MANV=Number(db.currentCall&&db.currentCall.answers&&db.currentCall.answers.count)>3;
+ try{return evaluate0()}finally{AVAIL_MANV=false}
+}
+function evaluate0(){
  const c=db.currentCall, a=c.answers, e=a.event||"";
 
  if(a.callType && a.callType!=="112"){
@@ -4575,7 +4631,12 @@ function evaluate(){
    // (Zeitersparnis gegenüber dem ersten anderen Einsatzmittel wird nach der Auswahl geprüft.)
    if(r.firstResponder&&u){const fe=estimatedEtaMinutes(u);if(fe==null||fe>15)continue}
    if(u){selected.push({...u,firstResponder:!!r.firstResponder});used.add(u.id)}
-   else selected.push({missing:true,type:r.type,org:r.org});
+   else{
+     // v5.34 MANV: fehlende Rettungsmittel kommen direkt aus den Nachbarkreisen – auch von weiter weg
+     const nbm=AVAIL_MANV&&ip&&!incidentOnWangerooge()?(db.neighborUnits||[]).filter(n=>n.type===r.type&&["1","2"].includes(String(n.status))&&!usedN.has(String(n.id))&&Number.isFinite(n.lat)).map(n=>{const km=haversine(ip[0],ip[1],n.lat,n.lng);return {n,km,eta:etaMinutesForDistance({...n,org:"Rettungsdienst",neighborLoan:true,status:String(n.status)},km)}}).sort((x,y)=>x.eta-y.eta)[0]:null;
+     if(nbm){selected.push({...nbm.n,neighbor:true,neighborKm:nbm.km,neighborEta:nbm.eta});usedN.add(String(nbm.n.id))}
+     else selected.push({missing:true,type:r.type,org:r.org});
+   }
  }
  // First Responder nur bei echter Zeitersparnis gegenüber dem ersten eintreffenden Einsatzmittel
  // (Nutzerangabe): Reanimation > 1 min, Verkehrsunfall > 2 min, sonst > 3 min.
@@ -4831,7 +4892,11 @@ function alarmProposal(){
  // angefragt werden (sie entscheidet und alarmiert selbst). Vorschläge werden automatisch angefragt.
  const nbAsk=(c.neighborProposal||[]).map(nid=>(db.neighborUnits||[]).find(n=>String(n.id)===String(nid))).filter(Boolean);
  c.neighborProposal=[];
- setTimeout(()=>nbAsk.forEach(nu=>nbOutRequest(c.id,NEIGHBOR_LEITSTELLE[nu.district],{unitId:nu.id,type:nu.type})),300);
+ const manvNow=isManvCall(c)&&currentScenarioId==="fri-whv";
+ // v5.34: beim MANV werden Nachbar-Fahrzeuge ohne Rückfrage direkt alarmiert (Nachbar-LST wird informiert)
+ if(manvNow){c.alarmedUnits=c.alarmedUnits||[];for(const nu of nbAsk)if(["1","2"].includes(String(nu.status)))manvNbAlarm(c,nu,null)}
+ else setTimeout(()=>nbAsk.forEach(nu=>nbOutRequest(c.id,NEIGHBOR_LEITSTELLE[nu.district],{unitId:nu.id,type:nu.type})),300);
+ if(manvNow)setTimeout(()=>{try{manvAreaCover(c.id)}catch(e){console.warn(e)}},500);
  for(const id of c.proposedUnitIds){
    const u=db.units.find(x=>x.id===id);
    if(!u)continue;
@@ -5182,6 +5247,88 @@ function manvTrainPick(sk){
   <ol style="font-size:13px;margin:0 0 0 18px;padding:0">${r.path.map(x=>`<li>${esc(x)}</li>`).join("")}</ol>
   <div class="row" style="justify-content:flex-end;margin-top:10px"><button class="primary" onclick="manvTrainDialog('${esc(String(T.id))}')">Weiter</button></div>`);
 }
+// ─── v5.34: Sichtung per Fahrzeug-Handy + MANV-Patientenübersicht ───────────────────────────────
+// Sichten dürfen: RTW, RTH, KTW, NKTW, KTH, NEF, ITW, ITH, NAW, GW-San, GW Wasserrettung und
+// GW Drohne der DLRG sowie ELW, MTW und MZF des DRK. Patientenkarten (Anhängekarten) je Fahrzeug:
+// NEF 25, GW-San und ELW 50, alle anderen 15. Kartennummer = Fahrzeug + laufende Nummer.
+const TRIAGE_RD=new Set(["RTW","RTH","KTW","NKTW","KTH","NEF","ITW","ITH","NAW"]);
+function triageCardCount(u){
+ if(!u)return 0; const t=String(u.type||""), o=String(u.org||"");
+ if(/^GW[- ]?San/i.test(t))return 50;
+ if(t==="NEF")return 25;
+ if(TRIAGE_RD.has(t))return 15;
+ if(o==="DLRG"&&/^GW (Wasserrettung|Drohne)$/i.test(t))return 15;
+ if(o==="DRK"&&/^ELW/i.test(t))return 50;
+ if(o==="DRK"&&/^(MTW|MZF)$/i.test(t))return 15;
+ return 0;
+}
+function triageUnitTag(u){const s=String(u&&(u.opta||u.name)||"?");const m=s.match(/(\d+[\/-]\d+(?:-\d+)?)\s*$/);return m?m[1]:s.slice(-8)}
+function triageCardId(u,n){return `${triageUnitTag(u)}-${String(n).padStart(2,"0")}`}
+function isManvLike(c){return !!c&&(!!c.manv||/MANV/.test(c.keyword||"")||Number(c.answers&&c.answers.count)>3)}
+// Alle Patienten eines MANV: Handy-Sichtungen der Einsatzkräfte + simulierte Vorsichtung
+function manvAllPatients(c){
+ const out=[];
+ Object.values(c.manvCards||{}).forEach(x=>out.push({src:"phone",card:x.cardId||x.card,sk:Number(x.sk),by:x.label||String(x.unitId),at:x.at,hist:x.hist||[]}));
+ if(c.manvTruth&&c.manvTruth.pats&&(c.manvReports||[]).length){
+   const orgl=(c.manvReports||[]).some(r=>r.kind==="orgl"), first=(c.manvReports||[]).find(r=>r.kind==="first");
+   c.manvTruth.pats.forEach(p=>{const tr=(c.manvPatients||[]).find(x=>x.pid===p.n), u=tr&&tr.unit?db.units.find(x=>String(x.id)===String(tr.unit)):null;
+     out.push({src:"sim",card:String(p.n),sk:orgl?p.sk:p.vs,by:first?first.by:"",at:first?first.at:null,p,unit:u?(u.opta||u.name):"",vs:p.vs})});
+ }
+ return out;
+}
+function manvPage(){
+ const calls=allOpenCalls().filter(c=>c&&isManvLike(c));
+ const f=window._manvFilter||0;
+ const chip=(k,l)=>`<button onclick="window._manvFilter=${k};render('manv')" class="${f===k?"primary":""}" style="font-size:12px;padding:4px 10px">${l}</button>`;
+ const block=c=>{
+   const P=manvAllPatients(c).filter(x=>!f||x.sk===f).sort((a,b)=>a.sk-b.sk||String(a.card).localeCompare(String(b.card),"de",{numeric:true}));
+   const all=manvAllPatients(c), cnt=k=>all.filter(x=>x.sk===k).length;
+   const rows=P.map(x=>`<tr style="border-bottom:1px solid var(--line)"><td style="padding:5px 4px;font-weight:800;white-space:nowrap">${esc(String(x.card))}</td><td>${mstartDot(x.sk,15)} <small>${MSTART_COL[x.sk]?MSTART_COL[x.sk][2]:"?"}</small>${x.src==="sim"&&x.vs!==x.sk?` <small class="muted">(Vorsichtung ${MSTART_COL[x.vs][1]})</small>`:""}${(x.hist||[]).length>1?` <small class="muted">(vorher ${x.hist.slice(0,-1).map(h=>MSTART_COL[h]?MSTART_COL[h][1]:h).join(", ")})</small>`:""}</td>
+     <td style="font-size:12px">${x.src==="phone"?`📱 ${esc(x.by)}`:`<span title="Simulierte Lage">🤖 ${esc(x.by||"")}</span>`}${x.at?` <span class="muted">${hhmm(x.at)}</span>`:""}</td>
+     <td style="font-size:12px">${x.p?`${x.p.gender==="W"?"♀":"♂"} ${x.p.age} J. – ${esc(x.p.inj)}`:"<span class='muted'>—</span>"}</td><td style="font-size:12px">${x.unit?esc(x.unit):x.sk===5?"—":"<span class='muted'>offen</span>"}</td></tr>`).join("");
+   return `<div class="card"><div class="row between"><h3 style="margin:0">#${esc(String(c.id))} ${esc(c.keyword||"MANV")}</h3><small class="muted">${esc(c.location||"")}</small></div>
+    <div style="margin:6px 0;font-weight:800">${[1,2,3,4,5].map(k=>`<span style="margin-right:12px">${mstartDot(k,13)} ${cnt(k)}</span>`).join("")}<small class="muted">${all.length} Patienten gesamt</small></div>
+    ${P.length?`<div style="overflow:auto"><table style="width:100%;border-collapse:collapse"><tr style="text-align:left;font-size:12px"><th>Karte</th><th>SK</th><th>Gesichtet von</th><th>Patient</th><th>Transport</th></tr>${rows}</table></div>`:`<p class="muted">Noch keine Patienten gesichtet${f?" in dieser Kategorie":""}.</p>`}</div>`};
+ document.getElementById("app").innerHTML=`<div class="card"><h2 style="margin:0">🚨 MANV – alle Patienten</h2>
+  <p class="muted" style="margin:4px 0 8px">📱 = vom Fahrzeug-Handy gesichtet · 🤖 = simulierte Sichtung. Aktualisiert sich von selbst.</p>
+  <div class="row" style="gap:6px;flex-wrap:wrap">${chip(0,"Alle")}${[1,2,3,4,5].map(k=>chip(k,`${mstartDot(k)} ${MSTART_COL[k][1]}`)).join("")}</div></div>
+  ${calls.length?calls.map(block).join(""):`<div class="card"><p class="muted">Zurzeit kein MANV.</p></div>`}
+  <div class="card">${mstartSchemeHTML()}</div>`;
+}
+setInterval(()=>{try{if(currentPage==="manv"&&!uiLocked&&!isTerminalLink&&!document.getElementById("lstModal"))render("manv")}catch(e){}},3000);
+// Fahrzeug-Handy: Karte wählen → Farbe wählen
+let vehicleTriageSel=null, vehicleTriageLocal={};
+function vehicleTriageHTML(local,unit,unitId,dburl,sid,c,mine){
+ const u={...(local||{}),...(unit||{})}, N=triageCardCount(u); if(!N)return "";
+ const st={...mine,...(vehicleTriageLocal[c.id]||{})};
+ const q=x=>String(x).replace(/'/g,"\\'");
+ const used=Object.keys(st).length;
+ const cell=n=>{const sk=st[n];const col=sk?MSTART_COL[sk][0]:"#fff";return `<button onclick="vehicleTriageSel=${vehicleTriageSel===n?"null":n};terminalRefreshFn&&terminalRefreshFn()" style="min-width:0;padding:8px 0;font-weight:800;background:${col};color:${sk===5||sk===1||sk===4?"#fff":"#111"};border:${vehicleTriageSel===n?"3px solid #111":"1px solid #94a3b8"}">${n}</button>`};
+ const pick=vehicleTriageSel&&vehicleTriageSel<=N?`<div style="margin-top:8px;padding:8px;border-radius:8px;background:#f1f5f9"><b>Karte ${esc(triageCardId(u,vehicleTriageSel))}</b>${st[vehicleTriageSel]?` – jetzt ${MSTART_COL[st[vehicleTriageSel]][1]}`:""}
+   <div style="display:grid;gap:6px;margin-top:6px">${[1,2,3,4,5].map(k=>`<button onclick="vehicleTriageSend('${q(unitId)}','${q(dburl)}','${q(sid)}','${q(String(c.id))}',${vehicleTriageSel},${k})" style="display:flex;align-items:center;justify-content:center;gap:8px;padding:12px;font-size:16px;font-weight:800;background:${MSTART_COL[k][0]};color:${k===2||k===3?"#111":"#fff"}">${MSTART_COL[k][2]}</button>`).join("")}
+   <button onclick="vehicleTriageSel=null;terminalRefreshFn&&terminalRefreshFn()">Abbrechen</button></div></div>`:"";
+ return `<div class="card" style="margin-top:12px"><div class="row between"><h2 style="margin:0">🏷️ Sichtung</h2><small class="muted">${used}/${N} Karten benutzt</small></div>
+  <p class="muted" style="font-size:12px;margin:4px 0 8px">Patientenkarte antippen, dann Kategorie wählen. Nochmal antippen = umsichten.</p>
+  <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:5px">${Array.from({length:N},(_,i)=>cell(i+1)).join("")}</div>${pick}
+  <div style="margin-top:8px;font-size:13px;font-weight:800">${[1,2,3,4,5].map(k=>`<span style="margin-right:10px">${mstartDot(k)} ${Object.values(st).filter(v=>v===k).length}</span>`).join("")}</div>
+  <details style="margin-top:6px"><summary style="cursor:pointer;font-size:13px">📘 mSTaRT</summary>${mstartSchemeHTML().replace(/^<details[^>]*><summary[^<]*<\/summary>/,"").replace(/<\/details>$/,"")}</details></div>`;
+}
+async function vehicleTriageSend(unitId,dburl,sid,callId,card,sk){
+ const local=db.units.find(x=>String(x.id)===String(unitId));
+ vehicleTriageLocal[callId]=vehicleTriageLocal[callId]||{}; vehicleTriageLocal[callId][card]=sk; vehicleTriageSel=null;
+ if(typeof terminalRefreshFn==="function")terminalRefreshFn();
+ try{await pushFeedbackEntry(dburl,sid,{kind:"triage",callId,unitId,unitLabel:local?.opta||local?.name||unitId,card,cardId:triageCardId(local||{name:unitId},card),sk});toast(`🏷️ Karte ${card}: ${MSTART_COL[sk][1]}`)}
+ catch(e){toast("Senden fehlgeschlagen – bitte nochmal")}
+}
+// Leitstelle: eingehende Handy-Sichtung übernehmen (letzte Meldung je Karte gilt)
+function manvApplyTriage(call,fb){
+ call.manvCards=call.manvCards||{}; const key=`${fb.unitId}#${fb.card}`, old=call.manvCards[key];
+ if(old&&old.fbIds&&old.fbIds.includes(String(fb.id)))return false;
+ if(old&&new Date(old.at)>new Date(fb.time))return false;
+ const hist=(old&&old.hist||[]).concat([Number(fb.sk)]);
+ call.manvCards[key]={unitId:fb.unitId,label:fb.unitLabel,card:fb.card,cardId:fb.cardId||`${fb.unitId}-${fb.card}`,sk:Number(fb.sk),at:fb.time,hist,fbIds:(old&&old.fbIds||[]).concat([String(fb.id)]).slice(-20)};
+ call.manv=true; return true;
+}
 function manvReport(c,u,kind){
  const T=manvTruth(c), jit=v=>Math.max(0,v+(Math.random()<0.5?0:pick([-1,1])));
  manvPats(c);
@@ -5201,7 +5348,8 @@ function manvReport(c,u,kind){
  }
 }
 function manvStripHTML(c){
- const R=(c.manvReports||[]).slice(-1)[0]; if(!R&&!isManvCall(c))return "";
+ const R=(c.manvReports||[]).slice(-1)[0]; if(!R&&!isManvCall(c)&&!c.manvCards)return "";
+ const PC=Object.values(c.manvCards||{}), pcHTML=PC.length?`<div style="margin-top:3px">📱 Handy-Sichtung: ${[1,2,3,4,5].map(k=>`<span style="margin-right:8px;font-weight:800">${mstartDot(k)} ${PC.filter(x=>Number(x.sk)===k).length}</span>`).join("")}<button onclick="event.stopPropagation();render('manv')" style="font-size:11px;padding:2px 8px">🚨 Alle Patienten</button></div>`:"";
  const dot=(col,n,t)=>`<span title="${t}" style="display:inline-flex;align-items:center;gap:3px;margin-right:8px;font-weight:800"><span style="width:12px;height:12px;border-radius:50%;background:${col};display:inline-block;border:1px solid #0003"></span>${n}</span>`;
  const br=c.staging?`🅿️ BR: ${esc(c.staging.name)}`:c.brMode==="orgl"?"🅿️ BR: OrgL legt fest …":isManvCall(c)?`<button onclick="event.stopPropagation();lstSetStaging('${esc(String(c.id))}')" style="font-size:11px;padding:2px 8px">🅿️ BR festlegen</button> <button onclick="event.stopPropagation();setBrMode('${esc(String(c.id))}','orgl')" style="font-size:11px;padding:2px 8px">OrgL legt fest</button>`:"";
  const tr=(c.manvPatients||[]), done=tr.filter(p=>p.unit).length;
@@ -5209,7 +5357,8 @@ function manvStripHTML(c){
   ${R?`<div><b>${R.total} Betroffene</b> <small class="muted">(${R.kind==="first"?"erste Meldung":"Sichtung"} ${esc(R.by)} ${hhmm(R.at)})</small></div>
   <div style="margin-top:3px">${dot("#d71920",R.rot,"rot – SK I")}${dot("#f2c200",R.gelb,"gelb – SK II")}${dot("#22c55e",R.gruen,"grün – SK III")}${dot("#2563eb",R.blau,"blau – SK IV")}${dot("#111827",R.schwarz,"verstorben")}${tr.length?`<small class="muted">· ${done}/${tr.length} Pat. von Rettungsmitteln übernommen</small>`:""}</div>
   ${(()=>{const open=tr.filter(p=>!p.unit),free=callUnits(c).filter(u=>CREW_TRANSPORT.has(u.type)&&["3","4"].includes(String(u.status))&&!(u.crew&&u.crew.mode==="transport")).length,miss=open.length-free;return miss>0?`<div style="margin-top:3px;color:#b91c1c;font-weight:800">⚠️ ${miss} Pat. noch ohne Transportmittel (${["SK1","SK2","SK3","SK4"].map((k,i)=>{const n=open.filter(p=>p.sk===i+1).length;return n?`${n}× ${k}`:""}).filter(Boolean).join(", ")}) – nachalarmieren!</div>`:""})()}`:`<div>🚨 MANV – Rückmeldung von der Einsatzstelle steht noch aus</div>`}
-  ${R?`<div style="margin-top:4px"><button onclick="event.stopPropagation();manvListDialog('${esc(String(c.id))}')" style="font-size:11px;padding:2px 8px">📋 Sichtung (mSTaRT)</button> <button onclick="event.stopPropagation();mstartTrain=null;manvTrainDialog('${esc(String(c.id))}',true)" style="font-size:11px;padding:2px 8px">🎓 Selbst sichten</button></div>`:""}
+  ${R?`<div style="margin-top:4px"><button onclick="event.stopPropagation();render('manv')" style="font-size:11px;padding:2px 8px">🚨 Alle Patienten</button> <button onclick="event.stopPropagation();manvListDialog('${esc(String(c.id))}')" style="font-size:11px;padding:2px 8px">📋 Sichtung (mSTaRT)</button> <button onclick="event.stopPropagation();mstartTrain=null;manvTrainDialog('${esc(String(c.id))}',true)" style="font-size:11px;padding:2px 8px">🎓 Selbst sichten</button></div>`:""}
+  ${pcHTML}
   ${br?`<div style="margin-top:4px">${br}</div>`:""}</div>`;
 }
 function setBrMode(id,mode){const c=allOpenCalls().find(x=>String(x.id)===String(id));if(!c)return;c.brMode=mode;(c.history=c.history||[]).push({q:"🅿️ Bereitstellungsraum",a:mode==="orgl"?"wird vom OrgL vor Ort festgelegt":"legt die Leitstelle fest"});save();render(currentPage)}
@@ -5386,7 +5535,9 @@ function finishCall(id=null){
  ids.forEach(uid=>{
    const u=db.units.find(x=>String(x.id)===String(uid));
    if(!u)return;
-   if(u.neighborLoan){
+   if(u.neighborLoan&&u.cover&&!u.coverEnd&&allOpenCalls().some(o=>String(o.id)===String(u.coverCallId)&&String(o.id)!==String(c.id))){
+     if(!["1","2"].includes(String(u.status)))setUnitStatus(u,"1"); // Gebietsabsicherung: zurück an „unsere“ Wache
+   }else if(u.neighborLoan){
      const orig=db.neighborUnits.find(n=>String(n.id)===String(u.neighborUnitId));
      if(orig)orig.status="1";
      db.units=db.units.filter(x=>String(x.id)!==String(u.id));
@@ -5396,6 +5547,7 @@ function finishCall(id=null){
    }
  });
  c.endTime=new Date().toISOString();
+ try{manvCoverRelease(c.id)}catch(e){}
  if(db.cloud?.enabled)setTimeout(()=>closeCallCloud(c),0);
  db.logs.unshift(c);
 
@@ -6110,6 +6262,7 @@ async function pollCloudUnits(){
      if(!fb||fb.id==null||!fb.callId)continue;
      const call=allCalls.find(c=>String(c.id)===String(fb.callId));
      if(!call)continue;
+     if(fb.kind==="triage"){if(manvApplyTriage(call,fb))changed=true;continue}
      call.orglFeedback=call.orglFeedback||[];
      if(!call.orglFeedback.some(x=>String(x.id)===String(fb.id))){
        call.orglFeedback.unshift(fb);
@@ -6182,6 +6335,7 @@ const NB_REQ_KW=[["RTW","R1_Med. Notfall"],["RTW","R1_Sturz"],["RTW","R1_Atemnot
 let nbReqNextAt=0;
 function nbReqTick(){
  if(currentScenarioId!=="fri-whv")return;
+ if(allOpenCalls().some(c=>c&&isManvCall(c)&&!c.endTime))return; // während eines eigenen MANV keine Anfragen von außen
  if(!simOn||isTerminalLink||IS_MONITOR)return;
  const now=Date.now();
  if(!nbReqNextAt){nbReqNextAt=now+rnd(20,45)*60000;return}
@@ -7072,6 +7226,12 @@ async function renderVehicleTerminal(unitId,dburl,sid){
    vehicleIvenaCache=await vehicleLoadScenarioIvena(dburl,sid);
    const remoteUnits=await vehicleFetch(dburl,sid,"units");
    if(remoteUnits&&typeof remoteUnits==="object")vehicleUnitsCache=Object.values(remoteUnits).filter(Boolean);
+   let triageMine={};
+   if(calls.some(isManvLike)&&triageCardCount({...(local||{}),...(unit||{})})){
+     const fbs=await vehicleFetch(dburl,sid,"orglFeedback")||{};
+     Object.values(fbs).filter(x=>x&&x.kind==="triage"&&String(x.unitId)===String(unitId)).sort((a,b)=>new Date(a.time)-new Date(b.time)).forEach(x=>{(triageMine[x.callId]=triageMine[x.callId]||{})[x.card]=Number(x.sk)});
+     Object.entries(vehicleTriageLocal).forEach(([cid,m])=>{Object.keys(m).forEach(k=>{if(triageMine[cid]&&triageMine[cid][k]===m[k])delete m[k]})});
+   }
    const led=document.getElementById("vehicleLiveLed");
    if(led){led.style.background="#2ecc71";led.style.boxShadow="0 0 5px #2ecc71";led.title="LIVE"}
    const vType=unit?.type||local?.type;
@@ -7099,6 +7259,7 @@ async function renderVehicleTerminal(unitId,dburl,sid){
        <div class="suggest"><b>Alarmierte Mittel</b><div>${esc(c.suggestion||"—")}</div></div>
        ${Array.isArray(c.nafo)&&c.nafo.length?`<div class="card" style="background:#fff7ed"><b>📟 Nachforderung / Lageänderung</b>${c.nafo.slice(-3).map(n=>`<div>${esc(n.reason||"")}</div>`).join("")}</div>`:""}
      </div>`).join(""):""}
+    ${calls.filter(isManvLike).map(c=>["4","7"].includes(String(unit?.status))?vehicleTriageHTML(local,unit,unitId,dburl,sid,c,triageMine[String(c.id)]||{}):"").join("")}
     ${["1","2"].includes(String(unit?.status))?vehicleQualHTML(local,unit,unitId,dburl,sid):""}
     ${vehicleIvenaCache?renderIvenaMini(vehicleIvenaCache):""}`;
  }

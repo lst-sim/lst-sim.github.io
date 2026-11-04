@@ -1607,6 +1607,23 @@ Version 5.05:
   („a, b“ = a ODER b). Mit „🚑 NA-Indikation“ markierte Knöpfe ziehen weiterhin einen Notarzt.
 - Nur „Unauffällig“ (ohne weitere Befunde) zählt weiter als unauffälliges E (R0 möglich).
 
+Version 5.34:
+- Neue Seite „🚨 MANV“ (Seitenleiste, auch „🚨 Alle Patienten“ im MANV-Kasten): alle Patienten
+  aller laufenden MANV mit Karte, Sichtungskategorie (SK I–IV, verstorben), wer gesichtet hat,
+  Uhrzeit, Umsichtungen und Transport; Filter je Farbe. Aktualisiert sich alle 3 Sekunden.
+- Sichten per Fahrzeug-Handy (Status 4 oder 7, bei MANV-Einsätzen): Patientenkarte als Nummer
+  antippen, dann Farbe wählen; nochmal antippen = umsichten. Die Leitstelle sieht es sofort.
+  Berechtigt: RTW, RTH, KTW, NKTW, KTH, NEF, ITW, ITH, NAW, GW-San, GW Wasserrettung und GW Drohne
+  der DLRG, ELW/MTW/MZF des DRK. Karten: NEF 25, GW-San und DRK-ELW 50, alle anderen 15.
+  Kartennummer = Fahrzeugkennung + laufende Nummer (z. B. 42/83-01-03).
+- MANV: fehlende Rettungsmittel werden ohne Rückfrage direkt aus den Nachbarkreisen alarmiert
+  (auch von weiter weg); die Nachbar-Leitstellen werden nur informiert. DRK-Rettungsmittel
+  (sonst Hintergrunddienst) gehören beim MANV mit in den Vorschlag.
+- Gebietsabsicherung: Jede eigene RTW-/NEF-Wache ohne freies Fahrzeug bekommt automatisch ein
+  Nachbar-Fahrzeug (ein Nachbarkreis gibt dabei nie sein letztes freies ab). Es fährt an die
+  Wache und übernimmt neue Einsätze im Kreis. Nach Ende des MANV fährt es heim (sonst nach
+  seinem laufenden Einsatz). Während eines MANV fragen die Nachbarn keine Fahrzeuge bei uns an.
+
 Version 5.33:
 - MANV-Stufen als eigene AAOs (im AAO-Bereich „MANV“, frei änderbar):
   MANV 5 (4–5 Betroffene), MANV 10 (6–10), MANV 30 (11–30), MANV 50 (31–50), MANV >50.
