@@ -170,7 +170,7 @@ html[data-device="handy"] #floatDock{left:8px;right:8px;width:auto;top:auto;bott
 </head>
 <body>
 <div style="padding:6px 10px;font-size:11px;color:#94a3b8;font-weight:700;display:flex;flex-wrap:wrap;align-items:center;gap:10px;position:sticky;top:0;z-index:10;background:var(--bg)">
- <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v5.32</span>
+ <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v5.33</span>
  <span id="syncState"></span> <a id="deskTag" href="#" onclick="renameDesk();return false" title="Name dieses Platzes (für „offen an …“) – antippen zum Ändern" style="color:#64748b;font-weight:700;text-decoration:none"></a>
  <span id="simCtl" style="position:absolute;left:50%;transform:translateX(-50%);display:flex;gap:6px;align-items:center"></span>
  <a id="homeLink" href="#" onclick="render('leitstelle');return false" class="hidden" style="color:#64748b;text-decoration:underline;font-weight:600">🖥️ Leitstelle</a>
@@ -461,7 +461,11 @@ const DEFAULTS_FRI_WHV={
   {"id":6,"name":"Feuerwehr 1 – Feuer/Rauch","keyword":"F_2","rules":{"event":"Feuer / Rauchentwicklung"},"units":[{"type":"HLF","n":1,"org":"Feuerwehr"},{"type":"LF","n":1,"org":"Feuerwehr"}]},
   {"id":7,"name":"Feuerwehr 2 – Feuer mit Personengefährdung","keyword":"F_2_Y","rules":{"event":"Feuer / Rauchentwicklung","firePeople":"ja","count":"1"},"units":[{"type":"HLF","n":1,"org":"Feuerwehr"},{"type":"LF","n":1,"org":"Feuerwehr"},{"type":"DLK","n":1,"org":"Feuerwehr"},{"type":"RTW","n":1,"org":"Rettungsdienst"}],"active":true,"rulesEdited":true},
   {"id":8,"name":"Feuerwehr/Rettungsdienst – Verkehrsunfall mit eingeklemmter Person","keyword":"H_Eingeklemmt_YY","rules":{"event":"Verkehrsunfall","trapped":"ja"},"units":[{"type":"HLF","n":1,"org":"Feuerwehr"},{"type":"RTW","n":1,"org":"Rettungsdienst"},{"type":"RW","n":1,"org":"Feuerwehr"}]},
-  {"id":9,"name":"MANV – Massenanfall von Verletzten (automatisch ab >3 Verletzten)","rules":{"count":">3"},"units":[{"type":"RTW","n":2,"org":"Rettungsdienst"},{"type":"NEF","n":1,"org":"Rettungsdienst"},{"type":"OrgL/LNA","n":1,"org":"Rettungsdienst"},{"type":"ELW","n":1,"org":"Feuerwehr"}]},
+  {"id":9,"name":"MANV 5 – 4 bis 5 Betroffene (MANV automatisch ab >3 Verletzten)","rules":{"count":">3"},"units":[{"type":"RTW","n":2,"org":"Rettungsdienst"},{"type":"NEF","n":1,"org":"Rettungsdienst"},{"type":"OrgL/LNA","n":1,"org":"Rettungsdienst"},{"type":"ELW","n":1,"org":"Feuerwehr"}]},
+  {"id":22,"name":"MANV 10 – 6 bis 10 Betroffene","rules":{"count":">3"},"units":[{"type":"RTW","n":4},{"type":"NEF","n":2},{"type":"KTW","n":2},{"type":"OrgL/LNA","n":1,"org":"Rettungsdienst"},{"type":"ELW","n":1,"org":"Feuerwehr"},{"type":"HLF","n":1,"org":"Feuerwehr"}]},
+  {"id":23,"name":"MANV 30 – 11 bis 30 Betroffene","rules":{"count":">3"},"units":[{"type":"RTW","n":8},{"type":"NEF","n":4},{"type":"KTW","n":4},{"type":"RTH","n":1},{"type":"OrgL/LNA","n":2,"org":"Rettungsdienst"},{"type":"ELW","n":2,"org":"Feuerwehr"},{"type":"HLF","n":2,"org":"Feuerwehr"},{"type":"MTW","n":2,"org":"DRK"}]},
+  {"id":24,"name":"MANV 50 – 31 bis 50 Betroffene","rules":{"count":">3"},"units":[{"type":"RTW","n":12},{"type":"NEF","n":5},{"type":"KTW","n":6},{"type":"RTH","n":2},{"type":"OrgL/LNA","n":2,"org":"Rettungsdienst"},{"type":"ELW","n":2,"org":"Feuerwehr"},{"type":"ELW1","n":1,"org":"DRK"},{"type":"HLF","n":3,"org":"Feuerwehr"},{"type":"MTW","n":4,"org":"DRK"}]},
+  {"id":25,"name":"MANV >50 – mehr als 50 Betroffene","rules":{"count":">3"},"units":[{"type":"RTW","n":16},{"type":"NEF","n":6},{"type":"KTW","n":8},{"type":"RTH","n":3},{"type":"OrgL/LNA","n":2,"org":"Rettungsdienst"},{"type":"ELW","n":3,"org":"Feuerwehr"},{"type":"ELW1","n":2,"org":"DRK"},{"type":"HLF","n":4,"org":"Feuerwehr"},{"type":"MTW","n":6,"org":"DRK"}]},
   {"id":10,"name":"Rettungsdienst – RD_X kritische Blutung","keyword":"R1N1_Trauma schwer","rules":{"x_massive":"Ja"},"units":[{"type":"RTW","n":1,"org":"Rettungsdienst"},{"type":"NEF","n":1,"org":"Rettungsdienst"}]},
   {"id":11,"name":"Rettungsdienst – RD_B Atemstillstand","keyword":"R1N1_Reanimation","rules":{"b_breath":"Keine normale Atmung"},"units":[{"type":"RTW","n":1,"org":"Rettungsdienst"},{"type":"NEF","n":1,"org":"Rettungsdienst"}]},
   {"id":12,"name":"Rettungsdienst – RD_C relevante Blutung","keyword":"R1N1_Med. Notfall schwer","rules":{"c_circ":"Relevante Blutung"},"units":[{"type":"RTW","n":1,"org":"Rettungsdienst"},{"type":"NEF","n":1,"org":"Rettungsdienst"}]},
@@ -925,6 +929,8 @@ let db=JSON.parse(localStorage.getItem(KEY)||"null")||JSON.parse(JSON.stringify(
 if(!Array.isArray(db.units))db.units=[];
 if(!Array.isArray(db.callers))db.callers=[];
 if(!Array.isArray(db.pendingCallerRequests))db.pendingCallerRequests=[];
+// v5.33: MANV-AAO (ID 9) heißt jetzt „MANV 5“ – nur umbenennen, wenn der alte Standardname noch drinsteht
+{const m9=db.aao.find(a=>String(a.id)==="9");if(m9&&m9.name==="MANV – Massenanfall von Verletzten (automatisch ab >3 Verletzten)")m9.name="MANV 5 – 4 bis 5 Betroffene (MANV automatisch ab >3 Verletzten)"}
 if(!Array.isArray(db.activeCalls))db.activeCalls=[];
 if(typeof db.mittelOrgFilter==="undefined")db.mittelOrgFilter=null; // null = Alle Organisationen anzeigen
 // Fahrzeuge, die in früheren Versionen mit erfundener OPTA-Nummer ausgeliefert wurden
@@ -4413,10 +4419,11 @@ function evaluate(){
  const cnt=Number(a.count)||0;
  if(cnt>3){
    // RTW-Anzahl skaliert weiterhin mit der Verletztenzahl (mind. 1 RTW je 3 Verletzte).
-   addAao(9,x=>x.type==="RTW"?Math.max(aaoN(x,a),Math.ceil(cnt/3)):aaoN(x,a));
+   var manvSt=manvStage(cnt), manvId=manvSt[1];
+   addAao(manvId,x=>x.type==="RTW"?Math.max(aaoN(x,a),Math.ceil(cnt/3)):aaoN(x,a));
    var manvBaseKw=keyword;
-   keyword=`MANV – ${keyword} – ${cnt} Verletzte`;
-   kwMap[9]=keyword;
+   keyword=`${manvSt[2]} – ${keyword} – ${cnt} Verletzte`;
+   kwMap[manvId]=keyword;
  }
  // Eigene (selbst angelegte, aktive) AAOs: greifen zusätzlich, wenn alle Bedingungen passen.
  for(const ca of customAaoMatches(c)){
@@ -4445,8 +4452,8 @@ function evaluate(){
      const blocked=k=>active.some(o=>aaoExcluded(o,k));
      const noteExcl=k=>{const n=(aaoEntry(k)?.name)||k;if(!excludedNames.includes(n))excludedNames.push(n)};
      // MANV ist ein Zusatz zur eigentlichen Lage: deren AAO (z. B. Feuer) läuft mit, außer sie ist ausgeschlossen.
-     if(win==="9"&&firstKwId&&firstKwId!=="9"&&groups.has(firstKwId)&&!["10","11","12","13","14","15","16"].includes(firstKwId)){
-       if(blocked(firstKwId)){noteExcl(firstKwId);keyword=`MANV – ${cnt} Verletzte`;kwMap[9]=keyword}
+     if(MANV_IDS.has(win)&&firstKwId&&!MANV_IDS.has(firstKwId)&&groups.has(firstKwId)&&!["10","11","12","13","14","15","16"].includes(firstKwId)){
+       if(blocked(firstKwId)){noteExcl(firstKwId);keyword=`${manvStage(cnt)[2]} – ${cnt} Verletzte`;kwMap[win]=keyword}
        else{active.push(firstKwId);req.push(...all.filter(r=>String(r.src)===firstKwId))}
      }
      // Weitere AAO dazunehmen – aufgefüllt (Maximalprinzip), nicht doppelt.
@@ -4484,8 +4491,8 @@ function evaluate(){
      if(active.includes(firstKwId)&&firstKwId!==win){const n=(aaoEntry(firstKwId)?.name)||firstKwId;if(!c.aaoCombined.includes(n))c.aaoCombined.unshift(n)}
      // MANV-Stichwort: die Lage (z. B. F_2_Y) nur nennen, wenn deren AAO auch wirklich alarmiert wird
      // (nicht, wenn sie ausgeschlossen ist, nicht passt oder keine Fahrzeuge bringt).
-     if(win==="9"&&firstKwId&&!active.includes(firstKwId)){
-       const old=kwMap[9]; if(old&&keyword.startsWith(old))keyword=`MANV – ${cnt} Verletzte`+keyword.slice(old.length);
+     if(MANV_IDS.has(win)&&firstKwId&&!active.includes(firstKwId)){
+       const old=kwMap[win]; if(old&&keyword.startsWith(old))keyword=`${manvStage(cnt)[2]} – ${cnt} Verletzte`+keyword.slice(old.length);
        if(active.some(o=>aaoExcluded(o,firstKwId)))noteExcl(firstKwId);
      }
      // Führende AAO: Fahrzeuge auffüllen (Maximalprinzip) und den Anfang des Stichworts liefern
@@ -5037,6 +5044,10 @@ function crewTick(){
 }
 
 // ═══ MANV, Bereitstellungsraum, Hubschrauber-Landeplatz, Auto-Abschluss (v5.16) ══════════════
+// MANV-Stufen (v5.33): MANV 5 · MANV 10 · MANV 30 · MANV 50 · MANV >50 – je Stufe eine eigene AAO
+const MANV_STAGES=[[5,"9","MANV 5"],[10,"22","MANV 10"],[30,"23","MANV 30"],[50,"24","MANV 50"],[Infinity,"25","MANV >50"]];
+const MANV_IDS=new Set(MANV_STAGES.map(x=>x[1]));
+function manvStage(n){n=Number(n)||0;return MANV_STAGES.find(x=>n<=x[0])}
 function isManvCall(c){return !!c&&!c.kt&&(Number(c.answers?.count)>3||!!c.manv||/MANV/.test(c.keyword||""))}
 const RD_TYPES=new Set(["RTW","NEF","NKTW","KTW","RTH","ITH","KTH","OrgL/LNA"]);
 function callUnits(c){return (c.alarmedUnits||[]).map(id=>db.units.find(x=>String(x.id)===String(id))).filter(Boolean)}
@@ -5044,12 +5055,12 @@ function callUnits(c){return (c.alarmedUnits||[]).map(id=>db.units.find(x=>Strin
 function manvTruth(c){
  if(c.manvTruth)return c.manvTruth;
  const S=c.sim&&c.sim.d&&c.sim.d.f, tot=Math.max(4,Number((S&&S.count)||c.answers?.count||4)||4);
- const schwarz=tot>=8&&Math.random()<0.35?1:0, blau=tot>=10&&Math.random()<0.3?1:0, rest=tot-schwarz-blau;
+ const schwarz=tot>=8?(tot>=30?Math.round(tot*rnd(0.02,0.06)):Math.random()<0.35?1:0):0, blau=tot>=10?(tot>=30?Math.round(tot*rnd(0.02,0.05)):Math.random()<0.3?1:0):0, rest=tot-schwarz-blau;
  const rot=Math.max(1,Math.round(rest*rnd(0.12,0.25))), gelb=Math.max(1,Math.round(rest*rnd(0.22,0.35))), gruen=Math.max(0,rest-rot-gelb);
  c.manvTruth={total:tot,rot,gelb,gruen,blau,schwarz}; return c.manvTruth;
 }
 // ─── v5.32: Sichtung nach mSTaRT (Kanz et al. 2006, BF München) ─────────────────────────────────
-// Vorsichtung durch das ersteintreffende Rettungsmittel nach mSTaRT:
+// Vorsichtung durch das ersteintreffende Rettungsmittel nach mSTaRT (hier mit SK IV, v5.33):
 //  1 gehfähig? → SK III grün · 2 Atmung (nach Atemwege freimachen)? nein → verstorben (schwarz)
 //  3 Atemfrequenz < 10 oder > 30 (Kinder: < 15 oder > 45) → SK I rot · 4 spritzende/massive Blutung → SK I
 //  5 Radialispuls nicht tastbar (bzw. Rekap > 2 s) → SK I · 6 befolgt einfache Aufforderungen nicht → SK I
@@ -5061,6 +5072,8 @@ function mstartClassify(p){
  path.push("Gehfähig → nein");
  if(!p.breath){path.push(p.airway?"Atmung → nein, nach Atemwege freimachen: ja":"Atmung → nein, auch nach Atemwege freimachen nicht");if(!p.airway){path.push(kid?"(Kind: 5 Beatmungen ohne Erfolg)":"");return {sk:5,path:path.filter(Boolean)}}}
  else path.push("Atmung → ja");
+ if(p.infaust){path.push("Verletzungen ohne Überlebenschance → SK IV");return {sk:4,path}}
+ path.push("Keine Verletzungen ohne Überlebenschance");
  if(p.airway){path.push("Atemwege mussten freigemacht werden → SK I");return {sk:1,path}}
  if(p.af<lo||p.af>hi){path.push(`Atemfrequenz ${p.af}/min (${p.af<lo?"< "+lo:"> "+hi}) → SK I`);return {sk:1,path}}
  path.push(`Atemfrequenz ${p.af}/min → unauffällig`);
@@ -5092,9 +5105,9 @@ function mstartMake(n,sk){
    if(r==="af_hi")p.af=kid?rint(48,60):rint(32,44); if(r==="af_lo")p.af=kid?rint(9,13):rint(5,8);
    if(r==="bleed")p.bleed=true; if(r==="radial")p.radial=false; if(r==="cmd")p.cmd=false;
    if(r==="airway"){p.breath=false;p.airway=true;p.cmd=false}
-   if(sk===4){p.inj="schwerstes Schädel-Hirn-Trauma, schnappende Atmung";p.af=kid?rint(6,10):rint(4,6);p.cmd=false;p.radial=false;p.reason="af_lo"}
+   if(sk===4){p.inj=pick(["schwerstes offenes Schädel-Hirn-Trauma, Atmung schnappend","Verbrennungen fast am ganzen Körper","Rumpf schwerst eingeklemmt und zerquetscht"]);p.af=kid?rint(6,10):rint(4,6);p.cmd=false;p.radial=false;p.bleed=false;p.breath=true;p.airway=false;p.infaust=true;p.reason="infaust"}
  }
- const v=mstartClassify(p); p.vs=v.sk; p.sk=sk; // vs = Vorsichtung (mSTaRT), sk = nach ärztlicher Sichtung
+ const v=mstartClassify(p); p.vs=v.sk; p.sk=sk; // vs = Vorsichtung (mSTaRT), sk = nach ärztlicher Sichtung (gleich, außer Nachsichtung)
  return p;
 }
 function manvPats(c){
@@ -5108,7 +5121,7 @@ function mstartFindings(p){
  if(p.walk)return "gehfähig";
  return ["nicht gehfähig",
   !p.breath&&!p.airway?"keine Atmung (auch nach Freimachen)":p.airway?"Atmung erst nach Freimachen der Atemwege":`AF ${p.af}/min`,
-  p.bleed?"massive Blutung":"",p.walk||!p.breath&&!p.airway?"":p.radial?"Radialis tastbar":"Radialis nicht tastbar",
+  p.infaust?"Verletzungen ohne Überlebenschance":"",p.bleed?"massive Blutung":"",p.walk||!p.breath&&!p.airway?"":p.radial?"Radialis tastbar":"Radialis nicht tastbar",
   p.walk||!p.breath&&!p.airway?"":p.cmd?"befolgt Aufforderungen":"befolgt keine Aufforderungen"].filter(Boolean).join(" · ");
 }
 function mstartDot(sk,size){const m=MSTART_COL[sk];return `<span title="${m[2]}" style="display:inline-block;width:${size||12}px;height:${size||12}px;border-radius:50%;background:${m[0]};border:1px solid #0003;vertical-align:middle"></span>`}
@@ -5116,12 +5129,13 @@ function mstartSchemeHTML(){
  return `<details style="margin-top:8px"><summary style="cursor:pointer;font-weight:800">📘 mSTaRT-Schema</summary><ol style="margin:6px 0 0 18px;padding:0;font-size:13px;line-height:1.5">
   <li>Gehfähig? → ja: ${mstartDot(3)} <b>SK III grün</b> (Sammelstelle)</li>
   <li>Atmung vorhanden? → nein: Atemwege freimachen → weiter keine Atmung: ${mstartDot(5)} <b>verstorben</b> · atmet jetzt: ${mstartDot(1)} <b>SK I</b></li>
+  <li>Verletzungen ohne Überlebenschance (z. B. schwerstes offenes SHT, Verbrennungen fast am ganzen Körper) → ${mstartDot(4)} <b>SK IV blau</b> (abwartende Behandlung)</li>
   <li>Atemfrequenz &lt; 10 oder &gt; 30/min (Kinder &lt; 15 oder &gt; 45) → ${mstartDot(1)} <b>SK I rot</b></li>
   <li>Massive (spritzende) Blutung → sofort stillen → ${mstartDot(1)} <b>SK I</b></li>
   <li>Radialispuls nicht tastbar → ${mstartDot(1)} <b>SK I</b></li>
   <li>Befolgt einfache Aufforderungen nicht → ${mstartDot(1)} <b>SK I</b></li>
   <li>Sonst → ${mstartDot(2)} <b>SK II gelb</b></li></ol>
-  <p class="muted" style="font-size:12px;margin:6px 0 0">${mstartDot(4)} SK IV blau vergibt nur der Arzt (LNA) bei der ärztlichen Sichtung. Örtliche Vorgaben können abweichen.</p></details>`;
+  <p class="muted" style="font-size:12px;margin:6px 0 0">SK IV wird in vielen Regionen nur vom Arzt (LNA) vergeben – hier schon in der Vorsichtung. Der LNA prüft bei der ärztlichen Sichtung nach. Örtliche Vorgaben können abweichen.</p></details>`;
 }
 function manvListDialog(id){
  const c=allOpenCalls().find(x=>String(x.id)===String(id)); if(!c)return;
@@ -5141,7 +5155,7 @@ function manvTrainDialog(id,fresh){
  const c=allOpenCalls().find(x=>String(x.id)===String(id));
  let P;
  if(c)P=manvPats(c);
- else{P=[];[1,1,2,2,2,3,3,3,5].forEach((sk,i)=>P.push(mstartMake(i+1,sk)))}
+ else{P=[];[1,1,2,2,2,3,3,3,4,5].forEach((sk,i)=>P.push(mstartMake(i+1,sk)))}
  if(!mstartTrain||mstartTrain.id!==id||fresh)mstartTrain={id,i:0,ok:0,done:[],order:P.map(p=>p.n).sort(()=>Math.random()-0.5),P};
  const T=mstartTrain;
  if(T.i>=T.order.length){showModal(`<h3 style="margin-top:0">🎓 Sichtung fertig</h3><p style="font-size:18px"><b>${T.ok} von ${T.order.length}</b> richtig nach mSTaRT.</p>
@@ -5155,9 +5169,9 @@ function manvTrainDialog(id,fresh){
   <ul style="font-size:14px;margin:8px 0 8px 18px;padding:0">
    <li>${p.walk?"steht auf und geht zur Sammelstelle":"kann nicht gehen"}</li>
    ${p.walk?"":`<li>${!p.breath&&!p.airway?"keine Atmung – auch nach Freimachen der Atemwege nicht":p.airway?"zunächst keine Atmung – nach Freimachen der Atemwege atmet er":`Atemfrequenz ${p.af}/min`}</li>
-   ${!p.breath&&!p.airway?"":`<li>${p.bleed?"spritzende Blutung":"keine massive Blutung"}</li><li>Radialispuls ${p.radial?"tastbar":"nicht tastbar"}</li><li>${p.cmd?"befolgt die Aufforderung „Drücken Sie meine Hand“":"befolgt keine Aufforderungen"}</li>`}`}
+   ${!p.breath&&!p.airway?"":`${p.infaust?"<li><b>Verletzungen ohne Überlebenschance</b></li>":""}<li>${p.bleed?"spritzende Blutung":"keine massive Blutung"}</li><li>Radialispuls ${p.radial?"tastbar":"nicht tastbar"}</li><li>${p.cmd?"befolgt die Aufforderung „Drücken Sie meine Hand“":"befolgt keine Aufforderungen"}</li>`}`}
   </ul>
-  <div style="display:grid;gap:6px">${[1,2,3,5].map(btn).join("")}</div>
+  <div style="display:grid;gap:6px">${[1,2,3,4,5].map(btn).join("")}</div>
   <div class="row" style="justify-content:space-between;margin-top:10px"><small class="muted">${T.ok} richtig bisher</small><button onclick="closeModal()">Abbrechen</button></div>`);
 }
 function manvTrainPick(sk){
@@ -5171,10 +5185,10 @@ function manvTrainPick(sk){
 function manvReport(c,u,kind){
  const T=manvTruth(c), jit=v=>Math.max(0,v+(Math.random()<0.5?0:pick([-1,1])));
  manvPats(c);
- const R=kind==="first"?{rot:jit(T.rot+T.blau),gelb:jit(T.gelb),gruen:jit(T.gruen),blau:0,schwarz:T.schwarz}:{rot:T.rot,gelb:T.gelb,gruen:T.gruen,blau:T.blau,schwarz:T.schwarz};
+ const R=kind==="first"?{rot:jit(T.rot),gelb:jit(T.gelb),gruen:jit(T.gruen),blau:T.blau,schwarz:T.schwarz}:{rot:T.rot,gelb:T.gelb,gruen:T.gruen,blau:T.blau,schwarz:T.schwarz};
  R.total=R.rot+R.gelb+R.gruen+R.blau+R.schwarz; R.kind=kind; R.by=u.opta||u.name; R.type=u.type; R.at=Date.now();
  c.manvReports=c.manvReports||[]; c.manvReports.push(R); c.manv=true;
- const txt=`${kind==="first"?"Erste Lagemeldung – Vorsichtung nach mSTaRT":"Ärztliche Sichtung abgeschlossen"}: ${R.total} Betroffene – ${R.rot} rot (SK I), ${R.gelb} gelb (SK II), ${R.gruen} grün (SK III)${kind==="first"?"":`, ${R.blau} blau (SK IV)`}, ${R.schwarz} verstorben.${kind==="first"?" Sichtung läuft.":""}`;
+ const txt=`${kind==="first"?"Erste Lagemeldung – Vorsichtung nach mSTaRT":"Ärztliche Sichtung abgeschlossen"}: ${manvStage(R.total)[2]}, ${R.total} Betroffene – ${R.rot} rot (SK I), ${R.gelb} gelb (SK II), ${R.gruen} grün (SK III), ${R.blau} blau (SK IV), ${R.schwarz} verstorben.${kind==="first"?" Sichtung läuft.":""}`;
  crewSds(u,c,txt); (c.history=c.history||[]).push({q:`🚨 MANV-Rückmeldung (${R.by})`,a:txt});
  // Patientenliste für die Transporte (nach dem Sichtungsergebnis, sonst nach der ersten Meldung)
  if(kind==="orgl"||!c.manvPatients){
@@ -7475,7 +7489,7 @@ const AAO_RULE_FIELDS={
  locationIsWater:{label:"Einsatzort auf dem Wasser",values:["ja","nein"]},
  freeText:{label:"Freitext enthält",free:true,placeholder:"Stichwort(e), mehrere mit Komma = eins davon"}
 };
-const LINKED_AAO_IDS=new Set(["1","2","3","4","5","6","7","8","9","10","11","12","13","14","15","16","17","18","19","20","21"]);
+const LINKED_AAO_IDS=new Set(["22","23","24","25","1","2","3","4","5","6","7","8","9","10","11","12","13","14","15","16","17","18","19","20","21"]);
 // "Vollalarm DLRG" / "Vollalarm DRK": alle freien Fahrzeuge der NÄCHSTEN Ortsgruppe (Standort mit
 // der kürzesten Entfernung zum Einsatzort, mit mindestens einem freien, erreichbaren Fahrzeug).
 // Ältere AAOs mit "Vollalarm DLRG <Ort>" funktionieren weiter (feste Ortsgruppe).
@@ -7812,7 +7826,7 @@ const AAO_TOPICS=["Rettungsdienst","Brand","Technische Hilfe / Verkehrsunfall","
 function aaoTopic(a){
  if(a.topic&&String(a.topic).trim())return String(a.topic).trim();
  const k=String(a.keyword||"").toUpperCase(), n=String(a.name||"").toLowerCase(), ev=String((a.rules||{}).event||"");
- if(String(a.id)==="9"||/manv/.test(n))return "MANV";
+ if(MANV_IDS.has(String(a.id))||/manv/.test(n))return "MANV";
  if(/^DLRG|wasser|boot|drohne|vermisst|suche/i.test(a.name||"")||/^H_(PERS|BOOT|SUCHE)/.test(k)||ev==="Person im Wasser"||ev==="Vermisste Person")return "Wasserrettung / Suche";
  if(/^TH|^H_|_VU\b/.test(k)||/verkehrsunfall|technische|eingeklemmt/.test(n)||ev==="Verkehrsunfall"||ev==="Technische Hilfeleistung")return "Technische Hilfe / Verkehrsunfall";
  if(/^F_/.test(k)||/feuer|brand|rauch/.test(n)||ev==="Feuer / Rauchentwicklung")return "Brand";
@@ -7852,7 +7866,7 @@ function editAAO(id){
  render("aao");
 }
 function aaoEditor(){
- const d=aaoDraft, builtin=d.id!=null&&isBuiltinAao(d.id)&&!d.rulesEdited, manv=String(d.id)==="9"&&!d.rulesEdited;
+ const d=aaoDraft, builtin=d.id!=null&&isBuiltinAao(d.id)&&!d.rulesEdited, manv=MANV_IDS.has(String(d.id))&&!d.rulesEdited;
  const types=[...vollalarmOptions(),...[...new Set([...(db.units||[]),...(db.neighborUnits||[])].map(u=>u.type).filter(Boolean))].sort((a,b)=>a.localeCompare(b,"de"))];
  const orgs=[...new Set((db.units||[]).map(u=>u.org).filter(Boolean))].sort((a,b)=>a.localeCompare(b,"de"));
  const ruleRow=(r,i)=>{
@@ -8652,7 +8666,7 @@ const IVENA_DEL_STYLE="text-decoration:line-through;color:#94a3b8;opacity:.7";
 function ivenaManvBannerHTML(){
  const list=allOpenCalls().filter(c=>c&&!c.kt&&c.alarmTime&&isManv(c));
  if(!list.length)return "";
- const stufe=n=>n<=10?10:n<=25?25:n<=50?50:100;
+ const stufe=n=>manvStage(n)[2].replace(/^MANV /,"");
  const art=c=>{const e=(c.answers||{}).event||"";return ["Verkehrsunfall","Technische Hilfeleistung"].includes(e)?"Traumatologisch":e==="Medizinischer Notfall"?"Internistisch":e==="Feuer / Rauchentwicklung"?"Brand / Rauchgas":e==="Person im Wasser"?"Wasserrettung":""};
  const lst="Leitstelle "+(SCENARIOS[currentScenarioId]?.label||"");
  const rows=list.map(c=>{const t=new Date(c.alarmTime).toLocaleTimeString("de-DE",{hour:"2-digit",minute:"2-digit"});const n=Number(c.answers.count)||0;

@@ -1607,6 +1607,16 @@ Version 5.05:
   („a, b“ = a ODER b). Mit „🚑 NA-Indikation“ markierte Knöpfe ziehen weiterhin einen Notarzt.
 - Nur „Unauffällig“ (ohne weitere Befunde) zählt weiter als unauffälliges E (R0 möglich).
 
+Version 5.33:
+- MANV-Stufen als eigene AAOs (im AAO-Bereich „MANV“, frei änderbar):
+  MANV 5 (4–5 Betroffene), MANV 10 (6–10), MANV 30 (11–30), MANV 50 (31–50), MANV >50.
+  Das Stichwort lautet z. B. „MANV 30 – R1_VU – 22 Verletzte“; IVENA zeigt dieselbe Stufe.
+  Fahrzeuglisten der neuen Stufen sind ein Vorschlag (bitte an den örtlichen Alarmplan anpassen).
+  Die RTW-Anzahl steigt weiterhin auf mindestens 1 RTW je 3 Verletzte.
+- mSTaRT mit SK IV (blau): „Verletzungen ohne Überlebenschance“ als eigener Schritt nach der
+  Atmung; SK IV schon in der Vorsichtung, in der Sichtungsliste und beim Selbst-Sichten.
+  Bei großen Lagen (ab 30) gibt es anteilig mehr SK IV und Verstorbene.
+
 Version 5.32:
 - MANV-Sichtung nach mSTaRT: Jeder Betroffene hat eine Anhängekarte (Nummer) mit Befund
   (gehfähig, Atmung/Atemwege, Atemfrequenz, massive Blutung, Radialispuls, Aufforderungen befolgen).
