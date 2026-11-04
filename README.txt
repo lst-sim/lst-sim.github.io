@@ -1607,6 +1607,18 @@ Version 5.05:
   („a, b“ = a ODER b). Mit „🚑 NA-Indikation“ markierte Knöpfe ziehen weiterhin einen Notarzt.
 - Nur „Unauffällig“ (ohne weitere Befunde) zählt weiter als unauffälliges E (R0 möglich).
 
+Version 5.32:
+- MANV-Sichtung nach mSTaRT: Jeder Betroffene hat eine Anhängekarte (Nummer) mit Befund
+  (gehfähig, Atmung/Atemwege, Atemfrequenz, massive Blutung, Radialispuls, Aufforderungen befolgen).
+  Kategorie wird streng nach mSTaRT ermittelt (Kinder unter 8: AF-Grenzen 15/45 nach JumpSTART).
+- Erste Lagemeldung = Vorsichtung nach mSTaRT (rot/gelb/grün/verstorben, noch ohne blau);
+  OrgL/LNA meldet die ärztliche Sichtung (inkl. SK IV blau).
+- Im MANV-Kasten des Einsatzes: „📋 Sichtung (mSTaRT)“ – Liste aller Anhängekarten mit Befund,
+  Kategorie und übernehmendem Rettungsmittel, dazu das mSTaRT-Schema zum Aufklappen.
+- „🎓 Selbst sichten“: Befund lesen, Kategorie wählen, Rückmeldung mit dem Weg durch das Schema
+  und Auswertung am Ende.
+- Rettungsmittel melden per SDS Kategorie (SK I–IV), Anhängekarte und Verletzung ihres Patienten.
+
 Version 5.31:
 - Anrufer verstehen deutlich mehr: Umgangssprache („Isser noch bei sich?“, „Kriegt er Luft?“,
   „Medis?“, „Jahrgang?“, „Wo seid ihr?“), viele Synonyme und Umschreibungen, Rechtschreib- und

@@ -170,7 +170,7 @@ html[data-device="handy"] #floatDock{left:8px;right:8px;width:auto;top:auto;bott
 </head>
 <body>
 <div style="padding:6px 10px;font-size:11px;color:#94a3b8;font-weight:700;display:flex;flex-wrap:wrap;align-items:center;gap:10px;position:sticky;top:0;z-index:10;background:var(--bg)">
- <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v5.31</span>
+ <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v5.32</span>
  <span id="syncState"></span> <a id="deskTag" href="#" onclick="renameDesk();return false" title="Name dieses Platzes (für „offen an …“) – antippen zum Ändern" style="color:#64748b;font-weight:700;text-decoration:none"></a>
  <span id="simCtl" style="position:absolute;left:50%;transform:translateX(-50%);display:flex;gap:6px;align-items:center"></span>
  <a id="homeLink" href="#" onclick="render('leitstelle');return false" class="hidden" style="color:#64748b;text-decoration:underline;font-weight:600">🖥️ Leitstelle</a>
@@ -4941,7 +4941,8 @@ function crewPlan(u,call){
    P.unit=u.id;
    const sev=P.sk===1?"critical":P.sk===2?"urgent":P.sk===4?"critical":"minor";
    const t={1:rint(10,15),2:rint(12,20),3:rint(15,30),4:rint(25,40)}[P.sk];
-   const inf={...info,sev,sk:P.sk,age:rint(16,85),gender:Math.random()<0.5?"M":"W"};
+   const card=P.pid!=null&&call.manvTruth&&call.manvTruth.pats?call.manvTruth.pats.find(q=>q.n===P.pid):null;
+   const inf={...info,sev,sk:P.sk,age:card?card.age:rint(16,85),gender:card?card.gender:(Math.random()<0.5?"M":"W"),card:card?card.n:null,inj:card?card.inj:null};
    u.crew={callId:String(call.id),mode:"transport",patient:P.n,sk:P.sk,departAt:now+t*60000,registerAt:now+Math.max(2,t-rint(3,6))*60000,info:inf};
    return;
  }
@@ -4977,7 +4978,7 @@ function crewRegister(u,call){
  if(db.cloud?.enabled)try{cloudRequest(`ivenaAssignments/${encodeURIComponent(String(a.id))}`,"PUT",a)}catch(e){}
  C.registered=true; C.asgId=a.id; C.hospId=h.id; C.drive=drive;
  const lab=pzcRmiLabel(info.rmi);
- crewSds(u,call,`${info.sk?`SK${info.sk} – `:""}Pat. ${info.gender||"?"}, ${age} J. – ${lab} – IVENA angemeldet: ${h.name}${fach?` (${fach})`:""}, PZC ${pzc}${flags.s?", Schockraum":""}${flags.n?", arztbegleitet":""}, Ankunft ca. ${hhmm(etaT)} Uhr${pick.zwang?" – ZWANGSZUWEISUNG":""}.`);
+ crewSds(u,call,`${info.sk?`SK ${["","I","II","III","IV"][info.sk]}${info.card?` (Anhängekarte ${info.card})`:""} – `:""}Pat. ${info.gender||"?"}, ${age} J. – ${lab} – IVENA angemeldet: ${h.name}${fach?` (${fach})`:""}, PZC ${pzc}${flags.s?", Schockraum":""}${flags.n?", arztbegleitet":""}, Ankunft ca. ${hhmm(etaT)} Uhr${pick.zwang?" – ZWANGSZUWEISUNG":""}.`);
  const call2=call; call2.history=call2.history||[]; call2.history.push({q:`🏥 IVENA (${u.opta||u.name})`,a:`${h.name} · PZC ${pzc} · an ${hhmm(etaT)}`});
 }
 function crewTick(){
@@ -5047,17 +5048,140 @@ function manvTruth(c){
  const rot=Math.max(1,Math.round(rest*rnd(0.12,0.25))), gelb=Math.max(1,Math.round(rest*rnd(0.22,0.35))), gruen=Math.max(0,rest-rot-gelb);
  c.manvTruth={total:tot,rot,gelb,gruen,blau,schwarz}; return c.manvTruth;
 }
+// ─── v5.32: Sichtung nach mSTaRT (Kanz et al. 2006, BF München) ─────────────────────────────────
+// Vorsichtung durch das ersteintreffende Rettungsmittel nach mSTaRT:
+//  1 gehfähig? → SK III grün · 2 Atmung (nach Atemwege freimachen)? nein → verstorben (schwarz)
+//  3 Atemfrequenz < 10 oder > 30 (Kinder: < 15 oder > 45) → SK I rot · 4 spritzende/massive Blutung → SK I
+//  5 Radialispuls nicht tastbar (bzw. Rekap > 2 s) → SK I · 6 befolgt einfache Aufforderungen nicht → SK I
+//  sonst SK II gelb. SK IV blau vergibt nur der Arzt bei der ärztlichen Sichtung (nicht überall genutzt).
+const MSTART_COL={1:["#d71920","rot","SK I – sofort"],2:["#f2c200","gelb","SK II – dringlich"],3:["#22c55e","grün","SK III – nicht dringlich"],4:["#2563eb","blau","SK IV – ohne Überlebenschance"],5:["#111827","schwarz","verstorben"]};
+function mstartClassify(p){
+ const kid=p.age<8, lo=kid?15:10, hi=kid?45:30, path=[];
+ if(p.walk){path.push("Gehfähig → ja");return {sk:3,path}}
+ path.push("Gehfähig → nein");
+ if(!p.breath){path.push(p.airway?"Atmung → nein, nach Atemwege freimachen: ja":"Atmung → nein, auch nach Atemwege freimachen nicht");if(!p.airway){path.push(kid?"(Kind: 5 Beatmungen ohne Erfolg)":"");return {sk:5,path:path.filter(Boolean)}}}
+ else path.push("Atmung → ja");
+ if(p.airway){path.push("Atemwege mussten freigemacht werden → SK I");return {sk:1,path}}
+ if(p.af<lo||p.af>hi){path.push(`Atemfrequenz ${p.af}/min (${p.af<lo?"< "+lo:"> "+hi}) → SK I`);return {sk:1,path}}
+ path.push(`Atemfrequenz ${p.af}/min → unauffällig`);
+ if(p.bleed){path.push("Massive Blutung → stillen → SK I");return {sk:1,path}}
+ path.push("Keine massive Blutung");
+ if(!p.radial){path.push("Radialispuls nicht tastbar → SK I");return {sk:1,path}}
+ path.push("Radialispuls tastbar");
+ if(!p.cmd){path.push("Befolgt Aufforderungen nicht → SK I");return {sk:1,path}}
+ path.push("Befolgt Aufforderungen → SK II");
+ return {sk:2,path};
+}
+const MSTART_INJ={
+ 3:["Prellungen und Schürfwunden","Schnittwunde am Unterarm","Schmerzen in der Schulter, läuft herum","steht unter Schock, unverletzt","Platzwunde an der Stirn, blutet leicht","Handgelenk verstaucht","Nackenschmerzen, läuft"],
+ 2:["Unterschenkel offensichtlich gebrochen","Oberschenkel-/Hüftschmerzen, kann nicht aufstehen","Oberarmfraktur","starke Rückenschmerzen","Sprunggelenk verdreht, kann nicht auftreten","Thoraxprellung, atmet aber ruhig","Verbrennungen an beiden Händen"],
+ 1:{af_hi:"Brustkorbverletzung, atmet schnell und flach",af_lo:"Schädel-Hirn-Trauma, atmet ganz langsam",bleed:"spritzende Blutung am Oberschenkel",radial:"blass, kaltschweißig, Bauchtrauma",cmd:"benommen nach Kopfverletzung, reagiert nicht auf Aufforderungen",airway:"bewusstlos, Atemwege verlegt – nach Freimachen atmet er",stridor:"Inhalationstrauma, pfeifende Atmung (Stridor)"},
+ 5:["keine Atmung, auch nicht nach Freimachen der Atemwege","offensichtlich tödliche Verletzungen"]
+};
+function mstartMake(n,sk){
+ const age=Math.random()<0.08?rint(3,7):rint(16,86), g=Math.random()<0.5?"M":"W";
+ const p={n,age,gender:g,walk:false,breath:true,airway:false,af:rint(13,24),bleed:false,radial:true,cmd:true};
+ if(age<8)p.af=rint(20,38);
+ if(sk===3){p.walk=true;p.inj=pick(MSTART_INJ[3])}
+ else if(sk===2){p.inj=pick(MSTART_INJ[2])}
+ else if(sk===5){p.breath=false;p.af=0;p.radial=false;p.cmd=false;p.inj=pick(MSTART_INJ[5])}
+ else { // SK I (und SK IV: in der Vorsichtung ebenfalls rot)
+   const r=pick(["af_hi","af_hi","af_lo","bleed","bleed","radial","radial","cmd","airway"]);
+   p.reason=r; p.inj=MSTART_INJ[1][r];
+   const kid=age<8;
+   if(r==="af_hi")p.af=kid?rint(48,60):rint(32,44); if(r==="af_lo")p.af=kid?rint(9,13):rint(5,8);
+   if(r==="bleed")p.bleed=true; if(r==="radial")p.radial=false; if(r==="cmd")p.cmd=false;
+   if(r==="airway"){p.breath=false;p.airway=true;p.cmd=false}
+   if(sk===4){p.inj="schwerstes Schädel-Hirn-Trauma, schnappende Atmung";p.af=kid?rint(6,10):rint(4,6);p.cmd=false;p.radial=false;p.reason="af_lo"}
+ }
+ const v=mstartClassify(p); p.vs=v.sk; p.sk=sk; // vs = Vorsichtung (mSTaRT), sk = nach ärztlicher Sichtung
+ return p;
+}
+function manvPats(c){
+ const T=manvTruth(c);
+ if(!T.pats){let n=0;const L=[];[[1,T.rot],[2,T.gelb],[3,T.gruen],[4,T.blau],[5,T.schwarz]].forEach(([sk,k])=>{for(let i=0;i<k;i++)L.push(mstartMake(++n,sk))});
+   // Nummern wie Anhängekarten in Fundreihenfolge (gemischt)
+   L.sort(()=>Math.random()-0.5).forEach((p,i)=>p.n=i+1); T.pats=L}
+ return T.pats;
+}
+function mstartFindings(p){
+ if(p.walk)return "gehfähig";
+ return ["nicht gehfähig",
+  !p.breath&&!p.airway?"keine Atmung (auch nach Freimachen)":p.airway?"Atmung erst nach Freimachen der Atemwege":`AF ${p.af}/min`,
+  p.bleed?"massive Blutung":"",p.walk||!p.breath&&!p.airway?"":p.radial?"Radialis tastbar":"Radialis nicht tastbar",
+  p.walk||!p.breath&&!p.airway?"":p.cmd?"befolgt Aufforderungen":"befolgt keine Aufforderungen"].filter(Boolean).join(" · ");
+}
+function mstartDot(sk,size){const m=MSTART_COL[sk];return `<span title="${m[2]}" style="display:inline-block;width:${size||12}px;height:${size||12}px;border-radius:50%;background:${m[0]};border:1px solid #0003;vertical-align:middle"></span>`}
+function mstartSchemeHTML(){
+ return `<details style="margin-top:8px"><summary style="cursor:pointer;font-weight:800">📘 mSTaRT-Schema</summary><ol style="margin:6px 0 0 18px;padding:0;font-size:13px;line-height:1.5">
+  <li>Gehfähig? → ja: ${mstartDot(3)} <b>SK III grün</b> (Sammelstelle)</li>
+  <li>Atmung vorhanden? → nein: Atemwege freimachen → weiter keine Atmung: ${mstartDot(5)} <b>verstorben</b> · atmet jetzt: ${mstartDot(1)} <b>SK I</b></li>
+  <li>Atemfrequenz &lt; 10 oder &gt; 30/min (Kinder &lt; 15 oder &gt; 45) → ${mstartDot(1)} <b>SK I rot</b></li>
+  <li>Massive (spritzende) Blutung → sofort stillen → ${mstartDot(1)} <b>SK I</b></li>
+  <li>Radialispuls nicht tastbar → ${mstartDot(1)} <b>SK I</b></li>
+  <li>Befolgt einfache Aufforderungen nicht → ${mstartDot(1)} <b>SK I</b></li>
+  <li>Sonst → ${mstartDot(2)} <b>SK II gelb</b></li></ol>
+  <p class="muted" style="font-size:12px;margin:6px 0 0">${mstartDot(4)} SK IV blau vergibt nur der Arzt (LNA) bei der ärztlichen Sichtung. Örtliche Vorgaben können abweichen.</p></details>`;
+}
+function manvListDialog(id){
+ const c=allOpenCalls().find(x=>String(x.id)===String(id)); if(!c)return;
+ const P=manvPats(c), orgl=(c.manvReports||[]).some(r=>r.kind==="orgl");
+ const rows=P.slice().sort((a,b)=>(orgl?a.sk-b.sk:a.vs-b.vs)||a.n-b.n).map(p=>{const k=orgl?p.sk:p.vs, tr=(c.manvPatients||[]).find(x=>x.pid===p.n), u=tr&&tr.unit?db.units.find(x=>String(x.id)===String(tr.unit)):null;
+   return `<tr style="border-bottom:1px solid var(--line)"><td style="padding:4px;font-weight:800">${p.n}</td><td>${mstartDot(k,14)}${orgl&&p.sk!==p.vs?` <small class="muted" title="Vorsichtung">(vorher ${MSTART_COL[p.vs][1]})</small>`:""}</td>
+   <td style="font-size:12px">${p.gender==="W"?"♀":"♂"} ${p.age} J. – ${esc(p.inj)}<br><span class="muted">${esc(mstartFindings(p))}</span></td><td style="font-size:12px">${u?esc(u.opta||u.name):k===5?"—":"<span class='muted'>wartet</span>"}</td></tr>`}).join("");
+ showModal(`<h3 style="margin-top:0">📋 Sichtung nach mSTaRT – Einsatz #${esc(String(c.id))}</h3>
+  <p class="muted" style="font-size:13px;margin-top:0">${orgl?"Stand nach ärztlicher Sichtung (OrgL/LNA).":"Vorsichtung durch das ersteintreffende Rettungsmittel."} Nummer = Anhängekarte.</p>
+  <div style="max-height:55vh;overflow:auto"><table style="width:100%;border-collapse:collapse"><tr style="text-align:left;font-size:12px"><th>Nr.</th><th>Kat.</th><th>Patient / Befund</th><th>Transport</th></tr>${rows}</table></div>
+  ${mstartSchemeHTML()}
+  <div class="row" style="justify-content:flex-end;gap:6px;margin-top:10px"><button onclick="manvTrainDialog('${esc(String(c.id))}')">🎓 Selbst sichten</button><button onclick="closeModal()">Schließen</button></div>`);
+}
+// 🎓 Selbst sichten: Befund lesen, Kategorie wählen, Rückmeldung mit dem mSTaRT-Weg
+let mstartTrain=null;
+function manvTrainDialog(id,fresh){
+ const c=allOpenCalls().find(x=>String(x.id)===String(id));
+ let P;
+ if(c)P=manvPats(c);
+ else{P=[];[1,1,2,2,2,3,3,3,5].forEach((sk,i)=>P.push(mstartMake(i+1,sk)))}
+ if(!mstartTrain||mstartTrain.id!==id||fresh)mstartTrain={id,i:0,ok:0,done:[],order:P.map(p=>p.n).sort(()=>Math.random()-0.5),P};
+ const T=mstartTrain;
+ if(T.i>=T.order.length){showModal(`<h3 style="margin-top:0">🎓 Sichtung fertig</h3><p style="font-size:18px"><b>${T.ok} von ${T.order.length}</b> richtig nach mSTaRT.</p>
+   ${T.done.filter(d=>!d.ok).map(d=>`<div style="font-size:13px;margin:4px 0">Nr. ${d.n}: gewählt ${mstartDot(d.pick)}, richtig ${mstartDot(d.sk)} – ${esc(d.path[d.path.length-1])}</div>`).join("")}
+   ${mstartSchemeHTML()}<div class="row" style="justify-content:flex-end;gap:6px;margin-top:10px"><button onclick="manvTrainDialog('${esc(String(id))}',true)">Nochmal</button><button onclick="closeModal()">Schließen</button></div>`);return}
+ const p=T.P.find(x=>x.n===T.order[T.i]);
+ const btn=sk=>`<button onclick="manvTrainPick(${sk})" style="display:flex;align-items:center;gap:6px;justify-content:center">${mstartDot(sk,16)} ${MSTART_COL[sk][2]}</button>`;
+ // Befund so, wie man ihn vor Ort erhebt (Schritt für Schritt aufdeckbar wäre schöner – hier alles auf einen Blick)
+ showModal(`<h3 style="margin-top:0">🎓 Selbst sichten (${T.i+1}/${T.order.length})</h3>
+  <div style="font-size:15px;padding:8px;background:#f8fafc;border-radius:8px"><b>Anhängekarte ${p.n}</b> – ${p.gender==="W"?"Frau":"Mann"}${p.age<8?" (Kind)":""}, ca. ${p.age} Jahre<br>${esc(p.inj)}</div>
+  <ul style="font-size:14px;margin:8px 0 8px 18px;padding:0">
+   <li>${p.walk?"steht auf und geht zur Sammelstelle":"kann nicht gehen"}</li>
+   ${p.walk?"":`<li>${!p.breath&&!p.airway?"keine Atmung – auch nach Freimachen der Atemwege nicht":p.airway?"zunächst keine Atmung – nach Freimachen der Atemwege atmet er":`Atemfrequenz ${p.af}/min`}</li>
+   ${!p.breath&&!p.airway?"":`<li>${p.bleed?"spritzende Blutung":"keine massive Blutung"}</li><li>Radialispuls ${p.radial?"tastbar":"nicht tastbar"}</li><li>${p.cmd?"befolgt die Aufforderung „Drücken Sie meine Hand“":"befolgt keine Aufforderungen"}</li>`}`}
+  </ul>
+  <div style="display:grid;gap:6px">${[1,2,3,5].map(btn).join("")}</div>
+  <div class="row" style="justify-content:space-between;margin-top:10px"><small class="muted">${T.ok} richtig bisher</small><button onclick="closeModal()">Abbrechen</button></div>`);
+}
+function manvTrainPick(sk){
+ const T=mstartTrain; if(!T)return; const p=T.P.find(x=>x.n===T.order[T.i]), r=mstartClassify(p), ok=sk===r.sk;
+ T.done.push({n:p.n,pick:sk,sk:r.sk,ok,path:r.path}); if(ok)T.ok++; T.i++;
+ showModal(`<h3 style="margin-top:0">${ok?"✅ Richtig":"❌ Nicht ganz"}</h3>
+  <p>Anhängekarte ${p.n}: ${mstartDot(r.sk,16)} <b>${MSTART_COL[r.sk][2]}</b>${ok?"":` (gewählt: ${MSTART_COL[sk][1]})`}</p>
+  <ol style="font-size:13px;margin:0 0 0 18px;padding:0">${r.path.map(x=>`<li>${esc(x)}</li>`).join("")}</ol>
+  <div class="row" style="justify-content:flex-end;margin-top:10px"><button class="primary" onclick="manvTrainDialog('${esc(String(T.id))}')">Weiter</button></div>`);
+}
 function manvReport(c,u,kind){
  const T=manvTruth(c), jit=v=>Math.max(0,v+(Math.random()<0.5?0:pick([-1,1])));
- const R=kind==="first"?{rot:jit(T.rot),gelb:jit(T.gelb),gruen:jit(T.gruen),blau:T.blau,schwarz:T.schwarz}:{rot:T.rot,gelb:T.gelb,gruen:T.gruen,blau:T.blau,schwarz:T.schwarz};
+ manvPats(c);
+ const R=kind==="first"?{rot:jit(T.rot+T.blau),gelb:jit(T.gelb),gruen:jit(T.gruen),blau:0,schwarz:T.schwarz}:{rot:T.rot,gelb:T.gelb,gruen:T.gruen,blau:T.blau,schwarz:T.schwarz};
  R.total=R.rot+R.gelb+R.gruen+R.blau+R.schwarz; R.kind=kind; R.by=u.opta||u.name; R.type=u.type; R.at=Date.now();
  c.manvReports=c.manvReports||[]; c.manvReports.push(R); c.manv=true;
- const txt=`${kind==="first"?"Erste Lagemeldung":"Sichtungsergebnis"}: ${R.total} Betroffene – ${R.rot} rot (SK1), ${R.gelb} gelb (SK2), ${R.gruen} grün (SK3), ${R.blau} blau, ${R.schwarz} schwarz.${kind==="first"?" Sichtung läuft.":""}`;
+ const txt=`${kind==="first"?"Erste Lagemeldung – Vorsichtung nach mSTaRT":"Ärztliche Sichtung abgeschlossen"}: ${R.total} Betroffene – ${R.rot} rot (SK I), ${R.gelb} gelb (SK II), ${R.gruen} grün (SK III)${kind==="first"?"":`, ${R.blau} blau (SK IV)`}, ${R.schwarz} verstorben.${kind==="first"?" Sichtung läuft.":""}`;
  crewSds(u,c,txt); (c.history=c.history||[]).push({q:`🚨 MANV-Rückmeldung (${R.by})`,a:txt});
  // Patientenliste für die Transporte (nach dem Sichtungsergebnis, sonst nach der ersten Meldung)
  if(kind==="orgl"||!c.manvPatients){
    const keep=(c.manvPatients||[]).filter(p=>p.unit);
    const list=[];let n=0;[[1,R.rot],[2,R.gelb],[3,R.gruen],[4,R.blau]].forEach(([sk,k])=>{for(let i=0;i<k;i++)list.push({n:n++,sk})});
+   // mit Anhängekarten verknüpfen (Vorsichtung: Kategorie nach mSTaRT, ärztliche Sichtung: endgültig)
+   const used=new Set(); list.forEach(it=>{const pp=T.pats.find(q=>!used.has(q.n)&&(kind==="orgl"?q.sk:q.vs)===it.sk)||(kind==="orgl"?null:T.pats.find(q=>!used.has(q.n)&&q.vs<=3));if(pp){used.add(pp.n);it.pid=pp.n}});
    keep.forEach(k=>{const i=list.findIndex(p=>p.sk===k.sk&&!p.unit);if(i>=0)list[i].unit=k.unit});
    c.manvPatients=list;
  }
@@ -5069,8 +5193,9 @@ function manvStripHTML(c){
  const tr=(c.manvPatients||[]), done=tr.filter(p=>p.unit).length;
  return `<div style="margin-top:6px;padding:6px 8px;border-radius:8px;background:#fff7ed;border:1px solid #fdba74;font-size:13px">
   ${R?`<div><b>${R.total} Betroffene</b> <small class="muted">(${R.kind==="first"?"erste Meldung":"Sichtung"} ${esc(R.by)} ${hhmm(R.at)})</small></div>
-  <div style="margin-top:3px">${dot("#d71920",R.rot,"rot – SK1")}${dot("#f2c200",R.gelb,"gelb – SK2")}${dot("#22c55e",R.gruen,"grün – SK3")}${dot("#2563eb",R.blau,"blau")}${dot("#111827",R.schwarz,"schwarz")}${tr.length?`<small class="muted">· ${done}/${tr.length} Pat. von Rettungsmitteln übernommen</small>`:""}</div>
+  <div style="margin-top:3px">${dot("#d71920",R.rot,"rot – SK I")}${dot("#f2c200",R.gelb,"gelb – SK II")}${dot("#22c55e",R.gruen,"grün – SK III")}${dot("#2563eb",R.blau,"blau – SK IV")}${dot("#111827",R.schwarz,"verstorben")}${tr.length?`<small class="muted">· ${done}/${tr.length} Pat. von Rettungsmitteln übernommen</small>`:""}</div>
   ${(()=>{const open=tr.filter(p=>!p.unit),free=callUnits(c).filter(u=>CREW_TRANSPORT.has(u.type)&&["3","4"].includes(String(u.status))&&!(u.crew&&u.crew.mode==="transport")).length,miss=open.length-free;return miss>0?`<div style="margin-top:3px;color:#b91c1c;font-weight:800">⚠️ ${miss} Pat. noch ohne Transportmittel (${["SK1","SK2","SK3","SK4"].map((k,i)=>{const n=open.filter(p=>p.sk===i+1).length;return n?`${n}× ${k}`:""}).filter(Boolean).join(", ")}) – nachalarmieren!</div>`:""})()}`:`<div>🚨 MANV – Rückmeldung von der Einsatzstelle steht noch aus</div>`}
+  ${R?`<div style="margin-top:4px"><button onclick="event.stopPropagation();manvListDialog('${esc(String(c.id))}')" style="font-size:11px;padding:2px 8px">📋 Sichtung (mSTaRT)</button> <button onclick="event.stopPropagation();mstartTrain=null;manvTrainDialog('${esc(String(c.id))}',true)" style="font-size:11px;padding:2px 8px">🎓 Selbst sichten</button></div>`:""}
   ${br?`<div style="margin-top:4px">${br}</div>`:""}</div>`;
 }
 function setBrMode(id,mode){const c=allOpenCalls().find(x=>String(x.id)===String(id));if(!c)return;c.brMode=mode;(c.history=c.history||[]).push({q:"🅿️ Bereitstellungsraum",a:mode==="orgl"?"wird vom OrgL vor Ort festgelegt":"legt die Leitstelle fest"});save();render(currentPage)}
@@ -5427,7 +5552,7 @@ function sdsAnswerFor(u,text,neighbor){
  if(/klinik|krankenhaus|zielort|ziel\b|ivena/.test(t))return asg?`Zielklinik ${asg.hospitalName}, PZC ${asg.pzc||"–"}, an ca. ${hhmm(asg.eta)} Uhr.`:st==="4"?"Zielklinik noch nicht festgelegt, Versorgung läuft.":"Kein Patient an Bord.";
  if(/patient|verletzt|lage|wie viele|zustand|sk ?\d|sichtung/.test(t)){
    if(call&&call.manvReports&&call.manvReports.length){const R=call.manvReports.slice(-1)[0];return `Lage: ${R.total} Betroffene – ${R.rot} rot, ${R.gelb} gelb, ${R.gruen} grün, ${R.blau} blau, ${R.schwarz} schwarz.`}
-   if(st==="4"&&C&&C.info)return C.mode==="home"?"1 Pat., leicht verletzt/erkrankt, Versorgung vor Ort, voraussichtlich kein Transport.":C.mode==="none"?"Kein Patient für uns.":`1 Pat. ${C.info.gender||""}${C.info.age!=null?`, ${C.info.age} J.`:""} – ${pzcRmiLabel(C.info.rmi)||"in Versorgung"}${C.info.sk?`, SK${C.info.sk}`:""}, Transport geplant.`;
+   if(st==="4"&&C&&C.info)return C.mode==="home"?"1 Pat., leicht verletzt/erkrankt, Versorgung vor Ort, voraussichtlich kein Transport.":C.mode==="none"?"Kein Patient für uns.":`1 Pat. ${C.info.gender||""}${C.info.age!=null?`, ${C.info.age} J.`:""} – ${pzcRmiLabel(C.info.rmi)||"in Versorgung"}${C.info.sk?`, SK ${["","I","II","III","IV"][C.info.sk]}${C.info.card?` (Karte ${C.info.card})`:""}`:""}${C.info.inj?`, ${C.info.inj}`:""}, Transport geplant.`;
    return st==="3"?"Noch nicht vor Ort, Lage folgt.":st==="4"?"Lageerkundung läuft, Meldung folgt.":"Kein Einsatz mit Patienten.";
  }
  if(/einsatzbereit|frei\b|verfügbar|könnt ihr|können sie (übernehmen|fahren)/.test(t))return ["1","2"].includes(st)?"Ja, einsatzbereit.":`Negativ, ${where}.`;
