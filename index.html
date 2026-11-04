@@ -170,7 +170,7 @@ html[data-device="handy"] #floatDock{left:8px;right:8px;width:auto;top:auto;bott
 </head>
 <body>
 <div style="padding:6px 10px;font-size:11px;color:#94a3b8;font-weight:700;display:flex;flex-wrap:wrap;align-items:center;gap:10px;position:sticky;top:0;z-index:10;background:var(--bg)">
- <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v5.34</span>
+ <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v5.35</span>
  <span id="syncState"></span> <a id="deskTag" href="#" onclick="renameDesk();return false" title="Name dieses Platzes (für „offen an …“) – antippen zum Ändern" style="color:#64748b;font-weight:700;text-decoration:none"></a>
  <span id="simCtl" style="position:absolute;left:50%;transform:translateX(-50%);display:flex;gap:6px;align-items:center"></span>
  <a id="homeLink" href="#" onclick="render('leitstelle');return false" class="hidden" style="color:#64748b;text-decoration:underline;font-weight:600">🖥️ Leitstelle</a>
@@ -553,6 +553,11 @@ const DEFAULTS_FRI_WHV={
  // Getrennt von db.units gehalten, damit sie nie für lokale Friesland-Alarmierungen/AAO/Karte
  // in Frage kommen. Status ist manuell steuerbar (Übungsleitung), keine echte Live-Anbindung.
  neighborUnits:[
+  // v5.35: Sonderfahrzeuge auf Wunsch. Baby-NAW „Felix“: Klinikum Oldenburg, Kinderklinik (seit 2013, NWZ/Steiger-Stiftung).
+  // SRTW Oldenburg und SRTW Wittmund (ehrenamtlich): Funkrufname und Standort NICHT belegt – bitte prüfen.
+  {id:190,name:"Baby-NAW-OL",opta:"Baby-NAW Oldenburg „Felix“",type:"Baby-NAW",district:"Oldenburg (Stadt)",status:"1",crew:"3",skills:"Neugeborenen-Notarztwagen mit Transportinkubator (Team Kinderklinik)",verified:"Klinikum Oldenburg / NWZ – Funkrufname nicht belegt",address:"Rahel-Straus-Straße 10, 26133 Oldenburg (Klinikum, Kinderklinik)",lat:53.11276,lng:8.21674,special:true},
+  {id:191,name:"SRTW-OL",opta:"SRTW Oldenburg",type:"SRTW",district:"Oldenburg (Stadt)",status:"1",crew:"2",skills:"Schwerlast-Rettungswagen (Patienten über 200 kg)",verified:"⚠️ Nutzerangabe – Funkrufname/Standort nicht belegt, bitte prüfen",address:"Ibo-Koch-Straße 6, 26127 Oldenburg (Standort angenommen: BF Oldenburg FuRW 1)",lat:53.1557,lng:8.2045,special:true},
+  {id:192,name:"SRTW-WTM",opta:"SRTW Wittmund (ehrenamtlich)",type:"SRTW",district:"Wittmund",status:"1",crew:"2",skills:"Schwerlast-Rettungswagen, ehrenamtlich besetzt (Patienten über 200 kg)",verified:"⚠️ Nutzerangabe – Funkrufname/Standort nicht belegt, bitte prüfen",address:"Wittmund (genauer Standort unbekannt)",lat:53.5767,lng:7.7795,special:true,volunteer:true},
   {id:1,name:"80-82-01",opta:"Rettung Wittmund 80/82-01",type:"NEF",district:"Wittmund",status:"1",crew:"2",skills:"Notarzt",verified:"BOS-Fahrzeuge",address:"Schloßstraße 11, 26409 Wittmund",lat:53.573624,lng:7.784572},
   {id:2,name:"80-83-01",opta:"Rettung Wittmund 80/83-01",type:"RTW",district:"Wittmund",status:"1",crew:"2",skills:"Notfallrettung",verified:"BOS-Fahrzeuge",address:"Schloßstraße 11, 26409 Wittmund",lat:53.573624,lng:7.784572},
   {id:9,name:"82-83-01",opta:"Rettung Wittmund 82/83-01",type:"RTW",district:"Wittmund",status:"1",crew:"2",skills:"Notfallrettung",verified:"BOS-Fahrzeuge",address:"Jeverstraße 28 A, 26327 Esens",lat:53.635804,lng:7.6171504},
@@ -2487,19 +2492,20 @@ function nbOutAnswer(callId,kind,unitId,type){
  if(unitId!=null&&!nu){
    // gewünschtes Fahrzeug inzwischen gebunden – anderes anbieten?
    const alt=dest?free.map(u=>({u,eta:neighborEtaFor(u,dest).eta})).sort((a,b)=>a.eta-b.eta)[0]:null;
-   if(alt&&freeInDist(alt.u.district)>1){nu=alt.u;txt=`Das angefragte Fahrzeug ist inzwischen im Einsatz – wir schicken euch stattdessen ${nu.opta}.`}
+   if(alt&&(alt.u.special||freeInDist(alt.u.district)>1)){nu=alt.u;txt=`Das angefragte Fahrzeug ist inzwischen im Einsatz – wir schicken euch stattdessen ${nu.opta}.`}
    else txt="Das angefragte Fahrzeug ist inzwischen selbst im Einsatz, und mehr können wir gerade nicht abgeben.";
  }else if(!nu){
    const best=dest?free.map(u=>({u,eta:neighborEtaFor(u,dest).eta})).sort((a,b)=>a.eta-b.eta)[0]:null;
-   if(best&&freeInDist(best.u.district)>1)nu=best.u; else txt=best?`Wir haben im LK ${best.u.district} nur noch einen freien ${type}, den müssen wir behalten.`:`Wir haben gerade selbst keinen ${type} frei.`;
- }else if(freeInDist(nu.district)<=1&&Math.random()<0.6){txt=`Das ist unser letzter freier ${type} im LK ${nu.district} – den können wir leider nicht abgeben.`;nu=null}
+   if(best&&(best.u.special||freeInDist(best.u.district)>1))nu=best.u; else txt=best?`Wir haben im LK ${best.u.district} nur noch einen freien ${type}, den müssen wir behalten.`:`Wir haben gerade selbst keinen ${type} frei.`;
+ }else if(!nu.special&&freeInDist(nu.district)<=1&&Math.random()<0.6){txt=`Das ist unser letzter freier ${type} im LK ${nu.district} – den können wir leider nicht abgeben.`;nu=null}
  if(nu){
    const loaned=loanNeighborUnit(nu); setUnitStatus(loaned,"3");
    appendUnitToCall(call,loaned,`Nachbar-LK ${nu.district}`);
    call.alarmedUnits=call.alarmedUnits||[]; if(!call.alarmedUnits.some(id=>String(id)===String(loaned.id)))call.alarmedUnits.push(loaned.id);
    if(!call.neighborUnitId)call.neighborUnitId=loaned.id;
    const eta=dest?Math.round(neighborEtaFor(nu,dest).eta):null;
-   txt=(txt?txt+" ":"")+`${nu.opta} ist alarmiert${eta?`, ca. ${eta} min`:""}.`;
+   const vol=nu.volunteer?rint(8,15):0; if(vol)loaned.volunteerDelayMin=vol;
+   txt=(txt?txt+" ":"")+`${nu.opta} ist alarmiert${eta?`, ca. ${eta+vol} min${vol?" (ehrenamtlich, Besatzung muss erst zur Wache)":""}`:""}.`;
    call.history.push({q:`🤝 ${name}: Zusage`,a:txt});
  }else call.history.push({q:`❌ ${name}: Absage`,a:txt});
  sdsLog({dir:"in",opta:name,callId:String(call.id),text:`📞 ${txt}`,read:false});
@@ -2517,7 +2523,7 @@ function openNeighborUnitPickerForCall(kind,callId){
  document.getElementById("app").innerHTML=`<div class="card">
   <div class="row between"><h2>📞 Rettungsmittel bei ${kind==="ostfriesland"?"der KRLS Ostfriesland":"der GOL"} anfragen – Einsatz #${esc(call.id)}</h2><button onclick="render('leitstelle')">Zurück</button></div>
   <p class="muted">Die Nachbar-Leitstelle entscheidet selbst und alarmiert ihr Fahrzeug – oder sagt ab, wenn sie es selbst braucht. Sagt sie zu, erscheint das Fahrzeug bei uns wie ein eigenes (Status 3, auf der Karte). Angezeigt sind nur freie Fahrzeuge, sortiert nach Ankunftszeit.</p>
-  <div class="row" style="gap:6px;flex-wrap:wrap;margin-bottom:8px"><button onclick="nbOutRequest('${esc(String(call.id))}','${kind}',{type:'RTW'})">📞 Irgendeinen RTW anfragen</button><button onclick="nbOutRequest('${esc(String(call.id))}','${kind}',{type:'NEF'})">📞 Irgendein NEF anfragen</button></div>
+  <div class="row" style="gap:6px;flex-wrap:wrap;margin-bottom:8px"><button onclick="nbOutRequest('${esc(String(call.id))}','${kind}',{type:'RTW'})">📞 Irgendeinen RTW anfragen</button><button onclick="nbOutRequest('${esc(String(call.id))}','${kind}',{type:'NEF'})">📞 Irgendein NEF anfragen</button>${["SRTW","Baby-NAW"].filter(t=>(db.neighborUnits||[]).some(n=>n.type===t&&NEIGHBOR_LEITSTELLE[n.district]===kind)).map(t=>`<button onclick="nbOutRequest('${esc(String(call.id))}','${kind}',{type:'${t}'})">📞 ${t} anfragen</button>`).join("")}</div>
   ${candidates.length?candidates.map(u=>`<div class="row between" style="padding:8px 0;border-bottom:1px solid var(--line)">
      <div><b>${esc(u.opta)}</b><div class="muted">${esc(u.district)} · ${esc(u.type)} · ${esc(u.address||"")}</div>${u._eta!=null?`<div style="font-weight:800;${own==null||u._eta<own?"color:#15803d":"color:#b45309"}">⏱️ ~${u._eta} min bis zum Einsatzort${own!=null?(u._eta<own?` – ${own-u._eta} min schneller als eigenes RTW/NEF (~${own} min)`:` – eigenes RTW/NEF ist schneller (~${own} min)`):" – kein eigenes RTW/NEF frei"}</div>`:""}</div>
      <button class="primary" onclick="nbOutRequest('${esc(String(call.id))}','${kind}',{unitId:${u.id},type:'${esc(u.type)}'})">📞 Anfragen</button>
@@ -4924,7 +4930,7 @@ function alarmProposal(){
 // Fahrt ins KH nach Entfernung (Sonderrechte nur bei Dringlichkeit 1), Übergabe in Status 8
 // 10–25 min, danach Status 1 und Rückfahrt zur Wache (wie bisher berechnet).
 // Gilt für alle Einsätze – auch für Übungsnotrufe (dort zählt der wahre Zustand des Patienten).
-const CREW_TRANSPORT=new Set(["RTW","NKTW","KTW","RTH","ITH","KTH"]);
+const CREW_TRANSPORT=new Set(["RTW","NKTW","KTW","RTH","ITH","KTH","SRTW","Baby-NAW","NAW","ITW"]);
 const CREW_RMI=[
  [/reanim|herzstillstand|keine normale atmung.*bewusstlos/,"132"],
  [/brust|herzinfarkt|druck auf der brust|engegefühl|ausstrahl/,"331"],
@@ -4998,6 +5004,20 @@ function crewSds(u,call,text){
 const hhmm=t=>new Date(t).toLocaleTimeString("de-DE",{hour:"2-digit",minute:"2-digit"});
 function crewPlan(u,call){
  const info=crewCaseInfo(call), now=Date.now(), isNef=u.type==="NEF";
+ // v5.35 SRTW: übernimmt den Patienten vom RTW, der den SRTW nachgefordert hat
+ if(u.type==="SRTW"){
+   const rt=callUnits(call).find(x=>x!==u&&x.crew&&x.crew.srtw&&x.crew.srtw.asked&&!x.crew.srtw.done);
+   if(rt){const C=rt.crew;C.srtw.done=true;
+     u.crew={...C,srtw:null,registered:false,asgId:null,registerAt:now+rint(8,14)*60000,departAt:now+rint(20,30)*60000,info:{...C.info}};
+     rt.crew={callId:C.callId,mode:"none",doneAt:now+rint(3,6)*60000,info:C.info,owner:C.owner};
+     crewSds(rt,call,"SRTW ist da – Patient wird an den SRTW übergeben, wir werden gleich frei.");
+     (call.history=call.history||[]).push({q:`🛏️ ${u.opta||u.name}`,a:"übernimmt den Patienten (Schwerlasttransport)"});return}
+   u.crew={callId:String(call.id),mode:"transport",patient:0,departAt:now+rint(25,35)*60000,registerAt:now+rint(15,20)*60000,info};return;
+ }
+ if(u.type==="Baby-NAW"){
+   u.crew={callId:String(call.id),mode:"transport",patient:0,departAt:now+rint(35,50)*60000,registerAt:now+rint(20,30)*60000,forceHosp:3,forceFach:"Pädiatrie",info:{...info,sev:"urgent",age:0}};
+   crewSds(u,call,"Übernahme Frühgeborenes in den Transportinkubator, Stabilisierung läuft – Transport ins Perinatalzentrum Klinikum Oldenburg folgt.");return;
+ }
  // welcher Patient? jedes Transportmittel übernimmt einen
  const planned=(call.alarmedUnits||[]).map(id=>db.units.find(x=>String(x.id)===String(id))).filter(x=>x&&x!==u&&x.crew&&x.crew.callId===String(call.id)&&x.crew.patient!=null&&CREW_TRANSPORT.has(x.type));
  if(isNef){
@@ -5028,13 +5048,17 @@ function crewPlan(u,call){
  // weitere Patienten (2., 3. RTW …) sind andere Personen: eigenes Alter/Geschlecht, oft leichter verletzt
  const inf=idx>0?{...info,age:rint(18,80),gender:Math.random()<0.5?"M":"W",sev:info.sev==="rea"?"critical":Math.random()<0.5?info.sev:"normal"}:info;
  u.crew={callId:String(call.id),mode:"transport",patient:idx,departAt:now+t*60000,registerAt:now+Math.max(2,t-rint(3,7))*60000,info:inf};
+ // v5.35: selten – Patient zu schwer für den RTW → Nachforderung SRTW (bei Schwerlast-Fällen immer)
+ if(u.type==="RTW"&&idx===0&&currentScenarioId==="fri-whv"&&info.sev!=="rea"&&((call.sim&&call.sim.d&&call.sim.d.srtw)||(!isManvCall(call)&&Math.random()<0.012)))
+   u.crew.srtw={askAt:now+rint(4,8)*60000,kg:(call.sim&&call.sim.d&&call.sim.d.weightKg)||rint(205,280)};
  // NEF auf demselben Einsatz: begleitet bei kritischen Patienten (sonst frei, wenn der RTW entschieden hat)
  const nef=(call.alarmedUnits||[]).map(id=>db.units.find(x=>String(x.id)===String(id))).find(x=>x&&x.type==="NEF"&&!unitPhoneLive(x)&&String(x.status)==="4"&&!(x.crew&&x.crew.follow));
  if(nef){if(info.sev==="rea"||info.sev==="critical"){nef.crew={callId:String(call.id),nef:true,follow:u.id};u.crew.nefId=nef.id}else nef.crew={callId:String(call.id),nef:true,releaseAt:u.crew.registerAt+rint(0,3)*60000}}
 }
 function crewRegister(u,call){
- const C=u.crew, info=C.info, dring=crewDring(info.rmi,info.sev,info.sk), fach=pzcFachrichtung(info.rmi);
- const pick=crewPickHospital(u,call,fach,dring); if(!pick){C.registered=true;return}
+ const C=u.crew, info=C.info, dring=crewDring(info.rmi,info.sev,info.sk), fach=C.forceFach||pzcFachrichtung(info.rmi);
+ const fh=C.forceHosp!=null?(db.ivena||[]).find(x=>String(x.id)===String(C.forceHosp)):null;
+ const pick=fh?{h:fh}:crewPickHospital(u,call,fach,dring); if(!pick){C.registered=true;return}
  const h=pick.h, drive=ivenaEtaMin(u,h,call,dring)||15, etaT=Math.max(C.departAt,Date.now())+drive*60000;
  const nef=C.nefId?db.units.find(x=>String(x.id)===String(C.nefId)):null;
  const air=["RTH","ITH"].includes(u.type);
@@ -5080,6 +5104,14 @@ function crewTick(){
      }
      if(C.mode==="none"&&now>=C.doneAt){crewSds(u,call,C.info&&C.info.noPatient?"Kein Patient vor Ort – Einsatzende, wieder einsatzbereit.":"Kein weiterer Patient für uns – Einsatzende, wieder einsatzbereit.");setUnitStatus(u,"1");delete u.crew;changed=true;continue}
      if(C.mode==="home"&&now>=C.doneAt){crewSds(u,call,`Pat. vor Ort versorgt, kein Transport notwendig (ambulant/Hausarzt). Einsatzende ${hhmm(now)} – wieder einsatzbereit.`);(call.history=call.history||[]).push({q:`🏠 ${u.opta||u.name}`,a:"Pat. vor Ort versorgt, kein Transport"});setUnitStatus(u,"1");delete u.crew;changed=true;continue}
+     if(C.mode==="transport"&&C.srtw&&!C.srtw.done){
+       if(!C.srtw.asked&&now>=C.srtw.askAt){C.srtw.asked=true;C.srtw.askedAt=now;call.srtwNeeded=true;
+         crewSds(u,call,`Nachforderung: SRTW – Patient ca. ${C.srtw.kg} kg, mit unserem RTW nicht transportfähig. Bitte SRTW über die Nachbar-Leitstelle anfordern, ggf. Tragehilfe Feuerwehr.`);
+         (call.history=call.history||[]).push({q:`📟 Nachforderung (${u.opta||u.name})`,a:`SRTW – Patient ca. ${C.srtw.kg} kg`});
+         (call.nafo=call.nafo||[]).push({reason:`SRTW nachgefordert – Patient ca. ${C.srtw.kg} kg`,at:new Date().toISOString()});changed=true}
+       else if(C.srtw.asked&&now-C.srtw.askedAt>75*60000){C.srtw.done=true;C.registerAt=now;C.departAt=now+rint(15,20)*60000;crewSds(u,call,"Kein SRTW gekommen – Transport jetzt mit Tragehilfe der Feuerwehr in unserem RTW.");changed=true}
+       continue;
+     }
      if(C.mode==="transport"){
        if(!C.registered&&now>=C.registerAt){crewRegister(u,call);changed=true}
        if(C.registered&&now>=C.departAt){
@@ -5114,7 +5146,7 @@ const MANV_STAGES=[[5,"9","MANV 5"],[10,"22","MANV 10"],[30,"23","MANV 30"],[50,
 const MANV_IDS=new Set(MANV_STAGES.map(x=>x[1]));
 function manvStage(n){n=Number(n)||0;return MANV_STAGES.find(x=>n<=x[0])}
 function isManvCall(c){return !!c&&!c.kt&&(Number(c.answers?.count)>3||!!c.manv||/MANV/.test(c.keyword||""))}
-const RD_TYPES=new Set(["RTW","NEF","NKTW","KTW","RTH","ITH","KTH","OrgL/LNA"]);
+const RD_TYPES=new Set(["RTW","NEF","NKTW","KTW","RTH","ITH","KTH","OrgL/LNA","SRTW","Baby-NAW","NAW","ITW"]);
 function callUnits(c){return (c.alarmedUnits||[]).map(id=>db.units.find(x=>String(x.id)===String(id))).filter(Boolean)}
 // Wahre Verteilung der Betroffenen (einmal pro Einsatz festgelegt)
 function manvTruth(c){
@@ -9280,6 +9312,46 @@ function simRoadLoc(){if(CUSTOM_SC)return csSimLoc("road");const r=pick(SIM_ROAD
 
 // Fall-Bibliothek. f = Fakten (Antworten für den Anrufer), say = feste Sätze, extra = spontane Sätze.
 const SIM_CASES=[
+ // ── v5.35: Einsätze im Altenheim / Pflegeheim (Anrufer: Pflegekraft) ──
+ {id:"heim_sturz",w:2,num:"112",loc:"home",locPrefix:"im Seniorenpflegeheim, ",mk:()=>{const p=simPerson("w"),c=simPerson("w"),age=rint(78,96);return {rel:"eine Bewohnerin",caller:c,patient:p,age,staff:true,
+   open:[`Guten Tag, ${c.first} ${c.last}, Pflegefachkraft im Seniorenpflegeheim. Eine Bewohnerin ist gestürzt und kann nicht mehr aufstehen.`,"Hallo, hier ist das Pflegeheim, Wohnbereich 2 – eine Bewohnerin ist vor dem Bett gestürzt, die Hüfte tut ihr sehr weh."],
+   event:"Sie ist nachts allein aufgestanden und vor dem Bett gestürzt. Das rechte Bein ist kürzer und nach außen gedreht, sie hat starke Schmerzen in der Hüfte.",
+   f:{count:"1",x:"Nein",a:"Frei",b:"Normal",c:"Unauffällig",d:"Wach / orientiert",e:"Sturz, Hüftschmerz rechts, Bein verkürzt und außenrotiert",psy:"Nein",danger:"nein"},
+   onset:"Wir haben sie vor zehn Minuten beim Rundgang gefunden.",hist:"Laut Pflegedokumentation: Demenz, Herzinsuffizienz, sie nimmt einen Blutverdünner. Den Medikamentenplan und den Überleitungsbogen lege ich bereit.",
+   extra:["Den Überleitungsbogen und den Medikamentenplan habe ich schon ausgedruckt.","Die Tochter ist die Betreuerin, die rufe ich gleich an.","Sie ist sonst mit dem Rollator unterwegs."]}}},
+ {id:"heim_atemnot",w:1.2,num:"112",loc:"home",locPrefix:"im Seniorenpflegeheim, ",mk:()=>{const p=simPerson("m"),c=simPerson(),age=rint(80,95);return {rel:"ein Bewohner",caller:c,patient:p,age,staff:true,
+   open:["Hallo, hier ist das Pflegeheim. Ein Bewohner bekommt ganz schlecht Luft und hat Fieber.","Guten Tag, Pflegeheim, Wohnbereich 1 – einem Bewohner geht es seit heute Morgen immer schlechter, er atmet ganz schwer."],
+   event:"Er hat seit gestern Husten, heute 39,2 Fieber und atmet schnell und rasselnd. Die Sättigung am Fingerclip zeigt 86 Prozent.",
+   f:{count:"1",x:"Nein",a:"Frei",b:"Auffällig",c:"Auffällig",d:"Wach / orientiert",e:"Atemnot, Fieber 39,2, Sättigung 86 %, Husten",psy:"Nein",danger:"nein"},
+   onset:"Seit heute Morgen deutlich schlechter.",hist:"COPD, Diabetes Typ 2, Herzschwäche. Der Hausarzt ist heute nicht erreichbar.",
+   extra:["Sauerstoff haben wir hier leider keinen.","Ich habe ihn schon mit erhöhtem Oberkörper hingesetzt.","Die Unterlagen liegen bereit."]}}},
+ {id:"heim_vigil",w:1.2,num:"112",loc:"home",locPrefix:"im Seniorenpflegeheim, ",mk:()=>{const p=simPerson("w"),c=simPerson(),age=rint(82,97);return {rel:"eine Bewohnerin",caller:c,patient:p,age,staff:true,
+   open:["Hallo, hier ist das Pflegeheim. Eine Bewohnerin ist heute kaum noch wach zu kriegen.","Guten Tag, Pflegeheim – eine Bewohnerin reagiert seit heute Mittag nur noch ganz schlecht."],
+   event:"Sie hat seit zwei Tagen kaum getrunken, ist heute ganz schläfrig und reagiert nur auf lautes Ansprechen. Die Haut ist trocken, sie hat leichtes Fieber.",
+   f:{count:"1",x:"Nein",a:"Frei",b:"Normal",c:"Auffällig",d:"Bewusstseinsgetrübt",e:"schläfrig, trinkt kaum, trockene Haut, Fieber 38,4",psy:"Nein",danger:"nein"},
+   onset:"Seit heute Mittag deutlich schlechter, getrunken hat sie schon zwei Tage kaum.",hist:"Demenz, Bluthochdruck, Nierenschwäche. Eine Patientenverfügung liegt vor, die gebe ich mit.",
+   extra:["Den Blutzucker habe ich gemessen, der ist normal, 124.","Die Patientenverfügung lege ich zum Überleitungsbogen.","Die Angehörigen sind informiert."]}}},
+ {id:"heim_bz",w:0.6,num:"112",loc:"home",locPrefix:"im Seniorenpflegeheim, ",mk:()=>{const p=simPerson("m"),c=simPerson(),age=rint(70,90);return {rel:"ein Bewohner",caller:c,patient:p,age,staff:true,
+   open:["Hallo, Pflegeheim hier – ein Bewohner ist ganz verwirrt und schwitzt, der Blutzucker ist bei 38.","Guten Tag, ein Bewohner von uns reagiert komisch, der Zucker ist ganz niedrig!"],
+   event:"Er ist Diabetiker, hat heute Morgen Insulin bekommen, aber kaum gefrühstückt. Jetzt ist er verwirrt, kaltschweißig, der Blutzucker ist 38.",
+   f:{count:"1",x:"Nein",a:"Frei",b:"Normal",c:"Auffällig",d:"Bewusstseinsgetrübt",e:"Unterzuckerung, BZ 38 mg/dl, kaltschweißig, verwirrt",psy:"Nein",danger:"nein"},
+   onset:"Seit etwa einer Viertelstunde.",hist:"Diabetes mit Insulin, leichte Demenz.",
+   extra:["Schlucken kann er gerade nicht richtig, ich trau mich nicht, ihm Saft zu geben.","Glukosegel haben wir leider nicht da."]}}},
+ // ── v5.35: ganz selten – Schwerlast-Patient (SRTW) ──
+ {id:"srtw_home",w:0,num:"112",loc:"home",mk:()=>{const p=simPerson("m"),age=rint(42,68),kg=rint(215,290);return {rel:"mein Mann",caller:simPerson("w"),patient:p,age,srtw:true,weightKg:kg,
+   open:["Hallo, mein Mann bekommt ganz schlecht Luft, er kommt nicht mehr hoch aus dem Sessel!","Bitte helfen Sie, mein Mann atmet so schwer, und er ist sehr schwer, über 200 Kilo!"],
+   event:`Er sitzt im Sessel, atmet ganz schwer und hat dicke Beine. Er wiegt etwa ${kg} Kilo und kann nicht mehr aufstehen.`,
+   f:{count:"1",x:"Nein",a:"Frei",b:"Auffällig",c:"Auffällig",d:"Wach / orientiert",e:`Atemnot, Beinödeme, Patient ca. ${kg} kg`,psy:"Nein",danger:"nein"},
+   onset:"Seit heute Nachmittag immer schlimmer.",hist:"Herzschwäche, Bluthochdruck, Schlafapnoe – er hat so ein Gerät zum Schlafen.",
+   extra:[`Er wiegt ${kg} Kilo, das schaffen zwei Leute nicht allein.`,"Beim letzten Mal musste die Feuerwehr helfen, und so ein Spezialwagen kam.","Die Haustür ist schmal, und wir wohnen im ersten Stock."]}}},
+ // ── v5.35: ganz selten – Inkubatortransport aus dem St. Johannes-Hospital Varel ──
+ {id:"inkubator_varel",w:0,num:"112",loc:"home",fixedLoc:{kind:"home",text:"im St. Johannes-Hospital Varel, Kreißsaal",addr:"St. Johannes-Hospital, Varel",town:"Varel",lat:53.39271,lng:8.13959,facility:"St. Johannes-Hospital Varel"},mk:()=>{const p=simPerson(),c=simPerson("w"),ssw=rint(30,35);return {rel:"ein Neugeborenes",caller:c,patient:p,age:0,staff:true,inkubator:true,weightText:`Das Kind wiegt etwa ${rint(14,24)*100} Gramm.`,ageText:`Das Kind ist vor gut einer Stunde geboren, ${ssw}. Schwangerschaftswoche.`,
+   open:[`Guten Tag, ${c.first} ${c.last}, Kreißsaal im St. Johannes-Hospital Varel. Wir haben ein Frühgeborenes, ${ssw}. Woche, das muss ins Perinatalzentrum nach Oldenburg – wir brauchen einen Inkubatortransport.`,`Hallo, hier ist der Kreißsaal Varel. Wir brauchen den Baby-Notarztwagen für ein Frühchen, ${ssw}. Schwangerschaftswoche.`],
+   event:`Frühgeborenes der ${ssw}. Schwangerschaftswoche, vor gut einer Stunde geboren, braucht Atemunterstützung. Muss ins Perinatalzentrum Klinikum Oldenburg.`,
+   f:{count:"1",x:"Nein",a:"Frei",b:"Auffällig",c:"Unauffällig",d:"Wach / orientiert",e:`Frühgeborenes ${ssw}. SSW, Atemstörung, Inkubatortransport Perinatalzentrum`,psy:"Nein",danger:"nein"},
+   onset:"Vor gut einer Stunde geboren.",hist:"Die Mutter hatte vorzeitige Wehen, die Lungenreife-Spritze wurde gegeben. Die Neonatologie in Oldenburg ist schon informiert.",
+   extra:["Die Kinderärzte in Oldenburg wissen Bescheid und warten auf den Anruf.","Die Mutter bleibt erst einmal hier bei uns.","Wir sind im Kreißsaal, die Pforte zeigt Ihnen den Weg."]}}},
+
  {id:"acs",w:9,num:"112",loc:"home",mk:()=>{const p=simPerson("m"),age=rint(52,79);return {rel:"mein Mann",caller:simPerson("w"),patient:p,age,
    open:["Hallo? Mein Mann hat ganz starke Schmerzen in der Brust!","Bitte kommen Sie schnell, meinem Mann geht es ganz schlecht, er hat so Druck auf der Brust!"],
    event:"Er hat seit ungefähr zwanzig Minuten so einen Druck auf der Brust, das zieht in den linken Arm. Er ist ganz grau im Gesicht.",
@@ -9599,6 +9671,8 @@ function simAaoCheck(c){
  a+=miss.length?` · ⚠️ fehlt: ${miss.join(", ")}`:" · ✅ alle Soll-Fahrzeuge alarmiert";
  if(more.length)a+=` · zusätzlich: ${more.join(", ")}`;
  if(s.d.phoneOnly)a+=" · ℹ️ Dieser Anruf wäre auch telefonisch zu erledigen gewesen (Beratung/Weiterleitung).";
+ if(s.d.srtw)a+=` · ℹ️ Patient ca. ${s.d.weightKg} kg: zusätzlich SRTW über die Nachbar-Leitstelle anfragen (GOL: SRTW Oldenburg · KRLS Ostfriesland: SRTW Wittmund).`;
+ if(s.d.inkubator)a+=" · ℹ️ Inkubatortransport: Baby-NAW „Felix“ über die GOL anfragen (Klinikum Oldenburg).";
  c.history=c.history||[]; c.history.push({q:"🎓 Übungs-Check AAO",a});
  toast(miss.length?`AAO-Check: es fehlt ${miss.join(", ")}`:"AAO-Check: passt ✅");
 }
@@ -9633,7 +9707,7 @@ function closeByPhone(id,why){
 function simMakeCall(){
  // Anrufer halten sich an die AAO: Fälle ohne passende AAO (kein Soll-Fahrzeug) werden übersprungen
  let sim=null;
- for(let i=0;i<6;i++){const x=simMakeCall0();if(!x||x.kt||x.d.phoneOnly||/^tier_/.test(x.caseId)){sim=x;break}const so=simSollAao(x);if(so&&Object.keys(so.types).length){x.soll=so;sim=x;break}}
+ for(let i=0;i<6;i++){const x=simMakeCall0();if(!x||x.kt||x.d.phoneOnly||x.d.inkubator||/^tier_/.test(x.caseId)){sim=x;break}const so=simSollAao(x);if(so&&Object.keys(so.types).length){x.soll=so;sim=x;break}}
  if(!sim)sim=simMakeCall0();
  try{simQueueWitnesses(sim)}catch(e){}
  return sim;
@@ -9661,6 +9735,8 @@ function simQueueWitnesses(sim){
 }
 // Tierrettung: höchstens eine pro Tag (pro Gerät), sonst nach Zufall bei etwa jedem 12. Notruf
 function simTierDue(){try{const d=simDayKey(Date.now());return localStorage.getItem("lst-sim-tier-day")!==d&&Math.random()<0.085}catch(e){return false}}
+// v5.35: ganz selten – Schwerlast (SRTW) und Inkubatortransport aus Varel, je höchstens einmal am Tag
+function simRareDue(){try{const d=simDayKey(Date.now());for(const [id,p] of [["srtw_home",0.02],["inkubator_varel",0.015]]){const k="lst-sim-rare-"+id;if(localStorage.getItem(k)!==d&&Math.random()<p){localStorage.setItem(k,d);return id}}}catch(e){}return null}
 function simTierMark(){try{localStorage.setItem("lst-sim-tier-day",simDayKey(Date.now()))}catch(e){}}
 function simMakeCall0(){
  // Mit KI: bevorzugt ein von der KI frisch erfundener Fall (im Hintergrund vorbereitet)
@@ -9670,6 +9746,7 @@ function simMakeCall0(){
  const tot=pool.reduce((a,c)=>a+c.w,0); let r=Math.random()*tot, cs=pool[0];
  for(const c of pool){r-=c.w;if(r<=0){cs=c;break}}
  if(!simMakeCall0.noTier&&simTierDue()){cs=pick(SIM_CASES.filter(c=>c.tier&&!(CUSTOM_SC&&c.loc==="water")));simTierMark()}
+ if(!simMakeCall0.noTier&&!CUSTOM_SC&&currentScenarioId==="fri-whv"){const rr=simRareDue();if(rr)cs=SIM_CASES.find(c=>c.id===rr)||cs}
  if(simMakeCall0.forceCase){cs=SIM_CASES.find(c=>c.id===simMakeCall0.forceCase)||cs;simMakeCall0.forceCase=null}
  const d=cs.mk();
  if(SIM_SELF[cs.id]&&Math.random()<(SIM_SELF_RATE[cs.id]||0.4)){
@@ -9679,7 +9756,8 @@ function simMakeCall0(){
    if(v.f)d.f={...d.f,...v.f};
  }
  if(!d.isSelf&&d.caller&&d.patient&&/^mein(e)? (mann|frau|vater|mutter|kind|sohn|tochter)/.test(String(d.rel||"")))d.caller.last=d.patient.last;
- const loc=cs.loc==="water"?simWaterLoc():cs.loc==="road"?simRoadLoc():simHomeLoc();
+ const loc=cs.fixedLoc?{...cs.fixedLoc}:cs.loc==="water"?simWaterLoc():cs.loc==="road"?simRoadLoc():simHomeLoc();
+ if(cs.locPrefix&&!cs.fixedLoc){loc.text=cs.locPrefix+loc.text;loc.facility=cs.locPrefix.trim()}
  // Boot in Not: Einsatzort ist draußen auf dem Wasser, nicht am Strand (v5.16)
  if(cs.id==="boat"){loc.text=loc.text.replace(/^am (Bade|Haupt)?(s|S)trand/,"vor dem Strand").replace(/^am /,"vor dem ").replace(/,.*$/,"")+", etwa 300 Meter draußen auf dem Wasser";loc.addr=loc.text}
  const id="sim"+Date.now().toString(36)+Math.floor(Math.random()*1000);
@@ -9903,7 +9981,7 @@ const SIM_CANON=[
  ["welche[rnms]? (stock|etage)|wievielte[nr]? (stock|etage)|in welchem stock|welches stockwerk","stockwerk"],
  // Alter / Name / Nummer
  ["jahrgang|geburtsjahr|geburtsdatum|wann (ist|wurde|war) (er|sie) geboren|wie jung|schätzen sie (das alter|wie alt)|ungefähres alter|alter ungefähr","wie alt"],
- ["hei(s|ss)t","heißt"],["wie lang","wie lange"],["isst (er|sie)","ist $1"],["hei(s|ss)en","heißen"],["mit wem (sprechen|spreche|rede|reden) ich|wer (spricht|ist am telefon|ist dran|ist da|sind sie)|wie (ist )?ihr (nach|vor|voller )?name|ihr (nach|vor)name|wie heißen sie (denn )?mit nachnamen","wie heißen sie"],
+ ["hei(s|ss)t","heißt"],["wie schwer (ist|wäre|sei)|wie viel wiegt|körpergewicht|wie schwer","gewicht"],["wie lang","wie lange"],["isst (er|sie)","ist $1"],["hei(s|ss)en","heißen"],["mit wem (sprechen|spreche|rede|reden) ich|wer (spricht|ist am telefon|ist dran|ist da|sind sie)|wie (ist )?ihr (nach|vor|voller )?name|ihr (nach|vor)name|wie heißen sie (denn )?mit nachnamen","wie heißen sie"],
  ["unter welcher nummer|wie erreiche ich sie|sind sie erreichbar|wie können wir sie (zurück|an)rufen|zurückrufen|rückrufen|ihre (handy|telefon|mobil)?nummer|von welcher nummer","rückrufnummer"],
  // Medikamente / Vorgeschichte
  ["medis|pillen|arzneien|arzneimittel|arznei|medikation|dauermedikation|medikamentenplan|medikationsplan|medikamentenliste","medikamente"],
@@ -10041,7 +10119,7 @@ function simKB(s){
   thinner:/blutverdünn/.test(txt)?true:null,
   allergy:/allerg/.test(txt)?"Ja, eine Allergie hat er.":null,
   diabetes:/diabet|insulin|zucker/.test(txt),
-  weight:(d.patient&&d.patient.g==="w"?rint(55,85):rint(70,110)),
+  weight:d.weightKg||(d.patient&&d.patient.g==="w"?rint(55,85):rint(70,110)),
   fell:/stürz|gestürzt|gefallen|umgekippt|umgefallen|zusammengesackt/.test(txt),
   head:/kopf|stirn|platzwunde/.test(txt),
   aed:pick(["Weiß ich nicht.","In der Apotheke um die Ecke hängt einer, glaub ich.","Nein, hier ist keiner."]),
@@ -10077,7 +10155,7 @@ const SIM_KB_Q=[
  [/allergi/,(s,kb,me,H,h)=>kb.allergy||"Allergien? Nicht dass ich wüsste."],
  [/diabet|zucker|insulin/,(s,kb,me,H,h)=>kb.diabetes?"Ja, er ist Diabetiker, spritzt Insulin.":"Zucker hat er nicht."],
  [/schwanger/,(s,kb,me,H,h)=>"Nein, schwanger ist sie nicht."],
- [/wiegt|gewicht|kilo/,(s,kb,me,H,h)=>`So ungefähr ${kb.weight} Kilo.`],
+ [/wiegt|gewicht|kilo/,(s,kb,me,H,h)=>s.d.weightText||(s.d.weightKg?`Er wiegt ungefähr ${kb.weight} Kilo – das schafft man nicht allein.`:`So ungefähr ${kb.weight} Kilo.`)],
  [/kopf (gestoßen|angeschlagen|aufgeschlagen|verletzt)|auf den kopf/,(s,kb,me,H,h)=>kb.head?"Ja, am Kopf hat er was abbekommen.":kb.fell?"Ich glaub nicht, aber ich hab's nicht gesehen.":"Nein."],
  [/^(?!(was|wie|warum|wieso|weshalb) ).*(gestürzt|hingefallen|umgefallen|gefallen\b)/,(s,kb,me,H,h)=>kb.fell?"Ja, er ist umgefallen.":"Nein, gestürzt ist er nicht."],
  [/zuletzt (gesund|normal|unauffällig)|wann (haben|hatten) sie (ihn|sie) zuletzt|letzte(s)? mal normal/,(s,kb,me,H,h)=>s.d.onset||"Vor einer halben Stunde war noch alles normal."],
@@ -10443,12 +10521,13 @@ function simAnswerFor(c,text){
     case "stay":out.push(pick(["Ja, ich bleib dran.","Ja, ich bin hier."]));break;
     case "door":out.push(me?pick(["Ich versuch zur Tür zu kommen… okay, ist auf.","Ich komm hier nicht hoch, die Nachbarin hat einen Schlüssel."]):pick(["Okay, ich mach die Haustür auf.","Ja, ich mach draußen Licht an.","Ich schick meinen Sohn raus zum Winken."]));break;
     case "loc":if(s.loc.custom){out.push(`${s.loc.text}.`);break}
+     if(s.loc.facility&&!s.addrFloor){const hosp=/hospital/i.test(s.loc.facility);s.addrFloor=hosp?"bitte an der Pforte melden, man bringt Sie hin":pick(["Wohnbereich 1","Wohnbereich 2","Wohnbereich 3"])+`, Zimmer ${rint(3,38)}`;s.addrDesc=hosp?"":"Haupteingang, an der Pforte klingeln, ich komme runter"}
      if(s.loc.kind==="home"&&!s.addrFloor){s.addrFloor=pick(["Erdgeschoss","Erdgeschoss","erster Stock rechts","erster Stock links","zweiter Stock"]);s.addrDesc=pick(["das gelbe Haus mit der Hecke","rotes Backsteinhaus","das Haus mit dem Carport","Eingang hinten über den Hof",""])}
      {const tl=String(text).toLowerCase();
       if(s.loc.kind==="home"&&/stock|etage/.test(tl)){out.push(s.addrFloor.charAt(0).toUpperCase()+s.addrFloor.slice(1)+".");break}
       if(s.loc.kind==="home"&&/klingel/.test(tl)){out.push(`Klingel ${(s.d.patient||s.d.caller).last}.`);break}
       if(s.loc.kind==="home"&&/eingang|hinterhaus|wie (finden|erkennen)|welches haus|haus aus/.test(tl)){out.push(s.addrDesc?s.addrDesc.charAt(0).toUpperCase()+s.addrDesc.slice(1)+".":"Normales Einfamilienhaus, Hausnummer steht dran.");break}
-      out.push(s.loc.kind==="home"?`${s.loc.text}, ${s.addrFloor}${s.addrDesc?" – "+s.addrDesc:""}.`:`Wir sind ${s.loc.text}.`);}
+      {const t0=s.loc.kind==="home"?`${s.loc.text}, ${s.addrFloor}${s.addrDesc?" – "+s.addrDesc:""}.`:`Wir sind ${s.loc.text}.`;out.push(s.loc.facility?t0.replace(/^im /,"Wir sind im "):t0)}}
      break;
     case "event":out.push(me?(d.isSelf?d.event:(d.pain?d.pain:`Mir geht's nicht gut… ${f.e?f.e.split(",")[0]:"ich weiß auch nicht"}.`)):simFix(s,d.event));break;
     case "who":out.push(me?"Um mich! Ich bin das selbst.":d.passerby?"Ich kenn die Person nicht, ich bin nur vorbeigekommen.":d.rel?`Um ${d.rel.replace(/^mein /,"meinen ").replace(/^ein /,"einen ").replace(/^der /,"den ")}.`:"Ich bin nur der Anrufer.");break;
@@ -10462,7 +10541,8 @@ function simAnswerFor(c,text){
     case "bleed":out.push(f.x==="Ja"?(me?"Ja, das blutet total, das hört nicht auf!":"Ja, das blutet ganz stark!"):/blut|platzwunde/i.test(f.e||"")?pick(["Ein bisschen, am Kopf.","Ja, da läuft Blut, aber nicht so viel."]):"Nein, Blut seh ich keins.");break;
     case "circ":out.push(me?pick(SIM_C_SELF[f.c]||["Weiß nicht…"]):simFix(s,pick(SIM_C[f.c]||["Weiß ich nicht."])));break;
     case "pain":out.push(me?(d.pain||(f.e?`Ja… ${f.e.split(",")[0]}.`:"Weiß nicht genau.")):f.e?simFix(s,`${He} sagt: ${f.e}.`):"Das kann ich nicht sagen.");break;
-    case "age":out.push(age!=null?(me?pick([`Ich bin ${age}.`,`${age}.`]):pick([`${age}.`,`${He} ist ${age} Jahre alt.`,`Ähm… ${age}.`])):"Weiß ich nicht.");break;
+    case "age":if(age===0){out.push(d.ageText||"Das Kind ist erst ein paar Stunden alt.");break}
+     out.push(age!=null?(me?pick([`Ich bin ${age}.`,`${age}.`]):pick([`${age}.`,`${He} ist ${age} Jahre alt.`,`Ähm… ${age}.`])):"Weiß ich nicht.");break;
     case "name":out.push(me?`${(d.isSelf?d.caller:d.patient).first} ${(d.isSelf?d.caller:d.patient).last}.`:/anrufer|sie selbst|ihr name/.test(text.toLowerCase())||d.passerby||d.fire?`${d.caller.first} ${d.caller.last}.`:`${d.patient.first} ${d.patient.last}.`);break;
     case "phone":out.push(`Meine Nummer ist ${s.phone}.`);break;
     case "danger":out.push(d.danger||(f.danger==="ja"?"Ja, das ist hier nicht ungefährlich.":"Nein, Gefahren seh ich keine."));break;

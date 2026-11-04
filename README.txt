@@ -1607,6 +1607,22 @@ Version 5.05:
   („a, b“ = a ODER b). Mit „🚑 NA-Indikation“ markierte Knöpfe ziehen weiterhin einen Notarzt.
 - Nur „Unauffällig“ (ohne weitere Befunde) zählt weiter als unauffälliges E (R0 möglich).
 
+Version 5.35:
+- Neue Sonderfahrzeuge bei den Nachbarn (nur über die Nachbar-Leitstelle anforderbar):
+  Baby-NAW Oldenburg „Felix“ (Klinikum Oldenburg, Kinderklinik), SRTW Oldenburg, SRTW Wittmund
+  (ehrenamtlich, längere Ausrückzeit). SRTW: Funkrufname und Standort NICHT belegt – bitte prüfen.
+  Sonderfahrzeuge werden nie als „letztes freies Fahrzeug“ zurückgehalten.
+  Im Nachbar-Fenster: „📞 SRTW anfragen“ / „📞 Baby-NAW anfragen“.
+- Neue Einsätze im Seniorenpflegeheim (Pflegekraft ruft an): Sturz mit Hüftverletzung, Atemnot mit
+  Fieber, Bewohnerin kaum wach/trinkt nicht, Unterzuckerung.
+- Ganz selten (höchstens einmal am Tag): Schwerlast-Patient zu Hause (SRTW nötig) und
+  Inkubatortransport eines Frühgeborenen aus dem Kreißsaal St. Johannes-Hospital Varel ins
+  Perinatalzentrum Klinikum Oldenburg (Baby-NAW). Der AAO-Check weist darauf hin.
+- Manchmal (ca. 1 % der RTW-Transporte) fordert der RTW vor Ort per SDS einen SRTW nach. Kommt der
+  SRTW, übernimmt er den Patienten und der RTW wird frei; ohne SRTW nach 75 min Transport mit
+  Tragehilfe der Feuerwehr.
+- Baby-NAW meldet sich in IVENA beim Klinikum Oldenburg (Pädiatrie) an.
+
 Version 5.34:
 - Neue Seite „🚨 MANV“ (Seitenleiste, auch „🚨 Alle Patienten“ im MANV-Kasten): alle Patienten
   aller laufenden MANV mit Karte, Sichtungskategorie (SK I–IV, verstorben), wer gesichtet hat,
