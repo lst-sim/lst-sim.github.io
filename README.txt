@@ -1608,6 +1608,8 @@ Version 5.05:
 - Nur „Unauffällig“ (ohne weitere Befunde) zählt weiter als unauffälliges E (R0 möglich).
 
 Version 5.52:
+- Updates kommen schneller an: Die App-Seite wird am Browser-Cache vorbei geladen (Service Worker v5).
+- Versehentlich mit hochgeladene Test-Bildschirmfotos aus dem Projekt entfernt.
 - Fehler behoben (aus 5.48): Beim MANV meldeten sich NEF nach wenigen Minuten frei, obwohl rote und
   blaue Patienten einen Notarzt brauchten. Jetzt:
   • Während der Sichtung warten alle NEF an der Einsatzstelle.
