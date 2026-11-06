@@ -170,7 +170,7 @@ html[data-device="handy"] #floatDock{left:8px;right:8px;width:auto;top:auto;bott
 </head>
 <body>
 <div style="padding:6px 10px;font-size:11px;color:#94a3b8;font-weight:700;display:flex;flex-wrap:wrap;align-items:center;gap:10px;position:sticky;top:0;z-index:10;background:var(--bg)">
- <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v5.54</span>
+ <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v5.55</span>
  <span id="syncState"></span> <a id="deskTag" href="#" onclick="renameDesk();return false" title="Name dieses Platzes (für „offen an …“) – antippen zum Ändern" style="color:#64748b;font-weight:700;text-decoration:none"></a>
  <span id="simCtl" style="position:absolute;left:50%;transform:translateX(-50%);display:flex;gap:6px;align-items:center"></span>
  <a id="homeLink" href="#" onclick="render('leitstelle');return false" class="hidden" style="color:#64748b;text-decoration:underline;font-weight:600">🖥️ Leitstelle</a>
@@ -5185,6 +5185,9 @@ function crewTick(){
  const now=Date.now(); let changed=false;
  for(const u of (db.units||[])){
    if(unitPhoneLive(u))continue;
+   // v5.55: erstes eintreffendes Fahrzeug gibt noch aus dem Fahrzeug eine Kurzlage
+   if(String(u.status)==="4"){const cl=findUnitCall(u);
+     if(cl&&cl.alarmTime&&!cl.firstReportAt&&!cl.kt&&!isManvCall(cl)&&(!cl.deskId||cl.deskId===DEVICE_ID)){cl.firstReportAt=new Date(now).toISOString();const t=firstLageText(cl,u);crewSds(u,cl,t);(cl.history=cl.history||[]).push({q:`📻 Kurzlage (${u.opta||u.name})`,a:t});changed=true}}
    // mehrere Plätze: nur der Platz, der den Einsatz hat, steuert die Besatzung (sonst doppelte SDS/IVENA)
    if(u.crew&&u.crew.owner&&u.crew.owner!==DEVICE_ID)continue;
    const st=String(u.status), isT=CREW_TRANSPORT.has(u.type), isNef=u.type==="NEF";
@@ -5282,6 +5285,19 @@ function crewTick(){
 //  • sonst: alle Patienten versorgt → weitere Rettungsmittel auf Anfahrt abbestellt; NEF auf Anfahrt
 //    abbestellt, wenn der RTW vor Ort keinen Notarzt braucht; Feuerwehr & Co. bei rein medizinischen
 //    Einsätzen nach Übergabe an den Rettungsdienst frei
+function firstLageText(call,u){
+ const d=call.sim&&call.sim.d||{}, info=crewCaseInfo(call), ev=info.ev||"", txt=info.text||"", A=call.answers||{};
+ const place=String(d.loc&&d.loc.facility||(call.sim&&call.sim.loc&&call.sim.loc.facility)||"").replace(/[,\s]+$/,"");
+ const trapped=Number(A.trapped)||(/eingeklemmt/.test(txt)?1:0);
+ if(d.co)return "Kurzlage: Eingetroffen – unser CO-Warner schlägt schon an der Haustür an! Gehen nicht weiter rein, Feuerwehr mit Atemschutz und Messgerät erforderlich.";
+ if(info.loc==="water"||/wasser|ertrink|schwimmer|boot/.test(ev.toLowerCase()+" "+txt))return `Kurzlage: Eingetroffen am Wasser – ${/boot/.test(txt)?"Boot in Sicht":Math.random()<0.6?"Person im Wasser in Sicht, ca. 50 m vom Ufer":"Person derzeit nicht in Sicht, Erkundung am Ufer läuft"}.`;
+ if(d.fire||/feuer|brand|rauch/.test(ev.toLowerCase())){const inside=d.inside||"";return `Kurzlage: Eingetroffen – ${/dach/.test(txt)?"Dachstuhl brennt, Flammen sichtbar":"starke Rauchentwicklung aus dem ersten Obergeschoss"}${/noch drin|machen nicht auf|kommen nicht/.test(inside)?", laut Anwohnern noch Personen im Gebäude":", Bewohner stehen auf der Straße"} – Erkundung läuft.`}
+ if(/verkehrsunfall|unfall/.test(ev.toLowerCase())||d.vu){const n=rint(2,3);return `Kurzlage: Eingetroffen – Verkehrsunfall, ${n} PKW beteiligt, ${trapped?`${trapped===1?"eine Person":trapped+" Personen"} eingeklemmt`:"keine eingeklemmte Person erkennbar"}, Fahrbahn ${Math.random()<0.5?"teilweise":"komplett"} blockiert – gehen zu den Verletzten.`}
+ if(info.noPatient)return "Kurzlage: Eingetroffen – auf den ersten Blick keine Lage erkennbar, Erkundung läuft.";
+ if(info.sev==="rea")return `Kurzlage: Eingetroffen${place?` ${place}`:""} – Angehörige winken an der Tür, Reanimation läuft durch Ersthelfer, übernehmen.`;
+ const where=place?place.replace(/^im /,"am "):pick(["Einfamilienhaus","Mehrfamilienhaus","Reihenhaus"]);
+ return `Kurzlage: Eingetroffen, ${where} – keine Gefahren erkennbar${info.pats>1?`, ${info.pats} Betroffene`:""}, gehen zum Patienten.`;
+}
 function crewSurplusTick(){
  const now=Date.now(); let ch=false;
  for(const call of allOpenCalls()){

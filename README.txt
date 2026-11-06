@@ -1607,6 +1607,13 @@ Version 5.05:
   („a, b“ = a ODER b). Mit „🚑 NA-Indikation“ markierte Knöpfe ziehen weiterhin einen Notarzt.
 - Nur „Unauffällig“ (ohne weitere Befunde) zählt weiter als unauffälliges E (R0 möglich).
 
+Version 5.55:
+- Das erste eintreffende Fahrzeug gibt noch aus dem Fahrzeug eine Kurzlage per SDS (steht auch im
+  Einsatzprotokoll), passend zur Lage: Wohnhaus/Pflegeheim „keine Gefahren erkennbar, gehen zum
+  Patienten“, Reanimation durch Ersthelfer, Verkehrsunfall mit Zahl der PKW und Eingeklemmten,
+  Brand mit Rauch und Personen im Gebäude, Wasser mit Person in Sicht oder nicht, CO-Warner schlägt an.
+  Beim MANV bleibt es bei der bisherigen ersten Lagemeldung (Vorsichtung).
+
 Version 5.54:
 - Neuer Knopf „📻 Funkgruppe“ im geöffneten Einsatz: alle alarmierten Fahrzeuge des Einsatzes auf einmal
   in eine Funkrufgruppe setzen (alle Gruppen aller Kreise zur Auswahl) oder zurück in ihre
