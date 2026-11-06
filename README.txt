@@ -1607,6 +1607,12 @@ Version 5.05:
   („a, b“ = a ODER b). Mit „🚑 NA-Indikation“ markierte Knöpfe ziehen weiterhin einen Notarzt.
 - Nur „Unauffällig“ (ohne weitere Befunde) zählt weiter als unauffälliges E (R0 möglich).
 
+Version 5.50:
+- Weitere Nachbar-Rettungsmittel (BOS-Fahrzeuge-Wachenseiten): Florian Oldenburg 01/82-01 (NEF),
+  01/83-01, 01/83-02 (FuRW 1, Ibo-Koch-Straße 6), Florian Oldenburg 03/82-01 (NEF, RW 3 Klinikum),
+  Johannes Oldenburg-Land 61/83-01 (RW Harpstedt), Akkon Wesermarsch 49/83-01 (RW Stollhamm).
+  Reserve- und a.D.-Fahrzeuge nicht übernommen. Ammerland laut BOS-Fahrzeuge schon vollständig.
+
 Version 5.49:
 - MANV: Hubschrauber (RTH/ITH/KTH) transportieren nur noch SK-I-Patienten. Ist kein SK I mehr offen,
   melden sie sich „nicht benötigt“ und werden frei (auch auf Anfahrt).

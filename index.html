@@ -170,7 +170,7 @@ html[data-device="handy"] #floatDock{left:8px;right:8px;width:auto;top:auto;bott
 </head>
 <body>
 <div style="padding:6px 10px;font-size:11px;color:#94a3b8;font-weight:700;display:flex;flex-wrap:wrap;align-items:center;gap:10px;position:sticky;top:0;z-index:10;background:var(--bg)">
- <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v5.49</span>
+ <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v5.50</span>
  <span id="syncState"></span> <a id="deskTag" href="#" onclick="renameDesk();return false" title="Name dieses Platzes (für „offen an …“) – antippen zum Ändern" style="color:#64748b;font-weight:700;text-decoration:none"></a>
  <span id="simCtl" style="position:absolute;left:50%;transform:translateX(-50%);display:flex;gap:6px;align-items:center"></span>
  <a id="homeLink" href="#" onclick="render('leitstelle');return false" class="hidden" style="color:#64748b;text-decoration:underline;font-weight:600">🖥️ Leitstelle</a>
@@ -562,6 +562,13 @@ const DEFAULTS_FRI_WHV={
  // Getrennt von db.units gehalten, damit sie nie für lokale Friesland-Alarmierungen/AAO/Karte
  // in Frage kommen. Status ist manuell steuerbar (Übungsleitung), keine echte Live-Anbindung.
  neighborUnits:[
+  // v5.50: weitere Rettungsmittel laut BOS-Fahrzeuge-Wachenseiten (11/2026); Reserve- und a.D.-Fahrzeuge nicht übernommen
+  {id:194,name:"01-82-01",opta:"Florian Oldenburg 01/82-01",type:"NEF",district:"Oldenburg (Stadt)",status:"1",crew:"2",skills:"Notarzt",verified:"BOS-Fahrzeuge (BF Oldenburg FuRW 1 RD)",address:"Ibo-Koch-Straße 6, 26127 Oldenburg",lat:53.1557,lng:8.2045,approxGeo:true},
+  {id:195,name:"01-83-01",opta:"Florian Oldenburg 01/83-01",type:"RTW",district:"Oldenburg (Stadt)",status:"1",crew:"2",skills:"Notfallrettung",verified:"BOS-Fahrzeuge (BF Oldenburg FuRW 1 RD)",address:"Ibo-Koch-Straße 6, 26127 Oldenburg",lat:53.1557,lng:8.2045,approxGeo:true},
+  {id:196,name:"01-83-02",opta:"Florian Oldenburg 01/83-02",type:"RTW",district:"Oldenburg (Stadt)",status:"1",crew:"2",skills:"Notfallrettung",verified:"BOS-Fahrzeuge (BF Oldenburg FuRW 1 RD)",address:"Ibo-Koch-Straße 6, 26127 Oldenburg",lat:53.1557,lng:8.2045,approxGeo:true},
+  {id:197,name:"03-82-01",opta:"Florian Oldenburg 03/82-01",type:"NEF",district:"Oldenburg (Stadt)",status:"1",crew:"2",skills:"Notarzt",verified:"BOS-Fahrzeuge (BF Oldenburg RW 3 Klinikum)",address:"Rahel-Straus-Straße 10, 26133 Oldenburg (Klinikum, RW 3)",lat:53.13,lng:8.226,approxGeo:true},
+  {id:198,name:"61-83-01",opta:"Johannes Oldenburg-Land 61/83-01",type:"RTW",district:"Oldenburg (Land)",status:"1",crew:"2",skills:"Notfallrettung",verified:"BOS-Fahrzeuge (MHD RW Harpstedt)",address:"Freistraße 22, 27243 Harpstedt",lat:52.9087,lng:8.5894,approxGeo:true},
+  {id:199,name:"49-83-01",opta:"Akkon Wesermarsch 49/83-01",type:"RTW",district:"Wesermarsch",status:"1",crew:"2",skills:"Notfallrettung (jedes 3. Wochenende zusätzlich ehrenamtlicher DRK-RTW)",verified:"BOS-Fahrzeuge (JUH RW Stollhamm)",address:"Hauptstraße 86b, 26969 Butjadingen",lat:53.4720,lng:8.3640,approxGeo:true},
   // v5.35: Sonderfahrzeuge auf Wunsch. Baby-NAW „Felix“: Klinikum Oldenburg, Kinderklinik (seit 2013, NWZ/Steiger-Stiftung).
   // SRTW Oldenburg und SRTW Wittmund (ehrenamtlich): Funkrufname und Standort NICHT belegt – bitte prüfen.
   {id:190,name:"02-86-01",opta:"Florian Oldenburg 02/86-01",type:"Baby-NAW",district:"Oldenburg (Stadt)",status:"1",crew:"3",skills:"Baby-NAW „Felix“ – Neugeborenen-Notarztwagen mit Transportinkubator (Team Kinderklinik)",verified:"Baby-NAW „Felix“ (Klinikum Oldenburg / NWZ); Funkrufname 2-86-1 laut Nutzerangabe",address:"Rahel-Straus-Straße 10, 26133 Oldenburg (Klinikum, Kinderklinik)",lat:53.11276,lng:8.21674,special:true},
