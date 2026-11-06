@@ -1607,6 +1607,10 @@ Version 5.05:
   („a, b“ = a ODER b). Mit „🚑 NA-Indikation“ markierte Knöpfe ziehen weiterhin einen Notarzt.
 - Nur „Unauffällig“ (ohne weitere Befunde) zählt weiter als unauffälliges E (R0 möglich).
 
+Version 5.46:
+- „Fahrzeuge bearbeiten“ (und Nachforderung): Bei jedem Fahrzeug steht der aktuelle Status als farbiges
+  Schild (z. B. „4 · Am Einsatzort“) – bei den zugeordneten Fahrzeugen und bei allen Auswahl-Knöpfen.
+
 Version 5.45:
 - Der 📞-Knopf oben ist jetzt die Notrufannahme des Platzes und gilt für ALLE Anrufe (Übungsnotrufe,
   19222, vorbereitete Anrufe, weitergeleitete Anrufe, Anrufer-Handy, Anrufe der Nachbar-Leitstellen).

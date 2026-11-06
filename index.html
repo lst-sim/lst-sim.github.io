@@ -170,7 +170,7 @@ html[data-device="handy"] #floatDock{left:8px;right:8px;width:auto;top:auto;bott
 </head>
 <body>
 <div style="padding:6px 10px;font-size:11px;color:#94a3b8;font-weight:700;display:flex;flex-wrap:wrap;align-items:center;gap:10px;position:sticky;top:0;z-index:10;background:var(--bg)">
- <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v5.45</span>
+ <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v5.46</span>
  <span id="syncState"></span> <a id="deskTag" href="#" onclick="renameDesk();return false" title="Name dieses Platzes (für „offen an …“) – antippen zum Ändern" style="color:#64748b;font-weight:700;text-decoration:none"></a>
  <span id="simCtl" style="position:absolute;left:50%;transform:translateX(-50%);display:flex;gap:6px;align-items:center"></span>
  <a id="homeLink" href="#" onclick="render('leitstelle');return false" class="hidden" style="color:#64748b;text-decoration:underline;font-weight:600">🖥️ Leitstelle</a>
@@ -1126,6 +1126,7 @@ function fifoStamp(){
 function save(){fifoStamp();localStorage.setItem(KEY,JSON.stringify(db));if(typeof scheduleStateSync==="function")scheduleStateSync()}
 function esc(s){return String(s??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]))}
 function toast(t){const x=document.getElementById("toast");x.textContent=t;x.style.display="block";setTimeout(()=>x.style.display="none",1800)}
+function statusPill(u){const st=String(u&&u.status!=null?u.status:"?");return `<span class="status s${esc(st)}" title="${esc(statusName(st))}" style="display:inline-block;font-size:11px;padding:1px 7px;border-radius:999px;font-weight:800;vertical-align:middle;animation:none">${esc(st)} · ${esc(statusName(st))}</span>`}
 function statusName(s){return {0:"Priorisierter Sprechwunsch",1:"Frei über Funk",2:"Frei auf Wache",3:"Einsatz übernommen",4:"Am Einsatzort",5:"Sprechwunsch",6:"Nicht einsatzbereit",7:"Patient aufgenommen",8:"bed. Verfügbar"}[s]||s}
 function statusClass(s){return "s"+s}
 function vehicleLabelBlock(u){
@@ -2814,7 +2815,7 @@ function resourcePickerCatsHTML(mode){
  const tabs=`<div class="row" style="flex-wrap:wrap;gap:6px;margin:6px 0 10px">${[["quick","⭐ Häufig"],...orgs.map(o=>[o,`${icon(o)} ${o}`])].map(([k,t])=>`<button class="${pickerCat===k?"primary":""}" onclick="setPickerCat(${esc(JSON.stringify(k))},'${mode}')">${esc(t)}</button>`).join("")}</div>`;
  const dist=u=>u&&geographicRank(u)<999?`ca. ${estimatedEtaMinutes(u)} min`:"verfügbar";
  const btn=(t,label,org)=>{const u=chooseAvailableByType(t,org);const typeArg=JSON.stringify(t).replace(/"/g,"'");
-   return `<button ${u?"":"disabled"} onclick="addResourceType(${typeArg},'${mode}'${org?`,${esc(JSON.stringify(org))}`:""})">${esc(label||(Array.isArray(t)?t.join("/"):t))}<small style="display:block">${u?`${esc(u.opta||u.name)} · ${dist(u)}`:"nicht verfügbar"}</small></button>`};
+   return `<button ${u?"":"disabled"} onclick="addResourceType(${typeArg},'${mode}'${org?`,${esc(JSON.stringify(org))}`:""})">${esc(label||(Array.isArray(t)?t.join("/"):t))}<small style="display:block">${u?`${esc(u.opta||u.name)} · ${dist(u)}<span style="display:block;margin-top:2px">${statusPill(u)}</span>`:"nicht verfügbar"}</small></button>`};
  if(pickerCat==="quick")return tabs+`<div class="answer">${QUICK_RESOURCE_TYPES.map(({type:t,label})=>btn(t,label,null)).join("")}</div>`;
  if(pickerCat==="THW"){
    const c=db.currentCall; const assigned=new Set([...(c?.alarmedUnits||[]),...(c?.proposedUnitIds||[])].map(String));
@@ -2825,7 +2826,7 @@ function resourcePickerCatsHTML(mode){
      const free=us.filter(u=>["1","2","8"].includes(String(u.status))&&!assigned.has(String(u.id)));
      return `<details style="border:1px solid var(--line);border-radius:10px;padding:8px 10px;margin-bottom:8px">
        <summary class="row between" style="flex-wrap:wrap;cursor:pointer;list-style:none"><b>▸ 🛠️ ${esc(g)}</b><button class="primary" ${free.length?"":"disabled"} onclick="event.preventDefault();event.stopPropagation();addThwGroup(${esc(JSON.stringify(g))},'${mode}')">Ganze Fachgruppe (${free.length})</button></summary>
-       <div class="answer" style="margin-top:6px">${us.map(u=>{const ok=["1","2","8"].includes(String(u.status))&&!assigned.has(String(u.id));return `<button ${ok?"":"disabled"} onclick="addResourceUnitId('${u.id}','${mode}')">${esc(u.type)}<small style="display:block">${esc(u.opta||u.name)} · ${ok?dist(u):assigned.has(String(u.id))?"bereits im Einsatz":"Status "+esc(u.status)}</small></button>`}).join("")}</div>
+       <div class="answer" style="margin-top:6px">${us.map(u=>{const ok=["1","2","8"].includes(String(u.status))&&!assigned.has(String(u.id));return `<button ${ok?"":"disabled"} onclick="addResourceUnitId('${u.id}','${mode}')">${esc(u.type)}<small style="display:block">${esc(u.opta||u.name)} · ${ok?dist(u):assigned.has(String(u.id))?"bereits im Einsatz":""}<span style="display:block;margin-top:2px">${statusPill(u)}</span></small></button>`}).join("")}</div>
      </details>`;
    }).join("");
  }
@@ -2844,7 +2845,7 @@ function resourcePickerCatsHTML(mode){
    const anyFree=us.some(u=>islandReachable(u)&&["1","2","8"].includes(String(u.status))&&!assigned.has(String(u.id)));
    return `<details style="border:1px solid var(--line);border-radius:10px;padding:6px 10px;margin-bottom:6px">
      <summary class="row between" style="flex-wrap:wrap;cursor:pointer;list-style:none"><b>▸ ${esc(t)} <span class="pill">${us.length}</span></b><button style="padding:4px 10px;font-size:12px" ${anyFree?"":"disabled"} onclick="event.preventDefault();event.stopPropagation();addResourceType(${typeArg},'${mode}',${esc(JSON.stringify(pickerCat))})">Nächstes freies</button></summary>
-     <div class="answer" style="margin-top:4px">${us.map(u=>{const reach=islandReachable(u);const ok=reach&&["1","2","8"].includes(String(u.status))&&!assigned.has(String(u.id));const abPl=ok&&isAB(u)?wlfPlanFor(u,callDestinationPoint(c,u)||incidentPoint(),c):null;const abBlocked=ok&&isAB(u)&&!abPl;return `<button ${ok&&!abBlocked?"":"disabled"} onclick="addResourceUnitId('${u.id}','${mode}')" style="padding:6px 10px">${esc(u.opta||u.name)}<small style="display:block">${isAB(u)&&ok?(abPl?`🚛 ${esc(abPl.wlf.opta||abPl.wlf.name)}${abPl.busy?` (von Einsatz #${esc(abPl.fromCallId)})`:""} · ca. ${Math.round(abPl.total)} min`:"🚛 kein WLF verfügbar"):""}${isAB(u)&&ok?"<br>":""}${esc(u.location||"")} · ${!reach?(unitOnIsland(u)?"🏝️ nur Insel":"🏝️ nicht auf die Insel"):ok?dist(u):assigned.has(String(u.id))?"bereits im Einsatz":"Status "+esc(u.status)}</small></button>`}).join("")}</div>
+     <div class="answer" style="margin-top:4px">${us.map(u=>{const reach=islandReachable(u);const ok=reach&&["1","2","8"].includes(String(u.status))&&!assigned.has(String(u.id));const abPl=ok&&isAB(u)?wlfPlanFor(u,callDestinationPoint(c,u)||incidentPoint(),c):null;const abBlocked=ok&&isAB(u)&&!abPl;return `<button ${ok&&!abBlocked?"":"disabled"} onclick="addResourceUnitId('${u.id}','${mode}')" style="padding:6px 10px">${esc(u.opta||u.name)}<small style="display:block">${isAB(u)&&ok?(abPl?`🚛 ${esc(abPl.wlf.opta||abPl.wlf.name)}${abPl.busy?` (von Einsatz #${esc(abPl.fromCallId)})`:""} · ca. ${Math.round(abPl.total)} min`:"🚛 kein WLF verfügbar"):""}${isAB(u)&&ok?"<br>":""}${esc(u.location||"")} · ${!reach?(unitOnIsland(u)?"🏝️ nur Insel":"🏝️ nicht auf die Insel"):ok?dist(u):assigned.has(String(u.id))?"bereits im Einsatz":""}<span style="display:block;margin-top:2px">${statusPill(u)}</span></small></button>`}).join("")}</div>
    </details>`;
  }).join("");
 }
@@ -2865,7 +2866,7 @@ function showResourcePicker(mode="additional"){
   ${!isNafo?realarmBannerHTML(c):""}
   ${!isNafo?stackSectionHTML(c):""}
   ${!isNafo?`<label>Aktuell zugeordnete Rettungsmittel</label>
-  ${assignedUnits.length?assignedUnits.map(u=>`<div class="row between" style="padding:8px 0;border-bottom:1px solid var(--line)"><span>${vehicleLabelBlock(u)}</span><button onclick="removeCallUnit('${esc(String(u.id))}')">🗑️ Entfernen</button></div>`).join(""):`<p class="muted">Noch keine Mittel zugeordnet.</p>`}
+  ${assignedUnits.length?assignedUnits.map(u=>`<div class="row between" style="padding:8px 0;border-bottom:1px solid var(--line)"><span>${vehicleLabelBlock(u)} <span style="margin-left:6px">${statusPill(u)}</span></span><button onclick="removeCallUnit('${esc(String(u.id))}')">🗑️ Entfernen</button></div>`).join(""):`<p class="muted">Noch keine Mittel zugeordnet.</p>`}
   <hr>`:""}
   <label style="margin-top:12px">${isNafo?"Rettungsmittel nachfordern":"Rettungsmittel hinzufügen"}</label>
   ${resourcePickerCatsHTML(mode)}
