@@ -170,7 +170,7 @@ html[data-device="handy"] #floatDock{left:8px;right:8px;width:auto;top:auto;bott
 </head>
 <body>
 <div style="padding:6px 10px;font-size:11px;color:#94a3b8;font-weight:700;display:flex;flex-wrap:wrap;align-items:center;gap:10px;position:sticky;top:0;z-index:10;background:var(--bg)">
- <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v5.46</span>
+ <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v5.47</span>
  <span id="syncState"></span> <a id="deskTag" href="#" onclick="renameDesk();return false" title="Name dieses Platzes (für „offen an …“) – antippen zum Ändern" style="color:#64748b;font-weight:700;text-decoration:none"></a>
  <span id="simCtl" style="position:absolute;left:50%;transform:translateX(-50%);display:flex;gap:6px;align-items:center"></span>
  <a id="homeLink" href="#" onclick="render('leitstelle');return false" class="hidden" style="color:#64748b;text-decoration:underline;font-weight:600">🖥️ Leitstelle</a>
@@ -199,6 +199,12 @@ html[data-device="handy"] #floatDock{left:8px;right:8px;width:auto;top:auto;bott
 <script>
 const DEFAULTS_FRI_WHV={
  units:[
+  // v5.47: Rettungsdienst Stadt Wilhelmshaven (Leitstelle Friesland-Wilhelmshaven laut BOS-Fahrzeuge, 11/2026).
+  // Reservefahrzeuge (01/82-01, 02/83-02) und der MHD-RTW (Funkrufname nicht gefunden) bewusst weggelassen.
+  {id:2101,name:"WHV-01-83-01",opta:"Florian Wilhelmshaven 01/83-01",type:"RTW",org:"Rettungsdienst",location:"Wilhelmshaven FuRW 1",fixedLocation:true,status:"2",crew:"2",skills:"Notfallrettung",verified:"BOS-Fahrzeuge (BF Wilhelmshaven FuRW 1 RD)",address:"Mozartstraße 11, 26382 Wilhelmshaven",homeLat:53.5216,homeLng:8.1143,approxGeo:true},
+  {id:2102,name:"WHV-01-83-02",opta:"Florian Wilhelmshaven 01/83-02",type:"RTW",org:"Rettungsdienst",location:"Wilhelmshaven FuRW 1",fixedLocation:true,status:"2",crew:"2",skills:"Notfallrettung",verified:"BOS-Fahrzeuge (BF Wilhelmshaven FuRW 1 RD)",address:"Mozartstraße 11, 26382 Wilhelmshaven",homeLat:53.5216,homeLng:8.1143,approxGeo:true},
+  {id:2103,name:"WHV-02-83-01",opta:"Florian Wilhelmshaven 02/83-01",type:"RTW",org:"Rettungsdienst",location:"Wilhelmshaven FuRW 2",fixedLocation:true,status:"2",crew:"2",skills:"Notfallrettung",verified:"BOS-Fahrzeuge (BF Wilhelmshaven FuRW 2 RD)",address:"Inhauser Landstraße 20, 26388 Wilhelmshaven",homeLat:53.5640,homeLng:8.0980,approxGeo:true},
+  {id:2104,name:"WHV-03-82-01",opta:"Florian Wilhelmshaven 03/82-01",type:"NEF",org:"Rettungsdienst",location:"Wilhelmshaven RW 3 (Klinikum)",fixedLocation:true,status:"2",crew:"2",skills:"Notarzt",verified:"BOS-Fahrzeuge (BF Wilhelmshaven RW 3)",address:"Friedrich-Paffrath-Straße 100, 26389 Wilhelmshaven",homeLat:53.54582,homeLng:8.08495},
   
   {id:1,name:"72-58-01",opta:"Pelikan Friesland 72-58-01",type:"GW Wasserrettung",org:"DLRG",location:"Varel",status:"2",crew:"2",skills:"Wasserrettungsgruppe-S (Wasserrettungszug Friesland) – Strömungsretter",verified:"Nutzerangabe"},
   {id:2,name:"72-17-01",opta:"Pelikan Friesland 72-17-01",type:"MTW",org:"DLRG",location:"Varel",status:"2",crew:"6",skills:"Wasserrettungsgruppe-S (Wasserrettungszug Friesland) – Mannschaftstransport",verified:"Nutzerangabe"},
@@ -936,6 +942,8 @@ if(!Array.isArray(db.units))db.units=[];
 if(!Array.isArray(db.callers))db.callers=[];
 if(!Array.isArray(db.pendingCallerRequests))db.pendingCallerRequests=[];
 // v5.37: NAW BWK Westerstede hat Kennung 81 – gespeicherten Eintrag umbenennen statt doppelt anlegen
+// v5.47: ausgeliehene Nachbar-Fahrzeuge stehen unter ihrer eigenen Wache (nicht unter „unserer“)
+(db.units||[]).forEach(u=>{if(u.neighborLoan){const nu=(db.neighborUnits||[]).find(n=>String(n.id)===String(u.neighborUnitId));if(nu)u.location=nbWacheName(nu)}});
 // v5.42: SRTW sind Johanniter-Fahrzeuge – gespeicherte Einträge auf die neuen Daten bringen
 {const NEWS={"191":null,"192":null};(db.neighborUnits||[]).forEach(u=>{if(/^SRTW (89 )?(Oldenburg|Wittmund)/.test(u.opta||"")){const d=(DEFAULTS_FRI_WHV.neighborUnits||[]).find(x=>x.id===(/Oldenburg/.test(u.opta)?191:192));if(d){const st=u.status;Object.keys(u).forEach(k=>delete u[k]);Object.assign(u,{...d,status:st})}}})}
 (db.neighborUnits||[]).forEach(u=>{if(u.opta==="Baby-NAW Oldenburg „Felix“"||u.opta==="Baby-NAW 86 Oldenburg „Felix“"){u.opta="Florian Oldenburg 02/86-01";u.name="02-86-01";u.verified="Baby-NAW „Felix“ (Klinikum Oldenburg / NWZ); Funkrufname 2-86-1 laut Nutzerangabe"}});
@@ -1131,7 +1139,7 @@ function statusName(s){return {0:"Priorisierter Sprechwunsch",1:"Frei über Funk
 function statusClass(s){return "s"+s}
 function vehicleLabelBlock(u){
  const q=typeof unitQualText==="function"?unitQualText(u):"";
- return `<b>${esc(u.type||"—")}</b><br><small class="muted">${esc(u.opta||u.name||"—")}</small>${u.org==="Luftrettung"?`<br><small style="color:#334155;font-weight:600">${heliHasWinch(u)?"🪝 Rettungswinde":"ohne Winde"}${heliPilots(u)?` · ✈️ ${esc(heliPilots(u))} Pilot${heliPilots(u)==="1"?"":"en"}`:""}</small>`:""}${q&&!u.qualNow?`<br><small title="Medizinische Qualifikation der Besatzung" style="color:#0f766e;font-weight:600">🩺 ${esc(q)}</small>`:""}${u.qualNow?`<br><small title="Besatzung gesondert angemeldet${u.qualNowAt?" um "+new Date(u.qualNowAt).toLocaleTimeString("de-DE",{hour:"2-digit",minute:"2-digit"}):""}" style="color:#c2410c;font-weight:800">⭐ angemeldet: ${esc(qualTokens(u.qualNow).join(" + "))}</small>`:""}`;
+ return `<b>${esc(u.type||"—")}</b><br><small class="muted">${esc(u.opta||u.name||"—")}</small>${u.neighborLoan?`<br><small style="color:#1d4ed8;font-weight:700">🤝 aus LK ${esc(u.homeDistrict||"?")}${u.cover?` · 🛡️ Gebietsabsicherung Wache ${esc(u.coverFor||"?")}`:""}</small>`:""}${u.org==="Luftrettung"?`<br><small style="color:#334155;font-weight:600">${heliHasWinch(u)?"🪝 Rettungswinde":"ohne Winde"}${heliPilots(u)?` · ✈️ ${esc(heliPilots(u))} Pilot${heliPilots(u)==="1"?"":"en"}`:""}</small>`:""}${q&&!u.qualNow?`<br><small title="Medizinische Qualifikation der Besatzung" style="color:#0f766e;font-weight:600">🩺 ${esc(q)}</small>`:""}${u.qualNow?`<br><small title="Besatzung gesondert angemeldet${u.qualNowAt?" um "+new Date(u.qualNowAt).toLocaleTimeString("de-DE",{hour:"2-digit",minute:"2-digit"}):""}" style="color:#c2410c;font-weight:800">⭐ angemeldet: ${esc(qualTokens(u.qualNow).join(" + "))}</small>`:""}`;
 }
 function statusOptionsFor(u){
  // Rettungsdienst-spezifische Status (7 = Patient aufgenommen, 8 = bedingt verfügbar)
@@ -1926,6 +1934,7 @@ function syncLocationFromOpta(){
  db.units.forEach(u=>{
    // Selbst angelegte oder selbst bearbeitete Fahrzeuge nie automatisch verändern.
    if(u.custom||u.userEdited||u.fixedLocation)return; // fester Standort (z. B. Ortswehr) bleibt
+   if(u.neighborLoan||!/Friesland/.test(String(u.opta||"")))return; // v5.47: Nachbar-Fahrzeuge haben eigene Kennungen – nicht auf unsere Wachen abbilden (Wittmund 84 ≠ Sande)
    if(["Feuerwehr","Rettungsdienst"].includes(u.org)){
      const area=OPTA_AREA_ORDER[optaAreaDigit(u)];
      if(area)u.location=area;
@@ -2355,10 +2364,18 @@ function maybeAddDrkSupport(list,call){
  }
  return null;
 }
+// v5.47: Wache (Ort) eines Nachbar-Fahrzeugs aus der Adresse, Landkreis eines Fahrzeugs
+function nbWacheName(nu){const a=String(nu&&nu.address||"");const m=a.match(/\d{5}\s+([^,(]+)/);return (m?m[1]:a.split(/[,(]/)[0]).trim()||String(nu&&nu.district||"?")}
+function unitDistrict(u){
+ if(u.neighborLoan)return u.homeDistrict||"Nachbarkreis";
+ if(CUSTOM_SC)return (SCENARIOS[currentScenarioId]&&SCENARIOS[currentScenarioId].custom&&SCENARIOS[currentScenarioId].custom.district)||"Eigener Kreis";
+ const m=String(u.opta||"").match(/^(?:Rettung|Rotkreuz|Akkon|Florian|Pelikan|Johannes|Sama)\s+([A-ZÄÖÜ][\wäöüß-]+)/);
+ return m?m[1]:"Friesland";
+}
 function loanNeighborUnit(nu){
  const loaned={
    id:Date.now()+Math.floor(Math.random()*1000),name:nu.name,opta:nu.opta,type:nu.type,org:"Rettungsdienst",
-   location:nu.district,lat:nu.lat,lng:nu.lng,crew:nu.crew,skills:nu.skills,
+   location:nbWacheName(nu),lat:nu.lat,lng:nu.lng,crew:nu.crew,skills:nu.skills,
    neighborLoan:true,homeDistrict:nu.district,neighborUnitId:nu.id,
    verified:nu.verified,status:"1"
  };
@@ -2372,7 +2389,7 @@ function manvNbAlarm(call,nu,coverFor){
  const loaned=loanNeighborUnit(nu);
  if(coverFor){
    // Gebietsabsicherung: fährt an unsere Wache und steht dort für neue Einsätze bereit
-   Object.assign(loaned,{cover:true,coverCallId:String(call.id),coverFor:coverFor.name,location:coverFor.name,homeLat:coverFor.pt[0],homeLng:coverFor.pt[1],coverFrom:[nu.lat,nu.lng]});
+   Object.assign(loaned,{cover:true,coverCallId:String(call.id),coverFor:coverFor.name,homeLat:coverFor.pt[0],homeLng:coverFor.pt[1],coverFrom:[nu.lat,nu.lng]});
    delete loaned.lat; delete loaned.lng;
    const km=haversine(nu.lat,nu.lng,coverFor.pt[0],coverFor.pt[1]);
    loaned.status="1"; loaned.status1Since=Date.now(); loaned.status2Due=Date.now()+Math.max(4,Math.round(2+km/70*60))*60000;
@@ -4119,7 +4136,7 @@ function isOutOfJurisdiction(r){
  const addr=r?.address;
  if(!addr)return false;
  const city=(addr.city||addr.town||addr.municipality||"").toLowerCase();
- if(city.includes("wilhelmshaven"))return true;
+ if(city.includes("wilhelmshaven"))return false; // v5.47: Stadt Wilhelmshaven gehört zur LST Friesland-Wilhelmshaven
  const county=(addr.county||"").toLowerCase();
  if(county && !county.includes("friesland"))return true;
  return false;
@@ -6364,6 +6381,13 @@ let phoneHere=(()=>{try{return localStorage.getItem("lst-phone-here")!=="0"}catc
 // Neu eingepflegte Wachen haben zunächst nur die ungefähre Ortsmitte. Einmal pro Gerät wird die
 // Adresse über OpenStreetMap (Nominatim) gesucht – langsam (1 Anfrage / 1,5 s), wie es Nominatim verlangt.
 async function neighborGeoRefine(){
+ // eigene Fahrzeuge mit ungefährer Wachen-Lage (z. B. Wilhelmshaven) ebenfalls genau verorten
+ for(const addr of [...new Set((db.units||[]).filter(u=>u.approxGeo&&!u.geoTried&&u.address).map(u=>u.address))]){
+   try{const rows=await (await fetch(`https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&countrycodes=de&q=${encodeURIComponent(addr)}`,{headers:{"Accept":"application/json"}})).json();
+     (db.units||[]).filter(u=>u.address===addr).forEach(u=>{u.geoTried=true;if(rows&&rows[0]){u.homeLat=Number(rows[0].lat);u.homeLng=Number(rows[0].lon);delete u.approxGeo}});save()}
+   catch(e){(db.units||[]).filter(u=>u.address===addr).forEach(u=>u.geoTried=true)}
+   await new Promise(res=>setTimeout(res,1500));
+ }
  const todo=[...new Set((db.neighborUnits||[]).filter(u=>u.approxGeo&&!u.geoTried).map(u=>u.address))];
  for(const addr of todo){
    try{
@@ -7541,17 +7565,26 @@ function mittel(){
   </div>`;
  const orgBlocks=orgs.map(org=>{
    const orgUnits=units.filter(u=>(u.org||"Sonstige")===org);
-   const locs=[...new Set(orgUnits.map(u=>u.location||"Sonstige"))].sort(org==="Feuerwehr"?fwStationSort:(a,b)=>a.localeCompare(b,"de"));
-   const locBlocks=locs.map(loc=>{
-     const rows=geoSortUnits(orgUnits.filter(u=>(u.location||"Sonstige")===loc));
+   // v5.47: Rettungsdienst erst nach Landkreis, dann nach Wache (Nachbar-Fahrzeuge unter ihrem Kreis)
+   const byDist=org==="Rettungsdienst";
+   const locKey=u=>byDist?`${unitDistrict(u)}\u0001${u.location||"Sonstige"}`:(u.location||"Sonstige");
+   const ownD=byDist?(orgUnits.some(u=>!u.neighborLoan&&unitDistrict(u)==="Friesland")?"Friesland":unitDistrict(orgUnits.find(u=>!u.neighborLoan)||{})):"";
+   const ownSet=new Set(orgUnits.filter(u=>!u.neighborLoan).map(unitDistrict));
+   const locs=[...new Set(orgUnits.map(locKey))].sort(org==="Feuerwehr"?fwStationSort:byDist?(a,b)=>{const[da,la]=a.split("\u0001"),[db2,lb]=b.split("\u0001");return (da===ownD?0:ownSet.has(da)?1:2)-(db2===ownD?0:ownSet.has(db2)?1:2)||da.localeCompare(db2,"de")||la.localeCompare(lb,"de")}:(a,b)=>a.localeCompare(b,"de"));
+   let lastD=null;
+   const locBlocks=locs.map(lk=>{
+     const loc=byDist?lk.split("\u0001")[1]:lk, dist=byDist?lk.split("\u0001")[0]:null;
+     const loanD=byDist&&orgUnits.filter(u=>unitDistrict(u)===dist).every(u=>u.neighborLoan);
+     const dHead=byDist&&dist!==lastD?`<h3 style="margin:16px 0 4px">🗺️ ${/^(Wilhelmshaven|Oldenburg \(Stadt\)|Emden|Delmenhorst|Bremen|Bremerhaven)$/.test(dist)?"Stadt":"LK"} ${esc(dist)}${loanD?` <small class="muted">(Nachbarkreis – ausgeliehen)</small>`:""}</h3>`:""; if(byDist)lastD=dist;
+     const rows=geoSortUnits(orgUnits.filter(u=>locKey(u)===lk));
      // Feuerwehr/Rettungsdienst: jede Wache als einklappbarer Reiter (Stand je Gerät gemerkt)
      const fold=MITTEL_FOLD_ORGS.includes(org);
-     const key=`${org}__${loc}`, open=mittelOpenLocs.has(key);
+     const key=`${org}__${byDist?lk:loc}`, open=mittelOpenLocs.has(key);
      const nFree=rows.filter(u=>["1","2"].includes(String(u.status))).length;
      const head=fold
        ?`<details class="mittel-loc" ${open?"open":""} ontoggle="mittelToggleLoc(${esc(JSON.stringify(key))},this.open)"><summary style="cursor:pointer;font-weight:800;padding:8px 10px;border:1px solid var(--line);border-radius:10px;background:#f8fafc;margin-top:6px;${org==="Feuerwehr"&&FW_STATION_INFO[loc]&&!FW_STATION_INFO[loc].main?"margin-left:22px;font-weight:700":""}">${org==="Feuerwehr"&&FW_STATION_INFO[loc]?(FW_STATION_INFO[loc].main?`📍 ${esc(loc)} <span style="font-size:11px;color:#b91c1c">Hauptwehr FF ${esc(FW_STATION_INFO[loc].gem)}</span>`:`↳ ${esc(loc)} <span style="font-size:11px;color:#64748b">Ortswehr FF ${esc(FW_STATION_INFO[loc].gem)}</span>`):`📍 ${esc(loc)}`} <span class="muted" style="font-weight:600;font-size:12px">· ${rows.length} Fahrzeug${rows.length===1?"":"e"} · ${nFree} frei</span></summary>`
        :`<h3 style="margin-top:14px">📍 ${esc(loc)}</h3>`;
-     return `${head}
+     return `${dHead||""}${head}
       <div style="overflow:auto"><table>
        <thead><tr><th>Fahrzeug</th><th>Status</th><th>Fahrzeugterminal</th><th>Status ändern</th></tr></thead>
        <tbody>
@@ -9281,6 +9314,8 @@ const rnd=(a,b)=>a+Math.random()*(b-a), rint=(a,b)=>Math.floor(rnd(a,b+1)), pick
 
 // Orte: reale Straßen (u. a. Adressen von Wachen/Kliniken), Hausnummer zufällig → fiktive Adresse
 const SIM_TOWNS=[
+ {t:"Wilhelmshaven",s:["Marktstraße","Gökerstraße","Bismarckstraße","Ebertstraße","Peterstraße","Rheinstraße","Weserstraße","Grenzstraße","Banter Weg"],c:[53.5259,8.1080]},
+ {t:"Wilhelmshaven",s:["Bremer Straße","Freiligrathstraße"],c:[53.5420,8.1050]},
  {t:"Varel",s:["Pelzerstraße","Menckestraße","Bleichenpfad","Am Wasserturm","Obernstraße","Oldenburger Straße","Neumarktplatz"],c:[53.3969,8.1362]},
  {t:"Varel-Obenstrohe",s:["Wiefelsteder Straße"],c:[53.3789,8.1067]},
  {t:"Varel-Borgstede",s:["Ziegelstraße"],c:[53.3952,8.0917]},

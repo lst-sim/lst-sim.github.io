@@ -1607,6 +1607,16 @@ Version 5.05:
   („a, b“ = a ODER b). Mit „🚑 NA-Indikation“ markierte Knöpfe ziehen weiterhin einen Notarzt.
 - Nur „Unauffällig“ (ohne weitere Befunde) zählt weiter als unauffälliges E (R0 möglich).
 
+Version 5.47:
+- Fehler behoben: Ausgeliehene Nachbar-Fahrzeuge wurden anhand ihrer Kennung einer eigenen Wache
+  zugeordnet (z. B. Rettung Wittmund 84/83-01 → „Sande“, 82/83-01 → „Varel“). Sie stehen jetzt
+  unter ihrer echten Wache (Westerholt, Esens …); die Gebietsabsicherung steht als Hinweis dabei.
+- Fahrzeuge › Rettungsdienst: erst nach Landkreis/Stadt, dann nach Wache.
+- Stadt Wilhelmshaven eingebaut (gehört zur Leitstelle Friesland-Wilhelmshaven): Florian Wilhelmshaven
+  01/83-01, 01/83-02 (FuRW 1, Mozartstraße 11), 02/83-01 (FuRW 2, Inhauser Landstraße 20), NEF 03/82-01
+  (RW 3 am Klinikum). Reservefahrzeuge und der MHD-RTW (Funkrufname unbekannt) fehlen bewusst.
+  Notrufe kommen jetzt auch aus Wilhelmshaven; Wilhelmshaven gilt nicht mehr als „nicht zuständig“.
+
 Version 5.46:
 - „Fahrzeuge bearbeiten“ (und Nachforderung): Bei jedem Fahrzeug steht der aktuelle Status als farbiges
   Schild (z. B. „4 · Am Einsatzort“) – bei den zugeordneten Fahrzeugen und bei allen Auswahl-Knöpfen.
