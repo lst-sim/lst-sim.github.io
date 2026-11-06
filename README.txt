@@ -1607,6 +1607,15 @@ Version 5.05:
   („a, b“ = a ODER b). Mit „🚑 NA-Indikation“ markierte Knöpfe ziehen weiterhin einen Notarzt.
 - Nur „Unauffällig“ (ohne weitere Befunde) zählt weiter als unauffälliges E (R0 möglich).
 
+Version 5.45:
+- Der 📞-Knopf oben ist jetzt die Notrufannahme des Platzes und gilt für ALLE Anrufe (Übungsnotrufe,
+  19222, vorbereitete Anrufe, weitergeleitete Anrufe, Anrufer-Handy, Anrufe der Nachbar-Leitstellen).
+  📞✕ = an diesem Platz klingelt nichts. Anrufe gehen dann an einen anderen Platz mit Notrufannahme;
+  gibt es keinen, kommen keine Übungsnotrufe.
+- Beim Ausschalten werden gerade klingelnde Anrufe an einen annehmenden Platz weitergegeben.
+- Überlauf: Klingelt ein Anruf 45 Sekunden ohne Annahme, geht er an einen anderen annehmenden Platz.
+- Beim Verlegen sieht man, welche Plätze die Notrufannahme aus haben.
+
 Version 5.44:
 - Hinweis auf schnellere Nachbar-Fahrzeuge nur noch, wenn der Einsatz einen RTW braucht (laut Vorschlag/
   AAO oder Alarmierung), und nur für RTW. Statt des blinkenden Banners ein blauer Knopf

@@ -170,7 +170,7 @@ html[data-device="handy"] #floatDock{left:8px;right:8px;width:auto;top:auto;bott
 </head>
 <body>
 <div style="padding:6px 10px;font-size:11px;color:#94a3b8;font-weight:700;display:flex;flex-wrap:wrap;align-items:center;gap:10px;position:sticky;top:0;z-index:10;background:var(--bg)">
- <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v5.44</span>
+ <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v5.45</span>
  <span id="syncState"></span> <a id="deskTag" href="#" onclick="renameDesk();return false" title="Name dieses Platzes (für „offen an …“) – antippen zum Ändern" style="color:#64748b;font-weight:700;text-decoration:none"></a>
  <span id="simCtl" style="position:absolute;left:50%;transform:translateX(-50%);display:flex;gap:6px;align-items:center"></span>
  <a id="homeLink" href="#" onclick="render('leitstelle');return false" class="hidden" style="color:#64748b;text-decoration:underline;font-weight:600">🖥️ Leitstelle</a>
@@ -6462,7 +6462,7 @@ function renderCallerBanner(){
  // Alle klingelnden Anrufe nach Anrufzeit sortieren – der am längsten wartende steht oben (v5.04)
  const items=[...((typeof simPending!=="undefined"?simPending:[]).map(x=>({t:x.ringAt||x.created||Date.now(),html:simBannerHTML([x])}))),
   ...reqs.map(r=>({t:r.time?new Date(r.time).getTime():Date.now(),html:callerReqHTML(r)})),
-  ...(db.nbRequests||[]).filter(r=>r.state==="ringing").map(r=>({t:r.ringAt,html:nbReqBannerHTML(r)})),
+  ...(phoneHere?(db.nbRequests||[]):[]).filter(r=>r.state==="ringing").map(r=>({t:r.ringAt,html:nbReqBannerHTML(r)})),
   ...(Array.isArray(db.callTransfers)?db.callTransfers:[]).filter(t=>t.to===DEVICE_ID&&t.kind==="call").map(t=>({t:t.at,html:xferBannerHTML(t)}))].sort((a,b)=>a.t-b.t);
  el.innerHTML=items.map((it,i)=>it.html.replace('<div class="row" style="gap:10px">',`<div class="row" style="gap:10px"><span style="font:800 13px system-ui;background:rgba(255,255,255,.25);border-radius:999px;padding:2px 8px;white-space:nowrap" title="Reihenfolge nach Anrufzeit">${items.length>1?(i+1)+". · ":""}${new Date(it.t).toLocaleTimeString("de-DE")}</span>`)).join("");
 }
@@ -9838,6 +9838,10 @@ function simTick(){
 }
 function simRing(pre){
  if(simPending.length>=4&&!pre)return;
+ if(!phoneHere){ // v5.45: an diesem Platz werden keine Notrufe angenommen
+   if(!pre&&!acceptingDesks().length)return;
+   simRouteAway(pre||simMakeCall(),pre?"":"gen"); renderCallerBanner(); return;
+ }
  const s=pre||simMakeCall(); s.ringAt=Date.now(); simPending.push(s);
  renderCallerBanner();
  toast(s.isFollow?`🔁 Erneuter Anruf – Rufnummer bekannt aus Einsatz #${s.refCallId}`:s.num==="19222"?"📞 Übungsanruf 19222 – Krankentransport":"📞 Übungsnotruf 112 eingegangen");
@@ -11234,15 +11238,18 @@ const simRenderChat=simRefresh;
 function simCtlHTML(){
  return `<button onclick="simToggleVoice()" title="${simVoice?"Sprachmodus – antippen für Textmodus":"Textmodus – antippen für Sprachmodus"}" style="font-size:20px;padding:2px 8px;background:none;border:1px solid var(--line);border-radius:8px">${simVoice?"🔊":"🔇"}</button>
   <button onclick="simToggleOn()" title="Automatische Übungsnotrufe ${simOn?"ausschalten":"einschalten"}" style="font-size:12px;padding:4px 10px;border-radius:8px;font-weight:800;${simOn?"background:#16a34a;color:#fff;border:1px solid #16a34a":"background:#fff;color:#334155;border:1px solid var(--line)"}">🎲 <span class="simLbl">Übungsnotrufe </span>${simOn?"AN":"AUS"}</button>
-  <button onclick="phoneHereToggle()" title="Anrufe vom Anrufer-Handy an diesem Platz ${phoneHere?"ausblenden":"anzeigen"} (${esc(deskName())})" style="font-size:12px;padding:4px 8px;border-radius:8px;font-weight:800;${phoneHere?"background:#e0f2fe;color:#075985;border:1px solid #7dd3fc":"background:#fff;color:#94a3b8;border:1px solid var(--line)"}">📞${phoneHere?"":"✕"}</button>
+  <button onclick="phoneHereToggle()" title="Notrufannahme an diesem Platz (${esc(deskName())}): ${phoneHere?"AN – antippen, damit hier keine Anrufe mehr klingeln":"AUS – hier klingeln keine Anrufe; antippen zum Einschalten"}" style="font-size:12px;padding:4px 8px;border-radius:8px;font-weight:800;${phoneHere?"background:#e0f2fe;color:#075985;border:1px solid #7dd3fc":"background:#fff;color:#94a3b8;border:1px solid var(--line)"}">📞${phoneHere?"":"✕"}</button>
   ${simVoice?`<button onclick="simVoiceDialog()" title="Anrufer-Stimmen und Plattdeutsch" style="font-size:16px;padding:2px 8px;border-radius:8px;background:none;border:1px solid var(--line)">🗣️</button>`:""}
   <button onclick="simPrepDialog()" title="Eigenen Notruf vorbereiten (Parameter festlegen, Anrufer spielt ihn)" style="font-size:16px;padding:2px 8px;border-radius:8px;background:none;border:1px solid var(--line)">📝</button>
   <button onclick="render('protokolle')" title="Anruferprotokolle (nach Tagen) und Lernliste" style="font-size:16px;padding:2px 8px;border-radius:8px;background:none;border:1px solid var(--line)">📼</button>`;
 }
 function phoneHereToggle(){
  phoneHere=!phoneHere; try{localStorage.setItem("lst-phone-here",phoneHere?"1":"0")}catch(e){}
+ deskHeartbeat(true);
+ // v5.45: Platz nimmt keine Notrufe an → klingelnde Anrufe gehen an einen annehmenden Platz
+ if(!phoneHere)while(simPending.length)simRouteAway(simPending.shift());
  renderSimCtl(); renderCallerBanner();
- toast(phoneHere?`📞 Anrufe vom Anrufer-Handy klingeln an diesem Platz (${deskName()})`:"📞 Anrufe vom Anrufer-Handy an diesem Platz ausgeblendet");
+ toast(phoneHere?`📞 Notrufannahme AN – Anrufe klingeln an diesem Platz (${deskName()})`:`📞 Notrufannahme AUS – an ${deskName()} klingeln keine Anrufe mehr${acceptingDesks().length?" (gehen an andere Plätze)":""}`);
 }
 function renameDesk(){
  const n=prompt("Name dieses Platzes (z. B. „Platz 1“, „Monitor Funk“):",deskName());
@@ -11281,8 +11288,18 @@ function deskHeartbeat(){
  db.desks=Array.isArray(db.desks)?db.desks:[];
  let me=db.desks.find(d=>d&&d.id===DEVICE_ID);
  const now=Date.now();
- if(!me){me={id:DEVICE_ID,name:deskName(),seen:now};db.desks.push(me);save();return}
- if(me.name!==deskName()||now-(me.seen||0)>60000){me.name=deskName();me.seen=now;save()}
+ if(!me){me={id:DEVICE_ID,name:deskName(),seen:now,accept:phoneHere};db.desks.push(me);save();return}
+ if(me.name!==deskName()||me.accept!==phoneHere||now-(me.seen||0)>60000||arguments[0]){me.name=deskName();me.seen=now;me.accept=phoneHere;save()}
+}
+// andere Plätze, die gerade Notrufe annehmen (wenig belegte zuerst)
+function acceptingDesks(){return activeDesks().filter(d=>d.id!==DEVICE_ID&&d.accept!==false)}
+// Anruf an einen annehmenden Platz weitergeben – gibt es keinen, kommt er hier nicht rein
+function simRouteAway(sim,why){
+ const d=acceptingDesks().sort((a,b)=>(a.load||0)-(b.load||0))[0];
+ if(!d){if(why!=="gen")toast("📵 Kein Platz nimmt gerade Notrufe an – Anruf nicht zugestellt");return false}
+ sim.fwdFrom=deskName();
+ db.callTransfers=(Array.isArray(db.callTransfers)?db.callTransfers:[]).concat([{id:"x"+Date.now().toString(36)+Math.floor(Math.random()*1000),kind:"ring",to:d.id,toName:d.name||d.id,from:DEVICE_ID,fromName:deskName(),at:Date.now(),sim}]);
+ save(); return true;
 }
 function activeDesks(){return (db.desks||[]).filter(d=>d&&Date.now()-(d.seen||0)<5*60000)}
 // ─── v5.43: Notrufe und Einsätze an andere Plätze verlegen ──────────────────────────────────────
@@ -11294,7 +11311,7 @@ function xferDeskDialog(kind,id){
  const ds=otherDesks();
  if(!ds.length){toast("Kein anderer Platz online – Live-Sync und zweiten Platz verbinden");return}
  showModal(`<h3 style="margin-top:0">➡️ ${kind==="ring"?"Anruf":"Notruf / Einsatz"} an anderen Platz verlegen</h3>
-  <div style="display:grid;gap:8px">${ds.map(d=>`<button style="padding:12px;font-size:16px" onclick="closeModal();xferSend('${kind}','${esc(String(id))}','${esc(d.id)}')">🖥️ ${esc(d.name||d.id)}</button>`).join("")}</div>
+  <div style="display:grid;gap:8px">${ds.map(d=>{const off=d.accept===false&&kind==="ring";return `<button style="padding:12px;font-size:16px" ${off?"disabled":""} onclick="closeModal();xferSend('${kind}','${esc(String(id))}','${esc(d.id)}')">🖥️ ${esc(d.name||d.id)}${d.accept===false?" <small>(Notrufannahme aus)</small>":""}</button>`}).join("")}</div>
   <p class="muted" style="font-size:12px">${kind==="ring"?"Der Anruf klingelt dann am gewählten Platz.":"Das Gespräch wird gehalten, bis der andere Platz übernimmt. Ohne Annahme kommt es nach 90 Sekunden zurück."}</p>
   <div class="row" style="justify-content:flex-end"><button onclick="closeModal()">Abbrechen</button></div>`);
 }
@@ -11334,6 +11351,10 @@ function xferAccept(tid){
 }
 function xferTick(){
  if(isTerminalLink||IS_MONITOR)return;
+ // Überlauf: klingelt ein Anruf hier 45 s ohne Annahme, geht er an einen anderen annehmenden Platz
+ if(typeof simPending!=="undefined")for(const sp of simPending.slice())if(!sp.overflowed&&Date.now()-(sp.ringAt||Date.now())>45000&&acceptingDesks().length){
+   sp.overflowed=true; simPending.splice(simPending.indexOf(sp),1); if(simRouteAway(sp))toast("📞 Anruf nicht angenommen – an anderen Platz weitergeleitet"); renderCallerBanner();
+ }
  const L=Array.isArray(db.callTransfers)?db.callTransfers:[]; if(!L.length)return;
  const now=Date.now(); let ch=false;
  for(const t of L.slice()){
