@@ -1607,6 +1607,20 @@ Version 5.05:
   („a, b“ = a ODER b). Mit „🚑 NA-Indikation“ markierte Knöpfe ziehen weiterhin einen Notarzt.
 - Nur „Unauffällig“ (ohne weitere Befunde) zählt weiter als unauffälliges E (R0 möglich).
 
+Version 5.48:
+- Nicht benötigte Fahrzeuge werden automatisch frei (Status 1, mit SDS und Eintrag im Protokoll):
+  • weitere Rettungsmittel auf Anfahrt, wenn alle Patienten schon versorgt sind („Abbestellt“),
+  • NEF auf Anfahrt, wenn der RTW vor Ort keinen Notarzt braucht,
+  • NEF vor Ort ohne Notarzt-Bedarf nach 6–12 min „frei Einsatzstelle“ (kritisch: wartet auf den RTW
+    und begleitet ihn),
+  • Feuerwehr & Co. bei rein medizinischen Einsätzen 5–10 min nach Übergabe an den Rettungsdienst,
+  • MANV: sobald alle Patienten ein Rettungsmittel haben, alle weiteren RTW/NEF/KTW/RTH (auch auf
+    Anfahrt).
+  Fahrzeug-Handys bekommen nur die SDS und melden den Status selbst.
+- Bearbeitungsstand an jedem Einsatz (Farbleiste links, 5 Stufen rechts in der Zeile, im geöffneten
+  Einsatz als Balken): Unbearbeitet · Alarmiert (Status 3) · mind. ein Fahrzeug vor Ort (Status 4) ·
+  vor Ort abgearbeitet (Status 7) · Patient im Krankenhaus (Status 8).
+
 Version 5.47:
 - Fehler behoben: Ausgeliehene Nachbar-Fahrzeuge wurden anhand ihrer Kennung einer eigenen Wache
   zugeordnet (z. B. Rettung Wittmund 84/83-01 → „Sande“, 82/83-01 → „Varel“). Sie stehen jetzt
