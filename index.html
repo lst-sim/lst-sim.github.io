@@ -170,7 +170,7 @@ html[data-device="handy"] #floatDock{left:8px;right:8px;width:auto;top:auto;bott
 </head>
 <body>
 <div style="padding:6px 10px;font-size:11px;color:#94a3b8;font-weight:700;display:flex;flex-wrap:wrap;align-items:center;gap:10px;position:sticky;top:0;z-index:10;background:var(--bg)">
- <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v5.36</span>
+ <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v5.37</span>
  <span id="syncState"></span> <a id="deskTag" href="#" onclick="renameDesk();return false" title="Name dieses Platzes (für „offen an …“) – antippen zum Ändern" style="color:#64748b;font-weight:700;text-decoration:none"></a>
  <span id="simCtl" style="position:absolute;left:50%;transform:translateX(-50%);display:flex;gap:6px;align-items:center"></span>
  <a id="homeLink" href="#" onclick="render('leitstelle');return false" class="hidden" style="color:#64748b;text-decoration:underline;font-weight:600">🖥️ Leitstelle</a>
@@ -556,7 +556,7 @@ const DEFAULTS_FRI_WHV={
   // v5.35: Sonderfahrzeuge auf Wunsch. Baby-NAW „Felix“: Klinikum Oldenburg, Kinderklinik (seit 2013, NWZ/Steiger-Stiftung).
   // SRTW Oldenburg und SRTW Wittmund (ehrenamtlich): Funkrufname und Standort NICHT belegt – bitte prüfen.
   {id:190,name:"Baby-NAW-OL",opta:"Baby-NAW Oldenburg „Felix“",type:"Baby-NAW",district:"Oldenburg (Stadt)",status:"1",crew:"3",skills:"Neugeborenen-Notarztwagen mit Transportinkubator (Team Kinderklinik)",verified:"Klinikum Oldenburg / NWZ – Funkrufname nicht belegt",address:"Rahel-Straus-Straße 10, 26133 Oldenburg (Klinikum, Kinderklinik)",lat:53.11276,lng:8.21674,special:true},
-  {id:193,name:"NAW-BWK-WST",opta:"NAW Bundeswehrkrankenhaus Westerstede",type:"NAW",district:"Ammerland",status:"1",crew:"3",skills:"Notarztwagen (Bund), Notarzt an Bord",verified:"Nutzerangabe (Standort BWK Westerstede) – Funkrufname nicht belegt",address:"Lange Straße 38, 26655 Westerstede (Bundeswehrkrankenhaus)",lat:53.25896,lng:7.91752,special:true},
+  {id:193,name:"NAW-BWK-WST",opta:"NAW 81 Bundeswehrkrankenhaus Westerstede",type:"NAW",district:"Ammerland",status:"1",crew:"3",skills:"Notarztwagen (Bund), Notarzt an Bord",verified:"Nutzerangabe (Standort BWK Westerstede, Kennung 81) – vollständiger Funkrufname offen",address:"Lange Straße 38, 26655 Westerstede (Bundeswehrkrankenhaus)",lat:53.25896,lng:7.91752,special:true},
   {id:191,name:"SRTW-OL",opta:"SRTW Oldenburg",type:"SRTW",district:"Oldenburg (Stadt)",status:"1",crew:"2",skills:"Schwerlast-Rettungswagen (Patienten über 200 kg)",verified:"⚠️ Nutzerangabe – Funkrufname/Standort nicht belegt, bitte prüfen",address:"Ibo-Koch-Straße 6, 26127 Oldenburg (Standort angenommen: BF Oldenburg FuRW 1)",lat:53.1557,lng:8.2045,special:true},
   {id:192,name:"SRTW-WTM",opta:"SRTW Wittmund (ehrenamtlich)",type:"SRTW",district:"Wittmund",status:"1",crew:"2",skills:"Schwerlast-Rettungswagen, ehrenamtlich besetzt (Patienten über 200 kg)",verified:"⚠️ Nutzerangabe – Funkrufname/Standort nicht belegt, bitte prüfen",address:"Wittmund (genauer Standort unbekannt)",lat:53.5767,lng:7.7795,special:true,volunteer:true},
   {id:1,name:"80-82-01",opta:"Rettung Wittmund 80/82-01",type:"NEF",district:"Wittmund",status:"1",crew:"2",skills:"Notarzt",verified:"BOS-Fahrzeuge",address:"Schloßstraße 11, 26409 Wittmund",lat:53.573624,lng:7.784572},
@@ -935,6 +935,8 @@ let db=JSON.parse(localStorage.getItem(KEY)||"null")||JSON.parse(JSON.stringify(
 if(!Array.isArray(db.units))db.units=[];
 if(!Array.isArray(db.callers))db.callers=[];
 if(!Array.isArray(db.pendingCallerRequests))db.pendingCallerRequests=[];
+// v5.37: NAW BWK Westerstede hat Kennung 81 – gespeicherten Eintrag umbenennen statt doppelt anlegen
+(db.neighborUnits||[]).forEach(u=>{if(u.opta==="NAW Bundeswehrkrankenhaus Westerstede"){u.opta="NAW 81 Bundeswehrkrankenhaus Westerstede";u.verified="Nutzerangabe (Standort BWK Westerstede, Kennung 81) – vollständiger Funkrufname offen"}});
 // v5.33: MANV-AAO (ID 9) heißt jetzt „MANV 5“ – nur umbenennen, wenn der alte Standardname noch drinsteht
 {const m9=db.aao.find(a=>String(a.id)==="9");if(m9&&m9.name==="MANV – Massenanfall von Verletzten (automatisch ab >3 Verletzten)")m9.name="MANV 5 – 4 bis 5 Betroffene (MANV automatisch ab >3 Verletzten)"}
 if(!Array.isArray(db.activeCalls))db.activeCalls=[];

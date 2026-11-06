@@ -1607,6 +1607,10 @@ Version 5.05:
   („a, b“ = a ODER b). Mit „🚑 NA-Indikation“ markierte Knöpfe ziehen weiterhin einen Notarzt.
 - Nur „Unauffällig“ (ohne weitere Befunde) zählt weiter als unauffälliges E (R0 möglich).
 
+Version 5.37:
+- NAW Bundeswehrkrankenhaus Westerstede trägt die Kennung 81 („NAW 81 …“). Vollständiger Funkrufname
+  (Wachen-Nummer) noch offen.
+
 Version 5.36:
 - NAW des Bundes am Bundeswehrkrankenhaus Westerstede (LK Ammerland, über die GOL anforderbar,
   „📞 NAW anfragen“). Transporte mit dem NAW gelten in IVENA als arztbegleitet.
