@@ -1607,6 +1607,12 @@ Version 5.05:
   („a, b“ = a ODER b). Mit „🚑 NA-Indikation“ markierte Knöpfe ziehen weiterhin einen Notarzt.
 - Nur „Unauffällig“ (ohne weitere Befunde) zählt weiter als unauffälliges E (R0 möglich).
 
+Version 5.54:
+- Neuer Knopf „📻 Funkgruppe“ im geöffneten Einsatz: alle alarmierten Fahrzeuge des Einsatzes auf einmal
+  in eine Funkrufgruppe setzen (alle Gruppen aller Kreise zur Auswahl) oder zurück in ihre
+  Standardgruppen. Die gewählte Gruppe steht danach auf dem Knopf und im Einsatzprotokoll; auf der
+  Seite „Funkrufgruppen“ erscheinen die Fahrzeuge in der neuen Gruppe.
+
 Version 5.53:
 - Anrufer sagen als Erstes, wo sie sind (Adresse mit Stockwerk/Hinweis, am Strand, auf der Straße,
   im Pflegeheim …), danach was passiert ist. Ausgenommen: Verwählt. Fragt man danach nochmal „Wo genau?“,

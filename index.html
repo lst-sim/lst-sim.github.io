@@ -170,7 +170,7 @@ html[data-device="handy"] #floatDock{left:8px;right:8px;width:auto;top:auto;bott
 </head>
 <body>
 <div style="padding:6px 10px;font-size:11px;color:#94a3b8;font-weight:700;display:flex;flex-wrap:wrap;align-items:center;gap:10px;position:sticky;top:0;z-index:10;background:var(--bg)">
- <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v5.53</span>
+ <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v5.54</span>
  <span id="syncState"></span> <a id="deskTag" href="#" onclick="renameDesk();return false" title="Name dieses Platzes (für „offen an …“) – antippen zum Ändern" style="color:#64748b;font-weight:700;text-decoration:none"></a>
  <span id="simCtl" style="position:absolute;left:50%;transform:translateX(-50%);display:flex;gap:6px;align-items:center"></span>
  <a id="homeLink" href="#" onclick="render('leitstelle');return false" class="hidden" style="color:#64748b;text-decoration:underline;font-weight:600">🖥️ Leitstelle</a>
@@ -3154,6 +3154,7 @@ function incidentCard(c,isSelected){
     <button onclick="openAdditionalResources('${esc(c.id)}')">✏️ Fahrzeuge bearbeiten</button>
     <button onclick="openCallEdit('${esc(c.id)}')" title="Abfragepunkte nachträglich ändern, Rettungsmittel anpassen und Alarm erneut senden">📝 Notruf ändern</button>
     ${otherDesks().length&&(!c.deskId||c.deskId===DEVICE_ID)?`<button onclick="xferDeskDialog('call','${esc(c.id)}')" title="Einsatz an anderen Platz verlegen">➡️ An Platz</button>`:""}
+    ${(c.alarmedUnits||[]).length?`<button onclick="funkCallDialog('${esc(c.id)}')" title="Alle alarmierten Fahrzeuge in eine Funkrufgruppe setzen">📻 Funkgruppe${c.funkGroup?`: ${esc(c.funkGroup)}`:""}</button>`:""}
     ${c.alarmTime?`<button class="btn blue" onclick="openNachforderung('${esc(c.id)}')">📟 Nachforderung</button>`:""}
     <button onclick="activateCallById('${esc(c.id)}');stagingPickMode=true;render('karte')" title="Bereitstellungsort für Landfahrzeuge auf der Karte wählen">🅿️ ${c.staging?esc(c.staging.name):"Bereitstellungsort"}</button>
     <button class="primary" onclick="finishCall('${esc(c.id)}')">✅ Einsatz abschließen</button>
@@ -9380,6 +9381,30 @@ function funkSetUnit(key,group){
  save(); toast(`📻 ${x.u.opta||x.u.name} → ${group}`); render('funk');
 }
 let funkOpenDistrict=FUNK_DISTRICTS[0][0];
+// v5.54: alle alarmierten Fahrzeuge eines Einsatzes in eine Funkrufgruppe setzen
+function funkCallDialog(callId){
+ const c=allOpenCalls().find(x=>String(x.id)===String(callId)); if(!c)return;
+ const us=callUnits(c); if(!us.length){toast("Für diesen Einsatz ist noch kein Fahrzeug alarmiert");return}
+ const cur=[...new Set(us.map(u=>funkUnitGroup(u,false)))];
+ const blocks=FUNK_DISTRICTS.map(([code,name])=>`<div style="margin-top:8px"><b style="font-size:13px">${esc(code)} – ${esc(name)}</b>
+   <div class="row" style="gap:5px;flex-wrap:wrap;margin-top:4px">${funkGroupsOf(code).map(g=>`<button onclick="funkCallToGroup('${esc(String(c.id))}','${esc(g)}')" style="font-size:13px;padding:5px 9px${cur.length===1&&cur[0]===g?";background:#1d4ed8;color:#fff":""}">${esc(g)}</button>`).join("")}</div></div>`).join("");
+ showModal(`<h3 style="margin-top:0">📻 Funkrufgruppe für Einsatz #${esc(String(c.id))}</h3>
+  <p class="muted" style="margin:0 0 4px;font-size:13px">${us.length} alarmierte Fahrzeuge: ${us.map(u=>esc(u.opta||u.name)).join(", ")}<br>Jetzt: ${cur.map(esc).join(", ")}</p>
+  ${blocks}
+  <div class="row" style="justify-content:space-between;margin-top:12px"><button onclick="funkCallToGroup('${esc(String(c.id))}',null)">↩️ Zurück in Standardgruppen</button><button onclick="closeModal()">Schließen</button></div>`);
+}
+function funkCallToGroup(callId,group){
+ const c=allOpenCalls().find(x=>String(x.id)===String(callId)); if(!c)return;
+ const us=callUnits(c);
+ us.forEach(u=>{
+   const tgt=[u]; if(u.neighborLoan){const nu=(db.neighborUnits||[]).find(n=>String(n.id)===String(u.neighborUnitId));if(nu)tgt.push(nu)}
+   tgt.forEach(x=>{if(!group||group===funkDefaultGroup(x,x!==u))delete x.funkGroup; else x.funkGroup=group});
+ });
+ c.funkGroup=group||null;
+ (c.history=c.history||[]).push({q:"📻 Funkrufgruppe",a:group?`${us.length} Fahrzeuge in ${group}`:"Fahrzeuge zurück in ihre Standardgruppen"});
+ save(); closeModal(); toast(group?`📻 ${us.length} Fahrzeuge in ${group}`:"📻 Fahrzeuge zurück in Standardgruppen");
+ if(!uiLocked)render(currentPage);
+}
 function funkSelect(g){db.funkActive=g;save();render('funk');toast(`📻 Leitstelle geschaltet auf ${g}`)}
 function funkToggleWatch(g){db.funkWatch=db.funkWatch||[];const i=db.funkWatch.indexOf(g);if(i>=0)db.funkWatch.splice(i,1);else db.funkWatch.push(g);save();render('funk')}
 function funkPage(){
