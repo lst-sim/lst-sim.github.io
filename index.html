@@ -170,7 +170,7 @@ html[data-device="handy"] #floatDock{left:8px;right:8px;width:auto;top:auto;bott
 </head>
 <body>
 <div style="padding:6px 10px;font-size:11px;color:#94a3b8;font-weight:700;display:flex;flex-wrap:wrap;align-items:center;gap:10px;position:sticky;top:0;z-index:10;background:var(--bg)">
- <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v5.52</span>
+ <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v5.53</span>
  <span id="syncState"></span> <a id="deskTag" href="#" onclick="renameDesk();return false" title="Name dieses Platzes (für „offen an …“) – antippen zum Ändern" style="color:#64748b;font-weight:700;text-decoration:none"></a>
  <span id="simCtl" style="position:absolute;left:50%;transform:translateX(-50%);display:flex;gap:6px;align-items:center"></span>
  <a id="homeLink" href="#" onclick="render('leitstelle');return false" class="hidden" style="color:#64748b;text-decoration:underline;font-weight:600">🖥️ Leitstelle</a>
@@ -10848,10 +10848,21 @@ async function simReply(c,text){
  if(c.sim.awaitGreeting){
    c.sim.awaitGreeting=false;
    if(c.sim.dropAt)c.sim.dropAt=Date.now()+rnd(60,200)*1000;
-   const open=pick(c.sim.d.open);
+   let open=pick(c.sim.d.open);
    // Hat die Leitstelle gleich eine echte Frage gestellt, antwortet der Anrufer (hastig) darauf mit
    const q=String(text).replace(/^.*?(notruf|leitstelle|feuerwehr|rettungsdienst)[^,.!?]*[,.!]?/i,"").trim();
-   if(q.length>6&&/\?|wo |was |wie /i.test(q)&&!simAiReady()){const extra=simAnswerSmart(c,q);if(extra&&!/weiß ich (leider )?nicht|wie meinen sie|versteh/i.test(extra)&&!c.sim.d.misdial)return open+" "+extra}
+   // v5.53: Anrufer sagen als Erstes, wo sie sind (außer Verwählt/Telefonberatung)
+   let locFirst=false;
+   if(!c.sim.d.misdial&&!c.sim.kt){
+     const la=String(simAnswerFor(c,"Wo genau ist der Notfallort?")||"").replace(/^(Bitte schnell! |Oh Gott… |Wie gesagt: |Nochmal: )+/,"");
+     if(la&&!simIsFallback(la)){
+       const gm=open.match(/^((?:ja|hallo|guten (?:tag|morgen|abend)|moin|bitte|hilfe|feuerwehr|notruf)[^,.!?]{0,12}[,.!?]\s*)+/i), greet=gm?gm[0]:"", rest=open.slice(greet.length);
+       open=`${greet}${la.replace(/^Wir sind /,greet?"wir sind ":"Wir sind ")} ${rest?rest[0].toUpperCase()+rest.slice(1):""}`.replace(/\s+/g," ").trim();
+       locFirst=true;
+     }
+   }
+   const locQ=/wo |notfallort|adresse|einsatzort|wo genau/i.test(q);
+   if(q.length>6&&/\?|wo |was |wie /i.test(q)&&!(locFirst&&locQ&&!/was |wie /i.test(q))&&!simAiReady()){const extra=simAnswerSmart(c,locFirst?q.replace(/wo genau ist der notfallort\??|wo ist der notfallort\??|wo genau\??/ig,"").trim()||q:q);if(extra&&!/weiß ich (leider )?nicht|wie meinen sie|versteh|wie gesagt/i.test(extra)&&!c.sim.d.misdial)return open+" "+extra}
    return open;
  }
  const ints0=simIntents(text);

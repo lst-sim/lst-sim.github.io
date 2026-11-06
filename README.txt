@@ -1607,6 +1607,11 @@ Version 5.05:
   („a, b“ = a ODER b). Mit „🚑 NA-Indikation“ markierte Knöpfe ziehen weiterhin einen Notarzt.
 - Nur „Unauffällig“ (ohne weitere Befunde) zählt weiter als unauffälliges E (R0 möglich).
 
+Version 5.53:
+- Anrufer sagen als Erstes, wo sie sind (Adresse mit Stockwerk/Hinweis, am Strand, auf der Straße,
+  im Pflegeheim …), danach was passiert ist. Ausgenommen: Verwählt. Fragt man danach nochmal „Wo genau?“,
+  wiederholen sie den Ort.
+
 Version 5.52:
 - Updates kommen schneller an: Die App-Seite wird am Browser-Cache vorbei geladen (Service Worker v5).
 - Versehentlich mit hochgeladene Test-Bildschirmfotos aus dem Projekt entfernt.
