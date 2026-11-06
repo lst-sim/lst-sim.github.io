@@ -170,7 +170,7 @@ html[data-device="handy"] #floatDock{left:8px;right:8px;width:auto;top:auto;bott
 </head>
 <body>
 <div style="padding:6px 10px;font-size:11px;color:#94a3b8;font-weight:700;display:flex;flex-wrap:wrap;align-items:center;gap:10px;position:sticky;top:0;z-index:10;background:var(--bg)">
- <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v5.48</span>
+ <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v5.49</span>
  <span id="syncState"></span> <a id="deskTag" href="#" onclick="renameDesk();return false" title="Name dieses Platzes (für „offen an …“) – antippen zum Ändern" style="color:#64748b;font-weight:700;text-decoration:none"></a>
  <span id="simCtl" style="position:absolute;left:50%;transform:translateX(-50%);display:flex;gap:6px;align-items:center"></span>
  <a id="homeLink" href="#" onclick="render('leitstelle');return false" class="hidden" style="color:#64748b;text-decoration:underline;font-weight:600">🖥️ Leitstelle</a>
@@ -497,6 +497,9 @@ const DEFAULTS_FRI_WHV={
  // offizielle heutige Name des früheren "Helios Klinikum Nordenham") und das St. Johannes-
  // Hospital Varel (auf ausdrücklichen Wunsch nur mit seiner Gynäkologie/Geburtshilfe-Abteilung).
  ivena:[
+  // v5.49: Druckkammern (HBO) für schwere CO-Vergiftungen – laut GTÜM-Listen (Stand 2025). Koordinaten ungefähr.
+  {id:90,name:"Druckkammer Kronshagen (Schiffahrtmed. Institut der Marine)",place:"Kronshagen bei Kiel",area:"GTÜM Liste 2 – 24-h-Bereitschaft, Intensivbehandlung in der Kammer",status:"grün",note:"Vorher anrufen: 0431 5409-1441 · Kopperpahler Allee 120, 24119 Kronshagen",closures:[],fachrichtungen:["Druckkammer (HBO)"],lat:54.3355,lng:10.0838,hbo:true},
+  {id:91,name:"Druckkammer Soltau (Zentrum für Hyperbarmedizin)",place:"Soltau",area:"GTÜM Liste 3 – eingeschränkter Dienst, keine intubierten Patienten",status:"grün",note:"Vorher anrufen: 05191 98 60 16 · Seilerstr. 7-9, 29614 Soltau",closures:[],fachrichtungen:["Druckkammer (HBO)"],lat:52.9866,lng:9.8424,hbo:true},
   {id:1,name:"Nordwest-Krankenhaus Sanderbusch",place:"Sande",area:"LST Friesland-Wilhelmshaven",status:"grün",note:"Übungsstatus – manuell pflegen",closures:[],fachrichtungen:["Chirurgie","Innere Medizin","Neurologie / Stroke Unit","Kardiologie / Chest Pain Unit","Intensivmedizin"]},
   {id:2,name:"Klinikum Wilhelmshaven",place:"Wilhelmshaven",area:"LST Friesland-Wilhelmshaven",status:"grün",note:"Übungsstatus – manuell pflegen",closures:[],fachrichtungen:["Chirurgie","Innere Medizin","Kardiologie / Chest Pain Unit","Gynäkologie/Geburtshilfe","Pädiatrie","Urologie","Psychiatrie","HNO","Augenheilkunde","Intensivmedizin","Schockraum"]},
   {id:3,name:"Klinikum Oldenburg",place:"Oldenburg",area:"GOL Oldenburger Land",status:"grün",note:"Übungsstatus – manuell pflegen",closures:[],fachrichtungen:["Chirurgie","Innere Medizin","Pädiatrie","Gynäkologie/Geburtshilfe","Kardiologie / Chest Pain Unit","Urologie","Intensivmedizin","Schockraum","HNO"]},
@@ -5027,15 +5030,15 @@ function crewCaseInfo(call){
 }
 function crewDring(rmi,sev,sk){const want=sk?String(Math.min(3,sk)):sev==="rea"||sev==="critical"?"1":sev==="minor"?"3":"2";const al=(pzcFind(rmi)||{allowed:"123"}).allowed;if(al.includes(want))return want;return [...al].sort((p,q)=>Math.abs(+p-+want)-Math.abs(+q-+want))[0]}
 function crewPickHospital(u,call,fach,dring){
- const hs=(db.ivena||[]).filter(h=>String(h.status||"").toLowerCase()!=="rot");
  const wantF=fach||"Innere Medizin";
+ const hs=(db.ivena||[]).filter(h=>String(h.status||"").toLowerCase()!=="rot"&&(!h.hbo||wantF==="Druckkammer (HBO)"));
  const has=h=>(h.fachrichtungen||[]).includes(wantF)||((wantF==="Schockraum"||wantF==="Intensivmedizin")&&(h.fachrichtungen||[]).includes("Intensivmedizin"));
  const already=h=>(db.ivenaAssignments||[]).filter(a=>!a.deleted&&a.callId===String(call?.id)&&String(a.hospitalId)===String(h.id)).length;
  const score=h=>{const m=ivenaEtaMin(u,h,call,dring);return (m==null?999:m)+(isManvCall(call)?already(h)*12:0)}; // MANV: auf mehrere Kliniken verteilen
  let c=hs.filter(h=>has(h)&&!ivenaClosedInfo(h,wantF)).sort((p,q)=>score(p)-score(q));
  if(c.length)return {h:c[0],zwang:false};
  c=hs.filter(h=>!ivenaClosedInfo(h,wantF)).sort((p,q)=>score(p)-score(q)); if(c.length)return {h:c[0],zwang:false};
- c=(db.ivena||[]).slice().sort((p,q)=>score(p)-score(q)); return c.length?{h:c[0],zwang:true}:null;
+ c=(db.ivena||[]).filter(h=>!h.hbo||wantF==="Druckkammer (HBO)").sort((p,q)=>score(p)-score(q)); return c.length?{h:c[0],zwang:true}:null;
 }
 function crewSds(u,call,text){
  db.sdsIn=db.sdsIn||[];
@@ -5057,6 +5060,14 @@ function crewPlan(u,call){
      (call.history=call.history||[]).push({q:`🛏️ ${u.opta||u.name}`,a:"übernimmt den Patienten (Schwerlasttransport)"});return}
    u.crew={callId:String(call.id),mode:"transport",patient:0,departAt:now+rint(25,35)*60000,registerAt:now+rint(15,20)*60000,info};return;
  }
+ if(["KTH","RTH","ITH"].includes(u.type)){
+   const rt=callUnits(call).find(x=>x!==u&&x.crew&&x.crew.hbo&&x.crew.hbo.asked&&!x.crew.hbo.done);
+   if(rt){const C=rt.crew;C.hbo.done=true;
+     u.crew={...C,hbo:null,registered:false,asgId:null,registerAt:now+rint(4,8)*60000,departAt:now+rint(12,18)*60000,forceHosp:(()=>{const k=(db.ivena||[]).find(h=>h.hbo&&/Kronshagen/.test(h.name)&&String(h.status).toLowerCase()!=="rot")||(db.ivena||[]).find(h=>h.hbo&&String(h.status).toLowerCase()!=="rot");return k?k.id:null})(),forceFach:"Druckkammer (HBO)",info:{...C.info}};
+     rt.crew={callId:C.callId,mode:"none",doneAt:now+rint(3,6)*60000,info:C.info,owner:C.owner};
+     crewSds(rt,call,`Patient an ${u.opta||u.name} übergeben (Druckkammer) – wir werden gleich frei.`);
+     (call.history=call.history||[]).push({q:`🚁 ${u.opta||u.name}`,a:"übernimmt den Patienten zur Druckkammer (HBO)"});return}
+ }
  if(u.type==="Baby-NAW"){
    u.crew={callId:String(call.id),mode:"transport",patient:0,departAt:now+rint(35,50)*60000,registerAt:now+rint(20,30)*60000,forceHosp:3,forceFach:"Pädiatrie",info:{...info,sev:"urgent",age:0}};
    crewSds(u,call,"Übernahme Frühgeborenes in den Transportinkubator, Stabilisierung läuft – Transport ins Perinatalzentrum Klinikum Oldenburg folgt.");return;
@@ -5073,8 +5084,10 @@ function crewPlan(u,call){
  const idx=planned.length;
  // MANV: Patienten nach Sichtungskategorie – SK1 sofort, SK2 möglichst schnell, SK3 wenn's passt
  if(call.manvPatients){
-   const P=call.manvPatients.find(x=>!x.unit&&x.sk<=4);
-   if(!P){u.crew={callId:String(call.id),mode:"none",doneAt:now+rint(3,8)*60000,info};return}
+   // v5.49: Hubschrauber nur für wirklich dringende Patienten (SK I)
+   const air=["RTH","ITH","KTH"].includes(u.type);
+   const P=call.manvPatients.find(x=>!x.unit&&(air?x.sk===1:x.sk<=4));
+   if(!P){u.crew={callId:String(call.id),mode:"none",doneAt:now+rint(3,8)*60000,info};if(air)crewSds(u,call,"Kein SK-I-Patient mehr offen – wir werden für den Transport nicht benötigt.");return}
    P.unit=u.id;
    const sev=P.sk===1?"critical":P.sk===2?"urgent":P.sk===4?"critical":"minor";
    const t={1:rint(10,15),2:rint(12,20),3:rint(15,30),4:rint(25,40)}[P.sk];
@@ -5094,6 +5107,7 @@ function crewPlan(u,call){
  const inf=idx>0?{...info,age:rint(18,80),gender:Math.random()<0.5?"M":"W",sev:info.sev==="rea"?"critical":Math.random()<0.5?info.sev:"normal"}:info;
  u.crew={callId:String(call.id),mode:"transport",patient:idx,departAt:now+t*60000,registerAt:now+Math.max(2,t-rint(3,7))*60000,info:inf};
  // v5.35: selten – Patient zu schwer für den RTW → Nachforderung SRTW (bei Schwerlast-Fällen immer)
+ if(CREW_TRANSPORT.has(u.type)&&!["KTH","RTH","ITH"].includes(u.type)&&idx===0&&call.sim&&call.sim.d&&call.sim.d.co==="schwer")u.crew.hbo={askAt:now+rint(6,10)*60000};
  if(u.type==="RTW"&&idx===0&&currentScenarioId==="fri-whv"&&info.sev!=="rea"&&((call.sim&&call.sim.d&&call.sim.d.srtw)||(!isManvCall(call)&&Math.random()<0.012)))
    u.crew.srtw={askAt:now+rint(4,8)*60000,kg:(call.sim&&call.sim.d&&call.sim.d.weightKg)||rint(205,280)};
  // NEF auf demselben Einsatz: begleitet bei kritischen Patienten (sonst frei, wenn der RTW entschieden hat)
@@ -5154,6 +5168,14 @@ function crewTick(){
      }
      if(C.mode==="none"&&now>=C.doneAt){crewSds(u,call,C.info&&C.info.noPatient?"Kein Patient vor Ort – Einsatzende, wieder einsatzbereit.":"Kein weiterer Patient für uns – Einsatzende, wieder einsatzbereit.");setUnitStatus(u,"1");delete u.crew;changed=true;continue}
      if(C.mode==="home"&&now>=C.doneAt){crewSds(u,call,`Pat. vor Ort versorgt, kein Transport notwendig (ambulant/Hausarzt). Einsatzende ${hhmm(now)} – wieder einsatzbereit.`);(call.history=call.history||[]).push({q:`🏠 ${u.opta||u.name}`,a:"Pat. vor Ort versorgt, kein Transport"});setUnitStatus(u,"1");delete u.crew;changed=true;continue}
+     if(C.mode==="transport"&&C.hbo&&!C.hbo.done){
+       if(!C.hbo.asked&&now>=C.hbo.askAt){C.hbo.asked=true;C.hbo.askedAt=now;
+         crewSds(u,call,"Schwere CO-Vergiftung (CO-Hb deutlich erhöht, Bewusstseinsstörung) – Indikation Druckkammer. Bitte Druckkammer anfragen und KTH (Northern 06) für den Transport alarmieren.");
+         (call.history=call.history||[]).push({q:`📟 Nachforderung (${u.opta||u.name})`,a:"KTH für Transport zur Druckkammer (schwere CO-Vergiftung)"});
+         (call.nafo=call.nafo||[]).push({reason:"KTH zur Druckkammer – schwere CO-Vergiftung",at:new Date().toISOString()});changed=true}
+       else if(C.hbo.asked&&now-C.hbo.askedAt>45*60000){C.hbo.done=true;C.registerAt=now;C.departAt=now+rint(8,12)*60000;crewSds(u,call,"Kein Hubschrauber gekommen – wir fahren in die nächste Klinik, 100 % Sauerstoff läuft.");changed=true}
+       continue;
+     }
      if(C.mode==="transport"&&C.srtw&&!C.srtw.done){
        if(!C.srtw.asked&&now>=C.srtw.askAt){C.srtw.asked=true;C.srtw.askedAt=now;call.srtwNeeded=true;
          crewSds(u,call,`Nachforderung: SRTW – Patient ca. ${C.srtw.kg} kg, mit unserem RTW nicht transportfähig. Bitte SRTW über die Nachbar-Leitstelle anfordern, ggf. Tragehilfe Feuerwehr.`);
@@ -5205,6 +5227,8 @@ function crewSurplusTick(){
    const rd=u=>CREW_TRANSPORT.has(u.type)||u.type==="NEF";
    if(call.manvPatients&&(call.manvReports||[]).length){
      const open=call.manvPatients.filter(P=>!P.unit&&P.sk<=4).length;
+     const openSk1=call.manvPatients.filter(P=>!P.unit&&P.sk===1).length;
+     if(open>0&&openSk1===0)for(const u of us){if(["RTH","ITH","KTH"].includes(u.type)&&String(u.status)==="3"&&!u.crew)free(u,"MANV: kein SK-I-Patient mehr offen – Hubschrauber nicht mehr benötigt.")}
      if(open===0){
        for(const u of us){
          if(!rd(u))continue; const st=String(u.status), C=u.crew;
@@ -9438,6 +9462,13 @@ function simRoadLoc(){if(CUSTOM_SC)return csSimLoc("road");const r=pick(SIM_ROAD
 
 // Fall-Bibliothek. f = Fakten (Antworten für den Anrufer), say = feste Sätze, extra = spontane Sätze.
 const SIM_CASES=[
+ // ── v5.49: CO-Vergiftung (Gastherme/Kohlegrill) – schwer: Druckkammer, Transport mit KTH ──
+ {id:"co_schwer",w:0.5,num:"112",loc:"home",mk:()=>{const p=simPerson(),src=pick(["die Gastherme im Bad","der Holzkohlegrill, den sie zum Heizen reingestellt haben","der Kaminofen"]);return {rel:pick(["mein Mann","meine Frau","mein Sohn"]),caller:simPerson(),patient:p,age:rint(25,70),co:"schwer",panic:true,
+   open:["Hallo! Mein Mann ist ganz komisch, und unser CO-Melder piept die ganze Zeit!","Bitte schnell, wir haben alle Kopfschmerzen und mein Mann wird nicht richtig wach – der Kohlenmonoxid-Melder geht!"],
+   event:`Der CO-Melder piept seit einer halben Stunde. Wir haben alle Kopfschmerzen und Übelkeit, er ist kaum wach zu kriegen. Ich glaube, das ist ${src}.`,
+   f:{event:"Medizinischer Notfall",count:"2",x:"Nein",a:"Frei",b:"Normal",c:"Unauffällig",d:"Bewusstseinsgetrübt",e:"Kopfschmerzen, Übelkeit, Bewusstseinsstörung – CO-Melder piept",psy:"Nein",danger:"ja"},
+   onset:"Seit etwa einer halben Stunde.",hist:"Eigentlich ist er gesund.",
+   extra:["Soll ich die Fenster aufmachen?","Mir ist auch ganz schwindelig.","Der Melder hängt im Flur und piept ununterbrochen."]}}},
  // ── v5.35: Einsätze im Altenheim / Pflegeheim (Anrufer: Pflegekraft) ──
  {id:"heim_sturz",w:2,num:"112",loc:"home",locPrefix:"im Seniorenpflegeheim, ",mk:()=>{const p=simPerson("w"),c=simPerson("w"),age=rint(78,96);return {rel:"eine Bewohnerin",caller:c,patient:p,age,staff:true,
    open:[`Guten Tag, ${c.first} ${c.last}, Pflegefachkraft im Seniorenpflegeheim. Eine Bewohnerin ist gestürzt und kann nicht mehr aufstehen.`,"Hallo, hier ist das Pflegeheim, Wohnbereich 2 – eine Bewohnerin ist vor dem Bett gestürzt, die Hüfte tut ihr sehr weh."],
@@ -9798,6 +9829,7 @@ function simAaoCheck(c){
  if(more.length)a+=` · zusätzlich: ${more.join(", ")}`;
  if(s.d.phoneOnly)a+=" · ℹ️ Dieser Anruf wäre auch telefonisch zu erledigen gewesen (Beratung/Weiterleitung).";
  if(s.d.srtw)a+=` · ℹ️ Patient ca. ${s.d.weightKg} kg: zusätzlich SRTW über die Nachbar-Leitstelle anfragen (GOL: Akkon Oldenburg 50/89-01 · KRLS Ostfriesland: Akkon Wittmund 81/89-01, ehrenamtlich).`;
+ if(s.d.co)a+=" · ℹ️ CO-Vergiftung: Feuerwehr zur Messung/Belüftung mitalarmieren. Bei schwerer Vergiftung Druckkammer (HBO): Transport z. B. mit KTH Northern 06 – nächste 24-h-Kammer Kronshagen bei Kiel, vorher anrufen.";
  if(s.d.inkubator)a+=" · ℹ️ Inkubatortransport: Baby-NAW „Felix“ (Florian Oldenburg 02/86-01) über die GOL anfragen.";
  c.history=c.history||[]; c.history.push({q:"🎓 Übungs-Check AAO",a});
  toast(miss.length?`AAO-Check: es fehlt ${miss.join(", ")}`:"AAO-Check: passt ✅");

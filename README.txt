@@ -1607,6 +1607,17 @@ Version 5.05:
   („a, b“ = a ODER b). Mit „🚑 NA-Indikation“ markierte Knöpfe ziehen weiterhin einen Notarzt.
 - Nur „Unauffällig“ (ohne weitere Befunde) zählt weiter als unauffälliges E (R0 möglich).
 
+Version 5.49:
+- MANV: Hubschrauber (RTH/ITH/KTH) transportieren nur noch SK-I-Patienten. Ist kein SK I mehr offen,
+  melden sie sich „nicht benötigt“ und werden frei (auch auf Anfahrt).
+- Neuer Einsatz (selten): schwere CO-Vergiftung (CO-Melder piept, Gastherme/Kohlegrill/Kaminofen).
+  Der RTW vor Ort fordert per SDS Druckkammer + KTH an. Kommt der KTH Northern 06 (oder ein RTH/ITH),
+  übernimmt er den Patienten und fliegt zur Druckkammer Kronshagen bei Kiel (24-h-Kammer laut GTÜM);
+  sonst nach 45 min Transport in die nächste Klinik. AAO-Check weist auf Feuerwehr und HBO hin.
+- IVENA: Druckkammer Kronshagen (24 h, GTÜM Liste 2) und Druckkammer Soltau (eingeschränkt, keine
+  intubierten Patienten, GTÜM Liste 3) mit Telefonnummern. Druckkammern werden nur bei
+  „Druckkammer (HBO)“ angefahren, nie als normale Klinik. Koordinaten ungefähr.
+
 Version 5.48:
 - Nicht benötigte Fahrzeuge werden automatisch frei (Status 1, mit SDS und Eintrag im Protokoll):
   • weitere Rettungsmittel auf Anfahrt, wenn alle Patienten schon versorgt sind („Abbestellt“),
