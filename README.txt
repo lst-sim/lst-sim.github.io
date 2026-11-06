@@ -1607,6 +1607,9 @@ Version 5.05:
   („a, b“ = a ODER b). Mit „🚑 NA-Indikation“ markierte Knöpfe ziehen weiterhin einen Notarzt.
 - Nur „Unauffällig“ (ohne weitere Befunde) zählt weiter als unauffälliges E (R0 möglich).
 
+Version 5.40:
+- SRTW tragen die Kennung 89 („SRTW 89 Oldenburg“, „SRTW 89 Wittmund (ehrenamtlich)“).
+
 Version 5.39:
 - Baby-NAW „Felix“ heißt jetzt Florian Oldenburg 02/86-01 (Nutzerangabe 2-86-1).
 
