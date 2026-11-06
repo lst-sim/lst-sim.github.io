@@ -170,7 +170,7 @@ html[data-device="handy"] #floatDock{left:8px;right:8px;width:auto;top:auto;bott
 </head>
 <body>
 <div style="padding:6px 10px;font-size:11px;color:#94a3b8;font-weight:700;display:flex;flex-wrap:wrap;align-items:center;gap:10px;position:sticky;top:0;z-index:10;background:var(--bg)">
- <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v5.35</span>
+ <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v5.36</span>
  <span id="syncState"></span> <a id="deskTag" href="#" onclick="renameDesk();return false" title="Name dieses Platzes (für „offen an …“) – antippen zum Ändern" style="color:#64748b;font-weight:700;text-decoration:none"></a>
  <span id="simCtl" style="position:absolute;left:50%;transform:translateX(-50%);display:flex;gap:6px;align-items:center"></span>
  <a id="homeLink" href="#" onclick="render('leitstelle');return false" class="hidden" style="color:#64748b;text-decoration:underline;font-weight:600">🖥️ Leitstelle</a>
@@ -556,6 +556,7 @@ const DEFAULTS_FRI_WHV={
   // v5.35: Sonderfahrzeuge auf Wunsch. Baby-NAW „Felix“: Klinikum Oldenburg, Kinderklinik (seit 2013, NWZ/Steiger-Stiftung).
   // SRTW Oldenburg und SRTW Wittmund (ehrenamtlich): Funkrufname und Standort NICHT belegt – bitte prüfen.
   {id:190,name:"Baby-NAW-OL",opta:"Baby-NAW Oldenburg „Felix“",type:"Baby-NAW",district:"Oldenburg (Stadt)",status:"1",crew:"3",skills:"Neugeborenen-Notarztwagen mit Transportinkubator (Team Kinderklinik)",verified:"Klinikum Oldenburg / NWZ – Funkrufname nicht belegt",address:"Rahel-Straus-Straße 10, 26133 Oldenburg (Klinikum, Kinderklinik)",lat:53.11276,lng:8.21674,special:true},
+  {id:193,name:"NAW-BWK-WST",opta:"NAW Bundeswehrkrankenhaus Westerstede",type:"NAW",district:"Ammerland",status:"1",crew:"3",skills:"Notarztwagen (Bund), Notarzt an Bord",verified:"Nutzerangabe (Standort BWK Westerstede) – Funkrufname nicht belegt",address:"Lange Straße 38, 26655 Westerstede (Bundeswehrkrankenhaus)",lat:53.25896,lng:7.91752,special:true},
   {id:191,name:"SRTW-OL",opta:"SRTW Oldenburg",type:"SRTW",district:"Oldenburg (Stadt)",status:"1",crew:"2",skills:"Schwerlast-Rettungswagen (Patienten über 200 kg)",verified:"⚠️ Nutzerangabe – Funkrufname/Standort nicht belegt, bitte prüfen",address:"Ibo-Koch-Straße 6, 26127 Oldenburg (Standort angenommen: BF Oldenburg FuRW 1)",lat:53.1557,lng:8.2045,special:true},
   {id:192,name:"SRTW-WTM",opta:"SRTW Wittmund (ehrenamtlich)",type:"SRTW",district:"Wittmund",status:"1",crew:"2",skills:"Schwerlast-Rettungswagen, ehrenamtlich besetzt (Patienten über 200 kg)",verified:"⚠️ Nutzerangabe – Funkrufname/Standort nicht belegt, bitte prüfen",address:"Wittmund (genauer Standort unbekannt)",lat:53.5767,lng:7.7795,special:true,volunteer:true},
   {id:1,name:"80-82-01",opta:"Rettung Wittmund 80/82-01",type:"NEF",district:"Wittmund",status:"1",crew:"2",skills:"Notarzt",verified:"BOS-Fahrzeuge",address:"Schloßstraße 11, 26409 Wittmund",lat:53.573624,lng:7.784572},
@@ -2523,7 +2524,7 @@ function openNeighborUnitPickerForCall(kind,callId){
  document.getElementById("app").innerHTML=`<div class="card">
   <div class="row between"><h2>📞 Rettungsmittel bei ${kind==="ostfriesland"?"der KRLS Ostfriesland":"der GOL"} anfragen – Einsatz #${esc(call.id)}</h2><button onclick="render('leitstelle')">Zurück</button></div>
   <p class="muted">Die Nachbar-Leitstelle entscheidet selbst und alarmiert ihr Fahrzeug – oder sagt ab, wenn sie es selbst braucht. Sagt sie zu, erscheint das Fahrzeug bei uns wie ein eigenes (Status 3, auf der Karte). Angezeigt sind nur freie Fahrzeuge, sortiert nach Ankunftszeit.</p>
-  <div class="row" style="gap:6px;flex-wrap:wrap;margin-bottom:8px"><button onclick="nbOutRequest('${esc(String(call.id))}','${kind}',{type:'RTW'})">📞 Irgendeinen RTW anfragen</button><button onclick="nbOutRequest('${esc(String(call.id))}','${kind}',{type:'NEF'})">📞 Irgendein NEF anfragen</button>${["SRTW","Baby-NAW"].filter(t=>(db.neighborUnits||[]).some(n=>n.type===t&&NEIGHBOR_LEITSTELLE[n.district]===kind)).map(t=>`<button onclick="nbOutRequest('${esc(String(call.id))}','${kind}',{type:'${t}'})">📞 ${t} anfragen</button>`).join("")}</div>
+  <div class="row" style="gap:6px;flex-wrap:wrap;margin-bottom:8px"><button onclick="nbOutRequest('${esc(String(call.id))}','${kind}',{type:'RTW'})">📞 Irgendeinen RTW anfragen</button><button onclick="nbOutRequest('${esc(String(call.id))}','${kind}',{type:'NEF'})">📞 Irgendein NEF anfragen</button>${["SRTW","Baby-NAW","NAW"].filter(t=>(db.neighborUnits||[]).some(n=>n.type===t&&NEIGHBOR_LEITSTELLE[n.district]===kind)).map(t=>`<button onclick="nbOutRequest('${esc(String(call.id))}','${kind}',{type:'${t}'})">📞 ${t} anfragen</button>`).join("")}</div>
   ${candidates.length?candidates.map(u=>`<div class="row between" style="padding:8px 0;border-bottom:1px solid var(--line)">
      <div><b>${esc(u.opta)}</b><div class="muted">${esc(u.district)} · ${esc(u.type)} · ${esc(u.address||"")}</div>${u._eta!=null?`<div style="font-weight:800;${own==null||u._eta<own?"color:#15803d":"color:#b45309"}">⏱️ ~${u._eta} min bis zum Einsatzort${own!=null?(u._eta<own?` – ${own-u._eta} min schneller als eigenes RTW/NEF (~${own} min)`:` – eigenes RTW/NEF ist schneller (~${own} min)`):" – kein eigenes RTW/NEF frei"}</div>`:""}</div>
      <button class="primary" onclick="nbOutRequest('${esc(String(call.id))}','${kind}',{unitId:${u.id},type:'${esc(u.type)}'})">📞 Anfragen</button>
@@ -5064,7 +5065,7 @@ function crewRegister(u,call){
  const air=["RTH","ITH"].includes(u.type);
  const age=info.age!=null?info.age:rint(info.sev==="minor"?20:45,88);
  const flags={}; IVENA_FLAGS.forEach(([k])=>flags[k]=false);
- flags.s=info.sev==="rea"||(info.sev==="critical"&&info.trauma)||info.sk===1; flags.r=info.sev==="rea"; flags.b=info.sev==="rea"; flags.n=!!nef||air; flags.ss=/schwanger/.test(info.text);
+ flags.s=info.sev==="rea"||(info.sev==="critical"&&info.trauma)||info.sk===1; flags.r=info.sev==="rea"; flags.b=info.sev==="rea"; flags.n=!!nef||air||u.type==="NAW"||u.type==="Baby-NAW"; flags.ss=/schwanger/.test(info.text);
  const pzc=pzcBuild(info.rmi,age,dring), vehicles=nef?[u,nef]:[u];
  const a={id:Date.now()+Math.floor(Math.random()*999),hospitalId:h.id,hospitalName:h.name,fach,schockraum:flags.s,geschlecht:info.gender,alter:String(age),na:flags.n,
    rmi:info.rmi,dringlichkeit:dring,pzc,flags,info:"",vehicleIds:vehicles.map(x=>x.id),vehicleLabels:vehicles.map(x=>`${x.opta||x.name} (${x.type})`),
