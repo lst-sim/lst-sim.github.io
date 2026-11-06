@@ -1607,6 +1607,10 @@ Version 5.05:
   („a, b“ = a ODER b). Mit „🚑 NA-Indikation“ markierte Knöpfe ziehen weiterhin einen Notarzt.
 - Nur „Unauffällig“ (ohne weitere Befunde) zählt weiter als unauffälliges E (R0 möglich).
 
+Version 5.42:
+- SRTW sind Johanniter-Fahrzeuge: Akkon Oldenburg 50/89-01 (Standort angenommen: Johanniter-Wache
+  Alte Fleiwa 2a) und Akkon Wittmund 81/89-01 (ehrenamtlich, genauer Standort noch offen).
+
 Version 5.41:
 - NAW (Bund) am Bundeswehrkrankenhaus Westerstede heißt jetzt Florian Ammerland 15/81-01
   (Nutzerangabe 15/81-1).

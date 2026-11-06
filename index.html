@@ -170,7 +170,7 @@ html[data-device="handy"] #floatDock{left:8px;right:8px;width:auto;top:auto;bott
 </head>
 <body>
 <div style="padding:6px 10px;font-size:11px;color:#94a3b8;font-weight:700;display:flex;flex-wrap:wrap;align-items:center;gap:10px;position:sticky;top:0;z-index:10;background:var(--bg)">
- <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v5.41</span>
+ <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v5.42</span>
  <span id="syncState"></span> <a id="deskTag" href="#" onclick="renameDesk();return false" title="Name dieses Platzes (für „offen an …“) – antippen zum Ändern" style="color:#64748b;font-weight:700;text-decoration:none"></a>
  <span id="simCtl" style="position:absolute;left:50%;transform:translateX(-50%);display:flex;gap:6px;align-items:center"></span>
  <a id="homeLink" href="#" onclick="render('leitstelle');return false" class="hidden" style="color:#64748b;text-decoration:underline;font-weight:600">🖥️ Leitstelle</a>
@@ -557,8 +557,8 @@ const DEFAULTS_FRI_WHV={
   // SRTW Oldenburg und SRTW Wittmund (ehrenamtlich): Funkrufname und Standort NICHT belegt – bitte prüfen.
   {id:190,name:"02-86-01",opta:"Florian Oldenburg 02/86-01",type:"Baby-NAW",district:"Oldenburg (Stadt)",status:"1",crew:"3",skills:"Baby-NAW „Felix“ – Neugeborenen-Notarztwagen mit Transportinkubator (Team Kinderklinik)",verified:"Baby-NAW „Felix“ (Klinikum Oldenburg / NWZ); Funkrufname 2-86-1 laut Nutzerangabe",address:"Rahel-Straus-Straße 10, 26133 Oldenburg (Klinikum, Kinderklinik)",lat:53.11276,lng:8.21674,special:true},
   {id:193,name:"15-81-01",opta:"Florian Ammerland 15/81-01",type:"NAW",district:"Ammerland",status:"1",crew:"3",skills:"NAW (Bund) am Bundeswehrkrankenhaus Westerstede, Notarzt an Bord",verified:"Nutzerangabe: Florian Ammerland 15/81-1, Standort BWK Westerstede",address:"Lange Straße 38, 26655 Westerstede (Bundeswehrkrankenhaus)",lat:53.25896,lng:7.91752,special:true},
-  {id:191,name:"SRTW-OL",opta:"SRTW 89 Oldenburg",type:"SRTW",district:"Oldenburg (Stadt)",status:"1",crew:"2",skills:"Schwerlast-Rettungswagen (Patienten über 200 kg)",verified:"⚠️ Nutzerangabe (Kennung 89) – Wachen-Nummer/Standort nicht belegt, bitte prüfen",address:"Ibo-Koch-Straße 6, 26127 Oldenburg (Standort angenommen: BF Oldenburg FuRW 1)",lat:53.1557,lng:8.2045,special:true},
-  {id:192,name:"SRTW-WTM",opta:"SRTW 89 Wittmund (ehrenamtlich)",type:"SRTW",district:"Wittmund",status:"1",crew:"2",skills:"Schwerlast-Rettungswagen, ehrenamtlich besetzt (Patienten über 200 kg)",verified:"⚠️ Nutzerangabe (Kennung 89) – Wachen-Nummer/Standort nicht belegt, bitte prüfen",address:"Wittmund (genauer Standort unbekannt)",lat:53.5767,lng:7.7795,special:true,volunteer:true},
+  {id:191,name:"50-89-01",opta:"Akkon Oldenburg 50/89-01",type:"SRTW",district:"Oldenburg (Stadt)",status:"1",crew:"2",skills:"Schwerlast-Rettungswagen der Johanniter (Patienten über 200 kg)",verified:"Nutzerangabe: Johanniter Oldenburg 50/89-1 – Standort angenommen (Johanniter-Wache Alte Fleiwa 2a)",address:"Alte Fleiwa 2a, 26121 Oldenburg",lat:53.156,lng:8.186,approxGeo:true,special:true},
+  {id:192,name:"81-89-01",opta:"Akkon Wittmund 81/89-01",type:"SRTW",district:"Wittmund",status:"1",crew:"2",skills:"Schwerlast-Rettungswagen der Johanniter, ehrenamtlich besetzt (Patienten über 200 kg)",verified:"Nutzerangabe: Johanniter Wittmund 81/89-1 – ⚠️ genauer Standort unbekannt (Ortsmitte Wittmund)",address:"Wittmund (genauer Standort unbekannt)",lat:53.5767,lng:7.7795,special:true,volunteer:true},
   {id:1,name:"80-82-01",opta:"Rettung Wittmund 80/82-01",type:"NEF",district:"Wittmund",status:"1",crew:"2",skills:"Notarzt",verified:"BOS-Fahrzeuge",address:"Schloßstraße 11, 26409 Wittmund",lat:53.573624,lng:7.784572},
   {id:2,name:"80-83-01",opta:"Rettung Wittmund 80/83-01",type:"RTW",district:"Wittmund",status:"1",crew:"2",skills:"Notfallrettung",verified:"BOS-Fahrzeuge",address:"Schloßstraße 11, 26409 Wittmund",lat:53.573624,lng:7.784572},
   {id:9,name:"82-83-01",opta:"Rettung Wittmund 82/83-01",type:"RTW",district:"Wittmund",status:"1",crew:"2",skills:"Notfallrettung",verified:"BOS-Fahrzeuge",address:"Jeverstraße 28 A, 26327 Esens",lat:53.635804,lng:7.6171504},
@@ -936,7 +936,8 @@ if(!Array.isArray(db.units))db.units=[];
 if(!Array.isArray(db.callers))db.callers=[];
 if(!Array.isArray(db.pendingCallerRequests))db.pendingCallerRequests=[];
 // v5.37: NAW BWK Westerstede hat Kennung 81 – gespeicherten Eintrag umbenennen statt doppelt anlegen
-(db.neighborUnits||[]).forEach(u=>{if(u.opta==="SRTW Oldenburg"||u.opta==="SRTW Wittmund (ehrenamtlich)"){u.opta=u.opta.replace("SRTW ","SRTW 89 ");u.verified="⚠️ Nutzerangabe (Kennung 89) – Wachen-Nummer/Standort nicht belegt, bitte prüfen"}});
+// v5.42: SRTW sind Johanniter-Fahrzeuge – gespeicherte Einträge auf die neuen Daten bringen
+{const NEWS={"191":null,"192":null};(db.neighborUnits||[]).forEach(u=>{if(/^SRTW (89 )?(Oldenburg|Wittmund)/.test(u.opta||"")){const d=(DEFAULTS_FRI_WHV.neighborUnits||[]).find(x=>x.id===(/Oldenburg/.test(u.opta)?191:192));if(d){const st=u.status;Object.keys(u).forEach(k=>delete u[k]);Object.assign(u,{...d,status:st})}}})}
 (db.neighborUnits||[]).forEach(u=>{if(u.opta==="Baby-NAW Oldenburg „Felix“"||u.opta==="Baby-NAW 86 Oldenburg „Felix“"){u.opta="Florian Oldenburg 02/86-01";u.name="02-86-01";u.verified="Baby-NAW „Felix“ (Klinikum Oldenburg / NWZ); Funkrufname 2-86-1 laut Nutzerangabe"}});
 (db.neighborUnits||[]).forEach(u=>{if(u.opta==="NAW Bundeswehrkrankenhaus Westerstede"||u.opta==="NAW 81 Bundeswehrkrankenhaus Westerstede"){u.opta="Florian Ammerland 15/81-01";u.name="15-81-01";u.skills="NAW (Bund) am Bundeswehrkrankenhaus Westerstede, Notarzt an Bord";u.verified="Nutzerangabe: Florian Ammerland 15/81-1, Standort BWK Westerstede"}});
 // v5.33: MANV-AAO (ID 9) heißt jetzt „MANV 5“ – nur umbenennen, wenn der alte Standardname noch drinsteht
@@ -9676,7 +9677,7 @@ function simAaoCheck(c){
  a+=miss.length?` · ⚠️ fehlt: ${miss.join(", ")}`:" · ✅ alle Soll-Fahrzeuge alarmiert";
  if(more.length)a+=` · zusätzlich: ${more.join(", ")}`;
  if(s.d.phoneOnly)a+=" · ℹ️ Dieser Anruf wäre auch telefonisch zu erledigen gewesen (Beratung/Weiterleitung).";
- if(s.d.srtw)a+=` · ℹ️ Patient ca. ${s.d.weightKg} kg: zusätzlich SRTW über die Nachbar-Leitstelle anfragen (GOL: SRTW Oldenburg · KRLS Ostfriesland: SRTW Wittmund).`;
+ if(s.d.srtw)a+=` · ℹ️ Patient ca. ${s.d.weightKg} kg: zusätzlich SRTW über die Nachbar-Leitstelle anfragen (GOL: Akkon Oldenburg 50/89-01 · KRLS Ostfriesland: Akkon Wittmund 81/89-01, ehrenamtlich).`;
  if(s.d.inkubator)a+=" · ℹ️ Inkubatortransport: Baby-NAW „Felix“ (Florian Oldenburg 02/86-01) über die GOL anfragen.";
  c.history=c.history||[]; c.history.push({q:"🎓 Übungs-Check AAO",a});
  toast(miss.length?`AAO-Check: es fehlt ${miss.join(", ")}`:"AAO-Check: passt ✅");
