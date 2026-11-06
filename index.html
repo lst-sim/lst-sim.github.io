@@ -170,7 +170,7 @@ html[data-device="handy"] #floatDock{left:8px;right:8px;width:auto;top:auto;bott
 </head>
 <body>
 <div style="padding:6px 10px;font-size:11px;color:#94a3b8;font-weight:700;display:flex;flex-wrap:wrap;align-items:center;gap:10px;position:sticky;top:0;z-index:10;background:var(--bg)">
- <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v5.43</span>
+ <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v5.44</span>
  <span id="syncState"></span> <a id="deskTag" href="#" onclick="renameDesk();return false" title="Name dieses Platzes (für „offen an …“) – antippen zum Ändern" style="color:#64748b;font-weight:700;text-decoration:none"></a>
  <span id="simCtl" style="position:absolute;left:50%;transform:translateX(-50%);display:flex;gap:6px;align-items:center"></span>
  <a id="homeLink" href="#" onclick="render('leitstelle');return false" class="hidden" style="color:#64748b;text-decoration:underline;font-weight:600">🖥️ Leitstelle</a>
@@ -2475,6 +2475,8 @@ function nbSimTick(){
 }
 setInterval(()=>{try{nbSimTick()}catch(e){}},30000); setTimeout(()=>{try{for(let i=0;i<6;i++)nbSimTick()}catch(e){}},4000);
 // Anfrage an die Nachbar-Leitstelle (Telefon) – Antwort nach 20–60 s
+// v5.44: nur nach Rettungsmitteln fragen – die Nachbar-Leitstelle entscheidet, welches sie schickt
+function nbAskRtw(callId,kind,n,type){for(let i=0;i<Math.max(1,n||1);i++)nbOutRequest(callId,kind,{type:type||"RTW"})}
 function nbOutRequest(callId,kind,{unitId=null,type="RTW"}={}){
  const call=allOpenCalls().find(c=>String(c.id)===String(callId)); if(!call){toast("Einsatz nicht gefunden");return}
  const name=kind==="ostfriesland"?"KRLS Ostfriesland":"GOL";
@@ -2518,7 +2520,9 @@ function nbOutAnswer(callId,kind,unitId,type){
  toast(`📞 ${name}: ${txt}`); save();
  if(["leitstelle","nachbarLks","karte"].includes(currentPage)&&!uiLocked)render(currentPage);
 }
-function openNeighborUnitPickerForCall(kind,callId){
+// v5.44: kein Auswählen einzelner Nachbar-Fahrzeuge mehr – man fragt nur Art und Anzahl an
+function openNeighborUnitPickerForCall(kind,callId){return openExternalRequest(kind,callId)}
+function openNeighborUnitPickerForCall_old(kind,callId){
  const call=allOpenCalls().find(c=>String(c.id)===String(callId));
  if(!call){toast("Einsatz nicht gefunden");return}
  const districts=Object.entries(NEIGHBOR_LEITSTELLE).filter(([,k])=>k===kind).map(([d])=>d);
@@ -3065,19 +3069,30 @@ function nearestNeighborUnit(call,types=["RTW","NEF"]){
  });
  return best;
 }
+// v5.44: Braucht der Einsatz (laut Vorschlag/AAO oder Alarmierung) überhaupt einen RTW?
+function callNeedsRtw(call){
+ if(!call||call.kt||call.rZero)return false;
+ if((call.proposal||[]).some(u=>u&&u.type==="RTW"))return true;
+ return (call.alarmedUnits||[]).some(id=>{const u=db.units.find(x=>String(x.id)===String(id));return u&&u.type==="RTW"});
+}
+function callMissingRtw(call){
+ const miss=(call.proposal||[]).filter(u=>u&&u.type==="RTW"&&u.missing).length;
+ return Math.max(1,miss);
+}
 function needsNeighborHelp(call){
- // Nur mit bekanntem Einsatzort, nicht bei R0, und nur solange noch kein Nachbar-Fahrzeug
- // für diesen Einsatz alarmiert ist. Unabhängig davon, ob schon eigene Mittel alarmiert sind.
- if(call.neighborUnitId||call.rZero||call.kt)return false;
+ // Nur mit bekanntem Einsatzort, nicht bei R0, nur wenn ein RTW gebraucht wird, und nur solange
+ // noch kein Nachbar-Fahrzeug für diesen Einsatz alarmiert/angefragt ist.
+ if(call.neighborUnitId||call.rZero||call.kt||call.nbPending)return false;
+ if(!callNeedsRtw(call))return false;
  if(!callDestinationPoint(call))return false;
- const nb=nearestNeighborUnit(call); if(!nb)return false;
+ const nb=nearestNeighborUnit(call,["RTW"]); if(!nb)return false;
  const own=ownBestEta(call);
  return own==null||nb.eta<own;
 }
 function incidentCard(c,isSelected){
  const state=c.alarmTime?"Alarmiert":"Bearbeitung";
  const stateClass=c.alarmTime?"s3":"s2";
- const neighborSuggestion=needsNeighborHelp(c)?nearestNeighborUnit(c):null;
+ const neighborSuggestion=needsNeighborHelp(c)?nearestNeighborUnit(c,["RTW"]):null;
  const neighborUnit=c.neighborUnitId?db.units.find(u=>String(u.id)===String(c.neighborUnitId)):null;
  return `<div class="card call">
    <div class="row between">
@@ -3091,11 +3106,9 @@ function incidentCard(c,isSelected){
     <div><label>Betroffene</label><div class="big">${esc(c.count||"–")}</div></div>
    </div>
    <div class="suggest-compact"><b>🧠 Vorschlag / alarmierte Mittel</b><div>${c.suggestion||"Noch nicht genügend Angaben."}</div>${(c.stackedUnits||[]).length?`<div style="margin-top:4px;color:#0369a1;font-weight:700">🔁 Gestapelt: ${(c.stackedUnits||[]).map(id=>db.units.find(u=>String(u.id)===String(id))).filter(Boolean).map(u=>`${esc(u.opta||u.name)} (${esc(u.type)}, Status ${esc(String(u.status))})`).join(", ")}</div>`:""}</div>
-   ${neighborSuggestion?`<div style="margin-top:10px">
-     <button class="s0" style="width:100%;border:none;border-radius:9px;padding:12px;font-weight:800;cursor:pointer" onclick="openExternalRequest('${NEIGHBOR_LEITSTELLE[neighborSuggestion.district]}','${esc(String(c.id))}')">
-      🚨 ${ownBestEta(c)!=null?`${esc(neighborSuggestion.unit.type)} aus ${esc(neighborSuggestion.district)} wäre schneller da (~${neighborSuggestion.eta} min statt ~${ownBestEta(c)} min mit eigenem RTW/NEF)`:`Kein eigenes RTW/NEF frei – ${esc(neighborSuggestion.unit.type)} aus ${esc(neighborSuggestion.district)} in ~${neighborSuggestion.eta} min`} – bei ${NEIGHBOR_LEITSTELLE[neighborSuggestion.district]==="ostfriesland"?"LST Ostfriesland":"GOL"} anfragen
-     </button>
-    </div>`:neighborUnit?`<div class="suggest-compact" style="margin-top:10px;border-color:#86c98b"><b>🤝 Nachbar-Fahrzeug übernimmt</b><div>${esc(neighborUnit.opta)} (${esc(neighborUnit.homeDistrict)}) – ${esc(statusName(neighborUnit.status))}</div></div>`:""}
+   ${neighborSuggestion?(()=>{const k=NEIGHBOR_LEITSTELLE[neighborSuggestion.district], nm=k==="ostfriesland"?"KRLS Ostfriesland":"GOL", n=callMissingRtw(c), own=ownBestEta(c);
+     return `<div style="margin-top:10px"><div style="font-size:12px;color:#1e3a8a;margin-bottom:4px">${own!=null?`RTW aus LK ${esc(neighborSuggestion.district)} wäre schneller (~${neighborSuggestion.eta} min statt ~${own} min)`:`Kein eigener RTW frei – RTW aus LK ${esc(neighborSuggestion.district)} ~${neighborSuggestion.eta} min`}</div>
+     <button style="width:100%;border:none;border-radius:9px;padding:12px;font-weight:800;cursor:pointer;background:#1d4ed8;color:#fff" onclick="nbAskRtw('${esc(String(c.id))}','${k}',${n})">📞 ${nm} anfragen${n>1?` – ${n} RTW`:" – RTW"}</button>    </div>`})():neighborUnit?`<div class="suggest-compact" style="margin-top:10px;border-color:#86c98b"><b>🤝 Nachbar-Fahrzeug übernimmt</b><div>${esc(neighborUnit.opta)} (${esc(neighborUnit.homeDistrict)}) – ${esc(statusName(neighborUnit.status))}</div></div>`:""}
    ${renderVehicleFeedbackBadges(c)}
    ${renderExternalRequestBadges(c)}
    <div class="row" style="margin-top:10px">
@@ -3125,6 +3138,8 @@ function openExternalRequest(kind,presetCallId){
   <p class="muted">${kind==="polizei"?"Fiktive externe Schnittstelle – rein zu Übungszwecken.":"Übung: Die Nachbar-Leitstelle prüft ihre freien Fahrzeuge und sagt zu oder ab (Antwort nach ca. 20–60 s)."}</p>
   <label>Einsatz auswählen</label>
   <select id="extCallId">${calls.map(c=>`<option value="${esc(String(c.id))}" ${presetCallId&&String(presetCallId)===String(c.id)?"selected":""}>#${esc(c.id)} – ${esc(c.keyword||"Einsatz")} (${esc(c.location||"Ort unbekannt")})</option>`).join("")}</select>
+  ${kind==="gol"||kind==="ostfriesland"?`<label style="margin-top:10px">Was wird gebraucht?</label>
+  <select id="extType">${["RTW","NEF","KTW","RTH","SRTW","NAW","Baby-NAW"].filter(t=>t==="RTW"||t==="NEF"||(db.neighborUnits||[]).some(n=>n.type===t&&NEIGHBOR_LEITSTELLE[n.district]===kind)).map(t=>`<option>${t}</option>`).join("")}</select>`:""}
   <label style="margin-top:10px">Anzahl ${meta.unit}</label>
   <input id="extCount" type="number" min="1" value="1">
   <label style="margin-top:10px">Hinweis (optional)</label>
@@ -3154,7 +3169,9 @@ function sendExternalRequest(kind){
  save();
  toast("Anfrage übermittelt (Übung)");
  if(kind==="gol"||kind==="ostfriesland"){
-   openNeighborUnitPickerForCall(kind,callId);
+   const type=document.getElementById("extType")?.value||"RTW";
+   call.externalRequests[0].unit=type; call.history[call.history.length-1].a=`${count}x ${type}${note?` – ${note}`:""}`;
+   nbAskRtw(callId,kind,count,type); render("leitstelle");
  }else{
    render(currentPage==="nachbarLks"?"nachbarLks":"leitstelle");
  }

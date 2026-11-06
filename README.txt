@@ -1607,6 +1607,15 @@ Version 5.05:
   („a, b“ = a ODER b). Mit „🚑 NA-Indikation“ markierte Knöpfe ziehen weiterhin einen Notarzt.
 - Nur „Unauffällig“ (ohne weitere Befunde) zählt weiter als unauffälliges E (R0 möglich).
 
+Version 5.44:
+- Hinweis auf schnellere Nachbar-Fahrzeuge nur noch, wenn der Einsatz einen RTW braucht (laut Vorschlag/
+  AAO oder Alarmierung), und nur für RTW. Statt des blinkenden Banners ein blauer Knopf
+  „📞 GOL anfragen – RTW“ (bzw. KRLS Ostfriesland, mit Anzahl der fehlenden RTW). Während die Anfrage
+  läuft, verschwindet der Knopf.
+- Bei den Nachbar-Leitstellen fragt man nur noch Art und Anzahl an (RTW, NEF, KTW, SRTW, NAW,
+  Baby-NAW …) – welches Fahrzeug kommt, entscheidet die Nachbar-Leitstelle. Die Auswahlliste
+  einzelner Nachbar-Fahrzeuge entfällt.
+
 Version 5.43:
 - Notrufe an andere Plätze verlegen (bei Live-Sync mit mehreren Plätzen):
   • Klingelnder Anruf: „➡️ Platz“ im Anrufbanner – er klingelt dann am gewählten Platz.
