@@ -1607,6 +1607,9 @@ Version 5.05:
   („a, b“ = a ODER b). Mit „🚑 NA-Indikation“ markierte Knöpfe ziehen weiterhin einen Notarzt.
 - Nur „Unauffällig“ (ohne weitere Befunde) zählt weiter als unauffälliges E (R0 möglich).
 
+Version 5.60:
+- Fehler aus 5.59 behoben: Blaue Patienten (SK IV) wurden von RTW transportiert. Jetzt gibt es keinen Transport mehr. Ein RTW (oder ein NEF, wenn es nicht für Rot gebraucht wird) betreut den Patienten palliativ an der Einsatzstelle. Nach ca. 15–50 min verstirbt der Patient (Status „verstorben“, Meldung per SDS). Die Besatzung übernimmt danach den nächsten Patienten.
+
 Version 5.59:
 - IVENA: Jedes Krankenhaus hat 2 Schockräume. Sind beide mit S+-Patienten belegt (je ca. 60 min), meldet sich das Haus für S+ automatisch ab; Zuweisungen gehen dann ans nächste Haus. Anzeige in der IVENA-Matrix (belegt/gesamt) und in der Kurzübersicht.
 - MANV: RTW nehmen Patienten in der Reihenfolge rot → blau → gelb → grün (blau jetzt vor gelb).
