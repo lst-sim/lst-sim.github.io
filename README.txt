@@ -1607,6 +1607,16 @@ Version 5.05:
   („a, b“ = a ODER b). Mit „🚑 NA-Indikation“ markierte Knöpfe ziehen weiterhin einen Notarzt.
 - Nur „Unauffällig“ (ohne weitere Befunde) zählt weiter als unauffälliges E (R0 möglich).
 
+Version 5.52:
+- Fehler behoben (aus 5.48): Beim MANV meldeten sich NEF nach wenigen Minuten frei, obwohl rote und
+  blaue Patienten einen Notarzt brauchten. Jetzt:
+  • Während der Sichtung warten alle NEF an der Einsatzstelle.
+  • Danach übernimmt jedes NEF einen roten (SK I) oder blauen (SK IV) Patienten (SDS „Übernehme Patient …
+    notärztlich“) und begleitet ihn beim Transport.
+  • Frei wird ein NEF nur, wenn mehr NEF vor Ort/auf Anfahrt sind als rote und blaue Patienten ohne
+    Notarzt („genügend Notärzte vor Ort“).
+- Bei der ärztlichen Sichtung bleiben die Zuordnungen von RTW und NEF zu ihren Patienten erhalten.
+
 Version 5.51:
 - RTH (außer MANV) arbeitet wie ein NEF: begleitet den RTW bei kritischen Patienten, ist sonst nach
   6–12 min „frei Einsatzstelle“. Selbst transportiert er nur bei Reanimation oder wenn kein
