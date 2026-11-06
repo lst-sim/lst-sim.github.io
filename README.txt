@@ -1607,6 +1607,11 @@ Version 5.05:
   („a, b“ = a ODER b). Mit „🚑 NA-Indikation“ markierte Knöpfe ziehen weiterhin einen Notarzt.
 - Nur „Unauffällig“ (ohne weitere Befunde) zählt weiter als unauffälliges E (R0 möglich).
 
+Version 5.59:
+- IVENA: Jedes Krankenhaus hat 2 Schockräume. Sind beide mit S+-Patienten belegt (je ca. 60 min), meldet sich das Haus für S+ automatisch ab; Zuweisungen gehen dann ans nächste Haus. Anzeige in der IVENA-Matrix (belegt/gesamt) und in der Kurzübersicht.
+- MANV: RTW nehmen Patienten in der Reihenfolge rot → blau → gelb → grün (blau jetzt vor gelb).
+- MANV: NEF betreuen rot → blau → gelb → grün. Gelbe/grüne Patienten werden bis zum Transport versorgt; danach (oder wenn ein roter/blauer Patient frei wird) wechselt das NEF zum nächsten Patienten.
+
 Version 5.58:
 - MANV: RTH/ITH/KTH ohne freien SK-I-Patienten bleiben in Bereitschaft an der Einsatzstelle (SDS) und
   werden erst frei, wenn alle Patienten versorgt sind (alle haben ein Transportmittel). Wird ein

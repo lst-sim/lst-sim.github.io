@@ -170,7 +170,7 @@ html[data-device="handy"] #floatDock{left:8px;right:8px;width:auto;top:auto;bott
 </head>
 <body>
 <div style="padding:6px 10px;font-size:11px;color:#94a3b8;font-weight:700;display:flex;flex-wrap:wrap;align-items:center;gap:10px;position:sticky;top:0;z-index:10;background:var(--bg)">
- <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v5.58</span>
+ <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v5.59</span>
  <span id="syncState"></span> <a id="deskTag" href="#" onclick="renameDesk();return false" title="Name dieses Platzes (für „offen an …“) – antippen zum Ändern" style="color:#64748b;font-weight:700;text-decoration:none"></a>
  <span id="simCtl" style="position:absolute;left:50%;transform:translateX(-50%);display:flex;gap:6px;align-items:center"></span>
  <a id="homeLink" href="#" onclick="render('leitstelle');return false" class="hidden" style="color:#64748b;text-decoration:underline;font-weight:600">🖥️ Leitstelle</a>
@@ -5062,9 +5062,9 @@ function crewCaseInfo(call){
  return {sev,pats:Math.max(noPatient?0:1,pats),noPatient,age,gender,rmi,text,ev,trauma:/^2/.test(rmi),loc:call?.sim?.loc?.kind||(call?.locationIsWater?"water":"home")};
 }
 function crewDring(rmi,sev,sk){const want=sk?String(Math.min(3,sk)):sev==="rea"||sev==="critical"?"1":sev==="minor"?"3":"2";const al=(pzcFind(rmi)||{allowed:"123"}).allowed;if(al.includes(want))return want;return [...al].sort((p,q)=>Math.abs(+p-+want)-Math.abs(+q-+want))[0]}
-function crewPickHospital(u,call,fach,dring){
+function crewPickHospital(u,call,fach,dring,needS){
  const wantF=fach||"Innere Medizin";
- const hs=(db.ivena||[]).filter(h=>String(h.status||"").toLowerCase()!=="rot"&&(!h.hbo||wantF==="Druckkammer (HBO)"));
+ const hs=(db.ivena||[]).filter(h=>String(h.status||"").toLowerCase()!=="rot"&&(!h.hbo||wantF==="Druckkammer (HBO)")&&!(needS&&shockFull(h)));
  const has=h=>(h.fachrichtungen||[]).includes(wantF)||((wantF==="Schockraum"||wantF==="Intensivmedizin")&&(h.fachrichtungen||[]).includes("Intensivmedizin"));
  const already=h=>(db.ivenaAssignments||[]).filter(a=>!a.deleted&&a.callId===String(call?.id)&&String(a.hospitalId)===String(h.id)).length;
  const score=h=>{const m=ivenaEtaMin(u,h,call,dring);return (m==null?999:m)+(isManvCall(call)?already(h)*12:0)}; // MANV: auf mehrere Kliniken verteilen
@@ -5132,10 +5132,12 @@ function crewPlan(u,call){
  // v5.52 MANV: jedes NEF gehört zu einem roten (SK I) oder blauen (SK IV) Patienten – frei nur bei NEF-Überhang
  if(isNef&&(call.manvPatients||isManvCall(call))){
    if(!call.manvPatients){u.crew={callId:String(call.id),nef:true,manvWait:true};return} // Sichtung läuft noch
-   const P=call.manvPatients.find(x=>(x.sk===1||x.sk===4)&&!x.doc&&(!x.unit||["3","4"].includes(String((db.units.find(y=>String(y.id)===String(x.unit))||{}).status))));
+   // v5.59: Reihenfolge rot → blau → gelb → grün (gelb/grün nur, solange sie noch kein Transportmittel haben)
+   const okU=x=>!x.unit||["3","4"].includes(String((db.units.find(y=>String(y.id)===String(x.unit))||{}).status));
+   const P=[1,4,2,3].map(k=>call.manvPatients.find(x=>x.sk===k&&!x.doc&&(k===1||k===4?okU(x):!x.unit))).find(Boolean);
    if(!P){u.crew={callId:String(call.id),nef:true,manv:true,surplus:true,standby:true};return} // frei erst, wenn alle Patienten versorgt
    P.doc=u.id; u.crew={callId:String(call.id),nef:true,manv:true,docFor:P.n};
-   crewSds(u,call,`Übernehme Patient ${P.pid!=null?`(Anhängekarte ${P.pid}) `:""}SK ${P.sk===1?"I":"IV"} notärztlich.`);return;
+   crewSds(u,call,`Übernehme Patient ${P.pid!=null?`(Anhängekarte ${P.pid}) `:""}SK ${["","I","II","III","IV"][P.sk]}${P.sk===1||P.sk===4?" notärztlich":" – Versorgung bis zum Transport"}.`);return;
  }
  if(isNef){
    // RTW schon vor Ort und Patient kritisch → NEF begleitet; sonst nach Versorgung wieder frei
@@ -5149,7 +5151,7 @@ function crewPlan(u,call){
  if(call.manvPatients){
    // v5.49: Hubschrauber nur für wirklich dringende Patienten (SK I)
    const air=["RTH","ITH","KTH"].includes(u.type);
-   const P=call.manvPatients.find(x=>!x.unit&&(air?x.sk===1:x.sk<=4));
+   const P=air?call.manvPatients.find(x=>!x.unit&&x.sk===1):[1,4,2,3].map(k=>call.manvPatients.find(x=>!x.unit&&x.sk===k)).find(Boolean); // v5.59: blau vor gelb
    if(!P){
      // v5.58: Hubschrauber bleiben in Bereitschaft, bis alle Patienten versorgt sind
      if(air&&call.manvPatients.some(x=>!x.unit&&x.sk<=4)){u.crew={callId:String(call.id),mode:"standby",info};crewSds(u,call,"Kein SK-I-Patient frei – bleiben an der Einsatzstelle in Bereitschaft, bis alle Patienten versorgt sind.");return}
@@ -5183,7 +5185,8 @@ function crewPlan(u,call){
 function crewRegister(u,call){
  const C=u.crew, info=C.info, dring=crewDring(info.rmi,info.sev,info.sk), fach=C.forceFach||pzcFachrichtung(info.rmi);
  const fh=C.forceHosp!=null?(db.ivena||[]).find(x=>String(x.id)===String(C.forceHosp)):null;
- const pick=fh?{h:fh}:crewPickHospital(u,call,fach,dring); if(!pick){C.registered=true;return}
+ const needS=info.sev==="rea"||(info.sev==="critical"&&info.trauma)||info.sk===1;
+ const pick=fh?{h:fh}:crewPickHospital(u,call,fach,dring,needS); if(!pick){C.registered=true;return}
  const h=pick.h, drive=ivenaEtaMin(u,h,call,dring)||15, etaT=Math.max(C.departAt,Date.now())+drive*60000;
  const nef=C.nefId?db.units.find(x=>String(x.id)===String(C.nefId)):null;
  const air=["RTH","ITH"].includes(u.type);
@@ -5235,11 +5238,16 @@ function crewTick(){
      if(C.nef&&C.manvWait){if(call&&call.manvPatients){delete u.crew;changed=true}continue}
      // Bereitschaft beim MANV: neuer passender Patient frei → neu planen; sonst warten (Freigabe im Überhang-Check)
      if(C.mode==="standby"||(C.nef&&C.standby)){const P=call&&call.manvPatients||[];
-       const want=C.nef?P.some(x=>(x.sk===1||x.sk===4)&&!x.doc&&!x.unit):P.some(x=>!x.unit&&x.sk===1);
+       const want=C.nef?P.some(x=>!x.doc&&!x.unit&&x.sk<=4):P.some(x=>!x.unit&&x.sk===1);
        if(want){delete u.crew;changed=true}
        continue}
      if(C.nef&&C.manv&&C.docFor!=null&&!C.follow){
        const P=(call.manvPatients||[]).find(x=>x.n===C.docFor), rt=P&&P.unit?db.units.find(x=>String(x.id)===String(P.unit)):null;
+       if(P&&(P.sk===2||P.sk===3)){ // gelb/grün: Übergabe an das Transportmittel, dann nächster Patient
+         if(P.unit||(!P.doc||String(P.doc)!==String(u.id))){delete u.crew;changed=true}
+         else{const better=call.manvPatients.find(x=>(x.sk===1||x.sk===4)&&!x.doc&&!x.unit);if(better){delete P.doc;delete u.crew;changed=true}} // rot/blau frei → dorthin wechseln
+         continue;
+       }
        if(rt&&rt.crew&&rt.crew.mode==="transport"&&String(rt.status)==="4"&&!rt.crew.nefId){rt.crew.nefId=u.id;rt.crew.departAt=Math.max(rt.crew.departAt,now+rint(3,6)*60000);C.follow=rt.id;changed=true}
        continue; // bleibt beim Patienten
      }
@@ -7648,7 +7656,7 @@ function renderIvenaMini(hospitals){
    <tbody>${hospitals.map(h=>{
      const closures=ivenaActiveClosures(h);
      return `<tr><td>${esc(h.name)}</td><td><span class="status ${ivenaStatusClass(h.status)}">${esc((h.status||"").toUpperCase())}</span></td>
-      <td>${closures.length?closures.map(cl=>`🚫 ${esc(cl.fach)} bis ${new Date(cl.until).toLocaleTimeString("de-DE",{hour:"2-digit",minute:"2-digit"})}`).join("<br>"):`<span class="muted">keine</span>`}</td></tr>`;
+      <td>${closures.length||shockFull(h)?[...closures.map(cl=>`🚫 ${esc(cl.fach)} bis ${new Date(cl.until).toLocaleTimeString("de-DE",{hour:"2-digit",minute:"2-digit"})}`),...(shockFull(h)?[`🚫 Schockraum (S+) ${shockBusy(h).length}/${shockCap(h)} belegt – automatisch bis ca. ${new Date(shockFreeAt(h)).toLocaleTimeString("de-DE",{hour:"2-digit",minute:"2-digit"})}`]:[])].join("<br>"):`<span class="muted">keine</span>`}</td></tr>`;
    }).join("")}</tbody>
   </table></div>
  </div>`;
@@ -8818,6 +8826,14 @@ function ivenaSetAutoEta(prefix,u,h,call,dring){
  if(info)info.textContent=`Automatisch: ca. ${m} min Fahrzeit ${String(dring)==="1"?"mit Sonderrechten":"ohne Sonderrechte"} (${u?.opta||u?.name||"Fahrzeug"} → ${h?.name||"Klinik"}) – änderbar.`;
 }
 // ─── Zwangszuweisung: abgemeldete Klinik (für die Fachrichtung des PZC bzw. komplett „rot“) ───
+// v5.59: Schockräume – alle Kliniken im Norden haben 2. Ein S+-Patient belegt einen Schockraum von der
+// Anmeldung bis ca. 60 min nach Eintreffen. Sind beide belegt, meldet sich die Klinik für S+ selbst ab.
+const SHOCK_ROOM_MIN=60;
+function shockCap(h){return h&&h.hbo?0:Number(h&&h.shockRooms)||2}
+function shockBusy(h){const now=Date.now();return (db.ivenaAssignments||[]).filter(a=>!a.deleted&&a.schockraum&&String(a.hospitalId)===String(h.id)&&now<new Date(a.eta||a.createdAt).getTime()+SHOCK_ROOM_MIN*60000)}
+function shockFull(h){return !!h&&!h.hbo&&shockBusy(h).length>=shockCap(h)}
+function shockFreeAt(h){const t=shockBusy(h).map(a=>new Date(a.eta||a.createdAt).getTime()+SHOCK_ROOM_MIN*60000).sort((a,b)=>a-b);return t.length?t[0]:Date.now()}
+function shockClosedInfo(h){return shockFull(h)?`${h.name}: beide Schockräume belegt – für S+ automatisch abgemeldet bis ca. ${new Date(shockFreeAt(h)).toLocaleTimeString("de-DE",{hour:"2-digit",minute:"2-digit"})}`:null}
 function ivenaClosedInfo(h,fach){
  if(!h)return null;
  if(String(h.status||"").toLowerCase()==="rot")return `${h.name} ist komplett abgemeldet (rot)`;
@@ -8839,7 +8855,8 @@ function ivenaZwangUpdate(prefix,h,fach){
  return msg;
 }
 function ivenaZwangCheck(prefix,h,fach){
- const msg=ivenaClosedInfo(h,fach);
+ let sPlus=false;try{sPlus=!!ivenaFlagsRead(prefix).flags.s}catch(e){}
+ const msg=ivenaClosedInfo(h,fach)||(sPlus?shockClosedInfo(h):null);
  if(msg&&!document.getElementById(prefix+"Zwang")?.checked){ivenaZwangUpdate(prefix,h,fach);toast(`⛔ ${msg} – nur mit Haken „Zwangszuweisung“`);return false}
  return {zwang:!!msg};
 }
@@ -9229,6 +9246,9 @@ function ivenaMatrixHTML(rows){
      if(!offered.has(f))return `<td title="${esc(f)}: nicht vorhanden" style="background:#e5e7eb;border:1px solid #fff"></td>`;
      const cl=closures.find(c=>c.fach===f);
      const manual=db.ivenaMode!=="auto";
+     if(f==="Schockraum"&&!cl){const n=shockBusy(h).length,cap=shockCap(h);
+       if(n>=cap)return `<td title="Schockraum: ${n}/${cap} belegt – für S+ automatisch abgemeldet bis ca. ${new Date(shockFreeAt(h)).toLocaleTimeString("de-DE",{hour:"2-digit",minute:"2-digit"})}" style="background:#dc2626;color:#fff;text-align:center;font-size:9px;font-weight:800;border:1px solid #fff">${n}/${cap}</td>`;
+       if(n>0)return `<td title="Schockraum: ${n}/${cap} belegt" style="background:#f59e0b;color:#111;text-align:center;font-size:9px;font-weight:800;border:1px solid #fff">${n}/${cap}</td>`}
      const fq=esc(JSON.stringify(f));
      if(cl){const until=new Date(cl.until).toLocaleTimeString("de-DE",{hour:"2-digit",minute:"2-digit"});return `<td title="${esc(f)}: abgemeldet bis ${until}${manual?" – antippen zum Freigeben":""}" ${manual?`onclick="ivenaReopen('${h.id}','${cl.id}')"`:""} style="background:#dc2626;color:#fff;text-align:center;font-size:10px;font-weight:800;border:1px solid #fff;${manual?"cursor:pointer":""}">${until}</td>`;}
      return `<td title="${esc(f)}: frei${manual?" – antippen zum Abmelden":""}" ${manual?`onclick="openIvenaClosure('${h.id}',${fq})"`:""} style="background:#16a34a;border:1px solid #fff;${manual?"cursor:pointer":""}"></td>`;
