@@ -1607,6 +1607,16 @@ Version 5.05:
   („a, b“ = a ODER b). Mit „🚑 NA-Indikation“ markierte Knöpfe ziehen weiterhin einen Notarzt.
 - Nur „Unauffällig“ (ohne weitere Befunde) zählt weiter als unauffälliges E (R0 möglich).
 
+Version 5.57:
+- MANV: DRK-Einheiten bauen nach dem Eintreffen (Status 4) Stellen auf – Aufbau ca. 5 min, mit SDS:
+  • GW-San → Sanitätsstelle für rote, gelbe und blaue Patienten (10 Plätze je Fahrzeug),
+  • GW-Betreuung → Betreuungsstelle für grüne Patienten (25 Plätze),
+  • GW-SEG → was noch fehlt (sonst zusätzliche Sanitätsstelle).
+  Patienten ohne Transportmittel kommen dorthin, bis die Plätze voll sind; mit dem Transport verlassen
+  sie die Stelle. Sind alle abtransportiert, wird abgebaut (10–15 min), danach Status 1.
+- Anzeige im MANV-Kasten („⛑️ Sanitätsstelle 6/20 · 🫂 Betreuungsstelle 7/25“) und auf der MANV-Seite
+  in der Spalte „Ort / Transport“ (Schadenstelle, Sanitätsstelle, Betreuungsstelle, Transport).
+
 Version 5.56:
 - Kurzlage aus dem Fahrzeug nur noch beim MANV („MANV bestätigt, geschätzt … Betroffene – Vorsichtung
   nach mSTaRT beginnt“, danach wie bisher die Vorsichtung) und bei Verkehrsunfällen (Zahl der PKW,

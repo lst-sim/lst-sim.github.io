@@ -170,7 +170,7 @@ html[data-device="handy"] #floatDock{left:8px;right:8px;width:auto;top:auto;bott
 </head>
 <body>
 <div style="padding:6px 10px;font-size:11px;color:#94a3b8;font-weight:700;display:flex;flex-wrap:wrap;align-items:center;gap:10px;position:sticky;top:0;z-index:10;background:var(--bg)">
- <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v5.56</span>
+ <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v5.57</span>
  <span id="syncState"></span> <a id="deskTag" href="#" onclick="renameDesk();return false" title="Name dieses Platzes (für „offen an …“) – antippen zum Ändern" style="color:#64748b;font-weight:700;text-decoration:none"></a>
  <span id="simCtl" style="position:absolute;left:50%;transform:translateX(-50%);display:flex;gap:6px;align-items:center"></span>
  <a id="homeLink" href="#" onclick="render('leitstelle');return false" class="hidden" style="color:#64748b;text-decoration:underline;font-weight:600">🖥️ Leitstelle</a>
@@ -5321,6 +5321,42 @@ function firstLageText(call,u){
  const where=place?place.replace(/^im /,"am "):pick(["Einfamilienhaus","Mehrfamilienhaus","Reihenhaus"]);
  return `Kurzlage: Eingetroffen, ${where} – keine Gefahren erkennbar${info.pats>1?`, ${info.pats} Betroffene`:""}, gehen zum Patienten.`;
 }
+// v5.57 MANV: DRK GW-San (und GW-SEG) baut eine Sanitätsstelle auf (rote, gelbe, blaue Patienten),
+// GW-Betreuung (bzw. GW-SEG, wenn keine Betreuung da ist) eine Betreuungsstelle (grüne Patienten).
+const MANV_ST={san:{name:"Sanitätsstelle",icon:"⛑️",cap:10,sk:[1,2,4]},bet:{name:"Betreuungsstelle",icon:"🫂",cap:25,sk:[3]}};
+function manvStationTick(call,now){
+ let ch=false; const us=callUnits(call); call.manvStations=call.manvStations||{};
+ const ST=call.manvStations;
+ for(const u of us){
+   if(String(u.status)!=="4"||unitPhoneLive(u)||ST[u.id])continue;
+   let kind=/^GW-San/i.test(u.type)?"san":/^GW-Betreuung/i.test(u.type)?"bet":/^GW-SEG/i.test(u.type)?null:null;
+   if(/^GW-SEG/i.test(u.type)){const has=k=>Object.values(ST).some(x=>x.kind===k)||us.some(x=>x!==u&&(k==="san"?/^GW-San/i:/^GW-Betreuung/i).test(x.type));kind=!has("san")?"san":!has("bet")?"bet":"san"}
+   if(!kind)continue;
+   const t=rint(4,6); ST[u.id]={kind,unitId:u.id,label:u.opta||u.name,startAt:now,readyAt:now+t*60000,cap:MANV_ST[kind].cap,ready:false};
+   crewSds(u,call,`MANV: Beginne Aufbau ${MANV_ST[kind].name} (${kind==="san"?"rote/gelbe/blaue":"grüne"} Patienten) – betriebsbereit in ca. ${t} min.`);
+   (call.history=call.history||[]).push({q:`${MANV_ST[kind].icon} ${u.opta||u.name}`,a:`Aufbau ${MANV_ST[kind].name}`}); ch=true;
+ }
+ for(const st of Object.values(ST)){
+   const u=db.units.find(x=>String(x.id)===String(st.unitId));
+   if(!st.ready&&now>=st.readyAt){st.ready=true;st.readyAtIso=new Date(now).toISOString();if(u)crewSds(u,call,`MANV: ${MANV_ST[st.kind].name} betriebsbereit – Platz für ${st.cap} Patienten.`);(call.history=call.history||[]).push({q:`${MANV_ST[st.kind].icon} ${st.label}`,a:`${MANV_ST[st.kind].name} betriebsbereit (${st.cap} Plätze)`});ch=true}
+ }
+ // Patienten, die noch kein Transportmittel haben, kommen in die passende Stelle (bis sie voll ist)
+ const P=call.manvPatients||[];
+ for(const kind of ["san","bet"]){
+   const cap=Object.values(ST).filter(x=>x.kind===kind&&x.ready&&!x.closed).reduce((a,x)=>a+x.cap,0);
+   let used=P.filter(x=>x.place===kind&&!x.unit).length;
+   for(const x of P){ if(x.unit){if(x.place&&x.place!=="transport"){x.place="transport";ch=true}continue}
+     if(!x.place&&MANV_ST[kind].sk.includes(x.sk)&&used<cap){x.place=kind;used++;ch=true} }
+ }
+ // alle Patienten abtransportiert → Stelle abbauen, Fahrzeug nach 15–25 min frei
+ if(P.length&&P.every(x=>x.unit||x.sk>4))for(const st of Object.values(ST)){
+   const u=db.units.find(x=>String(x.id)===String(st.unitId)); if(!u||st.closed)continue;
+   if(!st.closeAt){st.closeAt=now+rint(10,15)*60000;crewSds(u,call,`MANV: alle Patienten abtransportiert – ${MANV_ST[st.kind].name} wird abgebaut.`);ch=true}
+   else if(now>=st.closeAt&&String(u.status)==="4"){st.closed=true;crewSds(u,call,"Abbau beendet – einsatzbereit, rücken ein.");setUnitStatus(u,"1");ch=true}
+ }
+ return ch;
+}
+function manvPlaceLabel(call,pid){const P=(call.manvPatients||[]).find(x=>x.pid===pid);if(!P)return "";if(P.unit)return "🚑 Transport";if(P.place==="san")return "⛑️ Sanitätsstelle";if(P.place==="bet")return "🫂 Betreuungsstelle";return "Schadenstelle"}
 function crewSurplusTick(){
  const now=Date.now(); let ch=false;
  for(const call of allOpenCalls()){
@@ -5329,6 +5365,7 @@ function crewSurplusTick(){
    const us=callUnits(call); if(!us.length)continue;
    const free=(u,txt)=>{if(unitPhoneLive(u)){if(!u._relSds){u._relSds=1;crewSds(u,call,txt+" (Bitte Status 1 melden.)")}return}crewSds(u,call,txt);setUnitStatus(u,"1");delete u.crew;(call.history=call.history||[]).push({q:`↩️ ${u.opta||u.name}`,a:txt});ch=true};
    const rd=u=>CREW_TRANSPORT.has(u.type)||u.type==="NEF";
+   if(isManvCall(call)&&manvStationTick(call,now))ch=true;
    if(call.manvPatients&&(call.manvReports||[]).length){
      const open=call.manvPatients.filter(P=>!P.unit&&P.sk<=4).length;
      const openSk1=call.manvPatients.filter(P=>!P.unit&&P.sk===1).length;
@@ -5554,10 +5591,10 @@ function manvPage(){
    const all=manvAllPatients(c), cnt=k=>all.filter(x=>x.sk===k).length;
    const rows=P.map(x=>`<tr style="border-bottom:1px solid var(--line)"><td style="padding:5px 4px;font-weight:800;white-space:nowrap">${esc(String(x.card))}</td><td>${mstartDot(x.sk,15)} <small>${MSTART_COL[x.sk]?MSTART_COL[x.sk][2]:"?"}</small>${x.src==="sim"&&x.vs!==x.sk?` <small class="muted">(Vorsichtung ${MSTART_COL[x.vs][1]})</small>`:""}${(x.hist||[]).length>1?` <small class="muted">(vorher ${x.hist.slice(0,-1).map(h=>MSTART_COL[h]?MSTART_COL[h][1]:h).join(", ")})</small>`:""}</td>
      <td style="font-size:12px">${x.src==="phone"?`📱 ${esc(x.by)}`:`<span title="Simulierte Lage">🤖 ${esc(x.by||"")}</span>`}${x.at?` <span class="muted">${hhmm(x.at)}</span>`:""}</td>
-     <td style="font-size:12px">${x.p?`${x.p.gender==="W"?"♀":"♂"} ${x.p.age} J. – ${esc(x.p.inj)}`:"<span class='muted'>—</span>"}</td><td style="font-size:12px">${x.unit?esc(x.unit):x.sk===5?"—":"<span class='muted'>offen</span>"}</td></tr>`).join("");
+     <td style="font-size:12px">${x.p?`${x.p.gender==="W"?"♀":"♂"} ${x.p.age} J. – ${esc(x.p.inj)}`:"<span class='muted'>—</span>"}</td><td style="font-size:12px">${x.unit?esc(x.unit):x.sk===5?"—":x.src==="sim"?esc(manvPlaceLabel(c,x.p.n)||"Schadenstelle"):"<span class='muted'>offen</span>"}</td></tr>`).join("");
    return `<div class="card"><div class="row between"><h3 style="margin:0">#${esc(String(c.id))} ${esc(c.keyword||"MANV")}</h3><small class="muted">${esc(c.location||"")}</small></div>
     <div style="margin:6px 0;font-weight:800">${[1,2,3,4,5].map(k=>`<span style="margin-right:12px">${mstartDot(k,13)} ${cnt(k)}</span>`).join("")}<small class="muted">${all.length} Patienten gesamt</small></div>
-    ${P.length?`<div style="overflow:auto"><table style="width:100%;border-collapse:collapse"><tr style="text-align:left;font-size:12px"><th>Karte</th><th>SK</th><th>Gesichtet von</th><th>Patient</th><th>Transport</th></tr>${rows}</table></div>`:`<p class="muted">Noch keine Patienten gesichtet${f?" in dieser Kategorie":""}.</p>`}</div>`};
+    ${P.length?`<div style="overflow:auto"><table style="width:100%;border-collapse:collapse"><tr style="text-align:left;font-size:12px"><th>Karte</th><th>SK</th><th>Gesichtet von</th><th>Patient</th><th>Ort / Transport</th></tr>${rows}</table></div>`:`<p class="muted">Noch keine Patienten gesichtet${f?" in dieser Kategorie":""}.</p>`}</div>`};
  document.getElementById("app").innerHTML=`<div class="card"><h2 style="margin:0">🚨 MANV – alle Patienten</h2>
   <p class="muted" style="margin:4px 0 8px">📱 = vom Fahrzeug-Handy gesichtet · 🤖 = simulierte Sichtung. Aktualisiert sich von selbst.</p>
   <div class="row" style="gap:6px;flex-wrap:wrap">${chip(0,"Alle")}${[1,2,3,4,5].map(k=>chip(k,`${mstartDot(k)} ${MSTART_COL[k][1]}`)).join("")}</div></div>
@@ -5630,6 +5667,9 @@ function manvStripHTML(c){
   <div style="margin-top:3px">${dot("#d71920",R.rot,"rot – SK I")}${dot("#f2c200",R.gelb,"gelb – SK II")}${dot("#22c55e",R.gruen,"grün – SK III")}${dot("#2563eb",R.blau,"blau – SK IV")}${dot("#111827",R.schwarz,"verstorben")}${tr.length?`<small class="muted">· ${done}/${tr.length} Pat. von Rettungsmitteln übernommen</small>`:""}</div>
   ${(()=>{const open=tr.filter(p=>!p.unit),free=callUnits(c).filter(u=>CREW_TRANSPORT.has(u.type)&&["3","4"].includes(String(u.status))&&!(u.crew&&u.crew.mode==="transport")).length,miss=open.length-free;return miss>0?`<div style="margin-top:3px;color:#b91c1c;font-weight:800">⚠️ ${miss} Pat. noch ohne Transportmittel (${["SK1","SK2","SK3","SK4"].map((k,i)=>{const n=open.filter(p=>p.sk===i+1).length;return n?`${n}× ${k}`:""}).filter(Boolean).join(", ")}) – nachalarmieren!</div>`:""})()}`:`<div>🚨 MANV – Rückmeldung von der Einsatzstelle steht noch aus</div>`}
   ${R?`<div style="margin-top:4px"><button onclick="event.stopPropagation();render('manv')" style="font-size:11px;padding:2px 8px">🚨 Alle Patienten</button> <button onclick="event.stopPropagation();manvListDialog('${esc(String(c.id))}')" style="font-size:11px;padding:2px 8px">📋 Sichtung (mSTaRT)</button> <button onclick="event.stopPropagation();mstartTrain=null;manvTrainDialog('${esc(String(c.id))}',true)" style="font-size:11px;padding:2px 8px">🎓 Selbst sichten</button></div>`:""}
+  ${(()=>{const ST=Object.values(c.manvStations||{});if(!ST.length)return "";const P=c.manvPatients||[];
+    return `<div style="margin-top:3px">${["san","bet"].filter(k=>ST.some(x=>x.kind===k)).map(k=>{const xs=ST.filter(x=>x.kind===k),rd=xs.filter(x=>x.ready&&!x.closed),cap=rd.reduce((a,x)=>a+x.cap,0),n=P.filter(p=>p.place===k&&!p.unit).length;
+      return `<span style="margin-right:10px;font-weight:800">${MANV_ST[k].icon} ${MANV_ST[k].name}: ${rd.length?`${n}/${cap}`:xs.some(x=>x.closed)?"abgebaut":"im Aufbau"}</span>`}).join("")}</div>`})()}
   ${pcHTML}
   ${br?`<div style="margin-top:4px">${br}</div>`:""}</div>`;
 }
