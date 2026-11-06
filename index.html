@@ -170,7 +170,7 @@ html[data-device="handy"] #floatDock{left:8px;right:8px;width:auto;top:auto;bott
 </head>
 <body>
 <div style="padding:6px 10px;font-size:11px;color:#94a3b8;font-weight:700;display:flex;flex-wrap:wrap;align-items:center;gap:10px;position:sticky;top:0;z-index:10;background:var(--bg)">
- <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v5.50</span>
+ <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v5.51</span>
  <span id="syncState"></span> <a id="deskTag" href="#" onclick="renameDesk();return false" title="Name dieses Platzes (für „offen an …“) – antippen zum Ändern" style="color:#64748b;font-weight:700;text-decoration:none"></a>
  <span id="simCtl" style="position:absolute;left:50%;transform:translateX(-50%);display:flex;gap:6px;align-items:center"></span>
  <a id="homeLink" href="#" onclick="render('leitstelle');return false" class="hidden" style="color:#64748b;text-decoration:underline;font-weight:600">🖥️ Leitstelle</a>
@@ -1234,6 +1234,12 @@ function karte(){
   setTimeout(initMap,0);
 }
 
+// v5.51: Kartenausschnitt merken – beim Neuzeichnen (alle paar Sekunden) springt die Karte nicht mehr
+// zurück. Nur bei einem anderen Einsatz bzw. neuem Einsatzort wird neu ausgerichtet.
+const MAP_VIEW={};
+function mapViewKey(c){return `${c&&c.id||"-"}|${c&&c.lat||""}|${c&&c.lng||""}`}
+function mapKeepView(m,name,c){try{m.on("moveend zoomend",()=>{try{const ce=m.getCenter();MAP_VIEW[name]={c:[ce.lat,ce.lng],z:m.getZoom(),key:mapViewKey(c)}}catch(e){}})}catch(e){}}
+function mapStartView(name,c,def,z){const v=MAP_VIEW[name];return v&&v.key===mapViewKey(c)?[v.c,v.z]:[def,z]}
 function initMap(){
   if(typeof L==="undefined"){
     document.getElementById("map").innerHTML='<div style="padding:20px">Kartenbibliothek konnte nicht geladen werden. Internetverbindung prüfen.</div>';
@@ -1241,7 +1247,7 @@ function initMap(){
   }
   const c=db.currentCall;
   const SCC=(SCENARIOS[currentScenarioId]&&SCENARIOS[currentScenarioId].center)||[53.3965,8.1364]; const lat=Number(c?.lat)||SCC[0], lng=Number(c?.lng)||SCC[1]; // Standard: Varel bzw. Mittelpunkt des eigenen Szenarios
-  leafletMap=L.map("map").setView([lat,lng], c?.lat?16:11);
+  {const [vc,vz]=mapStartView("map",c,[lat,lng],c?.lat?16:11); leafletMap=L.map("map").setView(vc,vz); mapKeepView(leafletMap,"map",c)}
   L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{
     maxZoom:19,
     attribution:'&copy; OpenStreetMap-Mitwirkende'
@@ -4189,7 +4195,7 @@ function initNotrufMap(){
  if(typeof L==="undefined"){el.innerHTML='<div style="padding:16px">Kartenbibliothek konnte nicht geladen werden. Internetverbindung prüfen.</div>';return}
  const c=db.currentCall;
  const SCC=(SCENARIOS[currentScenarioId]&&SCENARIOS[currentScenarioId].center)||[53.3965,8.1364]; const lat=Number(c?.lat)||SCC[0], lng=Number(c?.lng)||SCC[1]; // Standard: Varel bzw. Mittelpunkt des eigenen Szenarios
- notrufLeafletMap=L.map("notrufMap").setView([lat,lng], c?.lat?16:11);
+ {const [vc,vz]=mapStartView("notrufMap",c,[lat,lng],c?.lat?16:11); notrufLeafletMap=L.map("notrufMap").setView(vc,vz); mapKeepView(notrufLeafletMap,"notrufMap",c)}
  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{
    maxZoom:19,
    attribution:'&copy; OpenStreetMap-Mitwirkende'
@@ -4985,6 +4991,7 @@ function alarmProposal(){
 // Gilt für alle Einsätze – auch für Übungsnotrufe (dort zählt der wahre Zustand des Patienten).
 const CREW_TRANSPORT=new Set(["RTW","NKTW","KTW","RTH","ITH","KTH","SRTW","Baby-NAW","NAW","ITW"]);
 const CREW_RMI=[
+ [/co-melder|kohlenmonoxid|co-vergiftung|co-hb/,"370"],
  [/reanim|herzstillstand|keine normale atmung.*bewusstlos/,"132"],
  [/brust|herzinfarkt|druck auf der brust|engegefühl|ausstrahl/,"331"],
  [/schlaganfall|lähmung|sprachstörung|mundwinkel|halbseit|verwaschen/,"421"],
@@ -5073,7 +5080,29 @@ function crewPlan(u,call){
      u.crew={...C,hbo:null,registered:false,asgId:null,registerAt:now+rint(4,8)*60000,departAt:now+rint(12,18)*60000,forceHosp:(()=>{const k=(db.ivena||[]).find(h=>h.hbo&&/Kronshagen/.test(h.name)&&String(h.status).toLowerCase()!=="rot")||(db.ivena||[]).find(h=>h.hbo&&String(h.status).toLowerCase()!=="rot");return k?k.id:null})(),forceFach:"Druckkammer (HBO)",info:{...C.info}};
      rt.crew={callId:C.callId,mode:"none",doneAt:now+rint(3,6)*60000,info:C.info,owner:C.owner};
      crewSds(rt,call,`Patient an ${u.opta||u.name} übergeben (Druckkammer) – wir werden gleich frei.`);
+     // v5.51: KTH hat keinen eigenen Arzt → Notarzt des NEF fliegt mit, NEF wartet im NWK (Status 6)
+     if(u.type==="KTH"){
+       const nef=callUnits(call).find(x=>x.type==="NEF"&&String(x.status)==="4"&&!unitPhoneLive(x));
+       if(nef){u.crew.docFrom=nef.id;
+         const nwk=(db.ivena||[]).find(h=>/Sanderbusch/.test(h.name)), pt=nwk?hospitalPoint(nwk):null;
+         setUnitStatus(nef,"6"); nef.crew={callId:String(call.id),mode:"waitDoc",kth:u.id,owner:DEVICE_ID}; if(pt){nef.lat=pt[0];nef.lng=pt[1]}
+         crewSds(nef,call,`Notarzt fliegt mit ${u.opta||u.name} zur Druckkammer – NEF fährt ins NWK Sanderbusch und wartet dort (Status 6).`);
+         (call.history=call.history||[]).push({q:`👨‍⚕️ ${nef.opta||nef.name}`,a:`Notarzt begleitet ${u.opta||u.name} – NEF wartet im NWK (Status 6)`});
+       }else crewSds(u,call,"Kein NEF vor Ort – Flug ohne Notarzt (nur RettSan/NotSan an Bord).");
+     }
      (call.history=call.history||[]).push({q:`🚁 ${u.opta||u.name}`,a:"übernimmt den Patienten zur Druckkammer (HBO)"});return}
+ }
+ // v5.51 RTH (außer MANV): begleitet wie ein NEF; transportiert selbst nur im schlimmsten Fall
+ // (Reanimation) oder wenn kein anderes Transportmittel im Einsatz ist
+ if(u.type==="RTH"&&!call.manvPatients&&!isManvCall(call)){
+   const others=callUnits(call).filter(x=>x!==u&&["RTW","NKTW","SRTW","NAW","ITW"].includes(x.type)&&["3","4","7","8"].includes(String(x.status)));
+   if(info.sev!=="rea"&&others.length){
+     const rt=callUnits(call).find(x=>x&&x.crew&&x.crew.mode==="transport"&&String(x.status)==="4"&&!x.crew.nefId);
+     const crit=info.sev==="critical";
+     if(rt&&crit){rt.crew.nefId=u.id;rt.crew.departAt=Math.max(rt.crew.departAt,now+rint(10,15)*60000);if(rt.crew.registerAt<now)rt.crew.registerAt=now;u.crew={callId:String(call.id),nef:true,follow:rt.id};return}
+     u.crew={callId:String(call.id),nef:true,needed:crit,releaseAt:now+(crit?rint(35,45):rint(6,12))*60000};return;
+   }
+   if(others.length===0)crewSds(u,call,"Kein bodengebundenes Rettungsmittel vor Ort – wir transportieren selbst.");
  }
  if(u.type==="Baby-NAW"){
    u.crew={callId:String(call.id),mode:"transport",patient:0,departAt:now+rint(35,50)*60000,registerAt:now+rint(20,30)*60000,forceHosp:3,forceFach:"Pädiatrie",info:{...info,sev:"urgent",age:0}};
@@ -5151,6 +5180,13 @@ function crewTick(){
    if(u.crew&&u.crew.owner&&u.crew.owner!==DEVICE_ID)continue;
    const st=String(u.status), isT=CREW_TRANSPORT.has(u.type), isNef=u.type==="NEF";
    if(!isT&&!isNef){if(u.crew&&!["4","7","8"].includes(st)){delete u.crew;changed=true}continue}
+   if(st==="6"&&u.crew&&u.crew.mode==="waitDoc")continue; // NEF wartet im NWK auf seinen Notarzt
+   if(st==="6"&&u.crew&&u.crew.mode==="docReturn"){
+     if(now>=u.crew.dueAt){const n=db.units.find(x=>String(x.id)===String(u.crew.nefId)), cl=allOpenCalls().find(c=>String(c.id)===String(u.crew.callId))||{id:u.crew.callId};
+       if(n&&String(n.status)==="6"){crewSds(n,cl,"Notarzt ist zurück – NEF wieder einsatzbereit.");setUnitStatus(n,"1");delete n.crew}
+       crewSds(u,cl,"Notarzt im NWK Sanderbusch abgesetzt – Rückflug zum Standort, wieder einsatzbereit.");setUnitStatus(u,"1");delete u.crew;changed=true}
+     continue;
+   }
    if(!["4","7","8"].includes(st)){if(u.crew){delete u.crew;changed=true}continue}
    const call=findUnitCall(u);
    if(st==="4"){
@@ -5169,7 +5205,7 @@ function crewTick(){
          // kritischer Patient: sobald ein RTW vor Ort den Transport plant, begleitet das NEF
          const rt=C.needed?callUnits(call).find(x=>x&&x.crew&&x.crew.mode==="transport"&&String(x.status)==="4"&&!x.crew.nefId):null;
          if(rt){rt.crew.nefId=u.id;rt.crew.departAt=Math.max(rt.crew.departAt,now+rint(8,12)*60000);C.follow=rt.id;changed=true}
-         else if(C.releaseAt&&now>=C.releaseAt){crewSds(u,call,C.needed?"Notarzt nicht mehr erforderlich – NEF frei Einsatzstelle, wieder einsatzbereit.":"Kein Notarzt erforderlich – NEF frei Einsatzstelle, wieder einsatzbereit.");setUnitStatus(u,"1");delete u.crew;changed=true}
+         else if(C.releaseAt&&now>=C.releaseAt){{const nm=u.type==="NEF"?"NEF":u.type;crewSds(u,call,C.needed?`Notarzt nicht mehr erforderlich – ${nm} frei Einsatzstelle, wieder einsatzbereit.`:`Kein Notarzt erforderlich – ${nm} frei Einsatzstelle, wieder einsatzbereit.`)}setUnitStatus(u,"1");delete u.crew;changed=true}
        }
        continue;
      }
@@ -5177,7 +5213,7 @@ function crewTick(){
      if(C.mode==="home"&&now>=C.doneAt){crewSds(u,call,`Pat. vor Ort versorgt, kein Transport notwendig (ambulant/Hausarzt). Einsatzende ${hhmm(now)} – wieder einsatzbereit.`);(call.history=call.history||[]).push({q:`🏠 ${u.opta||u.name}`,a:"Pat. vor Ort versorgt, kein Transport"});setUnitStatus(u,"1");delete u.crew;changed=true;continue}
      if(C.mode==="transport"&&C.hbo&&!C.hbo.done){
        if(!C.hbo.asked&&now>=C.hbo.askAt){C.hbo.asked=true;C.hbo.askedAt=now;
-         crewSds(u,call,"Schwere CO-Vergiftung (CO-Hb deutlich erhöht, Bewusstseinsstörung) – Indikation Druckkammer. Bitte Druckkammer anfragen und KTH (Northern 06) für den Transport alarmieren.");
+         crewSds(u,call,"Schwere CO-Vergiftung (CO-Hb deutlich erhöht, Bewusstseinsstörung) – Indikation Druckkammer. Bitte Druckkammer anfragen und RTH für den Transport alarmieren – alternativ KTH Northern 06, dann fliegt unser Notarzt mit.");
          (call.history=call.history||[]).push({q:`📟 Nachforderung (${u.opta||u.name})`,a:"KTH für Transport zur Druckkammer (schwere CO-Vergiftung)"});
          (call.nafo=call.nafo||[]).push({reason:"KTH zur Druckkammer – schwere CO-Vergiftung",at:new Date().toISOString()});changed=true}
        else if(C.hbo.asked&&now-C.hbo.askedAt>45*60000){C.hbo.done=true;C.registerAt=now;C.departAt=now+rint(8,12)*60000;crewSds(u,call,"Kein Hubschrauber gekommen – wir fahren in die nächste Klinik, 100 % Sauerstoff läuft.");changed=true}
@@ -5211,7 +5247,14 @@ function crewTick(){
      const C=u.crew; if(!C)continue;
      if(!C.handoverAt){C.handoverAt=now+rint(10,20)*60000;changed=true;continue}
      if(now>=C.handoverAt){
-       if(!C.nef){const asg=(db.ivenaAssignments||[]).find(a=>String(a.id)===String(C.asgId));crewSds(u,call||{id:C.callId},`Pat. ${asg?`im ${asg.hospitalName} `:""}übergeben – wieder einsatzbereit.`)}
+       if(C.docFrom){ // KTH mit NEF-Notarzt: Rückflug ins NWK in Status 6
+        const asg=(db.ivenaAssignments||[]).find(a=>String(a.id)===String(C.asgId)), h=asg&&(db.ivena||[]).find(x=>String(x.id)===String(asg.hospitalId)), hp=h?hospitalPoint(h):null;
+        const nwk=(db.ivena||[]).find(x=>/Sanderbusch/.test(x.name)), np=nwk?hospitalPoint(nwk):null;
+        const km=hp&&np?haversine(hp[0],hp[1],np[0],np[1]):150, fly=Math.round(5+km/200*60);
+        crewSds(u,call||{id:C.callId},`Pat. ${asg?`in der ${asg.hospitalName} `:""}übergeben – Rückflug mit Notarzt ins NWK Sanderbusch (Status 6), ca. ${fly} min.`);
+        setUnitStatus(u,"6"); u.crew={callId:C.callId,mode:"docReturn",nefId:C.docFrom,dueAt:now+fly*60000,owner:DEVICE_ID}; changed=true; continue;
+      }
+      if(!C.nef){const asg=(db.ivenaAssignments||[]).find(a=>String(a.id)===String(C.asgId));crewSds(u,call||{id:C.callId},`Pat. ${asg?`im ${asg.hospitalName} `:""}übergeben – wieder einsatzbereit.`)}
        setUnitStatus(u,"1"); delete u.crew; changed=true;
      }
    }
@@ -9473,7 +9516,7 @@ const SIM_CASES=[
  {id:"co_schwer",w:0.5,num:"112",loc:"home",mk:()=>{const p=simPerson(),src=pick(["die Gastherme im Bad","der Holzkohlegrill, den sie zum Heizen reingestellt haben","der Kaminofen"]);return {rel:pick(["mein Mann","meine Frau","mein Sohn"]),caller:simPerson(),patient:p,age:rint(25,70),co:"schwer",panic:true,
    open:["Hallo! Mein Mann ist ganz komisch, und unser CO-Melder piept die ganze Zeit!","Bitte schnell, wir haben alle Kopfschmerzen und mein Mann wird nicht richtig wach – der Kohlenmonoxid-Melder geht!"],
    event:`Der CO-Melder piept seit einer halben Stunde. Wir haben alle Kopfschmerzen und Übelkeit, er ist kaum wach zu kriegen. Ich glaube, das ist ${src}.`,
-   f:{event:"Medizinischer Notfall",count:"2",x:"Nein",a:"Frei",b:"Normal",c:"Unauffällig",d:"Bewusstseinsgetrübt",e:"Kopfschmerzen, Übelkeit, Bewusstseinsstörung – CO-Melder piept",psy:"Nein",danger:"ja"},
+   f:{event:"Medizinischer Notfall",count:"2",x:"Nein",a:"Frei",b:"Normal",c:"Unauffällig",d:"Bewusstseinsgetrübt",e:"Kopfschmerzen, Übelkeit, Bewusstseinsstörung – CO-Melder piept, Verdacht Kohlenmonoxid",psy:"Nein",danger:"ja"},
    onset:"Seit etwa einer halben Stunde.",hist:"Eigentlich ist er gesund.",
    extra:["Soll ich die Fenster aufmachen?","Mir ist auch ganz schwindelig.","Der Melder hängt im Flur und piept ununterbrochen."]}}},
  // ── v5.35: Einsätze im Altenheim / Pflegeheim (Anrufer: Pflegekraft) ──
@@ -9836,7 +9879,7 @@ function simAaoCheck(c){
  if(more.length)a+=` · zusätzlich: ${more.join(", ")}`;
  if(s.d.phoneOnly)a+=" · ℹ️ Dieser Anruf wäre auch telefonisch zu erledigen gewesen (Beratung/Weiterleitung).";
  if(s.d.srtw)a+=` · ℹ️ Patient ca. ${s.d.weightKg} kg: zusätzlich SRTW über die Nachbar-Leitstelle anfragen (GOL: Akkon Oldenburg 50/89-01 · KRLS Ostfriesland: Akkon Wittmund 81/89-01, ehrenamtlich).`;
- if(s.d.co)a+=" · ℹ️ CO-Vergiftung: Feuerwehr zur Messung/Belüftung mitalarmieren. Bei schwerer Vergiftung Druckkammer (HBO): Transport z. B. mit KTH Northern 06 – nächste 24-h-Kammer Kronshagen bei Kiel, vorher anrufen.";
+ if(s.d.co)a+=" · ℹ️ CO-Vergiftung: Feuerwehr zur Messung/Belüftung mitalarmieren. Bei schwerer Vergiftung Druckkammer (HBO): Transport mit RTH (oder KTH Northern 06, dann fliegt der NEF-Notarzt mit) – nächste 24-h-Kammer Kronshagen bei Kiel, vorher anrufen.";
  if(s.d.inkubator)a+=" · ℹ️ Inkubatortransport: Baby-NAW „Felix“ (Florian Oldenburg 02/86-01) über die GOL anfragen.";
  c.history=c.history||[]; c.history.push({q:"🎓 Übungs-Check AAO",a});
  toast(miss.length?`AAO-Check: es fehlt ${miss.join(", ")}`:"AAO-Check: passt ✅");

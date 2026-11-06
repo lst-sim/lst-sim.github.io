@@ -1607,6 +1607,17 @@ Version 5.05:
   („a, b“ = a ODER b). Mit „🚑 NA-Indikation“ markierte Knöpfe ziehen weiterhin einen Notarzt.
 - Nur „Unauffällig“ (ohne weitere Befunde) zählt weiter als unauffälliges E (R0 möglich).
 
+Version 5.51:
+- RTH (außer MANV) arbeitet wie ein NEF: begleitet den RTW bei kritischen Patienten, ist sonst nach
+  6–12 min „frei Einsatzstelle“. Selbst transportiert er nur bei Reanimation oder wenn kein
+  bodengebundenes Transportmittel im Einsatz ist.
+- Druckkammer: RTH ist erste Wahl. Fliegt stattdessen der KTH, nimmt er den Notarzt des NEF mit; das NEF
+  fährt ins NWK Sanderbusch und wartet dort in Status 6. Nach der Übergabe fliegt der KTH in Status 6
+  mit dem Notarzt ins NWK zurück – dann sind NEF und KTH wieder einsatzbereit (Status 1).
+- CO-Patienten werden mit PZC 370 (Intoxikation Kohlenmonoxid) angemeldet.
+- Karte: Zoom und Ausschnitt bleiben beim automatischen Neuzeichnen erhalten. Neu ausgerichtet wird
+  nur bei einem anderen Einsatz oder einem neuen Einsatzort.
+
 Version 5.50:
 - Weitere Nachbar-Rettungsmittel (BOS-Fahrzeuge-Wachenseiten): Florian Oldenburg 01/82-01 (NEF),
   01/83-01, 01/83-02 (FuRW 1, Ibo-Koch-Straße 6), Florian Oldenburg 03/82-01 (NEF, RW 3 Klinikum),
