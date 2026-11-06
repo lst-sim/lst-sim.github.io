@@ -1607,6 +1607,13 @@ Version 5.05:
   („a, b“ = a ODER b). Mit „🚑 NA-Indikation“ markierte Knöpfe ziehen weiterhin einen Notarzt.
 - Nur „Unauffällig“ (ohne weitere Befunde) zählt weiter als unauffälliges E (R0 möglich).
 
+Version 5.58:
+- MANV: RTH/ITH/KTH ohne freien SK-I-Patienten bleiben in Bereitschaft an der Einsatzstelle (SDS) und
+  werden erst frei, wenn alle Patienten versorgt sind (alle haben ein Transportmittel). Wird ein
+  SK-I-Patient frei, übernehmen sie ihn.
+- Ebenso überzählige NEF: Sie bleiben in Bereitschaft, übernehmen nachrückende rote/blaue Patienten
+  und werden erst frei, wenn alle Patienten versorgt sind.
+
 Version 5.57:
 - MANV: DRK-Einheiten bauen nach dem Eintreffen (Status 4) Stellen auf – Aufbau ca. 5 min, mit SDS:
   • GW-San → Sanitätsstelle für rote, gelbe und blaue Patienten (10 Plätze je Fahrzeug),
