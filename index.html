@@ -170,7 +170,7 @@ html[data-device="handy"] #floatDock{left:8px;right:8px;width:auto;top:auto;bott
 </head>
 <body>
 <div style="padding:6px 10px;font-size:11px;color:#94a3b8;font-weight:700;display:flex;flex-wrap:wrap;align-items:center;gap:10px;position:sticky;top:0;z-index:10;background:var(--bg)">
- <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v5.55</span>
+ <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v5.56</span>
  <span id="syncState"></span> <a id="deskTag" href="#" onclick="renameDesk();return false" title="Name dieses Platzes (für „offen an …“) – antippen zum Ändern" style="color:#64748b;font-weight:700;text-decoration:none"></a>
  <span id="simCtl" style="position:absolute;left:50%;transform:translateX(-50%);display:flex;gap:6px;align-items:center"></span>
  <a id="homeLink" href="#" onclick="render('leitstelle');return false" class="hidden" style="color:#64748b;text-decoration:underline;font-weight:600">🖥️ Leitstelle</a>
@@ -1174,7 +1174,25 @@ function navHTML(active){
 }
 let currentPage="leitstelle";
 var uiLocked=false; // true, solange eine Unterseite (QR, Setup) offen ist, die kein Live-Neuzeichnen verträgt
+// v5.56: Hintergrund-Aktualisierungen dürfen nichts wegreißen, was man gerade bedient
+// (Formulare wie Polizei-/GOL-Anfrage, offene Fenster, Eingaben, gerade getippt/gescrollt).
+let inRender=false, appDirty=false, lastUserAct=0, bgPending=null;
+["pointerdown","keydown","wheel","touchstart","scroll"].forEach(ev=>window.addEventListener(ev,()=>{lastUserAct=Date.now()},{passive:true,capture:true}));
+function bgBlocked(){return uiLocked||appDirty||!!document.getElementById("lstModal")||syncUserIsTyping()||Date.now()-lastUserAct<4000}
+function bgRender(page){
+ if(page!==currentPage)return;
+ if(bgBlocked()){bgPending=page;return}
+ bgPending=null; const y=window.scrollY; render(page); window.scrollTo(0,y);
+}
+setInterval(()=>{try{if(bgPending&&bgPending===currentPage&&!bgBlocked())bgRender(bgPending);else if(typeof syncPendingRender!=="undefined"&&syncPendingRender&&!bgBlocked())syncRequestRender()}catch(e){}},1500);
+// Eine Unteransicht (Formular) gilt als offen, wenn der Nutzer gerade etwas angetippt hat und danach
+// #app außerhalb von render() neu befüllt wurde – z. B. „👮 Polizeileitstelle“ oder „📠 LST GOL“.
+setTimeout(()=>{try{const app=document.getElementById("app");if(app)new MutationObserver(()=>{if(!inRender&&Date.now()-lastUserAct<2000)appDirty=true}).observe(app,{childList:true})}catch(e){}},0);
 function render(page="leitstelle"){
+ inRender=true; appDirty=false;
+ try{return render0(page)}finally{setTimeout(()=>{inRender=false},0)}
+}
+function render0(page="leitstelle"){
  currentPage=page;
  uiLocked=false;
  const hl=document.getElementById("homeLink");
@@ -2436,7 +2454,7 @@ function manvAreaCover(callId){
  }
  const info=Object.entries(call.manvNbInfo||{}).map(([l,k])=>`${l}: ${k} Fahrzeug${k>1?"e":""}`).join(" · ");
  if(info){sdsLog({dir:"in",opta:"Nachbar-Leitstellen",callId:String(call.id),text:`🚨 MANV-Info bestätigt – ${info}${n?` (davon ${n} zur Gebietsabsicherung)`:""}`,read:false});toast(`🚑 MANV: Nachbarkreise direkt alarmiert – ${info}`)}
- save(); if(["leitstelle","karte","mittel","nachbarLks"].includes(currentPage)&&!uiLocked)render(currentPage);
+ save(); if(["leitstelle","karte","mittel","nachbarLks"].includes(currentPage))bgRender(currentPage);
 }
 // MANV beendet → Gebietsabsicherung fährt heim (wenn frei; sonst nach dem laufenden Einsatz)
 function manvCoverRelease(callId){
@@ -2505,7 +2523,7 @@ function nbSimTick(){
    const free=us.filter(u=>["1","2"].includes(String(u.status))&&ok(u)&&!u.ownJob); if(!free.length)continue;
    const u=pick(free); u.status="3"; u.ownJob={next:now+rint(4,14)*60000,started:now}; changed=true;
  }
- if(changed){save();if(currentPage==="nachbarLks"&&!uiLocked)render("nachbarLks")}
+ if(changed){save();if(currentPage==="nachbarLks")bgRender("nachbarLks")}
 }
 setInterval(()=>{try{nbSimTick()}catch(e){}},30000); setTimeout(()=>{try{for(let i=0;i<6;i++)nbSimTick()}catch(e){}},4000);
 // Anfrage an die Nachbar-Leitstelle (Telefon) – Antwort nach 20–60 s
@@ -2552,7 +2570,7 @@ function nbOutAnswer(callId,kind,unitId,type){
  }else call.history.push({q:`❌ ${name}: Absage`,a:txt});
  sdsLog({dir:"in",opta:name,callId:String(call.id),text:`📞 ${txt}`,read:false});
  toast(`📞 ${name}: ${txt}`); save();
- if(["leitstelle","nachbarLks","karte"].includes(currentPage)&&!uiLocked)render(currentPage);
+ if(["leitstelle","nachbarLks","karte"].includes(currentPage))bgRender(currentPage);
 }
 // v5.44: kein Auswählen einzelner Nachbar-Fahrzeuge mehr – man fragt nur Art und Anzahl an
 function openNeighborUnitPickerForCall(kind,callId){return openExternalRequest(kind,callId)}
@@ -2777,7 +2795,7 @@ function checkStackedDispatch(u){
    c.history=c.history||[]; c.history.push({q:"🔁 Gestapeltes Fahrzeug alarmiert",a:`${unitLabel(u)} – nach Status 1 direkt weiter zu Einsatz #${cid}`});
    save(); if(db.cloud?.enabled)pushCallCloud(c);
    toast(`🔁 ${u.opta||u.name} fährt jetzt zu Einsatz #${cid}`);
-   if(["leitstelle","mittel"].includes(currentPage)&&!uiLocked)render(currentPage);
+   if(["leitstelle","mittel"].includes(currentPage))bgRender(currentPage);
  },0);
 }
 function stackSectionHTML(c){
@@ -2823,7 +2841,7 @@ function updateWaitTimers(){
      save();
      try{playAlarmTone()}catch(e){}
      toast(`⏰ Einsatz #${c.id} wartet seit 2 Stunden – erneut vorgelegt`);
-     if(currentPage==="leitstelle"&&!uiLocked)render("leitstelle");
+     if(currentPage==="leitstelle")bgRender("leitstelle");
    }
  }
 }
@@ -5187,7 +5205,7 @@ function crewTick(){
    if(unitPhoneLive(u))continue;
    // v5.55: erstes eintreffendes Fahrzeug gibt noch aus dem Fahrzeug eine Kurzlage
    if(String(u.status)==="4"){const cl=findUnitCall(u);
-     if(cl&&cl.alarmTime&&!cl.firstReportAt&&!cl.kt&&!isManvCall(cl)&&(!cl.deskId||cl.deskId===DEVICE_ID)){cl.firstReportAt=new Date(now).toISOString();const t=firstLageText(cl,u);crewSds(u,cl,t);(cl.history=cl.history||[]).push({q:`📻 Kurzlage (${u.opta||u.name})`,a:t});changed=true}}
+     if(cl&&cl.alarmTime&&!cl.firstReportAt&&!cl.kt&&(isManvCall(cl)||isVuCall(cl))&&(!cl.deskId||cl.deskId===DEVICE_ID)){cl.firstReportAt=new Date(now).toISOString();const t=firstLageText(cl,u);crewSds(u,cl,t);(cl.history=cl.history||[]).push({q:`📻 Kurzlage (${u.opta||u.name})`,a:t});changed=true}}
    // mehrere Plätze: nur der Platz, der den Einsatz hat, steuert die Besatzung (sonst doppelte SDS/IVENA)
    if(u.crew&&u.crew.owner&&u.crew.owner!==DEVICE_ID)continue;
    const st=String(u.status), isT=CREW_TRANSPORT.has(u.type), isNef=u.type==="NEF";
@@ -5278,15 +5296,20 @@ function crewTick(){
    }
  }
  try{if(crewSurplusTick())changed=true}catch(e){console.warn(e)}
- if(changed){save();if(["leitstelle","mittel","ivena","ivenaZuweisungen","karte"].includes(currentPage)&&!uiLocked)render(currentPage)}
+ if(changed){save();if(["leitstelle","mittel","ivena","ivenaZuweisungen","karte"].includes(currentPage))bgRender(currentPage)}
 }
 // v5.48: nicht benötigte Fahrzeuge wieder frei (Status 1)
 //  • MANV: alle Patienten haben ein Rettungsmittel → weitere RTW/NEF/KTW/RTH (auch auf Anfahrt) frei
 //  • sonst: alle Patienten versorgt → weitere Rettungsmittel auf Anfahrt abbestellt; NEF auf Anfahrt
 //    abbestellt, wenn der RTW vor Ort keinen Notarzt braucht; Feuerwehr & Co. bei rein medizinischen
 //    Einsätzen nach Übergabe an den Rettungsdienst frei
+// v5.56: Kurzlage nur beim MANV und bei Verkehrsunfällen
+function isVuCall(c){const ev=String((c.sim&&c.sim.d&&c.sim.d.f&&c.sim.d.f.event)||(c.answers&&c.answers.event)||"");return /verkehrsunfall/i.test(ev)||/(^|_)VU|Verkehrsunfall/i.test(String(c.keyword||""))}
 function firstLageText(call,u){
  const d=call.sim&&call.sim.d||{}, info=crewCaseInfo(call), ev=info.ev||"", txt=info.text||"", A=call.answers||{};
+ // v5.56: nur noch beim MANV – Kurzlage aus dem Fahrzeug, bevor die Vorsichtung beginnt
+ if(isManvCall(call)){const T=call.manvTruth||null, n=T?T.total:Number(A.count)||info.pats||0, est=Math.max(4,Math.round(n*(0.8+Math.random()*0.4)));
+   return `Kurzlage aus dem Fahrzeug: MANV bestätigt, geschätzt ${est} Betroffene${/unfall|bus/i.test(ev+" "+txt)?", mehrere Fahrzeuge beteiligt":""}${/brand|feuer|rauch/i.test(ev+" "+txt)?", Rauchentwicklung":""} – übernehme Einsatzabschnitt, Vorsichtung nach mSTaRT beginnt. Weitere Kräfte zum Bereitstellungsraum.`}
  const place=String(d.loc&&d.loc.facility||(call.sim&&call.sim.loc&&call.sim.loc.facility)||"").replace(/[,\s]+$/,"");
  const trapped=Number(A.trapped)||(/eingeklemmt/.test(txt)?1:0);
  if(d.co)return "Kurzlage: Eingetroffen – unser CO-Warner schlägt schon an der Haustür an! Gehen nicht weiter rein, Feuerwehr mit Atemschutz und Messgerät erforderlich.";
@@ -5688,7 +5711,7 @@ function callTick(){
      else delete c.allFreeSince;
    }
  }
- if(changed){save();if(["leitstelle","mittel","ivena","ivenaZuweisungen","karte"].includes(currentPage)&&!uiLocked)render(currentPage)}
+ if(changed){save();if(["leitstelle","mittel","ivena","ivenaZuweisungen","karte"].includes(currentPage))bgRender(currentPage)}
 }
 
 // ─── SDS-Eingang (Nachrichten der Fahrzeuge an die Leitstelle) ───
@@ -5980,7 +6003,7 @@ function sdsAnswerFor(u,text,neighbor){
 function sdsScheduleReply(u,text,neighbor){
  if(!neighbor&&unitPhoneLive(u))return; // echte Besatzung am Handy antwortet selbst
  const delay=rnd(8,35)*1000;
- setTimeout(()=>{try{const ans=sdsAnswerFor(u,text,neighbor);sdsLog({dir:"in",unitId:u.id,opta:u.opta||u.name,type:u.type,text:ans,read:false,re:text});toast(`📨 SDS ${u.opta||u.name}: ${ans.slice(0,80)}`);save();if(currentPage==="leitstelle"&&!uiLocked)render("leitstelle")}catch(e){}},delay);
+ setTimeout(()=>{try{const ans=sdsAnswerFor(u,text,neighbor);sdsLog({dir:"in",unitId:u.id,opta:u.opta||u.name,type:u.type,text:ans,read:false,re:text});toast(`📨 SDS ${u.opta||u.name}: ${ans.slice(0,80)}`);save();if(currentPage==="leitstelle")bgRender("leitstelle")}catch(e){}},delay);
 }
 function openSdsCompose(pre){
  const units=geoSortUnits(db.units).filter(u=>!u.neighborLoan), neighbors=db.neighborUnits||[];
@@ -6329,7 +6352,7 @@ function syncUserIsTyping(){
 }
 function syncRequestRender(){
  renderCallerBanner();
- if(uiLocked||syncUserIsTyping()){syncPendingRender=true;return}
+ if(uiLocked||syncUserIsTyping()||appDirty||document.getElementById("lstModal")||Date.now()-lastUserAct<4000){syncPendingRender=true;return}
  syncPendingRender=false;
  // Kartenausschnitt beim Neuzeichnen beibehalten
  const keep=[];
@@ -6547,7 +6570,7 @@ async function pollCloudUnits(){
    save();
    // Only auto-refresh screens that display live status, so we don't interrupt
    // someone mid-typing on the Notruf or Karte tabs.
-   if(["leitstelle","mittel","ivenaZuweisungen","karte"].includes(currentPage)&&!uiLocked)render(currentPage);
+   if(["leitstelle","mittel","ivenaZuweisungen","karte"].includes(currentPage))bgRender(currentPage);
  }
 }
 let phoneHere=(()=>{try{return localStorage.getItem("lst-phone-here")!=="0"}catch(e){return true}})();
@@ -8471,7 +8494,7 @@ function ivenaAutoTick(){
    h.closures.push({id:now+Math.random(),fach,until:new Date(now+(1+Math.floor(Math.random()*8))*3600*1000).toISOString()});
    changed=true;
  });
- if(changed){save();pushIvenaCloud();if(currentPage==="ivena"&&!uiLocked)render("ivena")}
+ if(changed){save();pushIvenaCloud();if(currentPage==="ivena")bgRender("ivena")}
 }
 setInterval(ivenaAutoTick,60000);
 function ivenaActiveClosures(h){

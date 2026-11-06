@@ -1607,6 +1607,15 @@ Version 5.05:
   („a, b“ = a ODER b). Mit „🚑 NA-Indikation“ markierte Knöpfe ziehen weiterhin einen Notarzt.
 - Nur „Unauffällig“ (ohne weitere Befunde) zählt weiter als unauffälliges E (R0 möglich).
 
+Version 5.56:
+- Kurzlage aus dem Fahrzeug nur noch beim MANV („MANV bestätigt, geschätzt … Betroffene – Vorsichtung
+  nach mSTaRT beginnt“, danach wie bisher die Vorsichtung) und bei Verkehrsunfällen (Zahl der PKW,
+  Eingeklemmte, Fahrbahn).
+- Fehler behoben: Die automatische Aktualisierung (alle paar Sekunden) hat geöffnete Formulare wieder
+  geschlossen, z. B. „👮 Polizeileitstelle“ oder „📠 LST GOL“, und die Seite springen lassen. Jetzt wird
+  nicht neu gezeichnet, solange ein Formular oder Fenster offen ist, man tippt oder in den letzten
+  4 Sekunden etwas angetippt/gescrollt hat – danach wird nachgeholt, an derselben Scrollposition.
+
 Version 5.55:
 - Das erste eintreffende Fahrzeug gibt noch aus dem Fahrzeug eine Kurzlage per SDS (steht auch im
   Einsatzprotokoll), passend zur Lage: Wohnhaus/Pflegeheim „keine Gefahren erkennbar, gehen zum
