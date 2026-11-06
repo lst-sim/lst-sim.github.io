@@ -1607,6 +1607,9 @@ Version 5.05:
   („a, b“ = a ODER b). Mit „🚑 NA-Indikation“ markierte Knöpfe ziehen weiterhin einen Notarzt.
 - Nur „Unauffällig“ (ohne weitere Befunde) zählt weiter als unauffälliges E (R0 möglich).
 
+Version 5.39:
+- Baby-NAW „Felix“ heißt jetzt Florian Oldenburg 02/86-01 (Nutzerangabe 2-86-1).
+
 Version 5.38:
 - Baby-NAW Oldenburg „Felix“ trägt die Kennung 86 („Baby-NAW 86 …“). Vollständiger Funkrufname
   (Wachen-Nummer) noch offen.
