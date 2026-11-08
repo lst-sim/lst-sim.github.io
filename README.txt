@@ -1607,6 +1607,11 @@ Version 5.05:
   („a, b“ = a ODER b). Mit „🚑 NA-Indikation“ markierte Knöpfe ziehen weiterhin einen Notarzt.
 - Nur „Unauffällig“ (ohne weitere Befunde) zählt weiter als unauffälliges E (R0 möglich).
 
+Version 5.61:
+- MANV: Der RTH übernimmt immer SK-I-Patienten, solange noch nicht alle SK I abtransportiert sind. Das gilt auch für Patienten, die schon ein RTW oder KTW hat, der noch nicht abgefahren ist (Übergabe an der Einsatzstelle). Der RTH bleibt so lange in Bereitschaft.
+- MANV: KTW übernehmen SK I/II nur, wenn kein freier RTW da ist oder ein Notarzt beim Patienten ist; sonst SK III.
+- MANV: Kommt ein RTW, übernimmt er vom KTW: SK I immer (außer ein anderer SK I ist noch unbetreut), SK II nur, wenn kein SK I/II mehr unbetreut ist. Ein mitbetreuendes NEF geht mit, die IVENA-Anmeldung des KTW wird gelöscht und der KTW übernimmt den nächsten Patienten.
+
 Version 5.60:
 - Fehler aus 5.59 behoben: Blaue Patienten (SK IV) wurden von RTW transportiert. Jetzt gibt es keinen Transport mehr. Ein RTW (oder ein NEF, wenn es nicht für Rot gebraucht wird) betreut den Patienten palliativ an der Einsatzstelle. Nach ca. 15–50 min verstirbt der Patient (Status „verstorben“, Meldung per SDS). Die Besatzung übernimmt danach den nächsten Patienten.
 

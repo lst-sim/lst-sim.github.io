@@ -170,7 +170,7 @@ html[data-device="handy"] #floatDock{left:8px;right:8px;width:auto;top:auto;bott
 </head>
 <body>
 <div style="padding:6px 10px;font-size:11px;color:#94a3b8;font-weight:700;display:flex;flex-wrap:wrap;align-items:center;gap:10px;position:sticky;top:0;z-index:10;background:var(--bg)">
- <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v5.60</span>
+ <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v5.61</span>
  <span id="syncState"></span> <a id="deskTag" href="#" onclick="renameDesk();return false" title="Name dieses Platzes (für „offen an …“) – antippen zum Ändern" style="color:#64748b;font-weight:700;text-decoration:none"></a>
  <span id="simCtl" style="position:absolute;left:50%;transform:translateX(-50%);display:flex;gap:6px;align-items:center"></span>
  <a id="homeLink" href="#" onclick="render('leitstelle');return false" class="hidden" style="color:#64748b;text-decoration:underline;font-weight:600">🖥️ Leitstelle</a>
@@ -5151,10 +5151,22 @@ function crewPlan(u,call){
  if(call.manvPatients){
    // v5.49: Hubschrauber nur für wirklich dringende Patienten (SK I)
    const air=["RTH","ITH","KTH"].includes(u.type);
-   const P=air?call.manvPatients.find(x=>!x.unit&&x.sk===1):[1,4,2,3].map(k=>call.manvPatients.find(x=>!x.unit&&x.sk===k)).find(Boolean); // v5.59: blau vor gelb
+   // v5.61: RTH übernimmt SK I auch von bodengebundenen Fahrzeugen, die noch nicht abgefahren sind.
+   //        KTW nimmt SK I/II nur, wenn kein freier RTW da ist oder ein Notarzt dabei ist – und gibt an den nächsten RTW ab.
+   const free=k=>call.manvPatients.find(x=>!x.unit&&x.sk===k), isKtw=u.type==="KTW";
+   let P;
+   if(air)P=free(1)||manvTakeable(call,u,1,o=>!MANV_AIR.has(o.type));
+   else if(isKtw){
+     const idle=callUnits(call).filter(x=>x&&x!==u&&CREW_TRANSPORT.has(x.type)&&x.type!=="KTW"&&!MANV_AIR.has(x.type)&&String(x.status)==="4"&&(!x.crew||x.crew.mode==="none")).length;
+     const sev=[1,2].map(free).filter(Boolean);
+     P=(sev.length>idle?sev[0]:null)||call.manvPatients.find(x=>!x.unit&&(x.sk===1||x.sk===2)&&x.doc)||free(3);
+   }
+   else P=free(1)||manvTakeable(call,u,1,o=>o.type==="KTW")||free(4)||free(2)||manvTakeable(call,u,2,o=>o.type==="KTW")||free(3); // v5.59: blau vor gelb
+   let nefMove=null;
+   if(P&&P.unit){const o=db.units.find(y=>String(y.id)===String(P.unit));nefMove=manvHandover(o,u,P,call)}
    if(!P){
      // v5.58: Hubschrauber bleiben in Bereitschaft, bis alle Patienten versorgt sind
-     if(air&&call.manvPatients.some(x=>!x.unit&&x.sk<=4)){u.crew={callId:String(call.id),mode:"standby",info};crewSds(u,call,"Kein SK-I-Patient frei – bleiben an der Einsatzstelle in Bereitschaft, bis alle Patienten versorgt sind.");return}
+     if(air&&call.manvPatients.some(x=>!x.unit&&x.sk<=4)||(air&&manvTakeable(call,u,1,o=>!MANV_AIR.has(o.type)))){u.crew={callId:String(call.id),mode:"standby",info};crewSds(u,call,"Kein SK-I-Patient frei – bleiben an der Einsatzstelle in Bereitschaft, bis alle Patienten versorgt sind.");return}
      u.crew={callId:String(call.id),mode:"none",doneAt:now+rint(3,8)*60000,info};return}
    if(P.sk===4){ // v5.60: SK IV wird nicht transportiert – palliative Betreuung vor Ort bis zum Versterben
      P.unit=u.id;P.care=true;if(!P.dieAt)P.dieAt=now+rint(15,45)*60000;
@@ -5166,6 +5178,8 @@ function crewPlan(u,call){
    const card=P.pid!=null&&call.manvTruth&&call.manvTruth.pats?call.manvTruth.pats.find(q=>q.n===P.pid):null;
    const inf={...info,sev,sk:P.sk,age:card?card.age:rint(16,85),gender:card?card.gender:(Math.random()<0.5?"M":"W"),card:card?card.n:null,inj:card?card.inj:null};
    u.crew={callId:String(call.id),mode:"transport",patient:P.n,sk:P.sk,departAt:now+t*60000,registerAt:now+Math.max(2,t-rint(3,6))*60000,info:inf};
+   if(nefMove)u.crew.nefId=nefMove;
+   if(isKtw&&P.sk<=2)crewSds(u,call,`Übernehme Patient ${P.pid!=null?`(Anhängekarte ${P.pid}) `:""}SK ${P.sk===1?"I":"II"} – Erstversorgung, Übergabe an den nächsten RTW.`);
    return;
  }
  if(isManvCall(call)){return} // Sichtung läuft noch – Besatzung wartet auf die Lagemeldung
@@ -5242,7 +5256,7 @@ function crewTick(){
      if(C.nef&&C.manvWait){if(call&&call.manvPatients){delete u.crew;changed=true}continue}
      // Bereitschaft beim MANV: neuer passender Patient frei → neu planen; sonst warten (Freigabe im Überhang-Check)
      if(C.mode==="standby"||(C.nef&&C.standby)){const P=call&&call.manvPatients||[];
-       const want=C.nef?P.some(x=>!x.doc&&!x.unit&&x.sk<=4):P.some(x=>!x.unit&&x.sk===1);
+       const want=C.nef?P.some(x=>!x.doc&&!x.unit&&x.sk<=4):(P.some(x=>!x.unit&&x.sk===1)||!!manvTakeable(call,u,1,o=>!MANV_AIR.has(o.type)));
        if(want){delete u.crew;changed=true}
        continue}
      if(C.nef&&C.manv&&C.docFor!=null&&!C.follow){
@@ -5397,6 +5411,20 @@ function manvDeathTick(call,now){
  }
  return ch;
 }
+// v5.61: Patientenübergabe an der Einsatzstelle (KTW → RTW, Boden → RTH), solange noch nicht abgefahren
+const MANV_AIR=new Set(["RTH","ITH","KTH"]);
+function manvHeldBy(P,typeOk){if(!P.unit||P.care)return null;const o=db.units.find(y=>String(y.id)===String(P.unit));
+ return o&&typeOk(o)&&String(o.status)==="4"&&o.crew&&o.crew.mode==="transport"&&o.crew.patient===P.n&&!(o.crew.hbo&&!o.crew.hbo.done)&&!unitPhoneLive(o)?o:null}
+function manvTakeable(call,u,sk,typeOk){return (call.manvPatients||[]).find(P=>P.sk===sk&&manvHeldBy(P,o=>o!==u&&typeOk(o)))||null}
+function manvHandover(o,u,P,call){
+ if(!o||!o.crew)return null; const C=o.crew;
+ const asg=C.asgId&&(db.ivenaAssignments||[]).find(a=>String(a.id)===String(C.asgId)); if(asg)asg.deleted=true;
+ let nefId=null;
+ if(C.nefId){const n=db.units.find(x=>String(x.id)===String(C.nefId));if(n&&n.crew&&String(n.crew.follow)===String(o.id)){n.crew.follow=u.id;nefId=n.id}}
+ const txt=`Patient ${P.pid!=null?`(Anhängekarte ${P.pid}) `:""}SK ${["","I","II","III","IV"][P.sk]} an ${u.opta||u.name} (${u.type}) übergeben.`;
+ crewSds(o,call,txt+" Übernehmen nächsten Patienten."); (call.history=call.history||[]).push({q:`🔁 Übergabe (${o.opta||o.name} → ${u.opta||u.name})`,a:txt});
+ delete o.crew; delete P.unit; return nefId;
+}
 function crewSurplusTick(){
  const now=Date.now(); let ch=false;
  for(const call of allOpenCalls()){
@@ -5408,7 +5436,7 @@ function crewSurplusTick(){
    if(isManvCall(call)&&manvStationTick(call,now))ch=true;
    if(call.manvPatients&&manvDeathTick(call,now))ch=true;
    if(call.manvPatients&&(call.manvReports||[]).length){
-     const open=call.manvPatients.filter(P=>!P.unit&&P.sk<=4).length;
+     const open=call.manvPatients.filter(P=>(!P.unit&&P.sk<=4)||(P.sk<=2&&manvHeldBy(P,o=>o.type==="KTW"))).length; // v5.61: SK I/II beim KTW → RTW wird noch gebraucht
      const openSk1=call.manvPatients.filter(P=>!P.unit&&P.sk===1).length;
      // (v5.58: Hubschrauber und überzählige NEF bleiben, bis alle Patienten versorgt sind)
      // Notärzte: so viele NEF bleiben, wie rote/blaue Patienten noch ohne Notarzt sind
@@ -5417,6 +5445,7 @@ function crewSurplusTick(){
        for(const u of us){
          if(!rd(u))continue; const st=String(u.status), C=u.crew;
          if(C&&(C.mode==="transport"||C.follow||C.docFor!=null||C.manvWait))continue;
+         if(MANV_AIR.has(u.type)&&manvTakeable(call,u,1,o=>!MANV_AIR.has(o.type)))continue; // v5.61: SK I noch am Boden → RTH übernimmt
          if(C&&(C.mode==="standby"||C.standby)&&String(u.status)==="4"){free(u,`MANV: alle Patienten versorgt – ${u.type} nicht mehr benötigt, frei Einsatzstelle.`);continue}
          if(u.type==="NEF"&&docNeed>0&&["3","4"].includes(st)){docNeed--;continue}
          if(st==="3"||(st==="4"&&(!C||C.mode==="none"||C.nef))||st==="2")free(u,u.type==="NEF"?"MANV: genügend Notärzte vor Ort – NEF nicht mehr benötigt, frei Einsatzstelle.":"MANV: alle Patienten versorgt – nicht mehr benötigt, frei Einsatzstelle.");
