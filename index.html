@@ -170,7 +170,7 @@ html[data-device="handy"] #floatDock{left:8px;right:8px;width:auto;top:auto;bott
 </head>
 <body>
 <div style="padding:6px 10px;font-size:11px;color:#94a3b8;font-weight:700;display:flex;flex-wrap:wrap;align-items:center;gap:10px;position:sticky;top:0;z-index:10;background:var(--bg)">
- <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v5.61</span>
+ <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v5.62</span>
  <span id="syncState"></span> <a id="deskTag" href="#" onclick="renameDesk();return false" title="Name dieses Platzes (für „offen an …“) – antippen zum Ändern" style="color:#64748b;font-weight:700;text-decoration:none"></a>
  <span id="simCtl" style="position:absolute;left:50%;transform:translateX(-50%);display:flex;gap:6px;align-items:center"></span>
  <a id="homeLink" href="#" onclick="render('leitstelle');return false" class="hidden" style="color:#64748b;text-decoration:underline;font-weight:600">🖥️ Leitstelle</a>
@@ -1693,6 +1693,7 @@ function useMyLocation(){
 
 
 function setUnitStatus(u,status){
+ if(String(status)!=="3")delete u.shuttleFrom;
  const wasFree=["1","2"].includes(String(u.status));
  if(String(status)!=="3")delete u.route;
  if(["1","2","6"].includes(String(status))){delete u.carriesAb; if(isAB(u))delete u.wlfId}
@@ -1758,7 +1759,7 @@ function autoAdvanceEnRoute(){
      // (geographicRank()/estimatedEtaMinutes() beziehen sich auf db.currentCall). Sonst bleibt
      // die Automatik aus, sobald kein oder ein anderer Einsatz geöffnet ist.
      const call=findUnitCall(u);
-     const home=unitPoint(u), dest=callDestinationPoint(call,u);
+     const home=u.shuttleFrom||unitPoint(u), dest=callDestinationPoint(call,u); // v5.62: Shuttle startet an der Klinik
      if(home&&dest){
        const km=haversine(home[0],home[1],dest[0],dest[1]);
        const etaMs=(etaMinutesForDistance(u,km)||10)*60000;
@@ -5326,7 +5327,14 @@ function crewTick(){
         crewSds(u,call||{id:C.callId},`Pat. ${asg?`in der ${asg.hospitalName} `:""}übergeben – Rückflug mit Notarzt ins NWK Sanderbusch (Status 6), ca. ${fly} min.`);
         setUnitStatus(u,"6"); u.crew={callId:C.callId,mode:"docReturn",nefId:C.docFrom,dueAt:now+fly*60000,owner:DEVICE_ID}; changed=true; continue;
       }
-      if(!C.nef){const asg=(db.ivenaAssignments||[]).find(a=>String(a.id)===String(C.asgId));crewSds(u,call||{id:C.callId},`Pat. ${asg?`im ${asg.hospitalName} `:""}übergeben – wieder einsatzbereit.`)}
+      if(!C.nef){const asg=(db.ivenaAssignments||[]).find(a=>String(a.id)===String(C.asgId));
+        // v5.62 MANV-Shuttle: noch Patienten an der Einsatzstelle → direkt wieder hin
+        const left=call&&!u.neighborLoan?manvShuttleNeed(call,u):0;
+        if(left){const hp=asg&&hospitalPoint(asg.hospitalId);
+          crewSds(u,call,`Pat. ${asg?`im ${asg.hospitalName} `:""}übergeben – MANV: noch ${left} Patient${left>1?"en":""} an der Einsatzstelle, fahren wieder hin (Shuttle).`);
+          (call.history=call.history||[]).push({q:`🔁 Shuttle (${u.opta||u.name})`,a:`erneut zur Einsatzstelle alarmiert – noch ${left} Pat.`});
+          setUnitStatus(u,"3"); if(hp)u.shuttleFrom=hp; delete u.crew; changed=true; continue}
+        crewSds(u,call||{id:C.callId},`Pat. ${asg?`im ${asg.hospitalName} `:""}übergeben – wieder einsatzbereit.`)}
        setUnitStatus(u,"1"); delete u.crew; changed=true;
      }
    }
@@ -5359,7 +5367,7 @@ function firstLageText(call,u){
 }
 // v5.57 MANV: DRK GW-San (und GW-SEG) baut eine Sanitätsstelle auf (rote, gelbe, blaue Patienten),
 // GW-Betreuung (bzw. GW-SEG, wenn keine Betreuung da ist) eine Betreuungsstelle (grüne Patienten).
-const MANV_ST={san:{name:"Sanitätsstelle",icon:"⛑️",cap:10,sk:[1,2,4]},bet:{name:"Betreuungsstelle",icon:"🫂",cap:25,sk:[3]}};
+const MANV_ST={san:{name:"Behandlungsplatz (BHP)",icon:"⛑️",cap:10,sk:[1,2,4]},bet:{name:"Betreuungsstelle",icon:"🫂",cap:25,sk:[3]}};
 function manvStationTick(call,now){
  let ch=false; const us=callUnits(call); call.manvStations=call.manvStations||{};
  const ST=call.manvStations;
@@ -5392,7 +5400,7 @@ function manvStationTick(call,now){
  }
  return ch;
 }
-function manvPlaceLabel(call,pid){const P=(call.manvPatients||[]).find(x=>x.pid===pid);if(!P)return "";if(P.care)return "🕯️ palliativ vor Ort";if(P.unit)return "🚑 Transport";if(P.place==="san")return "⛑️ Sanitätsstelle";if(P.place==="bet")return "🫂 Betreuungsstelle";return "Schadenstelle"}
+function manvPlaceLabel(call,pid){const P=(call.manvPatients||[]).find(x=>x.pid===pid);if(!P)return "";if(P.care)return "🕯️ palliativ vor Ort";if(P.unit)return "🚑 Transport";if(P.place==="san")return "⛑️ im BHP (DRK)";if(P.place==="bet")return "🫂 in der Betreuungsstelle (DRK)";return "Schadenstelle"}
 // v5.60: SK IV (blau, ohne Überlebenschance) – kein Transport; Patient verstirbt an der Einsatzstelle
 function manvDeathTick(call,now){
  let ch=false;
@@ -5424,6 +5432,16 @@ function manvHandover(o,u,P,call){
  const txt=`Patient ${P.pid!=null?`(Anhängekarte ${P.pid}) `:""}SK ${["","I","II","III","IV"][P.sk]} an ${u.opta||u.name} (${u.type}) übergeben.`;
  crewSds(o,call,txt+" Übernehmen nächsten Patienten."); (call.history=call.history||[]).push({q:`🔁 Übergabe (${o.opta||o.name} → ${u.opta||u.name})`,a:txt});
  delete o.crew; delete P.unit; return nefId;
+}
+// v5.62: Wie viele Patienten warten an der Einsatzstelle noch auf genau diesen Fahrzeugtyp
+//        (abzüglich der Fahrzeuge, die schon anfahren oder frei vor Ort stehen)?
+function manvShuttleNeed(call,u){
+ if(!call||!call.manvPatients||!(call.manvReports||[]).length||call.mergedInto)return 0;
+ const P=call.manvPatients, air=MANV_AIR.has(u.type), ktw=u.type==="KTW";
+ const want=P.filter(x=>air?(x.sk===1&&(!x.unit||manvHeldBy(x,o=>!MANV_AIR.has(o.type)))):ktw?(!x.unit&&x.sk<=3):((!x.unit&&x.sk<=4)||(x.sk<=2&&manvHeldBy(x,o=>o.type==="KTW")))).length;
+ if(!want)return 0;
+ const coming=callUnits(call).filter(x=>x!==u&&CREW_TRANSPORT.has(x.type)&&MANV_AIR.has(x.type)===air&&(String(x.status)==="3"||(String(x.status)==="4"&&(!x.crew||x.crew.mode==="none"||x.crew.mode==="standby")))).length;
+ return Math.max(0,want-coming);
 }
 function crewSurplusTick(){
  const now=Date.now(); let ch=false;
@@ -5584,10 +5602,10 @@ function manvListDialog(id){
  const P=manvPats(c), orgl=(c.manvReports||[]).some(r=>r.kind==="orgl");
  const rows=P.slice().sort((a,b)=>(orgl?a.sk-b.sk:a.vs-b.vs)||a.n-b.n).map(p=>{const k=orgl?p.sk:p.vs, tr=(c.manvPatients||[]).find(x=>x.pid===p.n), u=tr&&tr.unit?db.units.find(x=>String(x.id)===String(tr.unit)):null;
    return `<tr style="border-bottom:1px solid var(--line)"><td style="padding:4px;font-weight:800">${p.n}</td><td>${mstartDot(k,14)}${orgl&&p.sk!==p.vs?` <small class="muted" title="Vorsichtung">(vorher ${MSTART_COL[p.vs][1]})</small>`:""}</td>
-   <td style="font-size:12px">${p.gender==="W"?"♀":"♂"} ${p.age} J. – ${esc(p.inj)}<br><span class="muted">${esc(mstartFindings(p))}</span></td><td style="font-size:12px">${u?esc(u.opta||u.name):k===5?"—":"<span class='muted'>wartet</span>"}</td></tr>`}).join("");
+   <td style="font-size:12px">${p.gender==="W"?"♀":"♂"} ${p.age} J. – ${esc(p.inj)}<br><span class="muted">${esc(mstartFindings(p))}</span></td><td style="font-size:12px">${tr&&tr.care?`🕯️ palliativ vor Ort${u?` (${esc(u.opta||u.name)})`:""}`:u?`🚑 ${esc(u.opta||u.name)}`:k===5?"—":tr&&tr.place&&tr.place!=="transport"?esc(manvPlaceLabel(c,p.n)):"<span class='muted'>wartet</span>"}</td></tr>`}).join("");
  showModal(`<h3 style="margin-top:0">📋 Sichtung nach mSTaRT – Einsatz #${esc(String(c.id))}</h3>
   <p class="muted" style="font-size:13px;margin-top:0">${orgl?"Stand nach ärztlicher Sichtung (OrgL/LNA).":"Vorsichtung durch das ersteintreffende Rettungsmittel."} Nummer = Anhängekarte.</p>
-  <div style="max-height:55vh;overflow:auto"><table style="width:100%;border-collapse:collapse"><tr style="text-align:left;font-size:12px"><th>Nr.</th><th>Kat.</th><th>Patient / Befund</th><th>Transport</th></tr>${rows}</table></div>
+  <div style="max-height:55vh;overflow:auto"><table style="width:100%;border-collapse:collapse"><tr style="text-align:left;font-size:12px"><th>Nr.</th><th>Kat.</th><th>Patient / Befund</th><th>Verbleib</th></tr>${rows}</table></div>
   ${mstartSchemeHTML()}
   <div class="row" style="justify-content:flex-end;gap:6px;margin-top:10px"><button onclick="manvTrainDialog('${esc(String(c.id))}')">🎓 Selbst sichten</button><button onclick="closeModal()">Schließen</button></div>`);
 }

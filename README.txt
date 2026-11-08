@@ -1607,6 +1607,10 @@ Version 5.05:
   („a, b“ = a ODER b). Mit „🚑 NA-Indikation“ markierte Knöpfe ziehen weiterhin einen Notarzt.
 - Nur „Unauffällig“ (ohne weitere Befunde) zählt weiter als unauffälliges E (R0 möglich).
 
+Version 5.62:
+- MANV-Shuttle: Gibt ein Rettungsmittel seinen Patienten in der Klinik ab und warten an der Einsatzstelle noch Patienten, für die kein anderes Fahrzeug anfährt, fährt es direkt wieder hin (Status 3 ab der Klinik) und holt den nächsten. RTH nur für SK I, KTW nur für SK I–III. Sind alle Patienten weg, geht es wie bisher in Status 1.
+- mSTaRT-Liste: Spalte „Verbleib“ statt „Transport“. Zeigt an: im BHP (DRK), in der Betreuungsstelle (DRK), palliativ vor Ort oder das Transportfahrzeug. Die Sanitätsstelle heißt jetzt „Behandlungsplatz (BHP)“.
+
 Version 5.61:
 - MANV: Der RTH übernimmt immer SK-I-Patienten, solange noch nicht alle SK I abtransportiert sind. Das gilt auch für Patienten, die schon ein RTW oder KTW hat, der noch nicht abgefahren ist (Übergabe an der Einsatzstelle). Der RTH bleibt so lange in Bereitschaft.
 - MANV: KTW übernehmen SK I/II nur, wenn kein freier RTW da ist oder ein Notarzt beim Patienten ist; sonst SK III.
