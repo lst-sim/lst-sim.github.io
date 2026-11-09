@@ -1607,6 +1607,10 @@ Version 5.05:
   („a, b“ = a ODER b). Mit „🚑 NA-Indikation“ markierte Knöpfe ziehen weiterhin einen Notarzt.
 - Nur „Unauffällig“ (ohne weitere Befunde) zählt weiter als unauffälliges E (R0 möglich).
 
+Version 5.69:
+- „Rettungsmittel hinzufügen“: Feuerwehr-Fahrzeugtypen stehen jetzt zusätzlich ausgeschrieben da, z. B. „HLF – Hilfeleistungslöschgruppenfahrzeug“ oder „DLK – Drehleiter mit Korb“. Das gilt im Reiter „Feuerwehr“, bei „Häufig“ und in der Fahrzeugauswahl.
+- Bei unklaren Kürzeln (AB-G, AB-HFS) steht nur „Abrollbehälter“, die genaue Bedeutung ist nicht belegt.
+
 Version 5.68:
 - Großveranstaltung: Name, Ort/Adresse, Sanitätsstation und Besucherzahl sind frei wählbar. Die bisherigen Veranstaltungen gibt es weiter als Vorlage, alle Felder lassen sich ändern.
 - Der Ort wird über die Adresssuche (OpenStreetMap) gefunden. Klappt das nicht, reicht ein bekannter Ortsname im Text (z. B. „Jever“).

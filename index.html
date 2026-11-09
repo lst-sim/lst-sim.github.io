@@ -170,7 +170,7 @@ html[data-device="handy"] #floatDock{left:8px;right:8px;width:auto;top:auto;bott
 </head>
 <body>
 <div style="padding:6px 10px;font-size:11px;color:#94a3b8;font-weight:700;display:flex;flex-wrap:wrap;align-items:center;gap:10px;position:sticky;top:0;z-index:10;background:var(--bg)">
- <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v5.68</span>
+ <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v5.69</span>
  <span id="syncState"></span> <a id="deskTag" href="#" onclick="renameDesk();return false" title="Name dieses Platzes (für „offen an …“) – antippen zum Ändern" style="color:#64748b;font-weight:700;text-decoration:none"></a>
  <span id="simCtl" style="position:absolute;left:50%;transform:translateX(-50%);display:flex;gap:6px;align-items:center"></span>
  <a id="homeLink" href="#" onclick="render('leitstelle');return false" class="hidden" style="color:#64748b;text-decoration:underline;font-weight:600">🖥️ Leitstelle</a>
@@ -2956,6 +2956,13 @@ function openNachforderung(id){
 // Rettungsmittel nach Kategorie (Organisation) wie in der Fahrzeugliste; THW zusätzlich nach Fachgruppe.
 let pickerCat="quick";
 function setPickerCat(cat,mode){pickerCat=cat;showResourcePicker(mode)}
+// v5.69: Feuerwehr-Fahrzeugtypen ausgeschrieben (übliche Bezeichnungen). Unklare Kürzel bleiben ohne Langform.
+const FW_TYPE_LONG={ELW:"Einsatzleitwagen",ELW1:"Einsatzleitwagen 1",ELW2:"Einsatzleitwagen 2",MTW:"Mannschaftstransportwagen",MTF:"Mannschaftstransportfahrzeug",DLK:"Drehleiter mit Korb",
+ HLF:"Hilfeleistungslöschgruppenfahrzeug",LF:"Löschgruppenfahrzeug",RW:"Rüstwagen",SW:"Schlauchwagen",TLF:"Tanklöschfahrzeug",MZF:"Mehrzweckfahrzeug","GW-L1":"Gerätewagen Logistik 1",
+ RTB:"Rettungsboot",KLF:"Kleinlöschfahrzeug",WLF:"Wechselladerfahrzeug",GW:"Gerätewagen",ErkKW:"Erkundungskraftwagen (CBRN)",KdoW:"Kommandowagen",TSF:"Tragkraftspritzenfahrzeug",
+ "TSF-W":"Tragkraftspritzenfahrzeug mit Wassertank","AB-Küche":"Abrollbehälter Küche","AB-Logistik":"Abrollbehälter Logistik","AB-Mulde":"Abrollbehälter Mulde",
+ "AB-TEL":"Abrollbehälter Technische Einsatzleitung","AB-Übung Leckage":"Abrollbehälter Übung Leckage"};
+function fwTypeLong(t,org){if(org&&org!=="Feuerwehr")return "";return FW_TYPE_LONG[t]||(/^AB-/.test(String(t||""))?"Abrollbehälter":"")}
 function resourcePickerCatsHTML(mode){
  const orgs=[...new Set([...UNIT_CATEGORIES,...(db.units||[]).map(u=>u.org).filter(Boolean)])].filter(o=>(db.units||[]).some(u=>u.org===o&&!u.neighborLoan));
  if(pickerCat!=="quick"&&!orgs.includes(pickerCat))pickerCat="quick";
@@ -2963,7 +2970,7 @@ function resourcePickerCatsHTML(mode){
  const tabs=`<div class="row" style="flex-wrap:wrap;gap:6px;margin:6px 0 10px">${[["quick","⭐ Häufig"],...orgs.map(o=>[o,`${icon(o)} ${o}`])].map(([k,t])=>`<button class="${pickerCat===k?"primary":""}" onclick="setPickerCat(${esc(JSON.stringify(k))},'${mode}')">${esc(t)}</button>`).join("")}</div>`;
  const dist=u=>u&&isLNA(u)?"Privat-PKW, nicht ortbar":u&&geographicRank(u)<999?`ca. ${estimatedEtaMinutes(u)} min`:"verfügbar";
  const btn=(t,label,org)=>{const u=chooseAvailableByType(t,org);const typeArg=JSON.stringify(t).replace(/"/g,"'");
-   return `<button ${u?"":"disabled"} onclick="addResourceType(${typeArg},'${mode}'${org?`,${esc(JSON.stringify(org))}`:""})">${esc(label||(Array.isArray(t)?t.join("/"):t))}<small style="display:block">${u?`${esc(u.opta||u.name)} · ${dist(u)}<span style="display:block;margin-top:2px">${statusPill(u)}</span>`:"nicht verfügbar"}</small></button>`};
+   return `<button ${u?"":"disabled"} onclick="addResourceType(${typeArg},'${mode}'${org?`,${esc(JSON.stringify(org))}`:""})">${esc(label||(Array.isArray(t)?t.join("/"):t))}${!label&&!Array.isArray(t)&&u&&u.org==="Feuerwehr"&&fwTypeLong(t)?`<span style="display:block;font-size:11px;font-weight:500">${esc(fwTypeLong(t))}</span>`:""}<small style="display:block">${u?`${esc(u.opta||u.name)} · ${dist(u)}<span style="display:block;margin-top:2px">${statusPill(u)}</span>`:"nicht verfügbar"}</small></button>`};
  if(pickerCat==="quick")return tabs+`<div class="answer">${QUICK_RESOURCE_TYPES.map(({type:t,label})=>btn(t,label,null)).join("")}</div>`;
  if(pickerCat==="THW"){
    const c=db.currentCall; const assigned=new Set([...(c?.alarmedUnits||[]),...(c?.proposedUnitIds||[])].map(String));
@@ -2992,7 +2999,7 @@ function resourcePickerCatsHTML(mode){
    const typeArg=JSON.stringify(t).replace(/"/g,"'");
    const anyFree=us.some(u=>islandReachable(u)&&["1","2","8"].includes(String(u.status))&&!assigned.has(String(u.id)));
    return `<details style="border:1px solid var(--line);border-radius:10px;padding:6px 10px;margin-bottom:6px">
-     <summary class="row between" style="flex-wrap:wrap;cursor:pointer;list-style:none"><b>▸ ${esc(t)} <span class="pill">${us.length}</span></b><button style="padding:4px 10px;font-size:12px" ${anyFree?"":"disabled"} onclick="event.preventDefault();event.stopPropagation();addResourceType(${typeArg},'${mode}',${esc(JSON.stringify(pickerCat))})">Nächstes freies</button></summary>
+     <summary class="row between" style="flex-wrap:wrap;cursor:pointer;list-style:none"><b>▸ ${esc(t)}${pickerCat==="Feuerwehr"&&fwTypeLong(t)?` <span style="font-weight:500">– ${esc(fwTypeLong(t))}</span>`:""} <span class="pill">${us.length}</span></b><button style="padding:4px 10px;font-size:12px" ${anyFree?"":"disabled"} onclick="event.preventDefault();event.stopPropagation();addResourceType(${typeArg},'${mode}',${esc(JSON.stringify(pickerCat))})">Nächstes freies</button></summary>
      <div class="answer" style="margin-top:4px">${us.map(u=>{const reach=islandReachable(u);const ok=reach&&["1","2","8"].includes(String(u.status))&&!assigned.has(String(u.id));const abPl=ok&&isAB(u)?wlfPlanFor(u,callDestinationPoint(c,u)||incidentPoint(),c):null;const abBlocked=ok&&isAB(u)&&!abPl;return `<button ${ok&&!abBlocked?"":"disabled"} onclick="addResourceUnitId('${u.id}','${mode}')" style="padding:6px 10px">${esc(u.opta||u.name)}<small style="display:block">${isAB(u)&&ok?(abPl?`🚛 ${esc(abPl.wlf.opta||abPl.wlf.name)}${abPl.busy?` (von Einsatz #${esc(abPl.fromCallId)})`:""} · ca. ${Math.round(abPl.total)} min`:"🚛 kein WLF verfügbar"):""}${isAB(u)&&ok?"<br>":""}${esc(u.location||"")} · ${!reach?(unitOnIsland(u)?"🏝️ nur Insel":"🏝️ nicht auf die Insel"):ok?dist(u):assigned.has(String(u.id))?"bereits im Einsatz":""}<span style="display:block;margin-top:2px">${statusPill(u)}</span></small></button>`}).join("")}</div>
    </details>`;
  }).join("");
@@ -6708,7 +6715,7 @@ function unitPickHTML(fid,items,{placeholder="– Fahrzeug wählen –",value=""
  ${extra.length?`<div class="answer" style="margin-bottom:6px">${extra.map(btn).join("")}</div>`:""}
  ${cats.map(cat=>{const list=items.filter(x=>x.cat===cat);const types=[...new Set(list.map(x=>x.type||""))].sort((a,b)=>a.localeCompare(b,"de"));
    return `<details style="border:1px solid var(--line);border-radius:10px;margin:4px 0;padding:0 10px"><summary style="cursor:pointer;padding:8px 0;font-weight:800">${upIcon(cat)} ${esc(cat)} <span class="pill">${list.length}</span></summary>
-    ${types.map(t=>`<div style="margin:4px 0 8px"><div style="font-size:12px;font-weight:700;color:#475569">${esc(t||"Sonstige")}</div><div class="answer" style="margin-top:2px">${list.filter(x=>(x.type||"")===t).map(btn).join("")}</div></div>`).join("")}</details>`}).join("")}`;
+    ${types.map(t=>`<div style="margin:4px 0 8px"><div style="font-size:12px;font-weight:700;color:#475569">${esc(t||"Sonstige")}${cat==="Feuerwehr"&&fwTypeLong(t)?` – ${esc(fwTypeLong(t))}`:""}</div><div class="answer" style="margin-top:2px">${list.filter(x=>(x.type||"")===t).map(btn).join("")}</div></div>`).join("")}</details>`}).join("")}`;
 }
 function unitPickSet(fid,b,cb){
  const el=document.getElementById(fid); if(el)el.value=b.dataset.v;
