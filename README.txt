@@ -1607,6 +1607,16 @@ Version 5.05:
   („a, b“ = a ODER b). Mit „🚑 NA-Indikation“ markierte Knöpfe ziehen weiterhin einen Notarzt.
 - Nur „Unauffällig“ (ohne weitere Befunde) zählt weiter als unauffälliges E (R0 möglich).
 
+Version 5.67:
+- OrgL und LNA sind jetzt getrennt. Die bisherigen „OrgL/LNA Varel“ und „OrgL/LNA Sande“ heißen „OrgL Varel“ und „OrgL Sande“ (Fahrzeugtyp „OrgL“).
+- Neu: „LNA Friesland 1“ und „LNA Friesland 2“ (Typ „LNA“). Das sind Übungs-LNA, weil die echte LNA-Gruppe und ihre Rufnamen nicht hinterlegt sind.
+- Der LNA kommt mit dem Privat-PKW:
+  - Er ist nicht ortbar und erscheint weder auf der Karte noch an einer Wache. Im Vorschlag steht „Privat-PKW, nicht ortbar“ statt einer Ankunftszeit.
+  - Er startet von einem zufälligen Ort im Landkreis oder in Wilhelmshaven (Wohnung, Praxis, Klinik). Nach jedem Einsatz ist das ein neuer Ort.
+  - Vorlauf 5 Minuten, Fahrt ohne Sonderrechte (ca. 45 km/h). Beides ist eine Annahme.
+- MANV: Der OrgL legt den Bereitstellungsraum fest. Die ärztliche Sichtung macht der LNA. Ist kein LNA im Einsatz, macht sie wie bisher der OrgL.
+- AAOs: Wo bisher „OrgL/LNA“ stand, steht jetzt „OrgL“ und zusätzlich 1 LNA. Das gilt auch für selbst angelegte AAOs, damit sie weiter einen Arzt alarmieren.
+
 Version 5.66:
 - Neue Ereignisse in der Notrufabfrage: „👮 Polizeilage (Gewalt / Amok)“, „🦠 MANI“ und „🫂 MANB“ (mit eigenen AAOs 27, 28, 29).
 - Polizeilagen: Die Polizei meldet, ob die Lage sicher ist.

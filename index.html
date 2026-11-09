@@ -170,7 +170,7 @@ html[data-device="handy"] #floatDock{left:8px;right:8px;width:auto;top:auto;bott
 </head>
 <body>
 <div style="padding:6px 10px;font-size:11px;color:#94a3b8;font-weight:700;display:flex;flex-wrap:wrap;align-items:center;gap:10px;position:sticky;top:0;z-index:10;background:var(--bg)">
- <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v5.66</span>
+ <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v5.67</span>
  <span id="syncState"></span> <a id="deskTag" href="#" onclick="renameDesk();return false" title="Name dieses Platzes (für „offen an …“) – antippen zum Ändern" style="color:#64748b;font-weight:700;text-decoration:none"></a>
  <span id="simCtl" style="position:absolute;left:50%;transform:translateX(-50%);display:flex;gap:6px;align-items:center"></span>
  <a id="homeLink" href="#" onclick="render('leitstelle');return false" class="hidden" style="color:#64748b;text-decoration:underline;font-weight:600">🖥️ Leitstelle</a>
@@ -309,8 +309,12 @@ const DEFAULTS_FRI_WHV={
   {id:117,name:"88-83-01",opta:"Rettung Friesland 88/83-01",type:"RTW",org:"Rettungsdienst",location:"Wangerooge",island:"Wangerooge",status:"2",crew:"2",skills:"Notfallrettung (Insel Wangerooge)",verified:"BOS-Fahrzeuge"},
   {id:118,name:"88-82-01",opta:"Rettung Friesland 88/82-01",type:"NEF",org:"Rettungsdienst",location:"Wangerooge",island:"Wangerooge",status:"2",crew:"2",skills:"Notarzt (Insel Wangerooge)",verified:"BOS-Fahrzeuge"},
   {id:119,name:"88-83-02",opta:"Rettung Friesland 88/83-02",type:"RTW",org:"Rettungsdienst",location:"Wangerooge",island:"Wangerooge",status:"6",crew:"2",skills:"Reserve-RTW (Insel Wangerooge)",verified:"BOS-Fahrzeuge"},
-  {id:113,name:"OrgL/LNA Varel",opta:"Rettungsdienst Friesland – OrgL/LNA Varel",type:"OrgL/LNA",org:"Rettungsdienst",location:"Varel",status:"2",crew:"1",skills:"Organisatorischer Leiter Rettungsdienst / Leitender Notarzt",verified:"Nutzerangabe"},
-  {id:114,name:"OrgL/LNA Sande",opta:"Rettungsdienst Friesland – OrgL/LNA Sande",type:"OrgL/LNA",org:"Rettungsdienst",location:"Sande",status:"2",crew:"1",skills:"Organisatorischer Leiter Rettungsdienst / Leitender Notarzt",verified:"Nutzerangabe"},
+  {id:113,name:"OrgL Varel",opta:"Rettungsdienst Friesland – OrgL Varel",type:"OrgL",org:"Rettungsdienst",location:"Varel",status:"2",crew:"1",skills:"Organisatorischer Leiter Rettungsdienst",verified:"Nutzerangabe"},
+  {id:114,name:"OrgL Sande",opta:"Rettungsdienst Friesland – OrgL Sande",type:"OrgL",org:"Rettungsdienst",location:"Sande",status:"2",crew:"1",skills:"Organisatorischer Leiter Rettungsdienst",verified:"Nutzerangabe"},
+  // v5.67: Leitende Notärzte kommen getrennt vom OrgL mit dem Privat-PKW (nicht ortbar). Echte
+  // LNA-Gruppe und Rufnamen sind nicht hinterlegt → zwei Übungs-LNA, Wohnort zufällig im Landkreis.
+  {id:2201,name:"LNA 1",opta:"LNA Friesland 1",type:"LNA",org:"Rettungsdienst",location:"Friesland",status:"2",crew:"1",skills:"Leitender Notarzt (Privat-PKW, nicht ortbar)",verified:"Übungsannahme – echte LNA-Gruppe/Rufnamen nicht hinterlegt"},
+  {id:2202,name:"LNA 2",opta:"LNA Friesland 2",type:"LNA",org:"Rettungsdienst",location:"Friesland",status:"2",crew:"1",skills:"Leitender Notarzt (Privat-PKW, nicht ortbar)",verified:"Übungsannahme – echte LNA-Gruppe/Rufnamen nicht hinterlegt"},
 
   {id:201,name:"12-11-01",opta:"Florian Friesland 12-11-1",type:"ELW",org:"Feuerwehr",location:"Varel",status:"2",crew:"6",skills:"Einsatzleitung",verified:"Feuerwehr Varel"},
   {id:202,name:"12-17-01",opta:"Florian Friesland 12-17-1",type:"MTW",org:"Feuerwehr",location:"Varel",status:"2",crew:"9",skills:"Mannschaftstransport",verified:"Feuerwehr Varel"},
@@ -467,16 +471,16 @@ const DEFAULTS_FRI_WHV={
   {"id":6,"name":"Feuerwehr 1 – Feuer/Rauch","keyword":"F_2","rules":{"event":"Feuer / Rauchentwicklung"},"units":[{"type":"HLF","n":1,"org":"Feuerwehr"},{"type":"LF","n":1,"org":"Feuerwehr"}]},
   {"id":7,"name":"Feuerwehr 2 – Feuer mit Personengefährdung","keyword":"F_2_Y","rules":{"event":"Feuer / Rauchentwicklung","firePeople":"ja","count":"1"},"units":[{"type":"HLF","n":1,"org":"Feuerwehr"},{"type":"LF","n":1,"org":"Feuerwehr"},{"type":"DLK","n":1,"org":"Feuerwehr"},{"type":"RTW","n":1,"org":"Rettungsdienst"}],"active":true,"rulesEdited":true},
   {"id":8,"name":"Feuerwehr/Rettungsdienst – Verkehrsunfall mit eingeklemmter Person","keyword":"H_Eingeklemmt_YY","rules":{"event":"Verkehrsunfall","trapped":"ja"},"units":[{"type":"HLF","n":1,"org":"Feuerwehr"},{"type":"RTW","n":1,"org":"Rettungsdienst"},{"type":"RW","n":1,"org":"Feuerwehr"}]},
-  {"id":9,"name":"MANV 5 – 4 bis 5 Betroffene (MANV automatisch ab >3 Verletzten)","rules":{"count":">3"},"units":[{"type":"RTW","n":2,"org":"Rettungsdienst"},{"type":"NEF","n":1,"org":"Rettungsdienst"},{"type":"OrgL/LNA","n":1,"org":"Rettungsdienst"},{"type":"ELW","n":1,"org":"Feuerwehr"}]},
-  {"id":22,"name":"MANV 10 – 6 bis 10 Betroffene","rules":{"count":">3"},"units":[{"type":"RTW","n":4},{"type":"NEF","n":2},{"type":"KTW","n":2},{"type":"OrgL/LNA","n":1,"org":"Rettungsdienst"},{"type":"ELW","n":1,"org":"Feuerwehr"},{"type":"HLF","n":1,"org":"Feuerwehr"},{"type":"ELW1","n":1,"org":"DRK"}]},
-  {"id":23,"name":"MANV 30 – 11 bis 30 Betroffene","rules":{"count":">3"},"units":[{"type":"RTW","n":8},{"type":"NEF","n":4},{"type":"KTW","n":4},{"type":"RTH","n":1},{"type":"OrgL/LNA","n":2,"org":"Rettungsdienst"},{"type":"ELW","n":2,"org":"Feuerwehr"},{"type":"HLF","n":2,"org":"Feuerwehr"},{"type":"MTW","n":2,"org":"DRK"},{"type":"ELW1","n":1,"org":"DRK"}]},
-  {"id":24,"name":"MANV 50 – 31 bis 50 Betroffene","rules":{"count":">3"},"units":[{"type":"RTW","n":12},{"type":"NEF","n":5},{"type":"KTW","n":6},{"type":"RTH","n":2},{"type":"OrgL/LNA","n":2,"org":"Rettungsdienst"},{"type":"ELW","n":2,"org":"Feuerwehr"},{"type":"ELW1","n":1,"org":"DRK"},{"type":"HLF","n":3,"org":"Feuerwehr"},{"type":"MTW","n":4,"org":"DRK"}]},
-  {"id":25,"name":"MANV >50 – mehr als 50 Betroffene","rules":{"count":">3"},"units":[{"type":"RTW","n":16},{"type":"NEF","n":6},{"type":"KTW","n":8},{"type":"RTH","n":3},{"type":"OrgL/LNA","n":2,"org":"Rettungsdienst"},{"type":"ELW","n":3,"org":"Feuerwehr"},{"type":"ELW1","n":2,"org":"DRK"},{"type":"HLF","n":4,"org":"Feuerwehr"},{"type":"MTW","n":6,"org":"DRK"}]},
-  {"id":26,"name":"Evakuierung – Gebäude/Einrichtung räumen (v5.63)","keyword":"EVAK","rules":{"event":"Evakuierung"},"units":[{"type":"ELW","n":1,"org":"Feuerwehr"},{"type":"HLF","n":1,"org":"Feuerwehr"},{"type":"RTW","n":1,"org":"Rettungsdienst"},{"type":"KTW","n":2,"org":"Rettungsdienst"},{"type":"NEF","n":1,"org":"Rettungsdienst"},{"type":"OrgL/LNA","n":1,"org":"Rettungsdienst"},{"type":"GW-Betreuung","n":1,"org":"DRK"},{"type":"ELW1","n":1,"org":"DRK"},{"type":"MTW","n":2,"org":"DRK"}]},
+  {"id":9,"name":"MANV 5 – 4 bis 5 Betroffene (MANV automatisch ab >3 Verletzten)","rules":{"count":">3"},"units":[{"type":"RTW","n":2,"org":"Rettungsdienst"},{"type":"NEF","n":1,"org":"Rettungsdienst"},{"type":"OrgL","n":1,"org":"Rettungsdienst"},{"type":"LNA","n":1,"org":"Rettungsdienst"},{"type":"ELW","n":1,"org":"Feuerwehr"}]},
+  {"id":22,"name":"MANV 10 – 6 bis 10 Betroffene","rules":{"count":">3"},"units":[{"type":"RTW","n":4},{"type":"NEF","n":2},{"type":"KTW","n":2},{"type":"OrgL","n":1,"org":"Rettungsdienst"},{"type":"LNA","n":1,"org":"Rettungsdienst"},{"type":"ELW","n":1,"org":"Feuerwehr"},{"type":"HLF","n":1,"org":"Feuerwehr"},{"type":"ELW1","n":1,"org":"DRK"}]},
+  {"id":23,"name":"MANV 30 – 11 bis 30 Betroffene","rules":{"count":">3"},"units":[{"type":"RTW","n":8},{"type":"NEF","n":4},{"type":"KTW","n":4},{"type":"RTH","n":1},{"type":"OrgL","n":2,"org":"Rettungsdienst"},{"type":"LNA","n":1,"org":"Rettungsdienst"},{"type":"ELW","n":2,"org":"Feuerwehr"},{"type":"HLF","n":2,"org":"Feuerwehr"},{"type":"MTW","n":2,"org":"DRK"},{"type":"ELW1","n":1,"org":"DRK"}]},
+  {"id":24,"name":"MANV 50 – 31 bis 50 Betroffene","rules":{"count":">3"},"units":[{"type":"RTW","n":12},{"type":"NEF","n":5},{"type":"KTW","n":6},{"type":"RTH","n":2},{"type":"OrgL","n":2,"org":"Rettungsdienst"},{"type":"LNA","n":1,"org":"Rettungsdienst"},{"type":"ELW","n":2,"org":"Feuerwehr"},{"type":"ELW1","n":1,"org":"DRK"},{"type":"HLF","n":3,"org":"Feuerwehr"},{"type":"MTW","n":4,"org":"DRK"}]},
+  {"id":25,"name":"MANV >50 – mehr als 50 Betroffene","rules":{"count":">3"},"units":[{"type":"RTW","n":16},{"type":"NEF","n":6},{"type":"KTW","n":8},{"type":"RTH","n":3},{"type":"OrgL","n":2,"org":"Rettungsdienst"},{"type":"LNA","n":1,"org":"Rettungsdienst"},{"type":"ELW","n":3,"org":"Feuerwehr"},{"type":"ELW1","n":2,"org":"DRK"},{"type":"HLF","n":4,"org":"Feuerwehr"},{"type":"MTW","n":6,"org":"DRK"}]},
+  {"id":26,"name":"Evakuierung – Gebäude/Einrichtung räumen (v5.63)","keyword":"EVAK","rules":{"event":"Evakuierung"},"units":[{"type":"ELW","n":1,"org":"Feuerwehr"},{"type":"HLF","n":1,"org":"Feuerwehr"},{"type":"RTW","n":1,"org":"Rettungsdienst"},{"type":"KTW","n":2,"org":"Rettungsdienst"},{"type":"NEF","n":1,"org":"Rettungsdienst"},{"type":"OrgL","n":1,"org":"Rettungsdienst"},{"type":"LNA","n":1,"org":"Rettungsdienst"},{"type":"GW-Betreuung","n":1,"org":"DRK"},{"type":"ELW1","n":1,"org":"DRK"},{"type":"MTW","n":2,"org":"DRK"}]},
   // v5.66: Polizeilage (RD wartet im Bereitstellungsraum auf Freigabe), MANI, MANB
   {"id":27,"name":"Polizeilage – Gewalt/Amok (RD im Bereitstellungsraum, v5.66)","keyword":"POL","rules":{"event":"Polizeilage"},"units":[{"type":"RTW","n":1,"org":"Rettungsdienst"},{"type":"NEF","n":1,"org":"Rettungsdienst"}]},
-  {"id":28,"name":"MANI – Massenanfall von Infizierten/Erkrankten (v5.66)","keyword":"MANI","rules":{"event":"MANI"},"units":[{"type":"RTW","n":2,"org":"Rettungsdienst"},{"type":"KTW","n":2,"org":"Rettungsdienst"},{"type":"NEF","n":1,"org":"Rettungsdienst"},{"type":"OrgL/LNA","n":1,"org":"Rettungsdienst"},{"type":"ELW1","n":1,"org":"DRK"},{"type":"MTW","n":1,"org":"DRK"}]},
-  {"id":29,"name":"MANB – Massenanfall von Betroffenen (v5.66)","keyword":"MANB","rules":{"event":"MANB"},"units":[{"type":"RTW","n":1,"org":"Rettungsdienst"},{"type":"NEF","n":1,"org":"Rettungsdienst"},{"type":"OrgL/LNA","n":1,"org":"Rettungsdienst"},{"type":"ELW","n":1,"org":"Feuerwehr"},{"type":"ELW1","n":1,"org":"DRK"},{"type":"GW-Betreuung","n":1,"org":"DRK"},{"type":"MTW","n":2,"org":"DRK"}]},
+  {"id":28,"name":"MANI – Massenanfall von Infizierten/Erkrankten (v5.66)","keyword":"MANI","rules":{"event":"MANI"},"units":[{"type":"RTW","n":2,"org":"Rettungsdienst"},{"type":"KTW","n":2,"org":"Rettungsdienst"},{"type":"NEF","n":1,"org":"Rettungsdienst"},{"type":"OrgL","n":1,"org":"Rettungsdienst"},{"type":"LNA","n":1,"org":"Rettungsdienst"},{"type":"ELW1","n":1,"org":"DRK"},{"type":"MTW","n":1,"org":"DRK"}]},
+  {"id":29,"name":"MANB – Massenanfall von Betroffenen (v5.66)","keyword":"MANB","rules":{"event":"MANB"},"units":[{"type":"RTW","n":1,"org":"Rettungsdienst"},{"type":"NEF","n":1,"org":"Rettungsdienst"},{"type":"OrgL","n":1,"org":"Rettungsdienst"},{"type":"LNA","n":1,"org":"Rettungsdienst"},{"type":"ELW","n":1,"org":"Feuerwehr"},{"type":"ELW1","n":1,"org":"DRK"},{"type":"GW-Betreuung","n":1,"org":"DRK"},{"type":"MTW","n":2,"org":"DRK"}]},
   {"id":10,"name":"Rettungsdienst – RD_X kritische Blutung","keyword":"R1N1_Trauma schwer","rules":{"x_massive":"Ja"},"units":[{"type":"RTW","n":1,"org":"Rettungsdienst"},{"type":"NEF","n":1,"org":"Rettungsdienst"}]},
   {"id":11,"name":"Rettungsdienst – RD_B Atemstillstand","keyword":"R1N1_Reanimation","rules":{"b_breath":"Keine normale Atmung"},"units":[{"type":"RTW","n":1,"org":"Rettungsdienst"},{"type":"NEF","n":1,"org":"Rettungsdienst"}]},
   {"id":12,"name":"Rettungsdienst – RD_C relevante Blutung","keyword":"R1N1_Med. Notfall schwer","rules":{"c_circ":"Relevante Blutung"},"units":[{"type":"RTW","n":1,"org":"Rettungsdienst"},{"type":"NEF","n":1,"org":"Rettungsdienst"}]},
@@ -690,8 +694,8 @@ const DEFAULTS_BREMEN={
    const list=[];
    for(let i=1;i<=10;i++)list.push({id:1000+i,name:`RTW ${i}`,opta:`RTW ${i}`,type:"RTW",org:"Rettungsdienst",location:"Bremen",status:"2",crew:"2",skills:"Notfallrettung",verified:"Nutzerangabe"});
    for(let i=1;i<=3;i++)list.push({id:1100+i,name:`NEF ${i}`,opta:`NEF ${i}`,type:"NEF",org:"Rettungsdienst",location:"Bremen",status:"2",crew:"2",skills:"Notarzt",verified:"Nutzerangabe"});
-   list.push({id:1201,name:"OrgL",opta:"OrgL",type:"OrgL/LNA",org:"Rettungsdienst",location:"Bremen",status:"2",crew:"1",skills:"Organisatorischer Leiter Rettungsdienst",verified:"Nutzerangabe"});
-   list.push({id:1202,name:"LNA",opta:"LNA",type:"OrgL/LNA",org:"Rettungsdienst",location:"Bremen",status:"2",crew:"1",skills:"Leitender Notarzt",verified:"Nutzerangabe"});
+   list.push({id:1201,name:"OrgL",opta:"OrgL",type:"OrgL",org:"Rettungsdienst",location:"Bremen",status:"2",crew:"1",skills:"Organisatorischer Leiter Rettungsdienst",verified:"Nutzerangabe"});
+   list.push({id:1202,name:"LNA",opta:"LNA",type:"LNA",org:"Rettungsdienst",location:"Bremen",status:"2",crew:"1",skills:"Leitender Notarzt (Privat-PKW, nicht ortbar)",verified:"Nutzerangabe"});
    return list;
  })(),
  aao:DEFAULTS_FRI_WHV.aao,
@@ -749,7 +753,7 @@ async function csPull(){
  return false;
 }
 const CS_ORGS=["Rettungsdienst","Feuerwehr","DLRG","DRK","THW","Luftrettung","DGzRS"];
-const CS_TYPES={Rettungsdienst:["RTW","NEF","KTW","NKTW","ITW","OrgL/LNA"],Feuerwehr:["HLF","LF","TLF","DLK","RW","ELW","ELW1","MTW","GW-L1","WLF","TSF"],DLRG:["RTB","MZB","GW Wasserrettung","GW Taucher","MTW","ELW1"],DRK:["RTW","KTW","MTW","GW-San","ELW1","RTB"],THW:["MTW","GKW","MzKW","ELW"],Luftrettung:["RTH","ITH"],DGzRS:["SRK","SRB"]};
+const CS_TYPES={Rettungsdienst:["RTW","NEF","KTW","NKTW","ITW","OrgL","LNA"],Feuerwehr:["HLF","LF","TLF","DLK","RW","ELW","ELW1","MTW","GW-L1","WLF","TSF"],DLRG:["RTB","MZB","GW Wasserrettung","GW Taucher","MTW","ELW1"],DRK:["RTW","KTW","MTW","GW-San","ELW1","RTB"],THW:["MTW","GKW","MzKW","ELW"],Luftrettung:["RTH","ITH"],DGzRS:["SRK","SRB"]};
 const CS_SKILLS={RTW:"Notfallrettung",NEF:"Notarzt",KTW:"Krankentransport",NKTW:"Notfall-Krankentransport",ITW:"Intensivtransport",RTH:"Notarzt, Luftrettung",ITH:"Intensivtransport, Luftrettung",RTB:"Wasserrettung",MZB:"Wasserrettung",SRK:"Seenotrettung",SRB:"Seenotrettung",HLF:"Brandbekämpfung, Technische Hilfeleistung",LF:"Brandbekämpfung",TLF:"Brandbekämpfung",DLK:"Hubrettung",RW:"Technische Hilfeleistung"};
 const CS_FACH=["Innere Medizin","Chirurgie","Schockraum","Intensivmedizin","Kardiologie / Chest Pain Unit","Neurologie / Stroke Unit","Pädiatrie","Gynäkologie/Geburtshilfe","Urologie","Psychiatrie","HNO","Augenheilkunde"];
 function csBuildDefaults(cs){
@@ -976,6 +980,24 @@ const RETIRED_UNIT_OPTAS=[
  "Rettung Friesland 84/82-03"
 ];
 db.units=db.units.filter(u=>!RETIRED_UNIT_OPTAS.includes(u.opta));
+// v5.67: OrgL und LNA getrennt. Bisherige „OrgL/LNA“-Fahrzeuge werden zum OrgL (Typ „OrgL“), reine
+// LNA-Einträge zum LNA (Privat-PKW). In allen AAOs wird „OrgL/LNA“ zu „OrgL“ und zusätzlich 1 LNA alarmiert.
+if(!db.lnaSplitV567){
+ (db.units||[]).forEach(u=>{
+   if(u.type!=="OrgL/LNA")return;
+   const nm=String(u.opta||u.name||"");
+   if(/\bLNA\b/.test(nm)&&!/OrgL/.test(nm)){u.type="LNA";return}
+   u.type="OrgL";
+   const m=/^Rettungsdienst Friesland – OrgL\/LNA (Varel|Sande)$/.exec(nm);
+   if(m&&!u.userEdited){u.opta=`Rettungsdienst Friesland – OrgL ${m[1]}`;u.name=`OrgL ${m[1]}`;u.skills="Organisatorischer Leiter Rettungsdienst"}
+ });
+ (db.aao||[]).forEach(a=>{
+   if(!Array.isArray(a.units)||!a.units.some(x=>x.type==="OrgL/LNA"))return;
+   a.units.forEach(x=>{if(x.type==="OrgL/LNA")x.type="OrgL"});
+   if(!a.units.some(x=>x.type==="LNA"))a.units.splice(a.units.findIndex(x=>x.type==="OrgL")+1,0,{type:"LNA",n:1,org:"Rettungsdienst"});
+ });
+ db.lnaSplitV567=true;
+}
 // Neu hinzugekommene Standardfahrzeuge (z. B. per Update ergänzt) bei bereits genutzten
 // Installationen automatisch nachziehen, ohne eigene/manuell angelegte Einträge anzutasten.
 if(!Array.isArray(db.deletedUnitOptas))db.deletedUnitOptas=[];
@@ -1169,7 +1191,7 @@ function statusOptionsFor(u){
  let opts=restricted?["0","1","2","3","4","5","6"]:["0","1","2","3","4","5","6","7","8"];
  // OrgL/LNA soll immer einsatzbereit bleiben: kein "Nicht einsatzbereit" (6),
  // "Patient aufgenommen" (7) oder "bedingt verfügbar" (8).
- if(u?.type==="OrgL/LNA")opts=opts.filter(s=>!["6","7","8"].includes(s));
+ if(isLeadUnit(u))opts=opts.filter(s=>!["6","7","8"].includes(s));
  return opts;
 }
 const NAV_PAGES=NAV_PAGES_ALL;
@@ -1327,7 +1349,7 @@ function vehicleMapEmoji(u){
  if(u.org==="DLRG")return"🌊";
  if(u.org==="DRK")return"✚";
  if(u.org==="Luftrettung")return"🚁";
- if(u.type==="OrgL/LNA")return"🚗";
+ if(isLeadUnit(u))return"🚗";
  if(u.org==="THW")return"🛠️";
  return"🚑";
 }
@@ -1341,7 +1363,7 @@ function renderStationMarkersOnMap(){
  if(!leafletMap||typeof L==="undefined")return;
  const groups={};
  (db.units||[]).forEach(u=>{
-   if(!STATION_ORGS.includes(u.org))return;
+   if(!STATION_ORGS.includes(u.org)||isLNA(u))return; // LNA hat keine Wache
    const key=`${u.org}__${u.location||"?"}`;
    (groups[key]=groups[key]||{org:u.org,location:u.location,units:[]}).units.push(u);
  });
@@ -1557,6 +1579,7 @@ function renderVehiclePositionsOnMap(){
  const relevant=(db.units||[]).filter(u=>[...STATION_ORGS,"Luftrettung"].includes(u.org));
  const placed=[];
  relevant.forEach(u=>{
+   if(isLNA(u))return; // v5.67: LNA im Privat-PKW ist nicht ortbar
    const hasLiveGps=Number.isFinite(Number(u.lat))&&Number.isFinite(Number(u.lng));
    if(hasLiveGps){
      placed.push({u,pos:[Number(u.lat),Number(u.lng)],mode:"live"});
@@ -1708,6 +1731,7 @@ function setUnitStatus(u,status){
  if(["1","2","6"].includes(String(status))){delete u.carriesAb; if(isAB(u))delete u.wlfId}
  if(String(status)==="6"&&u.qualNow){u.qualNow="";delete u.qualNowAt} // nicht einsatzbereit → Sonder-Anmeldung endet
  u.status=String(status);
+ if(String(status)==="2"&&!wasFree&&isLNA(u))delete u.privHome; // v5.67: nächstes Mal ist der LNA woanders
  if(["1","2"].includes(String(status))){if(!wasFree||!u.freeSince)u.freeSince=Date.now()}else delete u.freeSince;
  delete u.status1Since; delete u.status2Due;
  delete u.status3Since;
@@ -2159,7 +2183,32 @@ function incidentArea(){
  )[0][0];
 }
 const numOk=v=>v!==""&&v!=null&&Number.isFinite(Number(v));
+// ─── v5.67: OrgL und LNA getrennt ─────────────────────────────────────────────────────────────
+// Der OrgL fährt sein Kommandofahrzeug (ortbar wie bisher). Der LNA kommt getrennt mit dem
+// Privat-PKW: kein GPS/keine Ortung (nicht auf der Karte), Standort zufällig (Wohnung, Praxis,
+// Klinik), etwas Vorlauf bis zur Abfahrt und Fahrt ohne Sonderrechte. Annahmen, nicht verifiziert.
+function isOrgL(u){return !!u&&(u.type==="OrgL"||u.type==="OrgL/LNA")}
+function isLNA(u){return !!u&&u.type==="LNA"}
+function isLeadUnit(u){return isOrgL(u)||isLNA(u)}
+const LNA_TOWNS=["Jever","Varel","Zetel","Sande","Schortens","Wangerland","Bockhorn","Wilhelmshaven"];
+function lnaPrivHome(u){
+ if(Array.isArray(u.privHome)&&u.privHome.length===2)return u.privHome;
+ let base=null;
+ if(numOk(u.homeLat)&&numOk(u.homeLng))base=[Number(u.homeLat),Number(u.homeLng)];
+ if(!base&&AREA_CENTERS[u.location])base=AREA_CENTERS[u.location];
+ if(!base&&currentScenarioId!=="bremen")base=AREA_CENTERS[LNA_TOWNS[Math.floor(Math.random()*LNA_TOWNS.length)]];
+ if(!base){const o=Object.entries(STATION_OVERRIDE).find(([k])=>k.endsWith("__"+u.location));base=o?o[1]:null}
+ if(!base){const r=db.units.find(x=>x!==u&&!isLNA(x)&&x.location===u.location&&x.org===u.org);base=r?unitPointBase(r):null}
+ if(!base)return null;
+ const ang=Math.random()*2*Math.PI, km=1+Math.random()*4;
+ u.privHome=[base[0]+km/111*Math.cos(ang), base[1]+km/(111*Math.cos(base[0]*Math.PI/180))*Math.sin(ang)];
+ return u.privHome;
+}
 function unitPoint(u){
+ if(isLNA(u)){const h=lnaPrivHome(u);if(h)return h}
+ return unitPointBase(u);
+}
+function unitPointBase(u){
  if(Number.isFinite(Number(u.lat)) && Number.isFinite(Number(u.lng)))return [Number(u.lat),Number(u.lng)];
  if(numOk(u.homeLat)&&numOk(u.homeLng))return [Number(u.homeLat),Number(u.homeLng)]; // eigener Standort (Editor)
  const override=STATION_OVERRIDE[`${u.org}__${u.location}`];
@@ -2187,6 +2236,7 @@ function geographicRank(u){
 function unitTurnoutDefault(u){
  if(!u)return 2;
  if(u.neighborLoan||u.district)return 1;
+ if(isLNA(u))return 5; // v5.67: LNA muss erst zum Privat-PKW (Annahme)
  const o=u.org;
  if(o==="Luftrettung")return 3;
  if(o==="Rettungsdienst"||o==="Polizei")return 1;
@@ -2243,7 +2293,7 @@ function travelMinutes(u,km,noSr=false){
  if(km==null||km>=999)return null;
  const isAir=u.type==="RTH"||u.type==="ITH"||u.type==="KTH"||u.org==="Luftrettung";
  const isBoat=!isAir&&typeof waterCapable==="function"&&waterCapable(u);
- const speed=isAir?200:isBoat?(u.type==="SRK"?35:30):(noSr?45:60);
+ const speed=isAir?200:isBoat?(u.type==="SRK"?35:30):((noSr||isLNA(u))?45:60); // v5.67: LNA-Privat-PKW ohne Sonderrechte
  const factor=(isAir||isBoat)?1:1.3;
  return (km*factor/speed)*60;
 }
@@ -2339,7 +2389,7 @@ function realisticMode(){
 
 
 const QUICK_RESOURCE_TYPES=[
- {type:"RTW"},{type:"NEF"},{type:"NKTW"},{type:"RTH"},{type:"ITH"},{type:"KTH"},{type:"OrgL/LNA"},{type:"HLF"},{type:"LF"},{type:"RW"},{type:"DLK"},{type:"ELW"},
+ {type:"RTW"},{type:"NEF"},{type:"NKTW"},{type:"RTH"},{type:"ITH"},{type:"KTH"},{type:"OrgL"},{type:"LNA"},{type:"HLF"},{type:"LF"},{type:"RW"},{type:"DLK"},{type:"ELW"},
  {type:["RTB","MZB"],label:"Boot"},{type:"GW Wasserrettung",label:"Strömungsrettung"},{type:"GW Taucher",label:"Taucher"},
  {type:"MTW"},{type:"GW Drohne"},{type:"KTW"}
 ];
@@ -2670,7 +2720,7 @@ function manageProposal(){
   <label style="margin-top:10px">Aktuell vorgeschlagen</label>
   ${proposal.length?proposal.map(u=>`<div class="row between" style="padding:8px 0;border-bottom:1px solid var(--line)"><span>${vehicleLabelBlock(u)}</span><button onclick="removeProposedUnit('${String(u.id)}')">🗑️ Entfernen</button></div>`).join(""):`<p class="muted">Noch keine Fahrzeuge vorgeschlagen.</p>`}
   <label style="margin-top:14px">Verfügbares Fahrzeug hinzufügen</label>
-  ${unitPickHTML("manualAddUnit",available.map(u=>unitItem(u,"",geographicRank(u)<999?`ca. ${estimatedEtaMinutes(u)} min`:statusName(String(u.status)))))}
+  ${unitPickHTML("manualAddUnit",available.map(u=>unitItem(u,"",isLNA(u)?"Privat-PKW, nicht ortbar":geographicRank(u)<999?`ca. ${estimatedEtaMinutes(u)} min`:statusName(String(u.status)))))}
   <div class="row" style="margin-top:10px"><button class="primary" onclick="addManualUnit()">➕ Hinzufügen</button></div>
  </div>`;
 }
@@ -2911,7 +2961,7 @@ function resourcePickerCatsHTML(mode){
  if(pickerCat!=="quick"&&!orgs.includes(pickerCat))pickerCat="quick";
  const icon=o=>(typeof ORG_ICON!=="undefined"&&ORG_ICON[o])||"🚗";
  const tabs=`<div class="row" style="flex-wrap:wrap;gap:6px;margin:6px 0 10px">${[["quick","⭐ Häufig"],...orgs.map(o=>[o,`${icon(o)} ${o}`])].map(([k,t])=>`<button class="${pickerCat===k?"primary":""}" onclick="setPickerCat(${esc(JSON.stringify(k))},'${mode}')">${esc(t)}</button>`).join("")}</div>`;
- const dist=u=>u&&geographicRank(u)<999?`ca. ${estimatedEtaMinutes(u)} min`:"verfügbar";
+ const dist=u=>u&&isLNA(u)?"Privat-PKW, nicht ortbar":u&&geographicRank(u)<999?`ca. ${estimatedEtaMinutes(u)} min`:"verfügbar";
  const btn=(t,label,org)=>{const u=chooseAvailableByType(t,org);const typeArg=JSON.stringify(t).replace(/"/g,"'");
    return `<button ${u?"":"disabled"} onclick="addResourceType(${typeArg},'${mode}'${org?`,${esc(JSON.stringify(org))}`:""})">${esc(label||(Array.isArray(t)?t.join("/"):t))}<small style="display:block">${u?`${esc(u.opta||u.name)} · ${dist(u)}<span style="display:block;margin-top:2px">${statusPill(u)}</span>`:"nicht verfügbar"}</small></button>`};
  if(pickerCat==="quick")return tabs+`<div class="answer">${QUICK_RESOURCE_TYPES.map(({type:t,label})=>btn(t,label,null)).join("")}</div>`;
@@ -4881,7 +4931,7 @@ function evaluate0(){
  c.neighborProposal=selected.filter(x=>x.neighbor).map(x=>x.id);
  c.proposal=selected;
  c.abPlans=abPlans;
- c.suggestion=selected.map(x=>x.wlfFor?`${x.opta||x.name} – WLF (holt ${x.wlfFor} an der FTZ${x.wlfBusy?`, kommt von Einsatz #${x.wlfFrom} und setzt dort ab`:""} · ca. ${x.wlfTotal} min)`:x.abWith?`${x.opta||x.name} – ${x.type} (auf ${x.abWith})`:x.missing?`⚠️ ${x.type} (${x.org||"beliebig"}) nicht verfügbar`:x.neighbor?`🤝 ${x.opta} – ${x.type} (Nachbar-LK ${x.district}, ca. ${x.neighborEta} min)`:`${x.opta||x.name} – ${x.type}${x.firstResponder?" (First Responder)":""}${Number.isFinite(geographicRank(x))&&geographicRank(x)<999?` (ca. ${estimatedEtaMinutes(x)} min)`:``}`).join(" · ");
+ c.suggestion=selected.map(x=>x.wlfFor?`${x.opta||x.name} – WLF (holt ${x.wlfFor} an der FTZ${x.wlfBusy?`, kommt von Einsatz #${x.wlfFrom} und setzt dort ab`:""} · ca. ${x.wlfTotal} min)`:x.abWith?`${x.opta||x.name} – ${x.type} (auf ${x.abWith})`:x.missing?`⚠️ ${x.type} (${x.org||"beliebig"}) nicht verfügbar`:x.neighbor?`🤝 ${x.opta} – ${x.type} (Nachbar-LK ${x.district}, ca. ${x.neighborEta} min)`:`${x.opta||x.name} – ${x.type}${x.firstResponder?" (First Responder)":""}${isLNA(x)?" (Privat-PKW, nicht ortbar)":Number.isFinite(geographicRank(x))&&geographicRank(x)<999?` (ca. ${estimatedEtaMinutes(x)} min)`:``}`).join(" · ");
  c.sr=sr;
 }
 
@@ -5501,7 +5551,7 @@ function manvStationTick(call,now){
 function manvFuAssUnit(call){return callUnits(call).find(u=>u.org==="DRK"&&/^ELW/.test(u.type)&&String(u.status)==="4")||null}
 function manvFuAssTick(call,now){
  const u=manvFuAssUnit(call); if(!u)return false; let ch=false;
- const orgl=callUnits(call).find(x=>x.type==="OrgL/LNA"&&String(x.status)==="4");
+ const orgl=callUnits(call).find(x=>isOrgL(x)&&String(x.status)==="4");
  if(!call.manvFuAss){
    call.manvFuAss={unitId:u.id,label:u.opta||u.name,at:now,next:now+rint(8,10)*60000};
    if(call._orglDelay)call._orglDelay=Math.round(call._orglDelay*0.6); else call._orglDelay=rint(3,6)*60000;
@@ -5586,7 +5636,7 @@ function manvStayLabel(c,pid){const s=(c.manvStay||[]).find(x=>x.pid===pid);if(!
  return s.done?"🫂 betreut und übergeben":s.place?"🫂 in der Betreuungsstelle (DRK)":"🫂 wartet auf Betreuung"}
 function manvStayTick(call,now){
  const S=call.manvStay; if(!S||!S.length)return false; let ch=false;
- const kind=manvKind(call), us=callUnits(call), lead=us.find(u=>u.type==="OrgL/LNA"&&String(u.status)==="4")||us.find(u=>RD_TYPES.has(u.type)&&String(u.status)==="4");
+ const kind=manvKind(call), us=callUnits(call), lead=us.find(u=>isOrgL(u)&&String(u.status)==="4")||us.find(u=>isLNA(u)&&String(u.status)==="4")||us.find(u=>RD_TYPES.has(u.type)&&String(u.status)==="4");
  const ST=Object.values(call.manvStations||{}).filter(x=>x.kind==="bet"&&x.ready&&!x.closed);
  let cap=ST.reduce((a,x)=>a+x.cap,0)-(call.manvPatients||[]).filter(p=>p.place==="bet"&&!p.unit).length-S.filter(s=>s.place==="bet"&&!s.done).length;
  const fresh=[];
@@ -5881,7 +5931,7 @@ function evacCheckDone(call,now){
  const E=call.evac; if(!E||E.complete)return false;
  if(E.arrived.lying>=E.lying&&E.arrived.chair>=E.chair&&E.walkDone+E.selfDone>=E.walk){
    E.complete=true;E.completeAt=now;
-   const lead=callUnits(call).find(x=>["ELW","ELW1","OrgL/LNA"].includes(x.type)&&String(x.status)==="4")||callUnits(call).find(x=>String(x.status)==="4");
+   const lead=callUnits(call).find(x=>(["ELW","ELW1"].includes(x.type)||isLeadUnit(x))&&String(x.status)==="4")||callUnits(call).find(x=>String(x.status)==="4");
    const t=`Evakuierung abgeschlossen – alle ${E.total} Personen in Sicherheit (${E.lying} liegend, ${E.chair} Rollstuhl, ${E.walk} gehfähig).`;
    if(lead)crewSds(lead,call,t); (call.history=call.history||[]).push({q:"🏃 Evakuierung",a:t});
    callUnits(call).forEach(x=>{if(String(x.status)==="4"&&!x.crew){x.sceneCall=String(call.id);x.sceneUntil=now+rint(5,15)*60000}});
@@ -5909,7 +5959,7 @@ function evacTick(call,now){
  if(gb&&!E.betAt){E.betAt=now+rint(4,6)*60000;crewSds(gb,call,"Evakuierung: Beginne Aufbau Betreuungsstelle (Registrierung, Decken, Getränke).");ch=true}
  if(E.betAt&&!E.betReady&&now>=E.betAt){E.betReady=true;crewSds(gb||on[0],call,"Betreuungsstelle betriebsbereit – evakuierte Personen werden registriert und betreut.");ch=true}
  // erste Rückmeldung der Einsatzleitung
- const lead=on.find(x=>["ELW","ELW1","OrgL/LNA"].includes(x.type));
+ const lead=on.find(x=>["ELW","ELW1"].includes(x.type)||isLeadUnit(x));
  if(lead&&!E.lageAt){E.lageAt=now;const t=`Lage Evakuierung: ${E.total} Personen, davon ${E.lying} liegend und ${E.chair} im Rollstuhl – Pendelverkehr mit KTW/RTW (Ziel: ${E.dest}), Gehfähige zur Betreuungsstelle.`;crewSds(lead,call,t);(call.history=call.history||[]).push({q:`📻 Lage (${lead.opta||lead.name})`,a:t});ch=true}
  // Engpass: zu wenig Transportmittel für die Liegenden → Hinweis an die Leitstelle
  const P=evacPending(call), tr=us.filter(x=>CREW_TRANSPORT.has(x.type)&&!MANV_AIR.has(x.type)).length;
@@ -6002,7 +6052,7 @@ const MANV_STAGES=[[5,"9","MANV 5"],[10,"22","MANV 10"],[30,"23","MANV 30"],[50,
 const MANV_IDS=new Set(MANV_STAGES.map(x=>x[1]));
 function manvStage(n){n=Number(n)||0;return MANV_STAGES.find(x=>n<=x[0])}
 function isManvCall(c){return !!c&&!c.kt&&(Number(c.answers?.count)>3||!!c.manv||/MANV/.test(c.keyword||""))}
-const RD_TYPES=new Set(["RTW","NEF","NKTW","KTW","RTH","ITH","KTH","OrgL/LNA","SRTW","Baby-NAW","NAW","ITW"]);
+const RD_TYPES=new Set(["RTW","NEF","NKTW","KTW","RTH","ITH","KTH","OrgL","LNA","OrgL/LNA","SRTW","Baby-NAW","NAW","ITW"]);
 function callUnits(c){return (c.alarmedUnits||[]).map(id=>db.units.find(x=>String(x.id)===String(id))).filter(Boolean)}
 // Wahre Verteilung der Betroffenen (einmal pro Einsatz festgelegt)
 function manvTruth(c){
@@ -6111,7 +6161,7 @@ function manvListDialog(id){
    return `<tr style="border-bottom:1px solid var(--line)"><td style="padding:4px;font-weight:800">${p.n}</td><td>${mstartDot(k,14)}${orgl&&p.sk!==p.vs?` <small class="muted" title="Vorsichtung">(vorher ${MSTART_COL[p.vs][1]})</small>`:""}</td>
    <td style="font-size:12px">${p.gender==="W"?"♀":"♂"} ${p.age} J. – ${esc(p.inj)}<br><span class="muted">${esc(mstartFindings(p))}</span></td><td style="font-size:12px">${tr&&tr.care?`🕯️ palliativ vor Ort${u?` (${esc(u.opta||u.name)})`:""}`:u?`🚑 ${esc(u.opta||u.name)}`:k===5?"—":manvStayLabel(c,p.n)?esc(manvStayLabel(c,p.n)):tr&&tr.place&&tr.place!=="transport"?esc(manvPlaceLabel(c,p.n)):"<span class='muted'>wartet</span>"}</td></tr>`}).join("");
  showModal(`<h3 style="margin-top:0">📋 Sichtung nach mSTaRT – Einsatz #${esc(String(c.id))}</h3>
-  <p class="muted" style="font-size:13px;margin-top:0">${orgl?"Stand nach ärztlicher Sichtung (OrgL/LNA).":"Vorsichtung durch das ersteintreffende Rettungsmittel."} Nummer = Anhängekarte.</p>
+  <p class="muted" style="font-size:13px;margin-top:0">${orgl?"Stand nach ärztlicher Sichtung (LNA).":"Vorsichtung durch das ersteintreffende Rettungsmittel."} Nummer = Anhängekarte.</p>
   <div style="max-height:55vh;overflow:auto"><table style="width:100%;border-collapse:collapse"><tr style="text-align:left;font-size:12px"><th>Nr.</th><th>Kat.</th><th>Patient / Befund</th><th>Verbleib</th></tr>${rows}</table></div>
   ${mstartSchemeHTML()}
   <div class="row" style="justify-content:flex-end;gap:6px;margin-top:10px"><button onclick="manvTrainDialog('${esc(String(c.id))}')">🎓 Selbst sichten</button><button onclick="closeModal()">Schließen</button></div>`);
@@ -6324,11 +6374,13 @@ function callTick(){
    try{if(policeTick(c,now))changed=true;if(c.manvComps&&manvCompTick(c,now))changed=true;if(bigEventManvTick(c,now))changed=true}catch(e){console.warn(e)} // v5.66
    if(c.alarmTime&&us.some(isAirUnit)&&!c.heliLanding&&Number.isFinite(Number(c.lat)))heliPickLanding(c);
    if(c.alarmTime&&isManvCall(c)&&!policeHold(c)){
-     if(!c.brMode&&!c.staging)c.brMode=us.some(u=>u.type==="OrgL/LNA")?"orgl":"lst";
-     const first=us.filter(u=>RD_TYPES.has(u.type)&&u.type!=="OrgL/LNA"&&String(u.status)==="4"&&u.status4Since).sort((a,b)=>a.status4Since-b.status4Since)[0];
+     if(!c.brMode&&!c.staging)c.brMode=us.some(isOrgL)?"orgl":"lst";
+     const first=us.filter(u=>RD_TYPES.has(u.type)&&!isLeadUnit(u)&&String(u.status)==="4"&&u.status4Since).sort((a,b)=>a.status4Since-b.status4Since)[0];
      if(first&&!(c.manvReports||[]).some(r=>r.kind==="first"||r.kind==="orgl")&&now-first.status4Since>=(c._firstDelay||(c._firstDelay=rint(2,4)*60000))){manvReport(c,first,"first");changed=true}
-     const orgl=us.find(u=>u.type==="OrgL/LNA"&&String(u.status)==="4"&&u.status4Since);
-     if(orgl&&!(c.manvReports||[]).some(r=>r.kind==="orgl")&&now-orgl.status4Since>=(c._orglDelay||(c._orglDelay=rint(5,10)*60000))){manvReport(c,orgl,"orgl");changed=true}
+     const orgl=us.find(u=>isOrgL(u)&&String(u.status)==="4"&&u.status4Since);
+     // v5.67: ärztliche Sichtung macht der LNA (kommt getrennt im Privat-PKW); nur ohne LNA im Einsatz der OrgL
+     const lna=us.find(u=>isLNA(u)&&String(u.status)==="4"&&u.status4Since), sichter=us.some(isLNA)?lna:orgl;
+     if(sichter&&!(c.manvReports||[]).some(r=>r.kind==="orgl")&&now-sichter.status4Since>=(c._orglDelay||(c._orglDelay=rint(5,10)*60000))){manvReport(c,sichter,"orgl");changed=true}
      if(orgl&&c.brMode==="orgl"&&!c.staging&&now-orgl.status4Since>=120000)orglPickStaging(c,orgl);
    }
    // Übrige Fahrzeuge (Feuerwehr, THW, DLRG, OrgL, ELW …) beenden ihre Arbeit nach realistischer Zeit
@@ -6343,7 +6395,7 @@ function callTick(){
      if(now<u.sceneUntil)continue;
      // Führung (OrgL, ELW) bleibt, bis alle Patienten weg sind
      if(c.evac&&!c.evac.complete)continue; // v5.63: alle bleiben, bis die Evakuierung abgeschlossen ist
-     if((["OrgL/LNA","ELW","ELW1","ELW2"].includes(u.type)||u.manvComp)&&(us.some(x=>x!==u&&CREW_TRANSPORT.has(x.type)&&String(x.status)==="4")||(c.manvPatients||[]).some(p=>!p.unit&&p.sk<=4)||manvStayOpen(c)))continue; // v5.66: auch MANV-PA und Betreuung (MANB)
+     if((["ELW","ELW1","ELW2"].includes(u.type)||isLeadUnit(u)||u.manvComp)&&(us.some(x=>x!==u&&CREW_TRANSPORT.has(x.type)&&String(x.status)==="4")||(c.manvPatients||[]).some(p=>!p.unit&&p.sk<=4)||manvStayOpen(c)))continue; // v5.66: auch MANV-PA und Betreuung (MANB)
      if(manvKind(c)==="MANB"&&/^(MTW|GW-Betreuung|GW-SEG|Küchenwagen)$/.test(u.type)&&u.org==="DRK"&&manvStayOpen(c))continue;
      setUnitStatus(u,"1"); delete u.sceneUntil; delete u.sceneCall; changed=true;
    }
@@ -8163,8 +8215,8 @@ async function renderVehicleTerminal(unitId,dburl,sid){
    if(led){led.style.background="#2ecc71";led.style.boxShadow="0 0 5px #2ecc71";led.title="LIVE"}
    const vType=unit?.type||local?.type;
    const inCallStatus4=String(unit?.status)==="4" && calls.length>0;
-   const canAssign=String(unit?.status)==="4" && ["RTW","RTH","ITH","KTH","NKTW","KTW","OrgL/LNA","NEF"].includes(vType);
-   const canOrglFeedback=vType==="OrgL/LNA" && inCallStatus4;
+   const canAssign=String(unit?.status)==="4" && ["RTW","RTH","ITH","KTH","NKTW","KTW","OrgL","LNA","OrgL/LNA","NEF"].includes(vType);
+   const canOrglFeedback=["OrgL","LNA","OrgL/LNA"].includes(vType) && inCallStatus4;
    if(!vehicleKeyboardOpen){
      const body=document.getElementById("vehicleBody"); if(!body)return;
      body.innerHTML=`${vehicleGeoWatchId?`<div style="font-size:10px;opacity:.8;margin-bottom:4px">📍 STANDORT LIVE</div>`:""}
@@ -8552,7 +8604,7 @@ async function openVehicleIvenaAssignment(unitId,dburl,sid,callId){
  const local=db.units.find(x=>String(x.id)===String(unitId));
  const hospitals=(vehicleIvenaCache&&vehicleIvenaCache.length)?vehicleIvenaCache:(db.ivena||[]);
  if(!hospitals.length){toast("Keine Kliniken hinterlegt");return}
- const isAnnounceType=["OrgL/LNA","NEF"].includes(local?.type);
+ const isAnnounceType=["OrgL","LNA","OrgL/LNA","NEF"].includes(local?.type);
  const allowSelf=local?.type==="NEF";
  const transportOptions=isAnnounceType?(vehicleUnitsCache||[]).filter(u=>["RTW","RTH","ITH","KTH","NKTW","KTW"].includes(u.type)&&String(u.status)==="4"):[];
  clearInterval(vehiclePollTimer);
@@ -8588,7 +8640,7 @@ async function openVehicleIvenaAssignment(unitId,dburl,sid,callId){
 }
 async function saveVehicleIvenaAssignment(unitId,dburl,sid){
  const local=db.units.find(x=>String(x.id)===String(unitId));
- const isAnnounceType=["OrgL/LNA","NEF"].includes(local?.type);
+ const isAnnounceType=["OrgL","LNA","OrgL/LNA","NEF"].includes(local?.type);
  const hospital=((vehicleIvenaCache&&vehicleIvenaCache.length)?vehicleIvenaCache:(db.ivena||[])).find(h=>String(h.id)===String(document.getElementById("vAsgHospital")?.value));
  if(!hospital){toast("Bitte Zielklinik wählen");return}
  const fach=pzcFachrichtung(document.getElementById("vAsgRmi")?.value||"");
