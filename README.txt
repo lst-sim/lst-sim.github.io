@@ -1607,6 +1607,14 @@ Version 5.05:
   („a, b“ = a ODER b). Mit „🚑 NA-Indikation“ markierte Knöpfe ziehen weiterhin einen Notarzt.
 - Nur „Unauffällig“ (ohne weitere Befunde) zählt weiter als unauffälliges E (R0 möglich).
 
+Version 5.63:
+- Fahrzeug-Bildschirm: neuer Knopf „🧭 NAVI“. Bodenfahrzeuge öffnen die echte Navi-App des Handys mit der Einsatzstelle (bzw. dem Bereitstellungsraum) als Ziel: Google Maps, Apple Karten oder eine andere App über geo:. Luftfahrzeuge bekommen eine Flugansicht (dunkle Karte, Luftlinie, Kurs, Distanz in NM/km, Flugzeit bei 120 kt bzw. GPS-Geschwindigkeit, ETA, Zielkoordinaten in Grad/Minuten). Die Ansicht ist an Rescue Track angelehnt, aber nicht das echte System. Ohne GPS-Freigabe gilt der Standort laut Leitstelle.
+- MANV-Verteilung: ca. 15 % rot, 20 % gelb, 60 % grün, 5 % blau. Verstorbene (unter 5 %) gibt es nur bei passenden Lagen (VU, Bus/Zug, Brand, Explosion, Einsturz). Bei Einklemmungen ist ein blauer Patient einer, dessen Rettung zu lange dauern würde.
+- Evakuierung: neues Ereignis „🏃 Evakuierung“ mit den Fragen „Wie viele Personen? davon liegend? davon Rollstuhl?“ und eigener AAO (EVAK). Die KTW-Zahl richtet sich nach Liegenden/Rollstuhl, die MTW-Zahl nach Gehfähigen.
+  - Ablauf: KTW/RTW fahren Liegende und Rollstuhlfahrer im Pendelverkehr zur Aufnahmeeinrichtung. Gehfähige gehen selbst oder fahren mit MTW zur Betreuungsstelle. Der GW-Betreuung baut eine Betreuungsstelle auf. Die Einsatzleitung gibt eine Lagemeldung und fordert bei Engpass weitere KTW an.
+  - Alle Kräfte bleiben, bis die Evakuierung abgeschlossen ist. Der Fortschritt steht am Einsatz.
+  - Neue Anrufer: Pflegeheim mit Rauch, Gasgeruch im Mehrfamilienhaus, Bombenfund (Ordnungsamt).
+
 Version 5.62:
 - MANV-Shuttle: Gibt ein Rettungsmittel seinen Patienten in der Klinik ab und warten an der Einsatzstelle noch Patienten, für die kein anderes Fahrzeug anfährt, fährt es direkt wieder hin (Status 3 ab der Klinik) und holt den nächsten. RTH nur für SK I, KTW nur für SK I–III. Sind alle Patienten weg, geht es wie bisher in Status 1.
 - mSTaRT-Liste: Spalte „Verbleib“ statt „Transport“. Zeigt an: im BHP (DRK), in der Betreuungsstelle (DRK), palliativ vor Ort oder das Transportfahrzeug. Die Sanitätsstelle heißt jetzt „Behandlungsplatz (BHP)“.

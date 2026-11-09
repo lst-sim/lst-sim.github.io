@@ -170,7 +170,7 @@ html[data-device="handy"] #floatDock{left:8px;right:8px;width:auto;top:auto;bott
 </head>
 <body>
 <div style="padding:6px 10px;font-size:11px;color:#94a3b8;font-weight:700;display:flex;flex-wrap:wrap;align-items:center;gap:10px;position:sticky;top:0;z-index:10;background:var(--bg)">
- <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v5.62</span>
+ <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v5.63</span>
  <span id="syncState"></span> <a id="deskTag" href="#" onclick="renameDesk();return false" title="Name dieses Platzes (für „offen an …“) – antippen zum Ändern" style="color:#64748b;font-weight:700;text-decoration:none"></a>
  <span id="simCtl" style="position:absolute;left:50%;transform:translateX(-50%);display:flex;gap:6px;align-items:center"></span>
  <a id="homeLink" href="#" onclick="render('leitstelle');return false" class="hidden" style="color:#64748b;text-decoration:underline;font-weight:600">🖥️ Leitstelle</a>
@@ -472,6 +472,7 @@ const DEFAULTS_FRI_WHV={
   {"id":23,"name":"MANV 30 – 11 bis 30 Betroffene","rules":{"count":">3"},"units":[{"type":"RTW","n":8},{"type":"NEF","n":4},{"type":"KTW","n":4},{"type":"RTH","n":1},{"type":"OrgL/LNA","n":2,"org":"Rettungsdienst"},{"type":"ELW","n":2,"org":"Feuerwehr"},{"type":"HLF","n":2,"org":"Feuerwehr"},{"type":"MTW","n":2,"org":"DRK"}]},
   {"id":24,"name":"MANV 50 – 31 bis 50 Betroffene","rules":{"count":">3"},"units":[{"type":"RTW","n":12},{"type":"NEF","n":5},{"type":"KTW","n":6},{"type":"RTH","n":2},{"type":"OrgL/LNA","n":2,"org":"Rettungsdienst"},{"type":"ELW","n":2,"org":"Feuerwehr"},{"type":"ELW1","n":1,"org":"DRK"},{"type":"HLF","n":3,"org":"Feuerwehr"},{"type":"MTW","n":4,"org":"DRK"}]},
   {"id":25,"name":"MANV >50 – mehr als 50 Betroffene","rules":{"count":">3"},"units":[{"type":"RTW","n":16},{"type":"NEF","n":6},{"type":"KTW","n":8},{"type":"RTH","n":3},{"type":"OrgL/LNA","n":2,"org":"Rettungsdienst"},{"type":"ELW","n":3,"org":"Feuerwehr"},{"type":"ELW1","n":2,"org":"DRK"},{"type":"HLF","n":4,"org":"Feuerwehr"},{"type":"MTW","n":6,"org":"DRK"}]},
+  {"id":26,"name":"Evakuierung – Gebäude/Einrichtung räumen (v5.63)","keyword":"EVAK","rules":{"event":"Evakuierung"},"units":[{"type":"ELW","n":1,"org":"Feuerwehr"},{"type":"HLF","n":1,"org":"Feuerwehr"},{"type":"RTW","n":1,"org":"Rettungsdienst"},{"type":"KTW","n":2,"org":"Rettungsdienst"},{"type":"NEF","n":1,"org":"Rettungsdienst"},{"type":"OrgL/LNA","n":1,"org":"Rettungsdienst"},{"type":"GW-Betreuung","n":1,"org":"DRK"},{"type":"ELW1","n":1,"org":"DRK"},{"type":"MTW","n":2,"org":"DRK"}]},
   {"id":10,"name":"Rettungsdienst – RD_X kritische Blutung","keyword":"R1N1_Trauma schwer","rules":{"x_massive":"Ja"},"units":[{"type":"RTW","n":1,"org":"Rettungsdienst"},{"type":"NEF","n":1,"org":"Rettungsdienst"}]},
   {"id":11,"name":"Rettungsdienst – RD_B Atemstillstand","keyword":"R1N1_Reanimation","rules":{"b_breath":"Keine normale Atmung"},"units":[{"type":"RTW","n":1,"org":"Rettungsdienst"},{"type":"NEF","n":1,"org":"Rettungsdienst"}]},
   {"id":12,"name":"Rettungsdienst – RD_C relevante Blutung","keyword":"R1N1_Med. Notfall schwer","rules":{"c_circ":"Relevante Blutung"},"units":[{"type":"RTW","n":1,"org":"Rettungsdienst"},{"type":"NEF","n":1,"org":"Rettungsdienst"}]},
@@ -2654,7 +2655,7 @@ function addManualUnit(){
 // an alle Fahrzeuge (Fahrzeug-Terminals klingeln erneut).
 const CALL_EDIT_OPTIONS={
  calltype:["112","116117","110"],
- event112:["Medizinischer Notfall","Reanimation","Feuer / Rauchentwicklung","Verkehrsunfall","Technische Hilfeleistung","Person im Wasser","Vermisste Person","Sonstiger Notfall"],
+ event112:["Medizinischer Notfall","Reanimation","Feuer / Rauchentwicklung","Verkehrsunfall","Technische Hilfeleistung","Person im Wasser","Vermisste Person","Evakuierung","Sonstiger Notfall"],
  xyn:["Nein","Ja","Unklar"], xairway:["Frei","Gefährdet","Verlegt","Unklar"], xbreathing:["Normal","Auffällig","Keine normale Atmung","Unklar"],
  xcirc:["Unauffällig","Auffällig","Schockzeichen","Relevante Blutung","Sonstiges","Unklar"],
  xdisability:["Wach / orientiert","Bewusstseinsgetrübt","Bewusstlos","Krampfanfall","Neurologisch auffällig","Unklar"],
@@ -3153,7 +3154,7 @@ function incidentCard(c,isSelected){
     <span class="status ${stateClass}">${state}</span>
    </div>
    ${callPhaseHTML(c,false)}
-   ${c.alarmTime&&isManvCall(c)?manvStripHTML(c):""}${c.heliLanding?`<div style="margin-top:6px;font-size:13px">🚁 Landeplatz: ${esc(c.heliLanding.name)}</div>`:""}
+   ${c.alarmTime&&isManvCall(c)?manvStripHTML(c):""}${c.alarmTime&&c.evac?evacStripHTML(c):""}${c.heliLanding?`<div style="margin-top:6px;font-size:13px">🚁 Landeplatz: ${esc(c.heliLanding.name)}</div>`:""}
    <hr>
    <div class="formgrid">
     <div><label>Einsatzstichwort</label><div class="big">${esc(c.keyword||"Noch keine Bewertung")}</div></div>
@@ -3292,7 +3293,7 @@ function dashboard(){
     const stateColor=CALL_PHASES[callPhase(c)][1];
     return `<div onclick="toggleIncidentExpand('${esc(String(c.id))}')" title="${esc(CALL_PHASES[callPhase(c)][0])}" style="cursor:pointer;background:var(--panel);border:1px solid var(--line);border-left:6px solid ${stateColor};border-radius:10px;padding:8px 14px;margin-top:${i===0?0:-9}px;position:relative;z-index:${sortedCalls.length-i};box-shadow:0 2px 5px rgba(0,0,0,.10);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">
       ${callPhaseHTML(c,true)}<b>#${esc(c.id)}</b>${waitBadgeHTML(c)}${deskBadgeHTML(c)} <span class="muted">${esc(c.keyword||"Noch keine Bewertung")}</span>
-      ${c.alarmTime&&isManvCall(c)?manvStripHTML(c):""}
+      ${c.alarmTime&&isManvCall(c)?manvStripHTML(c):""}${c.alarmTime&&c.evac?evacStripHTML(c):""}
      </div>`;
   }).join("")}</div>
    <p class="muted" style="margin-top:8px;font-size:11px">📂 Wie ein Aktensortierer: dringende Einsätze oben, R0 danach, bereits alarmierte ganz unten. Auf einen Eintrag tippen, um alle Infos zu sehen.</p>`:`<div class="card"><h2>Keine offenen Einsätze</h2><p class="muted">Starte einen Übungsnotruf.</p></div>`}
@@ -3345,6 +3346,9 @@ const QS_BASE=[
  ["water","🌊 Befindet sich die Person im Wasser?","ynQ"],
  ["waterState","🌊 Wie ist der Zustand der Person im Wasser?","waterState"],
  ["personDanger","⚠️ Wie viele Personen sind verletzt, erkrankt oder unmittelbar gefährdet?","ynPersonDanger"],
+ ["evacTotal","🏃 Wie viele Personen müssen evakuiert werden?","count"],
+ ["evacLying","🛏️ Davon liegend / bettlägerig?","count"],
+ ["evacChair","♿ Davon im Rollstuhl / nicht gehfähig?","count"],
  ["x_massive","X – Gibt es eine kritische / lebensbedrohliche Blutung?","xyn"],
  ["a_airway","A – Ist der Atemweg frei?","xairway"],
  ["b_breath","B – Wie ist die Atmung?","xbreathing"],
@@ -3370,9 +3374,9 @@ const KT_QS=[
 // Eigene Fragen: Kurztext, Langtext, Zahl, Ja/Nein, Auswahl; optional nur bei bestimmten Ereignissen.
 // Eigene Fragen erscheinen im Verlauf/Protokoll und können als AAO-Bedingung genutzt werden.
 const QS_LOCKED=new Set(["callType","location","event","ktType"]);
-const QS_DEP_EVENT=new Set(["fireKind","trapped","firePeople","water","waterState","personDanger","x_massive","a_airway","b_breath","c_circ","d_disability","e_exposure","psy","patientName","patientAge","patientGender"]);
+const QS_DEP_EVENT=new Set(["evacTotal","evacLying","evacChair","fireKind","trapped","firePeople","water","waterState","personDanger","x_massive","a_airway","b_breath","c_circ","d_disability","e_exposure","psy","patientName","patientAge","patientGender"]);
 const QS_KINDS={text:"Kurzer Text",textarea:"Langer Text",number:"Zahl",yesno:"Ja / Nein / Unbekannt",choice:"Auswahl (eigene Antwortknöpfe)"};
-const QS_EVENTS=["Medizinischer Notfall","Reanimation","Feuer / Rauchentwicklung","Verkehrsunfall","Technische Hilfeleistung","Person im Wasser","Vermisste Person","Sonstiger Notfall"];
+const QS_EVENTS=["Medizinischer Notfall","Reanimation","Feuer / Rauchentwicklung","Verkehrsunfall","Technische Hilfeleistung","Person im Wasser","Vermisste Person","Evakuierung","Sonstiger Notfall"];
 const QS_ANSWER_INFO={calltype:"112 / 116117 / 110",event112:"Ereignis-Knöpfe",fireDetail:"Feuer: was zu sehen / was brennt",count:"Zahl",ynTech:"Zahl",ynFire:"Zahl",ynQ:"Ja / Nein / ?",waterState:"Lebenszeichen / Vermisst / Bergung",ynPersonDanger:"Zahl",
  xyn:"Nein / Ja / Unklar",xairway:"Frei / Gefährdet / Verlegt / Unklar",xbreathing:"Normal / Auffällig / Keine normale Atmung / Unklar",xcirc:"Unauffällig / Auffällig / Schock / Blutung / Sonstiges / Unklar",
  xdisability:"Wach … Bewusstlos …",textarea:"Freitext",text:"Text",ynPsy:"Ja / Nein",yn:"ja / nein / unbekannt",gender:"M / W / Divers / Unbekannt",ktType:"Entlassung / Verlegung / Einweisung"};
@@ -3511,7 +3515,7 @@ function qsAnswerPick(id,i){
  qsPendingLabel=(!a.own&&a.label!==a.value)?{id,label:a.label}:null;
  answer(id,v);
 }
-const QS_ANS_ICON={event:{"Medizinischer Notfall":"🚑","Reanimation":"❤️","Feuer / Rauchentwicklung":"🔥","Verkehrsunfall":"🚗","Technische Hilfeleistung":"🛠️","Person im Wasser":"🌊","Vermisste Person":"🛸","Sonstiger Notfall":"❓"},waterState:{"Lebenszeichen":"🟢","Vermisst":"🔍","Bergung":"⚫"}};
+const QS_ANS_ICON={event:{"Medizinischer Notfall":"🚑","Reanimation":"❤️","Feuer / Rauchentwicklung":"🔥","Verkehrsunfall":"🚗","Technische Hilfeleistung":"🛠️","Person im Wasser":"🌊","Vermisste Person":"🛸","Evakuierung":"🏃","Sonstiger Notfall":"❓"},waterState:{"Lebenszeichen":"🟢","Vermisst":"🔍","Bergung":"⚫"}};
 function qsAnswerButtonsHTML(id,label){
  const ic=QS_ANS_ICON[id]||{};
  return `<label>${label}</label><div class="answer">${qsAnswerList(id).map((a,i)=>`<button onclick="qsAnswerPick('${id}',${i})">${!a.own&&ic[a.value]?ic[a.value]+" ":""}${esc(a.label)}</button>`).join("")}</div>`;
@@ -3772,7 +3776,7 @@ const REA_SHORTCUT_DEFAULTS={x_massive:"Nein",a_airway:"Gefährdet",b_breath:"Ke
 // und Patient (Psy, Name, Alter, Geschlecht). Nicht zutreffende Felder werden wie bisher
 // automatisch übersprungen; „Zurück“ nimmt die ganze Maske zurück.
 const QS_MASKS=[
- {key:"betroffene",title:"👥 Betroffene",ids:["count","trapped","firePeople","personDanger"]},
+ {key:"betroffene",title:"👥 Betroffene",ids:["count","trapped","firePeople","personDanger","evacTotal","evacLying","evacChair"]},
  {key:"wasser",title:"🌊 Person im Wasser",ids:["water","waterState"]},
  {key:"patient",title:"👤 Patient",ids:["psy","patientName","patientAge","patientGender"]},
  {key:"freitext",title:"📝 Freitext",ids:["danger","freeText"]}
@@ -3783,7 +3787,8 @@ function qsMaskOf(id){return QS_MASKS.find(m=>m.ids.includes(id))||null}
 function qsMaskSkip(c,id){
  if(qsIsHidden(c,id))return "nicht erhoben";
  const a=c.answers||{}, e=a.event||"";
- if(id==="count")return ["Medizinischer Notfall","Reanimation"].includes(e)?"1":null;
+ if(id==="count")return ["Medizinischer Notfall","Reanimation"].includes(e)?"1":e==="Evakuierung"?"0":null;
+ if(["evacTotal","evacLying","evacChair"].includes(id))return e==="Evakuierung"?null:"nicht zutreffend";
  if(id==="trapped")return ["Verkehrsunfall","Technische Hilfeleistung"].includes(e)?null:"nicht zutreffend";
  if(id==="firePeople")return e==="Feuer / Rauchentwicklung"?null:"nicht zutreffend";
  if(id==="personDanger")return ["Reanimation","Medizinischer Notfall","Person im Wasser","Verkehrsunfall"].includes(e)?"=count":null;
@@ -4087,6 +4092,7 @@ function questionHTML(q){
    <button onclick="answer('event','Technische Hilfeleistung')">🛠️ Technische Hilfeleistung</button>
    <button onclick="answer('event','Person im Wasser')">🌊 Person im Wasser</button>
    <button onclick="answer('event','Vermisste Person')">🛸 Vermisste Person (Suche)</button>
+   <button onclick="answer('event','Evakuierung')">🏃 Evakuierung (Gebäude/Einrichtung räumen)</button>
    <button onclick="answer('event','Sonstiger Notfall')">❓ Sonstiger Notfall</button>
  </div>`;
  if(type==="ynPsy") return `<label>${label} <span class="muted" style="font-weight:500">(optional)</span></label><div class="answer">
@@ -4478,6 +4484,12 @@ function evaluate0(){
  } else if(e==="Medizinischer Notfall"){
    keyword=kw(4,"MEDIZINISCHER NOTFALL R1");
    addAao(4);
+ } else if(e==="Evakuierung"){
+   // v5.63: Evakuierung – KTW-Zahl nach liegenden/Rollstuhl-Personen (Pendelverkehr), MTW nach Gehfähigen
+   const T=evacNums(c);
+   keyword=kw(26,"EVAK");
+   addAao(26,x=>x.type==="KTW"?Math.min(10,Math.max(aaoN(x,a),Math.ceil((T.lying+T.chair/2)/3))):x.type==="MTW"?Math.min(6,Math.max(aaoN(x,a),Math.ceil(T.walk/40))):aaoN(x,a));
+   keyword=`${keyword} – Evakuierung – ${T.total||"?"} Personen${T.lying?`, ${T.lying} liegend`:""}${T.chair?`, ${T.chair} Rollstuhl`:""}`; kwMap[26]=keyword;
  } else if(e==="Sonstiger Notfall"){
    keyword="NOTFALL – Disponentenentscheidung";
    sr=false;
@@ -5083,6 +5095,7 @@ function crewSds(u,call,text){
 }
 const hhmm=t=>new Date(t).toLocaleTimeString("de-DE",{hour:"2-digit",minute:"2-digit"});
 function crewPlan(u,call){
+ if(evacInit(call)){evacPlan(u,call);return} // v5.63: Evakuierung
  const info=crewCaseInfo(call), now=Date.now(), isNef=u.type==="NEF";
  // v5.35 SRTW: übernimmt den Patienten vom RTW, der den SRTW nachgefordert hat
  if(u.type==="SRTW"){
@@ -5281,6 +5294,7 @@ function crewTick(){
        }
        continue;
      }
+     if(C.mode==="evacT"){if(now>=C.departAt){const keep={...C,arriveAt:now+C.drive*60000};setUnitStatus(u,"7");u.crew=keep;changed=true}continue} // v5.63
      if(C.mode==="care"){const P=(call&&call.manvPatients||[]).find(x=>x.n===C.patient);if(!P||P.sk!==4){delete u.crew;changed=true}continue} // v5.60
      if(C.mode==="none"&&now>=C.doneAt){crewSds(u,call,C.info&&C.info.noPatient?"Kein Patient vor Ort – Einsatzende, wieder einsatzbereit.":"Kein weiterer Patient für uns – Einsatzende, wieder einsatzbereit.");setUnitStatus(u,"1");delete u.crew;changed=true;continue}
      if(C.mode==="home"&&now>=C.doneAt){crewSds(u,call,`Pat. vor Ort versorgt, kein Transport notwendig (ambulant/Hausarzt). Einsatzende ${hhmm(now)} – wieder einsatzbereit.`);(call.history=call.history||[]).push({q:`🏠 ${u.opta||u.name}`,a:"Pat. vor Ort versorgt, kein Transport"});setUnitStatus(u,"1");delete u.crew;changed=true;continue}
@@ -5327,6 +5341,10 @@ function crewTick(){
         crewSds(u,call||{id:C.callId},`Pat. ${asg?`in der ${asg.hospitalName} `:""}übergeben – Rückflug mit Notarzt ins NWK Sanderbusch (Status 6), ca. ${fly} min.`);
         setUnitStatus(u,"6"); u.crew={callId:C.callId,mode:"docReturn",nefId:C.docFrom,dueAt:now+fly*60000,owner:DEVICE_ID}; changed=true; continue;
       }
+      if(C.mode==="evacT"&&call&&call.evac){const E=call.evac;E.arrived.lying+=C.load.l;E.arrived.chair+=C.load.c;
+        const n=C.load.l+C.load.c, left=evacPending(call).lying+evacPending(call).chair;
+        if(left>0&&!u.neighborLoan){crewSds(u,call,`${n} Person${n>1?"en":""} übergeben (${E.dest}) – Evakuierung: noch ${left} liegend/Rollstuhl, fahren wieder hin (Pendelverkehr).`);setUnitStatus(u,"3");delete u.crew;changed=true;evacCheckDone(call,now);continue}
+        crewSds(u,call,`${n} Person${n>1?"en":""} übergeben (${E.dest}) – wieder einsatzbereit.`);setUnitStatus(u,"1");delete u.crew;changed=true;evacCheckDone(call,now);continue}
       if(!C.nef){const asg=(db.ivenaAssignments||[]).find(a=>String(a.id)===String(C.asgId));
         // v5.62 MANV-Shuttle: noch Patienten an der Einsatzstelle → direkt wieder hin
         const left=call&&!u.neighborLoan?manvShuttleNeed(call,u):0;
@@ -5433,6 +5451,84 @@ function manvHandover(o,u,P,call){
  crewSds(o,call,txt+" Übernehmen nächsten Patienten."); (call.history=call.history||[]).push({q:`🔁 Übergabe (${o.opta||o.name} → ${u.opta||u.name})`,a:txt});
  delete o.crew; delete P.unit; return nefId;
 }
+// ─── v5.63: Evakuierung ─────────────────────────────────────────────────────────────────────────
+// Liegende und Rollstuhl-Personen fahren KTW/RTW im Pendelverkehr in die Aufnahmeeinrichtung,
+// Gehfähige gehen selbst (oder mit Angehörigen) bzw. fahren mit den MTW zur Betreuungsstelle.
+// Alle Einsatzkräfte bleiben, bis die Evakuierung abgeschlossen ist.
+function evacNums(c){
+ const a=c&&c.answers||{}, F=c&&c.sim&&c.sim.d&&c.sim.d.f||{}, num=v=>{const n=parseInt(v,10);return Number.isFinite(n)&&n>=0?n:null};
+ const total=num(a.evacTotal)??num(F.evacTotal)??0, lying=Math.min(total,num(a.evacLying)??num(F.evacLying)??0), chair=Math.min(total-lying,num(a.evacChair)??num(F.evacChair)??0);
+ return {total,lying,chair,walk:Math.max(0,total-lying-chair)};
+}
+function evacInit(call){
+ if(!call)return false; if(call.evac)return true;
+ const a=call.answers||{}, F=call.sim&&call.sim.d&&call.sim.d.f||{};
+ if(a.event!=="Evakuierung"&&!(F.event==="Evakuierung"&&!a.event))return false;
+ // echte Zahlen kommen aus der Lage (Simulation), sonst aus der Abfrage
+ const T=(()=>{const t=evacNums({sim:call.sim});return t.total?t:evacNums(call)})();
+ if(!T.total)return false;
+ const D=call.sim&&call.sim.d||{}, share=D.evacWalkShare!=null?D.evacWalkShare:0.5;
+ call.evac={...T,walkNeed:Math.round(T.walk*share),dest:D.evacDest||"Aufnahmeeinrichtung",assigned:{lying:0,chair:0},arrived:{lying:0,chair:0},walkDone:0,selfDone:0,startAt:Date.now()};
+ return true;
+}
+function evacPending(call){const E=call.evac;return {lying:E.lying-E.assigned.lying,chair:E.chair-E.assigned.chair}}
+function evacPlan(u,call){
+ const now=Date.now(), E=call.evac, air=MANV_AIR.has(u.type);
+ if(u.type==="NEF"){u.crew={callId:String(call.id),nef:true,needed:false,releaseAt:now+rint(20,35)*60000};crewSds(u,call,"Evakuierung: Notarzt an der Sammelstelle, sichtet die Bewohner.");return}
+ if(air){u.crew={callId:String(call.id),mode:"none",doneAt:now+rint(3,6)*60000,info:{noPatient:true}};return}
+ const P=evacPending(call); let l=0,c=0;
+ if(P.lying>0){l=1;if(P.chair>0&&u.type!=="RTW")c=1}else if(P.chair>0)c=Math.min(2,P.chair);
+ if(!l&&!c){u.crew={callId:String(call.id),mode:"none",doneAt:now+rint(2,5)*60000,info:{}};return}
+ E.assigned.lying+=l;E.assigned.chair+=c;
+ u.crew={callId:String(call.id),mode:"evacT",load:{l,c},departAt:now+rint(8,14)*60000,drive:rint(8,18)};
+ crewSds(u,call,`Evakuierung: übernehmen ${l?`${l} liegend`:""}${l&&c?" + ":""}${c?`${c} im Rollstuhl/Tragestuhl`:""} – Transport, Ziel: ${E.dest}.`);
+}
+function evacCheckDone(call,now){
+ const E=call.evac; if(!E||E.complete)return false;
+ if(E.arrived.lying>=E.lying&&E.arrived.chair>=E.chair&&E.walkDone+E.selfDone>=E.walk){
+   E.complete=true;E.completeAt=now;
+   const lead=callUnits(call).find(x=>["ELW","ELW1","OrgL/LNA"].includes(x.type)&&String(x.status)==="4")||callUnits(call).find(x=>String(x.status)==="4");
+   const t=`Evakuierung abgeschlossen – alle ${E.total} Personen in Sicherheit (${E.lying} liegend, ${E.chair} Rollstuhl, ${E.walk} gehfähig).`;
+   if(lead)crewSds(lead,call,t); (call.history=call.history||[]).push({q:"🏃 Evakuierung",a:t});
+   callUnits(call).forEach(x=>{if(String(x.status)==="4"&&!x.crew){x.sceneCall=String(call.id);x.sceneUntil=now+rint(5,15)*60000}});
+   return true;
+ }
+ return false;
+}
+function evacTick(call,now){
+ const E=call.evac; if(!E||E.complete)return false; let ch=false;
+ const us=callUnits(call), on=us.filter(x=>String(x.status)==="4");
+ if(!on.length)return false;
+ if(!E.onSceneAt){E.onSceneAt=now;ch=true}
+ // Gehfähige ohne Transportbedarf: gehen nach und nach selbst raus (ca. 10–25 min)
+ const self=E.walk-E.walkNeed;
+ if(E.selfDone<self&&now-(E.lastSelf||E.onSceneAt)>=60000){E.lastSelf=now;E.selfDone=Math.min(self,E.selfDone+Math.max(1,Math.ceil(self/rint(10,20))));ch=true}
+ // MTW/Busse bringen die übrigen Gehfähigen zur Betreuungsstelle (8 Personen je Fahrt, ca. 15–25 min)
+ for(const m of on.filter(x=>/MTW|MTF|Bus/.test(x.type))){
+   if(E.walkDone>=E.walkNeed)break;
+   if(!m.evacTripAt||m.evacCall!==String(call.id)){m.evacCall=String(call.id);m.evacTripAt=now+rint(15,25)*60000;ch=true;continue}
+   if(now>=m.evacTripAt){const n=Math.min(8,E.walkNeed-E.walkDone);E.walkDone+=n;m.evacTripAt=now+rint(15,25)*60000;
+     crewSds(m,call,`Evakuierung: ${n} gehfähige Person${n>1?"en":""} zur Betreuungsstelle gebracht${E.walkNeed-E.walkDone>0?`, noch ${E.walkNeed-E.walkDone} – nächste Fahrt`:""}.`);ch=true}
+ }
+ // Betreuungsstelle durch den GW-Betreuung (Aufbau ca. 5 min)
+ const gb=on.find(x=>x.type==="GW-Betreuung");
+ if(gb&&!E.betAt){E.betAt=now+rint(4,6)*60000;crewSds(gb,call,"Evakuierung: Beginne Aufbau Betreuungsstelle (Registrierung, Decken, Getränke).");ch=true}
+ if(E.betAt&&!E.betReady&&now>=E.betAt){E.betReady=true;crewSds(gb||on[0],call,"Betreuungsstelle betriebsbereit – evakuierte Personen werden registriert und betreut.");ch=true}
+ // erste Rückmeldung der Einsatzleitung
+ const lead=on.find(x=>["ELW","ELW1","OrgL/LNA"].includes(x.type));
+ if(lead&&!E.lageAt){E.lageAt=now;const t=`Lage Evakuierung: ${E.total} Personen, davon ${E.lying} liegend und ${E.chair} im Rollstuhl – Pendelverkehr mit KTW/RTW (Ziel: ${E.dest}), Gehfähige zur Betreuungsstelle.`;crewSds(lead,call,t);(call.history=call.history||[]).push({q:`📻 Lage (${lead.opta||lead.name})`,a:t});ch=true}
+ // Engpass: zu wenig Transportmittel für die Liegenden → Hinweis an die Leitstelle
+ const P=evacPending(call), tr=us.filter(x=>CREW_TRANSPORT.has(x.type)&&!MANV_AIR.has(x.type)).length;
+ if(lead&&!E.moreAsked&&P.lying+P.chair>tr*3&&now-E.onSceneAt>10*60000){E.moreAsked=true;const n=Math.ceil((P.lying+P.chair)/3)-tr;
+   crewSds(lead,call,`Evakuierung: noch ${P.lying} liegend und ${P.chair} Rollstuhl offen – bitte ${n} weitere KTW nachalarmieren.`);(call.nafo=call.nafo||[]).push({reason:`Evakuierung: ${n} weitere KTW`,at:new Date().toISOString()});ch=true}
+ if(evacCheckDone(call,now))ch=true;
+ return ch;
+}
+function evacStripHTML(c){
+ const E=c.evac; if(!E)return "";
+ const bar=(a,b)=>`<b>${a}/${b}</b>`;
+ return `<div style="margin-top:4px;font-size:13px">🏃 Evakuierung: 🛏️ liegend ${bar(E.arrived.lying,E.lying)} · ♿ Rollstuhl ${bar(E.arrived.chair,E.chair)} · 🚶 gehfähig ${bar(E.walkDone+E.selfDone,E.walk)}${E.betReady?" · 🫂 Betreuungsstelle bereit":""}${E.complete?" · ✅ abgeschlossen":""}</div>`;
+}
 // v5.62: Wie viele Patienten warten an der Einsatzstelle noch auf genau diesen Fahrzeugtyp
 //        (abzüglich der Fahrzeuge, die schon anfahren oder frei vor Ort stehen)?
 function manvShuttleNeed(call,u){
@@ -5452,6 +5548,7 @@ function crewSurplusTick(){
    const free=(u,txt)=>{if(unitPhoneLive(u)){if(!u._relSds){u._relSds=1;crewSds(u,call,txt+" (Bitte Status 1 melden.)")}return}crewSds(u,call,txt);setUnitStatus(u,"1");delete u.crew;(call.history=call.history||[]).push({q:`↩️ ${u.opta||u.name}`,a:txt});ch=true};
    const rd=u=>CREW_TRANSPORT.has(u.type)||u.type==="NEF";
    if(isManvCall(call)&&manvStationTick(call,now))ch=true;
+   if(call.evac&&evacTick(call,now))ch=true; // v5.63
    if(call.manvPatients&&manvDeathTick(call,now))ch=true;
    if(call.manvPatients&&(call.manvReports||[]).length){
      const open=call.manvPatients.filter(P=>(!P.unit&&P.sk<=4)||(P.sk<=2&&manvHeldBy(P,o=>o.type==="KTW"))).length; // v5.61: SK I/II beim KTW → RTW wird noch gebraucht
@@ -5471,7 +5568,7 @@ function crewSurplusTick(){
      }
      continue;
    }
-   if(isManvCall(call))continue;
+   if(isManvCall(call)||call.evac)continue; // v5.63: Evakuierung steuert sich selbst
    const info=crewCaseInfo(call);
    const covered=us.filter(u=>u.crew&&u.crew.patient!=null&&["transport","home"].includes(u.crew.mode)).length;
    const need=info.noPatient?0:Math.max(1,info.pats||1);
@@ -5515,9 +5612,16 @@ function callUnits(c){return (c.alarmedUnits||[]).map(id=>db.units.find(x=>Strin
 function manvTruth(c){
  if(c.manvTruth)return c.manvTruth;
  const S=c.sim&&c.sim.d&&c.sim.d.f, tot=Math.max(4,Number((S&&S.count)||c.answers?.count||4)||4);
- const schwarz=tot>=8?(tot>=30?Math.round(tot*rnd(0.02,0.06)):Math.random()<0.35?1:0):0, blau=tot>=10?(tot>=30?Math.round(tot*rnd(0.02,0.05)):Math.random()<0.3?1:0):0, rest=tot-schwarz-blau;
- const rot=Math.max(1,Math.round(rest*rnd(0.12,0.25))), gelb=Math.max(1,Math.round(rest*rnd(0.22,0.35))), gruen=Math.max(0,rest-rot-gelb);
- c.manvTruth={total:tot,rot,gelb,gruen,blau,schwarz}; return c.manvTruth;
+ // v5.63: Verteilung ca. 15 % rot, 20 % gelb, 60 % grün, 5 % blau, < 5 % verstorben (nur wenn die Lage das hergibt)
+ const pr=x=>{const f=Math.floor(x);return f+(Math.random()<x-f?1:0)}; // zufällig gerundet – auch kleine Lagen haben mal einen blauen
+ const txt=`${c.keyword||""} ${c.answers?.event||""} ${c.text||""} ${(S&&S.ev)||""}`.toLowerCase();
+ const heavy=/explosion|brand|feuer|zug|bahn|bus|verkehrsunfall|vu|einsturz|flugzeug|absturz|kollision|massenkarambolage/.test(txt);
+ const entrap=/eingeklemmt|einsturz|zug|bahn|bus|verkehrsunfall|vu|karambolage/.test(txt);
+ const schwarz=heavy?pr(tot*rnd(0,0.045)):0;
+ const blau=Math.min(pr(tot*0.05),Math.max(0,tot-schwarz-2));
+ const rest=tot-schwarz-blau;
+ const rot=Math.max(1,Math.round(tot*0.15)), gelb=Math.max(1,Math.min(rest-rot,Math.round(tot*0.20))), gruen=Math.max(0,rest-rot-gelb);
+ c.manvTruth={total:tot,rot,gelb,gruen,blau,schwarz,entrap}; return c.manvTruth;
 }
 // ─── v5.32: Sichtung nach mSTaRT (Kanz et al. 2006, BF München) ─────────────────────────────────
 // Vorsichtung durch das ersteintreffende Rettungsmittel nach mSTaRT (hier mit SK IV, v5.33):
@@ -5574,6 +5678,8 @@ function manvPats(c){
  const T=manvTruth(c);
  if(!T.pats){let n=0;const L=[];[[1,T.rot],[2,T.gelb],[3,T.gruen],[4,T.blau],[5,T.schwarz]].forEach(([sk,k])=>{for(let i=0;i<k;i++)L.push(mstartMake(++n,sk))});
    // Nummern wie Anhängekarten in Fundreihenfolge (gemischt)
+   // v5.63: bei Einklemmungen ist ein blauer Patient einer, dessen Rettung zu lange dauern würde
+   if(T.entrap){const b=L.find(p=>p.sk===4);if(b){b.inj="schwerst eingeklemmt – technische Rettung würde zu lange dauern, Kreislauf instabil";b.longRescue=true}}
    L.sort(()=>Math.random()-0.5).forEach((p,i)=>p.n=i+1); T.pats=L}
  return T.pats;
 }
@@ -5829,6 +5935,7 @@ function callTick(){
      }
      if(now<u.sceneUntil)continue;
      // Führung (OrgL, ELW) bleibt, bis alle Patienten weg sind
+     if(c.evac&&!c.evac.complete)continue; // v5.63: alle bleiben, bis die Evakuierung abgeschlossen ist
      if(["OrgL/LNA","ELW","ELW1","ELW2"].includes(u.type)&&(us.some(x=>x!==u&&CREW_TRANSPORT.has(x.type)&&String(x.status)==="4")||(c.manvPatients||[]).some(p=>!p.unit&&p.sk<=4)))continue;
      setUnitStatus(u,"1"); delete u.sceneUntil; delete u.sceneCall; changed=true;
    }
@@ -7596,8 +7703,10 @@ async function renderVehicleTerminal(unitId,dburl,sid){
      <button onclick="unlockVehicleAudio()">🔔 ALARM AN</button>
      <button onclick="toggleVehicleGeo('${unitId}','${dburl.replace(/'/g,"\\'")}','${sid.replace(/'/g,"\\'")}')">${vehicleGeoWatchId?"📍 GPS AUS":"📍 GPS AN"}</button>
      <button onclick="toast('🔄 Aktualisiere…')">🔄 REFRESH</button>
+     <button onclick="vehicleNaviToggle()">🧭 NAVI</button>
    </div>
    <div class="radio-keypad" id="vehicleKeypad"></div>
+   <div id="vehicleNavi"></div>
    <div id="vehicleInfo"></div>
  </div>`;
  async function refresh(){
@@ -7657,6 +7766,8 @@ async function renderVehicleTerminal(unitId,dburl,sid){
      const keypad=document.getElementById("vehicleKeypad");
      if(keypad)keypad.innerHTML=radioKeypadHTML(local,unit?.status,unitId,dburl,sid);
    }
+   vehicleNaviData={unit:{...(local||{}),...(unit||{})},calls};
+   vehicleNaviRender();
    const info=document.getElementById("vehicleInfo"); if(!info)return;
    info.innerHTML=`${canAssign?`<div class="row" style="margin-top:12px"><button class="primary" onclick="openVehicleIvenaAssignment('${unitId}','${dburl.replace(/'/g,"\\'")}','${sid.replace(/'/g,"\\'")}','${calls[0]?esc(String(calls[0].id)):""}')">🏥 IVENA-${["OrgL/LNA","NEF"].includes(vType)?"Anmeldung":"Zuweisung"}</button></div>`:""}
     ${inCallStatus4?`<div class="row" style="margin-top:12px"><button onclick="openVehicleNachforderung('${unitId}','${dburl.replace(/'/g,"\\'")}','${sid.replace(/'/g,"\\'")}','${esc(String(calls[0].id))}')">📟 Nachfordern</button></div>`:""}
@@ -7685,6 +7796,76 @@ async function renderVehicleTerminal(unitId,dburl,sid){
 // Fahrzeug-Terminal: Besatzung mit besonderer Qualifikation anmelden (z. B. DLRG-Fahrzeug mit NFS an Bord).
 // Wird mit Status 1 gesendet; die Leitstelle kann das Fahrzeug dann bei passenden Einsätzen als
 // qualifizierten Ersthelfer mitziehen.
+// ─── v5.63: Navi auf dem Fahrzeugbildschirm ──────────────────────────────────────────────────
+// Bodenfahrzeuge: echte Navigation über die Navi-App des Handys (Google Maps, Apple Karten, geo:).
+// Luftfahrzeuge: Flugansicht mit Karte, Luftlinie, Kurs, Distanz (NM) und Flugzeit – ähnlich
+// einer Rescue-Track-Ansicht (kein Zugang zum echten System, nur die eigenen Einsatzdaten).
+let vehicleNaviOpen=false, vehicleNaviData=null, vehicleNaviMap=null, vehicleNaviLayers=null, vehicleNaviGps=null, vehicleNaviGpsWatch=null;
+const NAVI_AIR=new Set(["RTH","ITH","KTH","Hubschrauber","SAR-Hubschrauber","Polizeihubschrauber"]);
+function naviIsAir(u){return !!u&&(NAVI_AIR.has(u.type)||u.org==="Luftrettung"||/^(Christoph|Northern|SAR|Pirol|Hummel)/i.test(String(u.opta||u.name||"")))}
+function vehicleNaviToggle(){
+ vehicleNaviOpen=!vehicleNaviOpen;
+ if(!vehicleNaviOpen){if(vehicleNaviGpsWatch!=null&&navigator.geolocation)navigator.geolocation.clearWatch(vehicleNaviGpsWatch);vehicleNaviGpsWatch=null;if(vehicleNaviMap){vehicleNaviMap.remove();vehicleNaviMap=null}}
+ else if(navigator.geolocation&&vehicleNaviGpsWatch==null){try{vehicleNaviGpsWatch=navigator.geolocation.watchPosition(p=>{vehicleNaviGps=[p.coords.latitude,p.coords.longitude,p.coords.heading,p.coords.speed];vehicleNaviRender()},()=>{},{enableHighAccuracy:true,maximumAge:5000})}catch(e){}}
+ const el=document.getElementById("vehicleNavi"); if(el)el.innerHTML="";
+ vehicleNaviRender();
+}
+function naviTarget(){
+ const D=vehicleNaviData; if(!D||!D.calls||!D.calls.length)return null;
+ const c=D.calls[0], pt=callDestinationPoint(c,D.unit); if(!pt)return null;
+ const br=c.staging&&c.staging.name&&!waterCapable(D.unit);
+ return {lat:pt[0],lng:pt[1],label:br?`BR ${c.staging.name}`:(c.location||"Einsatzstelle"),kw:c.keyword||"Einsatz"};
+}
+function naviOwnPos(){const u=vehicleNaviData&&vehicleNaviData.unit;if(vehicleNaviGps)return [vehicleNaviGps[0],vehicleNaviGps[1]];if(u&&Number.isFinite(Number(u.lat))&&Number.isFinite(Number(u.lng)))return [Number(u.lat),Number(u.lng)];const p=u?unitPoint(u):null;return p||null}
+function naviBearing(a,b){const r=Math.PI/180,y=Math.sin((b[1]-a[1])*r)*Math.cos(b[0]*r),x=Math.cos(a[0]*r)*Math.sin(b[0]*r)-Math.sin(a[0]*r)*Math.cos(b[0]*r)*Math.cos((b[1]-a[1])*r);return (Math.atan2(y,x)/r+360)%360}
+function naviDM(v,pos,neg,w){const h=v<0?neg:pos,a=Math.abs(v),d=Math.floor(a),m=(a-d)*60;return `${h} ${String(d).padStart(w,"0")}°${m.toFixed(3).padStart(6,"0")}'`}
+function vehicleNaviRender(){
+ const el=document.getElementById("vehicleNavi"); if(!el)return;
+ if(!vehicleNaviOpen){el.innerHTML="";return}
+ const T=naviTarget(), u=vehicleNaviData&&vehicleNaviData.unit;
+ if(!T){el.innerHTML=`<div class="card" style="margin-top:10px"><b>🧭 Navi</b><div class="muted" style="margin-top:4px">Kein Einsatz mit Zielkoordinaten – das Navi startet, sobald ihr alarmiert seid.</div></div>`;return}
+ if(!naviIsAir(u)){
+   const q=`${T.lat.toFixed(6)},${T.lng.toFixed(6)}`, me=naviOwnPos(), km=me?haversine(me[0],me[1],T.lat,T.lng):null;
+   el.innerHTML=`<div class="card" style="margin-top:10px"><b>🧭 Navi zur Einsatzstelle</b>
+    <div style="font-size:16px;font-weight:800;margin-top:4px">📍 ${esc(T.label)}</div>
+    <div class="muted" style="font-size:12px">${esc(T.kw)} · ${q}${km!=null?` · Luftlinie ${km.toFixed(1)} km`:""}</div>
+    <div style="display:grid;gap:6px;margin-top:8px">
+     <a class="btn primary" style="text-align:center;padding:10px;border-radius:8px;background:#1d4ed8;color:#fff;font-weight:800;text-decoration:none" href="https://www.google.com/maps/dir/?api=1&destination=${q}&travelmode=driving&dir_action=navigate" target="_blank" rel="noopener">▶️ Google Maps – Navigation starten</a>
+     <a style="text-align:center;padding:10px;border-radius:8px;background:#e2e8f0;color:#111;font-weight:700;text-decoration:none" href="https://maps.apple.com/?daddr=${q}&dirflg=d" target="_blank" rel="noopener">🍎 Apple Karten</a>
+     <a style="text-align:center;padding:10px;border-radius:8px;background:#e2e8f0;color:#111;font-weight:700;text-decoration:none" href="geo:${q}?q=${q}(${encodeURIComponent(T.label)})">📱 Andere Navi-App (Android)</a>
+    </div><small class="muted">Öffnet die Navi-App des Handys mit der Einsatzstelle als Ziel.</small></div>`;
+   return;
+ }
+ // Luftfahrzeug: Flugansicht
+ const me=naviOwnPos(), tgt=[T.lat,T.lng];
+ const km=me?haversine(me[0],me[1],tgt[0],tgt[1]):null, nm=km!=null?km/1.852:null, crs=me?Math.round(naviBearing(me,tgt)):null;
+ const kt=vehicleNaviGps&&vehicleNaviGps[3]>15?vehicleNaviGps[3]*1.94384:120, ete=nm!=null?Math.round(nm/kt*60):null;
+ const eta=ete!=null?new Date(Date.now()+ete*60000).toLocaleTimeString("de-DE",{hour:"2-digit",minute:"2-digit"}):"—";
+ const cell=(k,v)=>`<div style="background:#0b1220;border:1px solid #1e3a5f;border-radius:6px;padding:5px 7px"><div style="font-size:10px;color:#7dd3fc;letter-spacing:1px">${k}</div><div style="font-size:18px;font-weight:800;color:#e2e8f0;font-family:monospace">${v}</div></div>`;
+ if(!document.getElementById("naviAirMap")){
+   el.innerHTML=`<div style="margin-top:10px;background:#020617;border-radius:10px;padding:8px;color:#e2e8f0">
+    <div style="display:flex;justify-content:space-between;align-items:center"><b style="color:#7dd3fc">✈️ FLUGNAVIGATION</b><small style="color:#94a3b8">${esc(u.opta||u.name||"")}</small></div>
+    <div id="naviAirMap" style="height:260px;border-radius:8px;margin-top:6px;background:#0f172a"></div>
+    <div id="naviAirData" style="display:grid;grid-template-columns:repeat(3,1fr);gap:5px;margin-top:6px"></div>
+    <div id="naviAirTgt" style="font-size:12px;margin-top:6px;font-family:monospace"></div>
+    <a href="https://www.google.com/maps/search/?api=1&query=${T.lat},${T.lng}" target="_blank" rel="noopener" style="display:block;margin-top:6px;color:#7dd3fc;font-size:12px">🗺️ Ziel in Karten-App öffnen</a></div>`;
+   vehicleNaviMap=null;
+ }
+ document.getElementById("naviAirData").innerHTML=cell("KURS (rw)",crs!=null?String(crs).padStart(3,"0")+"°":"—")+cell("DIST",nm!=null?nm.toFixed(1)+" NM":"—")+cell("ETE",ete!=null?ete+" min":"—")+cell("ETA",eta)+cell("GS",Math.round(kt)+" kt")+cell("DIST km",km!=null?km.toFixed(1):"—");
+ document.getElementById("naviAirTgt").innerHTML=`🎯 ${esc(T.kw)} – ${esc(T.label)}<br>${naviDM(T.lat,"N","S",2)} ${naviDM(T.lng,"E","W",3)}${vehicleNaviGps?"":`<br><span style="color:#fbbf24">Kein GPS – Position = Standort laut Leitstelle</span>`}`;
+ if(typeof L==="undefined"||!L.map)return;
+ if(!vehicleNaviMap){
+   vehicleNaviMap=L.map("naviAirMap",{zoomControl:true,attributionControl:true});
+   L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:18,attribution:"© OpenStreetMap",className:"navi-dark-tiles"}).addTo(vehicleNaviMap);
+   if(!document.getElementById("naviDarkCss")){const st=document.createElement("style");st.id="naviDarkCss";st.textContent=".navi-dark-tiles{filter:invert(1) hue-rotate(190deg) brightness(.85) contrast(1.1)}";document.head.appendChild(st)}
+   vehicleNaviLayers=L.layerGroup().addTo(vehicleNaviMap); vehicleNaviMap._fit=false;
+ }
+ vehicleNaviLayers.clearLayers();
+ L.circleMarker(tgt,{radius:8,color:"#ef4444",fillColor:"#ef4444",fillOpacity:.9}).bindTooltip("🎯 "+T.label).addTo(vehicleNaviLayers);
+ if(me){L.circleMarker(me,{radius:7,color:"#38bdf8",fillColor:"#38bdf8",fillOpacity:.9}).bindTooltip("✈️ eigene Position").addTo(vehicleNaviLayers);
+   L.polyline([me,tgt],{color:"#facc15",weight:3,dashArray:"8 6"}).addTo(vehicleNaviLayers)}
+ if(!vehicleNaviMap._fit){vehicleNaviMap._fit=true;me?vehicleNaviMap.fitBounds([me,tgt],{padding:[30,30],maxZoom:12}):vehicleNaviMap.setView(tgt,11)}
+}
 let vehicleQualDraft=null;
 function vehicleQualHTML(local,unit,unitId,dburl,sid){
  const base=unitQualBase(local||unit||{});
@@ -8047,7 +8228,7 @@ function setStatusFromSelect(id,status){
 // Bedingungen nicht (die ergeben sich aus der Abfragelogik). Eigene AAOs haben frei wählbare
 // Bedingungen auf die Notrufabfrage und alarmieren ZUSÄTZLICH, wenn alle Bedingungen passen.
 const AAO_RULE_FIELDS={
- event:{label:"Was ist passiert?",values:["Medizinischer Notfall","Reanimation","Feuer / Rauchentwicklung","Verkehrsunfall","Technische Hilfeleistung","Person im Wasser","Vermisste Person","Sonstiger Notfall"]},
+ event:{label:"Was ist passiert?",values:["Medizinischer Notfall","Reanimation","Feuer / Rauchentwicklung","Verkehrsunfall","Technische Hilfeleistung","Person im Wasser","Vermisste Person","Evakuierung","Sonstiger Notfall"]},
  count:{label:"Anzahl Betroffene",free:true,placeholder:"z. B. >3, 2, <=5"},
  patients:{label:"Anzahl Patienten (inkl. Angabe bei X)",free:true,placeholder:"z. B. 2, >1, <=3"},
  waterState:{label:"Person im Wasser – Zustand",values:["Lebenszeichen","Vermisst","Bergung"]},
@@ -8069,7 +8250,7 @@ const AAO_RULE_FIELDS={
  locationIsWater:{label:"Einsatzort auf dem Wasser",values:["ja","nein"]},
  freeText:{label:"Freitext enthält",free:true,placeholder:"Stichwort(e), mehrere mit Komma = eins davon"}
 };
-const LINKED_AAO_IDS=new Set(["22","23","24","25","1","2","3","4","5","6","7","8","9","10","11","12","13","14","15","16","17","18","19","20","21"]);
+const LINKED_AAO_IDS=new Set(["26","22","23","24","25","1","2","3","4","5","6","7","8","9","10","11","12","13","14","15","16","17","18","19","20","21"]);
 // "Vollalarm DLRG" / "Vollalarm DRK": alle freien Fahrzeuge der NÄCHSTEN Ortsgruppe (Standort mit
 // der kürzesten Entfernung zum Einsatzort, mit mindestens einem freien, erreichbaren Fahrzeug).
 // Ältere AAOs mit "Vollalarm DLRG <Ort>" funktionieren weiter (feste Ortsgruppe).
@@ -9744,6 +9925,31 @@ const SIM_CASES=[
    f:{event:"Medizinischer Notfall",count:"2",x:"Nein",a:"Frei",b:"Normal",c:"Unauffällig",d:"Bewusstseinsgetrübt",e:"Kopfschmerzen, Übelkeit, Bewusstseinsstörung – CO-Melder piept, Verdacht Kohlenmonoxid",psy:"Nein",danger:"ja"},
    onset:"Seit etwa einer halben Stunde.",hist:"Eigentlich ist er gesund.",
    extra:["Soll ich die Fenster aufmachen?","Mir ist auch ganz schwindelig.","Der Melder hängt im Flur und piept ununterbrochen."]}}},
+ // ── v5.63: Evakuierungen (Pflegeheim mit Rauch, Gasaustritt, Bombenfund) ──
+ {id:"evak_heim",w:0.6,num:"112",loc:"home",locPrefix:"im Seniorenpflegeheim, ",mk:()=>{const c=simPerson(),tot=rint(18,36),l=rint(5,10),r=rint(4,9);return {rel:"die Bewohner",caller:c,patient:simPerson(),age:85,staff:true,panic:true,
+   open:[`${c.first} ${c.last}, Pflegeheim – wir haben Rauch im Wohnbereich 2, wir müssen den ganzen Bereich räumen!`,"Hallo, hier ist das Pflegeheim! Bei uns brennt es im Keller, der Rauch zieht hoch – wir müssen die Bewohner rausholen!"],
+   event:`Im Keller hat es angefangen zu qualmen, der Rauch zieht durchs Treppenhaus in den Wohnbereich. Die Brandmeldeanlage hat ausgelöst. Wir müssen ${tot} Bewohner rausbringen, ${l} davon sind bettlägerig und ${r} sitzen im Rollstuhl.`,
+   f:{event:"Evakuierung",count:"0",evacTotal:String(tot),evacLying:String(l),evacChair:String(r),x:"",a:"",b:"",c:"",d:"",e:"",psy:"Nein",danger:"ja"},
+   evacText:{all:`${tot} Bewohner, der ganze Wohnbereich.`,lying:`${l} sind bettlägerig, die müssen liegend raus.`,chair:`${r} sitzen im Rollstuhl.`,walk:`Die anderen ${tot-l-r} können mit Hilfe laufen, aber die sind dement, die brauchen Begleitung.`},
+   evacWalkShare:1,evacDest:"Ausweich-Pflegeheim",
+   onset:"Vor fünf Minuten hat die Brandmeldeanlage ausgelöst.",hist:"",inside:"Ja, die Bewohner sind alle noch im Wohnbereich!",
+   extra:["Wir sind nur zu dritt im Nachtdienst!","Sollen wir die Bettlägerigen schon in den anderen Flügel schieben?","Die Feuerschutztüren sind zu."]}}},
+ {id:"evak_gas",w:0.8,num:"112",loc:"home",mk:()=>{const c=simPerson(),tot=rint(12,30),l=pick([0,0,1,1,2]),r=pick([0,1,1,2]);return {rel:"die Hausbewohner",caller:c,patient:simPerson(),age:50,
+   open:["Hier riecht es im ganzen Haus nach Gas, ganz stark!","Hallo, ich bin der Hausmeister – im Mehrfamilienhaus riecht es überall nach Gas!"],
+   event:`Im Treppenhaus riecht es ganz stark nach Gas, auch in den Wohnungen. Im Haus wohnen ${tot} Leute. Eine alte Dame oben ist bettlägerig${r?`, und einer sitzt im Rollstuhl`:""}.`,
+   f:{event:"Evakuierung",count:"0",evacTotal:String(tot),evacLying:String(l),evacChair:String(r),x:"",a:"",b:"",c:"",d:"",e:"",psy:"Nein",danger:"ja"},
+   evacText:{all:`So ${tot} Leute wohnen hier.`,lying:l?(l===1?"Eine ist bettlägerig, die kommt nicht allein raus.":"Zwei sind bettlägerig, die kommen nicht allein raus."):"Bettlägerig ist keiner.",chair:r?`${r} im Rollstuhl.`:"Rollstuhl hat keiner.",walk:"Die anderen können alle laufen."},
+   evacWalkShare:0,evacDest:"Notunterkunft",
+   onset:"Gerade eben gemerkt.",hist:"",inside:"Ja, die meisten sind noch drin!",danger:"Hier riecht alles nach Gas, ich hab nichts angemacht.",
+   extra:["Soll ich die Leute rausklingeln?","Ich hab den Haupthahn im Keller nicht gefunden.","Darf ich das Licht anmachen?"]}}},
+ {id:"evak_bombe",w:0.3,num:"112",loc:"road",mk:()=>{const c=simPerson(),tot=rint(80,220),l=rint(3,8),r=rint(4,12);return {rel:"die Anwohner",caller:c,patient:simPerson(),age:50,staff:true,
+   open:[`${c.last}, Ordnungsamt. Bei Bauarbeiten ist eine Fliegerbombe gefunden worden – wir müssen den Bereich evakuieren.`],
+   event:`Auf der Baustelle ist ein Blindgänger aus dem Weltkrieg gefunden worden. Der Kampfmittelräumdienst ist informiert, im Sperrradius von 500 Metern müssen etwa ${tot} Anwohner raus. Laut Pflegedienst sind ${l} bettlägerig und ${r} im Rollstuhl.`,
+   f:{event:"Evakuierung",count:"0",evacTotal:String(tot),evacLying:String(l),evacChair:String(r),x:"",a:"",b:"",c:"",d:"",e:"",psy:"Nein",danger:"ja"},
+   evacText:{all:`Etwa ${tot} Anwohner im Sperrradius.`,lying:`${l} sind bettlägerig, die brauchen einen Liegendtransport.`,chair:`${r} im Rollstuhl.`,walk:"Die übrigen gehen selbst, die meisten fahren zu Verwandten. Ein Teil braucht eine Fahrt zur Notunterkunft."},
+   evacWalkShare:0.25,evacDest:"Notunterkunft Sporthalle",
+   onset:"Gefunden vor einer halben Stunde.",hist:"",danger:"Die Bombe hat einen Aufschlagzünder, sagt der Räumdienst.",
+   extra:["Die Polizei sperrt schon ab.","Die Notunterkunft in der Sporthalle macht die Stadt auf.","Wann können Ihre Leute da sein?"]}}},
  // ── v5.35: Einsätze im Altenheim / Pflegeheim (Anrufer: Pflegekraft) ──
  {id:"heim_sturz",w:2,num:"112",loc:"home",locPrefix:"im Seniorenpflegeheim, ",mk:()=>{const p=simPerson("w"),c=simPerson("w"),age=rint(78,96);return {rel:"eine Bewohnerin",caller:c,patient:p,age,staff:true,
    open:[`Guten Tag, ${c.first} ${c.last}, Pflegefachkraft im Seniorenpflegeheim. Eine Bewohnerin ist gestürzt und kann nicht mehr aufstehen.`,"Hallo, hier ist das Pflegeheim, Wohnbereich 2 – eine Bewohnerin ist vor dem Bett gestürzt, die Hüfte tut ihr sehr weh."],
@@ -10324,6 +10530,7 @@ const SIM_INTENTS=[
  ["loc",/klingel|eingang|hinterhaus|welches haus|\bwo\b(?!.*(schmerz|weh|blut))|adresse|stra(ss|ß)e|hausnummer|welche(r|m)? (stadt|ort)|wo genau|standort|ortsteil|stockwerk|etage/],
  ["event",/was (ist |genau |denn |jetzt |da |nun )*(passiert|los)|worum geht|schildern|erz(ä|ae)hlen sie|was hat sich (ver)?(ä|ae)ndert/],
  ["who",/f(ü|ue)r wen|wer ist (betroffen|der patient|krank|verletzt)|sind sie selbst|sie selbst betroffen|um wen geht/],
+ ["evac",/evaku|r(ä|ae)umen|bettl(ä|ae)gerig|liegend|rollstuhl|rollator|gehf(ä|ae)hig|laufen|gehen k(ö|oe)nnen|selbst(st(ä|ae)ndig)? (raus|gehen|laufen)|wie viele (bewohner|anwohner|leute|menschen|personen) (sind|m(ü|ue)ssen|wohnen)/],
  ["count",/wie ?viele|anzahl|weitere (person|verletzte)|noch jemand verletzt|mehrere|betroffen|verletzte\b|gibt es verletzt/],
  ["trapped",/eingeklemmt|eingeschlossen|raus ?kommen|aussteigen/],
  ["inside",/noch (jemand|personen|leute)|alle (raus|drau(ss|ß)en)|im haus|in der wohnung/],
@@ -10926,7 +11133,7 @@ function simAnswerSmart(c,text){
  return res;
 }
 function simAnswerFor(c,text){
- const s=c.sim, d=s.d, f=d.f||{}, ints=simIntents(text), out=[];
+ const s=c.sim, d=s.d, f=d.f||{}, ints0e=simIntents(text), ints=(d.evacText&&ints0e.includes("evac"))?ints0e.filter(k=>k!=="mode"&&(k!=="count"||/verletz/.test(String(text).toLowerCase()))):ints0e, out=[];
  if(ints.includes("toCaller")&&s.speaker==="patient"){s.speaker="caller";return pick(["Ja, hier bin ich wieder.","Ja? Ich bin wieder dran."])}
  if(ints.includes("toPatient")&&!d.isSelf&&s.speaker!=="patient"){
    const [He]=simHe(s);
@@ -10968,6 +11175,9 @@ function simAnswerFor(c,text){
      break;
     case "event":out.push(me?(d.isSelf?d.event:(d.pain?d.pain:`Mir geht's nicht gut… ${f.e?f.e.split(",")[0]:"ich weiß auch nicht"}.`)):simFix(s,d.event));break;
     case "who":out.push(me?"Um mich! Ich bin das selbst.":d.passerby?"Ich kenn die Person nicht, ich bin nur vorbeigekommen.":d.rel?`Um ${d.rel.replace(/^mein /,"meinen ").replace(/^ein /,"einen ").replace(/^der /,"den ")}.`:"Ich bin nur der Anrufer.");break;
+    case "evac":if(d.evacText){const tl=String(text).toLowerCase(),E=d.evacText;
+       out.push(/bettl|liegend/.test(tl)?E.lying:/rollstuhl|rollator/.test(tl)?E.chair:/gehf|laufen|selbst/.test(tl)?E.walk:`${E.all} ${E.lying} ${E.chair}`);break}
+     break;
     case "count":out.push(d.kt?"Nur ein Patient.":me?"Nur ich.":f.count==="0"?"Verletzt ist niemand.":f.count==="1"?pick(["Nur "+he+".","Eine Person."]):`${f.count} Personen.`);break;
     case "trapped":out.push(f.trapped&&f.trapped!=="0"?(d.trappedText||"Ja, der kommt nicht raus, die Tür klemmt und die Beine stecken fest!"):"Nein, eingeklemmt ist keiner.");break;
     case "inside":out.push(d.inside||"Nein, ich glaube nicht.");break;
