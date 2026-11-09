@@ -170,7 +170,7 @@ html[data-device="handy"] #floatDock{left:8px;right:8px;width:auto;top:auto;bott
 </head>
 <body>
 <div style="padding:6px 10px;font-size:11px;color:#94a3b8;font-weight:700;display:flex;flex-wrap:wrap;align-items:center;gap:10px;position:sticky;top:0;z-index:10;background:var(--bg)">
- <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v5.63</span>
+ <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v5.64</span>
  <span id="syncState"></span> <a id="deskTag" href="#" onclick="renameDesk();return false" title="Name dieses Platzes (für „offen an …“) – antippen zum Ändern" style="color:#64748b;font-weight:700;text-decoration:none"></a>
  <span id="simCtl" style="position:absolute;left:50%;transform:translateX(-50%);display:flex;gap:6px;align-items:center"></span>
  <a id="homeLink" href="#" onclick="render('leitstelle');return false" class="hidden" style="color:#64748b;text-decoration:underline;font-weight:600">🖥️ Leitstelle</a>
@@ -7766,7 +7766,10 @@ async function renderVehicleTerminal(unitId,dburl,sid){
      const keypad=document.getElementById("vehicleKeypad");
      if(keypad)keypad.innerHTML=radioKeypadHTML(local,unit?.status,unitId,dburl,sid);
    }
-   vehicleNaviData={unit:{...(local||{}),...(unit||{})},calls};
+   vehicleNaviData={unit:{...(local||{}),...(unit||{})},local,calls};
+   vehicleNaviCtx={unitId,dburl,sid};
+   if(vehicleNaviOpen&&["7","8"].includes(String(unit?.status))&&Date.now()-(NAV.asgAt||0)>15000){NAV.asgAt=Date.now();
+     try{const all=await vehicleFetch(dburl,sid,"ivenaAssignments")||{};const L=(Array.isArray(all)?all:Object.values(all)).filter(a=>a&&!a.deleted&&(a.vehicleIds||[]).some(id=>String(id)===String(unitId))).sort((a,b)=>new Date(b.createdAt||0)-new Date(a.createdAt||0));NAV.asg=L[0]||null}catch(e){}}
    vehicleNaviRender();
    const info=document.getElementById("vehicleInfo"); if(!info)return;
    info.innerHTML=`${canAssign?`<div class="row" style="margin-top:12px"><button class="primary" onclick="openVehicleIvenaAssignment('${unitId}','${dburl.replace(/'/g,"\\'")}','${sid.replace(/'/g,"\\'")}','${calls[0]?esc(String(calls[0].id)):""}')">🏥 IVENA-${["OrgL/LNA","NEF"].includes(vType)?"Anmeldung":"Zuweisung"}</button></div>`:""}
@@ -7805,8 +7808,8 @@ const NAVI_AIR=new Set(["RTH","ITH","KTH","Hubschrauber","SAR-Hubschrauber","Pol
 function naviIsAir(u){return !!u&&(NAVI_AIR.has(u.type)||u.org==="Luftrettung"||/^(Christoph|Northern|SAR|Pirol|Hummel)/i.test(String(u.opta||u.name||"")))}
 function vehicleNaviToggle(){
  vehicleNaviOpen=!vehicleNaviOpen;
- if(!vehicleNaviOpen){if(vehicleNaviGpsWatch!=null&&navigator.geolocation)navigator.geolocation.clearWatch(vehicleNaviGpsWatch);vehicleNaviGpsWatch=null;if(vehicleNaviMap){vehicleNaviMap.remove();vehicleNaviMap=null}}
- else if(navigator.geolocation&&vehicleNaviGpsWatch==null){try{vehicleNaviGpsWatch=navigator.geolocation.watchPosition(p=>{vehicleNaviGps=[p.coords.latitude,p.coords.longitude,p.coords.heading,p.coords.speed];vehicleNaviRender()},()=>{},{enableHighAccuracy:true,maximumAge:5000})}catch(e){}}
+ if(!vehicleNaviOpen){naviGroundClose();if(vehicleNaviGpsWatch!=null&&navigator.geolocation)navigator.geolocation.clearWatch(vehicleNaviGpsWatch);vehicleNaviGpsWatch=null;if(vehicleNaviMap){vehicleNaviMap.remove();vehicleNaviMap=null}}
+ else if(navigator.geolocation&&vehicleNaviGpsWatch==null){try{vehicleNaviGpsWatch=navigator.geolocation.watchPosition(p=>{const prev=vehicleNaviGps;vehicleNaviGps=[p.coords.latitude,p.coords.longitude,p.coords.heading,p.coords.speed];if(prev&&haversine(prev[0],prev[1],vehicleNaviGps[0],vehicleNaviGps[1])>0.008)NAV.head=naviBearing(prev,vehicleNaviGps);vehicleNaviRender()},()=>{},{enableHighAccuracy:true,maximumAge:5000})}catch(e){}}
  const el=document.getElementById("vehicleNavi"); if(el)el.innerHTML="";
  vehicleNaviRender();
 }
@@ -7823,19 +7826,9 @@ function vehicleNaviRender(){
  const el=document.getElementById("vehicleNavi"); if(!el)return;
  if(!vehicleNaviOpen){el.innerHTML="";return}
  const T=naviTarget(), u=vehicleNaviData&&vehicleNaviData.unit;
+ if(u&&!naviIsAir(u)){naviGroundRender();return}
  if(!T){el.innerHTML=`<div class="card" style="margin-top:10px"><b>🧭 Navi</b><div class="muted" style="margin-top:4px">Kein Einsatz mit Zielkoordinaten – das Navi startet, sobald ihr alarmiert seid.</div></div>`;return}
- if(!naviIsAir(u)){
-   const q=`${T.lat.toFixed(6)},${T.lng.toFixed(6)}`, me=naviOwnPos(), km=me?haversine(me[0],me[1],T.lat,T.lng):null;
-   el.innerHTML=`<div class="card" style="margin-top:10px"><b>🧭 Navi zur Einsatzstelle</b>
-    <div style="font-size:16px;font-weight:800;margin-top:4px">📍 ${esc(T.label)}</div>
-    <div class="muted" style="font-size:12px">${esc(T.kw)} · ${q}${km!=null?` · Luftlinie ${km.toFixed(1)} km`:""}</div>
-    <div style="display:grid;gap:6px;margin-top:8px">
-     <a class="btn primary" style="text-align:center;padding:10px;border-radius:8px;background:#1d4ed8;color:#fff;font-weight:800;text-decoration:none" href="https://www.google.com/maps/dir/?api=1&destination=${q}&travelmode=driving&dir_action=navigate" target="_blank" rel="noopener">▶️ Google Maps – Navigation starten</a>
-     <a style="text-align:center;padding:10px;border-radius:8px;background:#e2e8f0;color:#111;font-weight:700;text-decoration:none" href="https://maps.apple.com/?daddr=${q}&dirflg=d" target="_blank" rel="noopener">🍎 Apple Karten</a>
-     <a style="text-align:center;padding:10px;border-radius:8px;background:#e2e8f0;color:#111;font-weight:700;text-decoration:none" href="geo:${q}?q=${q}(${encodeURIComponent(T.label)})">📱 Andere Navi-App (Android)</a>
-    </div><small class="muted">Öffnet die Navi-App des Handys mit der Einsatzstelle als Ziel.</small></div>`;
-   return;
- }
+ if(!naviIsAir(u)){naviGroundRender();return} // v5.64: eigenes Navi mit Statustasten
  // Luftfahrzeug: Flugansicht
  const me=naviOwnPos(), tgt=[T.lat,T.lng];
  const km=me?haversine(me[0],me[1],tgt[0],tgt[1]):null, nm=km!=null?km/1.852:null, crs=me?Math.round(naviBearing(me,tgt)):null;
@@ -7865,6 +7858,188 @@ function vehicleNaviRender(){
  if(me){L.circleMarker(me,{radius:7,color:"#38bdf8",fillColor:"#38bdf8",fillOpacity:.9}).bindTooltip("✈️ eigene Position").addTo(vehicleNaviLayers);
    L.polyline([me,tgt],{color:"#facc15",weight:3,dashArray:"8 6"}).addTo(vehicleNaviLayers)}
  if(!vehicleNaviMap._fit){vehicleNaviMap._fit=true;me?vehicleNaviMap.fitBounds([me,tgt],{padding:[30,30],maxZoom:12}):vehicleNaviMap.setView(tgt,11)}
+}
+// ─── v5.64: eigenes Navi für Bodenfahrzeuge ────────────────────────────────────────────────────
+// Route über den öffentlichen OSRM-Routenserver (OpenStreetMap-Daten), Abbiegehinweise auf Deutsch
+// mit Sprachansage, Karte folgt dem Fahrzeug, Neuberechnung beim Verlassen der Route.
+// Ziel automatisch: Einsatzstelle (bzw. BR) – bei Status 7/8 die Zielklinik aus IVENA – ohne Einsatz die Wache.
+// Unten Statustasten wie am Funkgerät. Ohne GPS: Route ab Standort laut Leitstelle, „Simulation“ fährt sie ab.
+let vehicleNaviCtx=null;
+const NAV={route:null,key:"",pos:null,head:0,idx:0,follow:true,voice:true,said:{},sim:null,map:null,lay:null,me:null,fetching:false,lastRoute:0,err:"",mode:"auto",asg:null,asgAt:0};
+function naviGroundClose(){const o=document.getElementById("naviOverlay");if(o)o.remove();if(NAV.map){NAV.map.remove();NAV.map=null}if(NAV.sim){clearInterval(NAV.sim);NAV.sim=null}try{speechSynthesis.cancel()}catch(e){}}
+function naviHospital(){
+ const a=NAV.asg; if(!a)return null;
+ const list=(Array.isArray(vehicleIvenaCache)&&vehicleIvenaCache.length)?vehicleIvenaCache:(db.ivena||[]);
+ const h=list.find(x=>String(x.id)===String(a.hospitalId))||(db.ivena||[]).find(x=>String(x.id)===String(a.hospitalId));
+ const pt=h?hospitalPointOf(h):null; return pt?{lat:pt[0],lng:pt[1],label:a.hospitalName||h.name,kind:"klinik"}:null;
+}
+function naviHome(){const L=vehicleNaviData&&vehicleNaviData.local;if(!L)return null;const pt=unitPoint({...L,lat:null,lng:null});return pt?{lat:pt[0],lng:pt[1],label:`Wache ${L.location||""}`.trim(),kind:"wache"}:null}
+function naviGroundTarget(){
+ const D=vehicleNaviData||{}, st=String(D.unit&&D.unit.status||""), E=naviTarget();
+ const T=E?{lat:E.lat,lng:E.lng,label:E.label,kind:"einsatz",kw:E.kw}:null, H=naviHospital(), W=naviHome();
+ if(NAV.mode==="einsatz")return T||W; if(NAV.mode==="klinik")return H||T||W; if(NAV.mode==="wache")return W;
+ if(["7","8"].includes(st)&&H)return H;
+ if(T&&!["1","2"].includes(st))return T;
+ return T||W;
+}
+function naviOwnGround(){if(NAV.sim&&NAV.pos)return NAV.pos;if(vehicleNaviGps)return [vehicleNaviGps[0],vehicleNaviGps[1]];return NAV.pos||naviOwnPos()}
+const NAVI_ARROW={uturn:"⮌","sharp right":"↱","right":"↱","slight right":"↗","straight":"↑","slight left":"↖","left":"↰","sharp left":"↰"};
+function naviStepText(st){
+ const m=st.modifier||"straight", n=st.name?` auf ${st.name}`:"", dir={uturn:"wenden","sharp right":"scharf rechts abbiegen",right:"rechts abbiegen","slight right":"leicht rechts halten",straight:"geradeaus weiterfahren","slight left":"leicht links halten",left:"links abbiegen","sharp left":"scharf links abbiegen"}[m]||"weiterfahren";
+ switch(st.type){
+  case "depart":return `Losfahren${n}`;
+  case "arrive":return "Ziel erreicht";
+  case "roundabout":case "rotary":case "roundabout turn":return `Im Kreisverkehr die ${st.exit||1}. Ausfahrt nehmen${n}`;
+  case "exit roundabout":case "exit rotary":return `Kreisverkehr verlassen${n}`;
+  case "merge":return `Einfädeln${n}`;
+  case "on ramp":return `Auffahrt nehmen${n}`;
+  case "off ramp":return `Ausfahrt nehmen${n}`;
+  case "fork":return `An der Gabelung ${/left/.test(m)?"links":"rechts"} halten${n}`;
+  case "end of road":return `Am Straßenende ${/left/.test(m)?"links":"rechts"} abbiegen${n}`;
+  case "new name":case "continue":return m==="straight"?`Weiter${n}`:dir.charAt(0).toUpperCase()+dir.slice(1)+n;
+  default:return dir.charAt(0).toUpperCase()+dir.slice(1)+n;
+ }
+}
+function naviArrow(st){if(!st)return "↑";if(st.type==="arrive")return "🏁";if(/roundabout|rotary/.test(st.type))return "⟳";return NAVI_ARROW[st.modifier||"straight"]||"↑"}
+function naviFmtDist(m){return m>=1000?(m/1000).toFixed(m>=10000?0:1).replace(".",",")+" km":(m>=100?Math.round(m/50)*50:Math.max(0,Math.round(m/10)*10))+" m"}
+function naviSay(t){if(!NAV.voice||typeof speechSynthesis==="undefined")return;try{const u=new SpeechSynthesisUtterance(t);u.lang="de-DE";u.rate=1.05;speechSynthesis.cancel();speechSynthesis.speak(u)}catch(e){}}
+function naviLineDist(p,a,b){ // Meter von p zur Strecke a–b, plus Anteil t
+ const kx=111320*Math.cos(p[0]*Math.PI/180), ky=110540, ax=(a[1]-p[1])*kx, ay=(a[0]-p[0])*ky, bx=(b[1]-p[1])*kx, by=(b[0]-p[0])*ky, dx=bx-ax, dy=by-ay, L2=dx*dx+dy*dy;
+ let t=L2?-(ax*dx+ay*dy)/L2:0; t=Math.max(0,Math.min(1,t)); const x=ax+t*dx, y=ay+t*dy; return [Math.hypot(x,y),t];
+}
+function naviBuildRoute(js,tgt){
+ const r=js.routes&&js.routes[0]; if(!r)return null;
+ const co=r.geometry.coordinates.map(c=>[c[1],c[0]]), cum=[0];
+ for(let i=1;i<co.length;i++)cum.push(cum[i-1]+haversine(co[i-1][0],co[i-1][1],co[i][0],co[i][1])*1000);
+ const steps=[];let k=0;
+ (r.legs||[]).forEach(l=>(l.steps||[]).forEach(st=>{const loc=[st.maneuver.location[1],st.maneuver.location[0]];
+   let best=k,bd=1e9;for(let i=k;i<Math.min(co.length,k+4000);i++){const d=Math.abs(co[i][0]-loc[0])+Math.abs(co[i][1]-loc[1]);if(d<bd){bd=d;best=i}if(bd<1e-7)break}
+   k=best;steps.push({type:st.maneuver.type,modifier:st.maneuver.modifier,exit:st.maneuver.exit,name:st.name||st.ref||"",idx:best})}));
+ return {co,cum,steps,dist:cum[cum.length-1]||r.distance,dur:r.duration,tgt,straight:false};
+}
+async function naviFetchRoute(from,tgt){
+ if(NAV.fetching)return; NAV.fetching=true; NAV.lastRoute=Date.now();
+ try{
+   const url=`https://router.project-osrm.org/route/v1/driving/${from[1].toFixed(6)},${from[0].toFixed(6)};${tgt.lng.toFixed(6)},${tgt.lat.toFixed(6)}?overview=full&geometries=geojson&steps=true`;
+   const res=await fetch(url); if(!res.ok)throw new Error("HTTP "+res.status);
+   const R=naviBuildRoute(await res.json(),tgt); if(!R)throw new Error("keine Route");
+   NAV.route=R; NAV.idx=0; NAV.said={}; NAV.err="";
+ }catch(e){ // Ersatz: Luftlinie
+   const co=[from,[tgt.lat,tgt.lng]], d=haversine(from[0],from[1],tgt.lat,tgt.lng)*1000;
+   NAV.route={co,cum:[0,d],steps:[{type:"depart",modifier:"straight",name:"",idx:0},{type:"arrive",idx:1,name:""}],dist:d,dur:d/13,tgt,straight:true};NAV.idx=0;NAV.said={};
+   NAV.err="Keine Straßenroute verfügbar (offline?) – Luftlinie";
+ }finally{NAV.fetching=false}
+ naviGroundRender();
+}
+function naviProgress(){
+ const R=NAV.route, p=naviOwnGround(); if(!R||!p)return null;
+ let bi=NAV.idx,bd=1e9,bt=0; const end=Math.min(R.co.length-1,NAV.idx+400);
+ for(let i=Math.max(0,NAV.idx-5);i<end;i++){const [d,t]=naviLineDist(p,R.co[i],R.co[i+1]);if(d<bd){bd=d;bi=i;bt=t}}
+ if(R.co.length<2)return null;
+ NAV.idx=bi; const along=R.cum[bi]+(R.cum[bi+1]-R.cum[bi])*bt, rest=Math.max(0,R.dist-along);
+ const next=R.steps.find(st=>st.idx>bi&&st.type!=="depart")||R.steps[R.steps.length-1], after=R.steps[R.steps.indexOf(next)+1];
+ const toNext=Math.max(0,R.cum[Math.min(next.idx,R.cum.length-1)]-along);
+ return {off:bd,rest,restSec:R.dur*(R.dist?rest/R.dist:0),next,after,toNext,p};
+}
+function naviStatusKeys(){
+ const D=vehicleNaviData||{}, L=D.local||D.unit||{}, cur=String(D.unit&&D.unit.status||""), C=vehicleNaviCtx;
+ if(!C)return "";
+ const ok=statusOptionsFor(L).filter(x=>x!=="6");
+ return ["1","2","3","4","5","7","8","0"].filter(d=>ok.includes(d)||d==="5"||d==="0").map(d=>`<button title="${esc(statusName(d))}" onclick="naviSendStatus('${d}')" style="padding:8px 2px;border-radius:8px;border:2px solid ${cur===d?"#facc15":"#334155"};background:${cur===d?"#854d0e":"#1e293b"};color:#fff;min-width:0"><div style="font-size:22px;font-weight:900;line-height:1">${d}</div><div style="font-size:9px;line-height:1.1;opacity:.85;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${({"1":"Frei Funk","2":"Wache","3":"Einsatz","4":"Am Ort","5":"Sprechw.","7":"Pat. auf","8":"Am Ziel","0":"Dringend"})[d]}</div></button>`).join("");
+}
+async function naviSendStatus(d){
+ const C=vehicleNaviCtx; if(!C)return;
+ if(vehicleNaviData&&vehicleNaviData.unit)vehicleNaviData.unit.status=d;
+ NAV.mode="auto"; naviGroundRender();
+ try{await vehicleSetStatus(C.unitId,d,C.dburl,C.sid)}catch(e){toast("Status nicht gesendet")}
+ if(typeof terminalRefreshFn==="function")terminalRefreshFn();
+}
+function naviSetMode(m){NAV.mode=m;NAV.route=null;NAV.key="";naviGroundRender()}
+function naviToggleSim(){
+ if(NAV.sim){clearInterval(NAV.sim);NAV.sim=null;naviGroundRender();return}
+ if(!NAV.route)return toast("Noch keine Route");
+ NAV.pos=NAV.route.co[NAV.idx]||NAV.route.co[0]; let along=NAV.route.cum[NAV.idx]||0;
+ NAV.sim=setInterval(()=>{const R=NAV.route;if(!R){clearInterval(NAV.sim);NAV.sim=null;return}
+   along+=18; if(along>=R.dist){along=R.dist;clearInterval(NAV.sim);NAV.sim=null}
+   let i=0;while(i<R.cum.length-2&&R.cum[i+1]<along)i++;
+   const seg=R.cum[i+1]-R.cum[i]||1,t=(along-R.cum[i])/seg,a=R.co[i],b=R.co[i+1]||a;
+   NAV.head=naviBearing(a,b); NAV.pos=[a[0]+(b[0]-a[0])*t,a[1]+(b[1]-a[1])*t]; naviGroundRender();
+ },1000);
+ naviGroundRender();
+}
+function naviGroundRender(){
+ if(!vehicleNaviOpen)return;
+ const tgt=naviGroundTarget(), from=naviOwnGround();
+ let o=document.getElementById("naviOverlay");
+ if(!o){
+   o=document.createElement("div");o.id="naviOverlay";
+   o.style.cssText="position:fixed;inset:0;z-index:2500;background:#0f172a;color:#f8fafc;display:flex;flex-direction:column;font-family:system-ui,sans-serif";
+   o.innerHTML=`<div id="naviBanner" style="background:#14532d;padding:10px 12px;display:flex;gap:12px;align-items:center;min-height:74px"></div>
+    <div id="naviThen" style="background:#166534;font-size:13px;padding:3px 12px;display:none"></div>
+    <div style="position:relative;flex:1;min-height:0"><div id="naviMap" style="position:absolute;inset:0;background:#e2e8f0"></div>
+      <div style="position:absolute;right:8px;top:8px;display:flex;flex-direction:column;gap:6px;z-index:500">
+       <button onclick="vehicleNaviToggle()" title="Navi schließen" style="width:44px;height:44px;border-radius:50%;border:0;background:#0f172aee;color:#fff;font-size:20px">✕</button>
+       <button id="naviVoiceBtn" onclick="NAV.voice=!NAV.voice;naviGroundRender()" style="width:44px;height:44px;border-radius:50%;border:0;background:#0f172aee;color:#fff;font-size:18px"></button>
+       <button onclick="NAV.follow=true;naviGroundRender()" title="Zentrieren" style="width:44px;height:44px;border-radius:50%;border:0;background:#0f172aee;color:#fff;font-size:20px">◎</button>
+       <button id="naviSimBtn" onclick="naviToggleSim()" title="Fahrt simulieren" style="width:44px;height:44px;border-radius:50%;border:0;background:#0f172aee;color:#fff;font-size:16px"></button>
+      </div>
+      <div id="naviErr" style="position:absolute;left:8px;bottom:8px;right:60px;z-index:500;font-size:12px;background:#7c2d12e6;color:#fff;border-radius:6px;padding:4px 8px;display:none"></div></div>
+    <div id="naviInfo" style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:6px 12px;background:#020617;font-size:14px"></div>
+    <div id="naviTgtSel" style="display:flex;gap:6px;padding:0 12px 6px;background:#020617"></div>
+    <div id="naviKeys" style="display:grid;grid-template-columns:repeat(8,1fr);gap:4px;padding:6px;background:#020617;padding-bottom:max(6px,env(safe-area-inset-bottom))"></div>`;
+   document.body.appendChild(o);
+ }
+ // Ziel geändert → neue Route
+ const key=tgt?`${tgt.kind}|${tgt.lat.toFixed(5)},${tgt.lng.toFixed(5)}`:"";
+ if(tgt&&from&&key!==NAV.key&&!NAV.fetching){NAV.key=key;NAV.route=null;if(NAV.sim){clearInterval(NAV.sim);NAV.sim=null}naviFetchRoute(from,tgt)}
+ const P=NAV.route?naviProgress():null;
+ // weit neben der Route (nur echte GPS-Fahrt) → neu berechnen
+ if(P&&!NAV.sim&&vehicleNaviGps&&P.off>60&&Date.now()-NAV.lastRoute>12000&&tgt)naviFetchRoute(P.p,tgt);
+ const ban=document.getElementById("naviBanner"), then=document.getElementById("naviThen");
+ if(!tgt){ban.innerHTML=`<div style="font-size:18px;font-weight:800">Kein Ziel – kein Einsatz, Wache unbekannt</div>`}
+ else if(!NAV.route){ban.innerHTML=`<div style="font-size:18px;font-weight:800">${from?"Route wird berechnet …":"Kein Standort – GPS AN tippen"}</div>`}
+ else if(P){
+   const arrived=P.rest<40||P.next.type==="arrive"&&P.toNext<40;
+   ban.innerHTML=arrived?`<div style="font-size:44px;line-height:1">🏁</div><div><div style="font-size:24px;font-weight:900">Ziel erreicht</div><div style="font-size:14px">${esc(tgt.label)}${tgt.kind==="einsatz"?" – Status 4 drücken":tgt.kind==="klinik"?" – Status 8 drücken":""}</div></div>`
+    :`<div style="font-size:52px;line-height:1;font-weight:900;width:56px;text-align:center">${naviArrow(P.next)}</div><div style="min-width:0"><div style="font-size:30px;font-weight:900;line-height:1.1">${naviFmtDist(P.toNext)}</div><div style="font-size:16px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(naviStepText(P.next))}</div></div>`;
+   if(P.after&&!arrived&&P.toNext<400){then.style.display="block";then.textContent=`danach: ${naviStepText(P.after)}`}else then.style.display="none";
+   // Sprachansage
+   const sid=String(P.next.idx);
+   if(arrived){if(!NAV.said.arr){NAV.said.arr=1;naviSay(`Sie haben Ihr Ziel erreicht. ${tgt.label}.`)}}
+   else if(P.toNext<45&&!NAV.said[sid+"n"]){NAV.said[sid+"n"]=NAV.said[sid+"f"]=1;naviSay(`Jetzt ${naviStepText(P.next)}`)}
+   else if(P.toNext<320&&P.toNext>=45&&!NAV.said[sid+"f"]){NAV.said[sid+"f"]=1;naviSay(`In ${naviFmtDist(P.toNext).replace(" m"," Metern").replace(" km"," Kilometern")} ${naviStepText(P.next)}`)}
+ }
+ const eta=P?new Date(Date.now()+P.restSec*1000).toLocaleTimeString("de-DE",{hour:"2-digit",minute:"2-digit"}):"—";
+ document.getElementById("naviInfo").innerHTML=`<div><div style="font-size:22px;font-weight:900;color:#4ade80">${eta}</div><div style="font-size:11px;opacity:.7">Ankunft</div></div>
+   <div style="text-align:center"><div style="font-size:18px;font-weight:800">${P?naviFmtDist(P.rest):"—"}</div><div style="font-size:11px;opacity:.7">${P?Math.max(1,Math.round(P.restSec/60))+" min":""}</div></div>
+   <div style="text-align:right;min-width:0;flex:1"><div style="font-size:13px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${tgt?({einsatz:"🚨 ",klinik:"🏥 ",wache:"🏠 "}[tgt.kind]||"")+esc(tgt.label):"—"}</div><div style="font-size:11px;opacity:.7;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${tgt&&tgt.kw?esc(tgt.kw):""}</div></div>`;
+ const H=naviHospital(), sel=(m,l,ok)=>`<button ${ok?"":"disabled"} onclick="naviSetMode('${m}')" style="flex:1;padding:4px;border-radius:6px;font-size:12px;border:1px solid ${NAV.mode===m?"#4ade80":"#334155"};background:${NAV.mode===m?"#14532d":"#0f172a"};color:${ok?"#fff":"#64748b"}">${l}</button>`;
+ document.getElementById("naviTgtSel").innerHTML=sel("auto","Auto",true)+sel("einsatz","🚨 Einsatz",!!naviTarget())+sel("klinik","🏥 Klinik",!!H)+sel("wache","🏠 Wache",!!naviHome());
+ document.getElementById("naviKeys").innerHTML=naviStatusKeys();
+ document.getElementById("naviVoiceBtn").textContent=NAV.voice?"🔊":"🔇";
+ document.getElementById("naviSimBtn").textContent=NAV.sim?"⏸":"▶️";
+ const er=document.getElementById("naviErr"); er.style.display=NAV.err?"block":"none"; er.textContent=NAV.err;
+ // Karte
+ if(typeof L==="undefined"||!L.map)return;
+ if(!NAV.map){
+   NAV.map=L.map("naviMap",{zoomControl:false,attributionControl:true});
+   L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:19,attribution:"© OpenStreetMap, Route: OSRM"}).addTo(NAV.map);
+   NAV.lay=L.layerGroup().addTo(NAV.map); NAV.drawn=null;
+   NAV.map.on("dragstart",()=>{NAV.follow=false});
+   NAV.map.setView(from||(tgt?[tgt.lat,tgt.lng]:[53.4,8.0]),16);
+ }
+ if(NAV.route&&NAV.drawn!==NAV.route){NAV.drawn=NAV.route;NAV.lay.clearLayers();
+   L.polyline(NAV.route.co,{color:"#1d4ed8",weight:8,opacity:.85,dashArray:NAV.route.straight?"10 8":null}).addTo(NAV.lay);
+   if(tgt)L.circleMarker([tgt.lat,tgt.lng],{radius:10,color:"#fff",weight:3,fillColor:"#dc2626",fillOpacity:1}).addTo(NAV.lay);
+   NAV.me=null;
+ }
+ const me=P?P.p:from;
+ if(me){
+   const hd=vehicleNaviGps&&vehicleNaviGps[2]!=null&&!NAV.sim?vehicleNaviGps[2]:NAV.head;
+   const ic=L.divIcon({className:"",html:`<div style="width:30px;height:30px;transform:rotate(${hd||0}deg);display:flex;align-items:center;justify-content:center"><div style="width:0;height:0;border-left:11px solid transparent;border-right:11px solid transparent;border-bottom:26px solid #2563eb;filter:drop-shadow(0 0 2px #fff)"></div></div>`,iconSize:[30,30],iconAnchor:[15,15]});
+   if(!NAV.me){NAV.me=L.marker(me,{icon:ic,zIndexOffset:1000}).addTo(NAV.lay)}else{NAV.me.setLatLng(me);NAV.me.setIcon(ic)}
+   if(NAV.follow)NAV.map.setView(me,Math.max(15,NAV.map.getZoom()||16),{animate:true});
+ }
 }
 let vehicleQualDraft=null;
 function vehicleQualHTML(local,unit,unitId,dburl,sid){

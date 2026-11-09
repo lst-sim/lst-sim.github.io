@@ -1607,6 +1607,16 @@ Version 5.05:
   („a, b“ = a ODER b). Mit „🚑 NA-Indikation“ markierte Knöpfe ziehen weiterhin einen Notarzt.
 - Nur „Unauffällig“ (ohne weitere Befunde) zählt weiter als unauffälliges E (R0 möglich).
 
+Version 5.64:
+- Fahrzeug-Bildschirm, Bodenfahrzeuge: „🧭 NAVI“ öffnet jetzt ein eigenes Navi im Vollbild statt der Handy-Navi-App.
+  - Oben: Abbiegehinweis mit Pfeil und Entfernung, darunter der nächste Schritt. Ansagen auf Deutsch, abschaltbar.
+  - Mitte: Karte mit Route, die dem Fahrzeug folgt (◎ zentriert wieder).
+  - Unten: Ankunftszeit, Restweg, Ziel und Statustasten 1, 2, 3, 4, 5, 7, 8, 0, die direkt an die Leitstelle gehen.
+  - Ziel automatisch: Einsatzstelle bzw. Bereitstellungsraum, bei Status 7/8 die Zielklinik aus IVENA, ohne Einsatz die Wache. Umschaltbar über Auto / Einsatz / Klinik / Wache.
+  - Route über den öffentlichen OSRM-Server (OpenStreetMap). Wer mit GPS mehr als 60 m von der Route abkommt, bekommt eine neue Route. Ohne Netz gibt es die Luftlinie.
+  - Ohne GPS startet die Route am Standort laut Leitstelle. „▶️“ fährt sie zum Üben ab.
+  - Hubschrauber behalten die Flugansicht.
+
 Version 5.63:
 - Fahrzeug-Bildschirm: neuer Knopf „🧭 NAVI“. Bodenfahrzeuge öffnen die echte Navi-App des Handys mit der Einsatzstelle (bzw. dem Bereitstellungsraum) als Ziel: Google Maps, Apple Karten oder eine andere App über geo:. Luftfahrzeuge bekommen eine Flugansicht (dunkle Karte, Luftlinie, Kurs, Distanz in NM/km, Flugzeit bei 120 kt bzw. GPS-Geschwindigkeit, ETA, Zielkoordinaten in Grad/Minuten). Die Ansicht ist an Rescue Track angelehnt, aber nicht das echte System. Ohne GPS-Freigabe gilt der Standort laut Leitstelle.
 - MANV-Verteilung: ca. 15 % rot, 20 % gelb, 60 % grün, 5 % blau. Verstorbene (unter 5 %) gibt es nur bei passenden Lagen (VU, Bus/Zug, Brand, Explosion, Einsturz). Bei Einklemmungen ist ein blauer Patient einer, dessen Rettung zu lange dauern würde.
