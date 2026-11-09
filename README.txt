@@ -1607,6 +1607,10 @@ Version 5.05:
   („a, b“ = a ODER b). Mit „🚑 NA-Indikation“ markierte Knöpfe ziehen weiterhin einen Notarzt.
 - Nur „Unauffällig“ (ohne weitere Befunde) zählt weiter als unauffälliges E (R0 möglich).
 
+Version 5.70:
+- Navi (Bodenfahrzeuge): Unter der Karte gibt es ein Meldungsfenster. Es zeigt Stichwort, Einsatzort, Bereitstellungsraum, Meldetext, die letzte Nachforderung, die alarmierten Mittel und die SDS der letzten Stunde (höchstens 2).
+- Das Fenster nimmt etwa ein Fünftel bis ein knappes Drittel der Bildschirmhöhe ein und lässt sich bei langem Text scrollen. Die Karte ist dafür entsprechend kleiner.
+
 Version 5.69:
 - „Rettungsmittel hinzufügen“: Feuerwehr-Fahrzeugtypen stehen jetzt zusätzlich ausgeschrieben da, z. B. „HLF – Hilfeleistungslöschgruppenfahrzeug“ oder „DLK – Drehleiter mit Korb“. Das gilt im Reiter „Feuerwehr“, bei „Häufig“ und in der Fahrzeugauswahl.
 - Bei unklaren Kürzeln (AB-G, AB-HFS) steht nur „Abrollbehälter“, die genaue Bedeutung ist nicht belegt.

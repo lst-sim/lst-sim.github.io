@@ -170,7 +170,7 @@ html[data-device="handy"] #floatDock{left:8px;right:8px;width:auto;top:auto;bott
 </head>
 <body>
 <div style="padding:6px 10px;font-size:11px;color:#94a3b8;font-weight:700;display:flex;flex-wrap:wrap;align-items:center;gap:10px;position:sticky;top:0;z-index:10;background:var(--bg)">
- <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v5.69</span>
+ <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v5.70</span>
  <span id="syncState"></span> <a id="deskTag" href="#" onclick="renameDesk();return false" title="Name dieses Platzes (für „offen an …“) – antippen zum Ändern" style="color:#64748b;font-weight:700;text-decoration:none"></a>
  <span id="simCtl" style="position:absolute;left:50%;transform:translateX(-50%);display:flex;gap:6px;align-items:center"></span>
  <a id="homeLink" href="#" onclick="render('leitstelle');return false" class="hidden" style="color:#64748b;text-decoration:underline;font-weight:600">🖥️ Leitstelle</a>
@@ -8282,7 +8282,7 @@ async function renderVehicleTerminal(unitId,dburl,sid){
      const keypad=document.getElementById("vehicleKeypad");
      if(keypad)keypad.innerHTML=radioKeypadHTML(local,unit?.status,unitId,dburl,sid);
    }
-   vehicleNaviData={unit:{...(local||{}),...(unit||{})},local,calls};
+   vehicleNaviData={unit:{...(local||{}),...(unit||{})},local,calls,sds:sdsList};
    vehicleNaviCtx={unitId,dburl,sid};
    if(vehicleNaviOpen&&["7","8"].includes(String(unit?.status))&&Date.now()-(NAV.asgAt||0)>15000){NAV.asgAt=Date.now();
      try{const all=await vehicleFetch(dburl,sid,"ivenaAssignments")||{};const L=(Array.isArray(all)?all:Object.values(all)).filter(a=>a&&!a.deleted&&(a.vehicleIds||[]).some(id=>String(id)===String(unitId))).sort((a,b)=>new Date(b.createdAt||0)-new Date(a.createdAt||0));NAV.asg=L[0]||null}catch(e){}}
@@ -8328,6 +8328,18 @@ function vehicleNaviToggle(){
  else if(navigator.geolocation&&vehicleNaviGpsWatch==null){try{vehicleNaviGpsWatch=navigator.geolocation.watchPosition(p=>{const prev=vehicleNaviGps;vehicleNaviGps=[p.coords.latitude,p.coords.longitude,p.coords.heading,p.coords.speed];if(prev&&haversine(prev[0],prev[1],vehicleNaviGps[0],vehicleNaviGps[1])>0.008)NAV.head=naviBearing(prev,vehicleNaviGps);vehicleNaviRender()},()=>{},{enableHighAccuracy:true,maximumAge:5000})}catch(e){}}
  const el=document.getElementById("vehicleNavi"); if(el)el.innerHTML="";
  vehicleNaviRender();
+}
+// v5.70: Einsatzmeldung (Stichwort, Ort, BR, Meldetext, Nachforderung, letzte SDS) im Navi
+function naviMsgHTML(){
+ const D=vehicleNaviData||{}, calls=D.calls||[], sds=(D.sds||[]).filter(x=>Date.now()-new Date(x.time).getTime()<60*60000).slice(0,2);
+ const parts=calls.map(c=>`<div style="margin-bottom:6px"><div style="font-size:18px;font-weight:900;color:#fca5a5">🚨 ${esc(c.keyword||"Einsatz")}</div>
+   <div style="font-weight:700">📍 ${esc(c.location||"Ort unbekannt")}</div>
+   ${c.staging&&c.staging.name&&!waterCapable(D.unit)?`<div style="color:#7dd3fc;font-weight:700">🅿️ BR: ${esc(c.staging.name)}</div>`:""}
+   ${c.alarmFreeText?`<div style="margin-top:3px">📝 ${esc(c.alarmFreeText)}</div>`:""}
+   ${Array.isArray(c.nafo)&&c.nafo.length?`<div style="margin-top:3px;color:#fdba74">📟 ${esc(c.nafo[c.nafo.length-1].reason||"")}</div>`:""}
+   ${c.suggestion?`<div style="margin-top:3px;font-size:12px;opacity:.75">Alarmiert: ${esc(c.suggestion)}</div>`:""}</div>`).join("");
+ const sd=sds.map(x=>`<div style="margin-top:4px;color:#fde68a">✉️ ${new Date(x.time).toLocaleTimeString("de-DE",{hour:"2-digit",minute:"2-digit"})} ${esc(x.text||"")}</div>`).join("");
+ return (parts||`<div style="opacity:.7">Kein aktueller Einsatz</div>`)+sd;
 }
 function naviTarget(){
  const D=vehicleNaviData; if(!D||!D.calls||!D.calls.length)return null;
@@ -8500,6 +8512,7 @@ function naviGroundRender(){
        <button id="naviSimBtn" onclick="naviToggleSim()" title="Fahrt simulieren" style="width:44px;height:44px;border-radius:50%;border:0;background:#0f172aee;color:#fff;font-size:16px"></button>
       </div>
       <div id="naviErr" style="position:absolute;left:8px;bottom:8px;right:60px;z-index:500;font-size:12px;background:#7c2d12e6;color:#fff;border-radius:6px;padding:4px 8px;display:none"></div></div>
+    <div id="naviMsg" style="min-height:18vh;max-height:30vh;overflow-y:auto;background:#1e293b;border-top:2px solid #334155;padding:8px 12px;font-size:15px;line-height:1.35"></div>
     <div id="naviInfo" style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:6px 12px;background:#020617;font-size:14px"></div>
     <div id="naviTgtSel" style="display:flex;gap:6px;padding:0 12px 6px;background:#020617"></div>
     <div id="naviKeys" style="display:grid;grid-template-columns:repeat(8,1fr);gap:4px;padding:6px;background:#020617;padding-bottom:max(6px,env(safe-area-inset-bottom))"></div>`;
@@ -8532,6 +8545,7 @@ function naviGroundRender(){
  const H=naviHospital(), sel=(m,l,ok)=>`<button ${ok?"":"disabled"} onclick="naviSetMode('${m}')" style="flex:1;padding:4px;border-radius:6px;font-size:12px;border:1px solid ${NAV.mode===m?"#4ade80":"#334155"};background:${NAV.mode===m?"#14532d":"#0f172a"};color:${ok?"#fff":"#64748b"}">${l}</button>`;
  document.getElementById("naviTgtSel").innerHTML=sel("auto","Auto",true)+sel("einsatz","🚨 Einsatz",!!naviTarget())+sel("klinik","🏥 Klinik",!!H)+sel("wache","🏠 Wache",!!naviHome());
  document.getElementById("naviKeys").innerHTML=naviStatusKeys();
+ const mh=naviMsgHTML(), mEl=document.getElementById("naviMsg"); if(mEl&&mEl._h!==mh){mEl._h=mh;mEl.innerHTML=mh;if(NAV.map)setTimeout(()=>NAV.map&&NAV.map.invalidateSize(),50)} // v5.70: Einsatzmeldung unter der Karte
  document.getElementById("naviVoiceBtn").textContent=NAV.voice?"🔊":"🔇";
  document.getElementById("naviSimBtn").textContent=NAV.sim?"⏸":"▶️";
  const er=document.getElementById("naviErr"); er.style.display=NAV.err?"block":"none"; er.textContent=NAV.err;
