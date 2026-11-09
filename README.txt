@@ -1607,6 +1607,18 @@ Version 5.05:
   („a, b“ = a ODER b). Mit „🚑 NA-Indikation“ markierte Knöpfe ziehen weiterhin einen Notarzt.
 - Nur „Unauffällig“ (ohne weitere Befunde) zählt weiter als unauffälliges E (R0 möglich).
 
+Version 5.65:
+- MANV: Der DRK-ELW stellt Führungsassistenten für den OrgL/LNA.
+  - Bei Ankunft meldet er die Übernahme von Lagekarte, Patientenregistrierung und Transportorganisation.
+  - Die ärztliche Sichtung des OrgL kommt dadurch schneller (ca. 40 % kürzer), Transporte fahren ca. 25 % früher ab.
+  - Etwa alle 10 Minuten kommt eine Zwischenmeldung: Patienten übernommen/wartend nach Farbe, anfahrende und pendelnde Transportmittel und wie viele RTW/KTW noch fehlen (auch als Nachforderung).
+  - Am Einsatz steht „📋 Führungsassistenz“.
+  - Der DRK-ELW ist jetzt auch in den AAOs MANV 10 und MANV 30 (bei MANV 50/>50 war er schon drin).
+- AAO-Liste: neuer Bereich „➕ Zusatzalarmierung nach Fahrzeugmenge“. Regeln der Form „Wenn mindestens N Fahrzeuge / Ortsgruppen / Fahrzeuge vom Typ X (einer Organisation), optional nur bei einem Ereignis, dann zusätzlich n × Typ (Organisation)“.
+  - Gezählt wird der fertige Alarmvorschlag.
+  - Standardregeln: DLRG-ELW ab 2 DLRG-Ortsgruppen und ab 4 DLRG-Fahrzeugen. Sie ersetzen die bisher fest eingebaute Regel.
+  - Regeln können ein-/ausgeschaltet, geändert, gelöscht und auf Standard zurückgesetzt werden. Sie werden mit der AAO gespeichert und exportiert.
+
 Version 5.64:
 - Fahrzeug-Bildschirm, Bodenfahrzeuge: „🧭 NAVI“ öffnet jetzt ein eigenes Navi im Vollbild statt der Handy-Navi-App.
   - Oben: Abbiegehinweis mit Pfeil und Entfernung, darunter der nächste Schritt. Ansagen auf Deutsch, abschaltbar.

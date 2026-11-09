@@ -170,7 +170,7 @@ html[data-device="handy"] #floatDock{left:8px;right:8px;width:auto;top:auto;bott
 </head>
 <body>
 <div style="padding:6px 10px;font-size:11px;color:#94a3b8;font-weight:700;display:flex;flex-wrap:wrap;align-items:center;gap:10px;position:sticky;top:0;z-index:10;background:var(--bg)">
- <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v5.64</span>
+ <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v5.65</span>
  <span id="syncState"></span> <a id="deskTag" href="#" onclick="renameDesk();return false" title="Name dieses Platzes (für „offen an …“) – antippen zum Ändern" style="color:#64748b;font-weight:700;text-decoration:none"></a>
  <span id="simCtl" style="position:absolute;left:50%;transform:translateX(-50%);display:flex;gap:6px;align-items:center"></span>
  <a id="homeLink" href="#" onclick="render('leitstelle');return false" class="hidden" style="color:#64748b;text-decoration:underline;font-weight:600">🖥️ Leitstelle</a>
@@ -468,8 +468,8 @@ const DEFAULTS_FRI_WHV={
   {"id":7,"name":"Feuerwehr 2 – Feuer mit Personengefährdung","keyword":"F_2_Y","rules":{"event":"Feuer / Rauchentwicklung","firePeople":"ja","count":"1"},"units":[{"type":"HLF","n":1,"org":"Feuerwehr"},{"type":"LF","n":1,"org":"Feuerwehr"},{"type":"DLK","n":1,"org":"Feuerwehr"},{"type":"RTW","n":1,"org":"Rettungsdienst"}],"active":true,"rulesEdited":true},
   {"id":8,"name":"Feuerwehr/Rettungsdienst – Verkehrsunfall mit eingeklemmter Person","keyword":"H_Eingeklemmt_YY","rules":{"event":"Verkehrsunfall","trapped":"ja"},"units":[{"type":"HLF","n":1,"org":"Feuerwehr"},{"type":"RTW","n":1,"org":"Rettungsdienst"},{"type":"RW","n":1,"org":"Feuerwehr"}]},
   {"id":9,"name":"MANV 5 – 4 bis 5 Betroffene (MANV automatisch ab >3 Verletzten)","rules":{"count":">3"},"units":[{"type":"RTW","n":2,"org":"Rettungsdienst"},{"type":"NEF","n":1,"org":"Rettungsdienst"},{"type":"OrgL/LNA","n":1,"org":"Rettungsdienst"},{"type":"ELW","n":1,"org":"Feuerwehr"}]},
-  {"id":22,"name":"MANV 10 – 6 bis 10 Betroffene","rules":{"count":">3"},"units":[{"type":"RTW","n":4},{"type":"NEF","n":2},{"type":"KTW","n":2},{"type":"OrgL/LNA","n":1,"org":"Rettungsdienst"},{"type":"ELW","n":1,"org":"Feuerwehr"},{"type":"HLF","n":1,"org":"Feuerwehr"}]},
-  {"id":23,"name":"MANV 30 – 11 bis 30 Betroffene","rules":{"count":">3"},"units":[{"type":"RTW","n":8},{"type":"NEF","n":4},{"type":"KTW","n":4},{"type":"RTH","n":1},{"type":"OrgL/LNA","n":2,"org":"Rettungsdienst"},{"type":"ELW","n":2,"org":"Feuerwehr"},{"type":"HLF","n":2,"org":"Feuerwehr"},{"type":"MTW","n":2,"org":"DRK"}]},
+  {"id":22,"name":"MANV 10 – 6 bis 10 Betroffene","rules":{"count":">3"},"units":[{"type":"RTW","n":4},{"type":"NEF","n":2},{"type":"KTW","n":2},{"type":"OrgL/LNA","n":1,"org":"Rettungsdienst"},{"type":"ELW","n":1,"org":"Feuerwehr"},{"type":"HLF","n":1,"org":"Feuerwehr"},{"type":"ELW1","n":1,"org":"DRK"}]},
+  {"id":23,"name":"MANV 30 – 11 bis 30 Betroffene","rules":{"count":">3"},"units":[{"type":"RTW","n":8},{"type":"NEF","n":4},{"type":"KTW","n":4},{"type":"RTH","n":1},{"type":"OrgL/LNA","n":2,"org":"Rettungsdienst"},{"type":"ELW","n":2,"org":"Feuerwehr"},{"type":"HLF","n":2,"org":"Feuerwehr"},{"type":"MTW","n":2,"org":"DRK"},{"type":"ELW1","n":1,"org":"DRK"}]},
   {"id":24,"name":"MANV 50 – 31 bis 50 Betroffene","rules":{"count":">3"},"units":[{"type":"RTW","n":12},{"type":"NEF","n":5},{"type":"KTW","n":6},{"type":"RTH","n":2},{"type":"OrgL/LNA","n":2,"org":"Rettungsdienst"},{"type":"ELW","n":2,"org":"Feuerwehr"},{"type":"ELW1","n":1,"org":"DRK"},{"type":"HLF","n":3,"org":"Feuerwehr"},{"type":"MTW","n":4,"org":"DRK"}]},
   {"id":25,"name":"MANV >50 – mehr als 50 Betroffene","rules":{"count":">3"},"units":[{"type":"RTW","n":16},{"type":"NEF","n":6},{"type":"KTW","n":8},{"type":"RTH","n":3},{"type":"OrgL/LNA","n":2,"org":"Rettungsdienst"},{"type":"ELW","n":3,"org":"Feuerwehr"},{"type":"ELW1","n":2,"org":"DRK"},{"type":"HLF","n":4,"org":"Feuerwehr"},{"type":"MTW","n":6,"org":"DRK"}]},
   {"id":26,"name":"Evakuierung – Gebäude/Einrichtung räumen (v5.63)","keyword":"EVAK","rules":{"event":"Evakuierung"},"units":[{"type":"ELW","n":1,"org":"Feuerwehr"},{"type":"HLF","n":1,"org":"Feuerwehr"},{"type":"RTW","n":1,"org":"Rettungsdienst"},{"type":"KTW","n":2,"org":"Rettungsdienst"},{"type":"NEF","n":1,"org":"Rettungsdienst"},{"type":"OrgL/LNA","n":1,"org":"Rettungsdienst"},{"type":"GW-Betreuung","n":1,"org":"DRK"},{"type":"ELW1","n":1,"org":"DRK"},{"type":"MTW","n":2,"org":"DRK"}]},
@@ -1019,6 +1019,10 @@ if(!db.aaoSyncV393){
  db.aaoSyncV393=true;
 }
 // Einmalig (v3.94): bei "Feuer groß" die Bedingung "Verkehrsunfall" entfernen (griff so nie).
+if(!db.aaoSyncV565){ // v5.65: DRK-ELW (Führungsassistenz) auch bei MANV 10 und MANV 30
+ ["22","23"].forEach(id=>{const a=db.aao.find(x=>String(x.id)===id);if(a&&Array.isArray(a.units)&&!a.units.some(u=>u.type==="ELW1"&&u.org==="DRK"))a.units.push({type:"ELW1",n:1,org:"DRK"})});
+ db.aaoSyncV565=true;
+}
 if(!db.aaoSyncV394){
  const fg=db.aao.find(a=>String(a.id)==="1790688810963");
  if(fg&&fg.rules&&fg.rules.event==="Verkehrsunfall")delete fg.rules.event;
@@ -2386,6 +2390,43 @@ function maybeAddDlrgElw1(list){
  }
  return null;
 }
+// ─── v5.65: Zusatzalarmierung nach Fahrzeugmenge ─────────────────────────────────────────────────
+// Regel: „Wenn mindestens N [Fahrzeuge | Ortsgruppen/Standorte | Fahrzeuge vom Typ X] [der Organisation Y]
+// alarmiert sind (optional nur bei Ereignis Z), dann zusätzlich n × Typ T (Organisation O)“.
+const AAO_QTY_DEFAULTS=[
+ {id:"q_dlrg_og",name:"DLRG-ELW ab 2 Ortsgruppen",active:true,what:"groups",org:"DLRG",min:2,addType:"ELW1",addOrg:"DLRG",n:1},
+ {id:"q_dlrg_fz",name:"DLRG-ELW ab 4 DLRG-Fahrzeugen",active:true,what:"units",org:"DLRG",min:4,addType:"ELW1",addOrg:"DLRG",n:1}
+];
+function aaoQtyRules(){if(!Array.isArray(db.aaoQty)){db.aaoQty=JSON.parse(JSON.stringify(AAO_QTY_DEFAULTS))}return db.aaoQty}
+function aaoQtyCount(q,list){
+ const L=list.filter(x=>(!q.org||x.org===q.org||(q.org==="DLRG"&&x.wasserrettung))&&(q.what!=="type"||x.type===q.type)&&!(x.type===q.addType&&(!q.addOrg||x.org===q.addOrg)));
+ return q.what==="groups"?new Set(L.map(x=>String(x.location||"").trim()).filter(Boolean)).size:L.length;
+}
+function aaoQtyMatch(q,list,a){if(q.event&&String(a&&a.event||"")!==q.event)return false;return aaoQtyCount(q,list)>=(Number(q.min)||1)}
+function aaoQtyText(q){const what=q.what==="groups"?`Ortsgruppen/Standorte`:q.what==="type"?`× ${q.type||"?"}`:"Fahrzeuge";
+ return `ab ${q.min} ${what}${q.org?` (${q.org})`:""}${q.event?` · nur bei „${q.event}“`:""} → ${q.n||1}× ${q.addType}${q.addOrg?` (${q.addOrg})`:""}`}
+function aaoQtyHTML(){
+ const R=aaoQtyRules(), types=[...new Set((db.units||[]).map(u=>u.type).filter(Boolean))].sort((a,b)=>a.localeCompare(b,"de")), orgs=[...new Set((db.units||[]).map(u=>u.org).filter(Boolean))].sort((a,b)=>a.localeCompare(b,"de"));
+ const ev=AAO_RULE_FIELDS.event?AAO_RULE_FIELDS.event.values:[];
+ const sel=(i,k,opts,v,ph)=>`<select onchange="aaoQtySet(${i},'${k}',this.value)" style="flex:1;min-width:110px">${ph!=null?`<option value="">${esc(ph)}</option>`:""}${opts.map(o=>Array.isArray(o)?o:[o,o]).map(([val,l])=>`<option value="${esc(val)}" ${String(v||"")===String(val)?"selected":""}>${esc(l)}</option>`).join("")}</select>`;
+ const row=(q,i)=>`<div class="suggest-compact" style="margin-top:8px;${q.active===false?"opacity:.55":""}">
+   <div class="row" style="gap:6px;flex-wrap:wrap;align-items:center"><label style="display:flex;gap:4px;align-items:center;margin:0;font-weight:600"><input type="checkbox" style="width:auto" ${q.active!==false?"checked":""} onchange="aaoQtySet(${i},'active',this.checked)"> aktiv</label>
+    <input value="${esc(q.name||"")}" placeholder="Name der Regel" oninput="aaoQtyRules()[${i}].name=this.value;save()" style="flex:2;min-width:160px"><button onclick="aaoQtyDel(${i})" title="Regel löschen">✕</button></div>
+   <div class="row" style="gap:6px;flex-wrap:wrap;margin-top:6px;align-items:center"><b>Wenn mindestens</b><input type="number" min="1" value="${esc(String(q.min||1))}" style="width:64px" onchange="aaoQtySet(${i},'min',Math.max(1,Number(this.value)||1))">
+    ${sel(i,"what",[["units","Fahrzeuge"],["groups","Ortsgruppen / Standorte"],["type","Fahrzeuge vom Typ …"]],q.what)}
+    ${q.what==="type"?`<input list="aaoQtyTypes" value="${esc(q.type||"")}" placeholder="Typ" style="flex:1;min-width:90px" onchange="aaoQtySet(${i},'type',this.value)">`:""}
+    ${sel(i,"org",orgs,q.org,"jeder Organisation")}</div>
+   <div class="row" style="gap:6px;flex-wrap:wrap;margin-top:6px;align-items:center"><b>bei</b>${sel(i,"event",ev,q.event,"jedem Ereignis")}</div>
+   <div class="row" style="gap:6px;flex-wrap:wrap;margin-top:6px;align-items:center"><b>dann zusätzlich</b><input type="number" min="1" max="10" value="${esc(String(q.n||1))}" style="width:56px" onchange="aaoQtySet(${i},'n',Math.max(1,Number(this.value)||1))"><b>×</b>
+    <input list="aaoQtyTypes" value="${esc(q.addType||"")}" placeholder="Fahrzeugtyp" style="flex:1;min-width:100px" onchange="aaoQtySet(${i},'addType',this.value)">${sel(i,"addOrg",orgs,q.addOrg,"beliebige Organisation")}</div>
+   <div class="muted" style="font-size:12px;margin-top:4px">${esc(aaoQtyText(q))}</div></div>`;
+ return `<div class="card"><div class="row between"><div><h2 style="margin:0">➕ Zusatzalarmierung nach Fahrzeugmenge</h2><p class="muted" style="margin:4px 0 0">Kommt automatisch dazu, wenn im Alarmvorschlag genug Fahrzeuge oder Ortsgruppen stehen – z. B. der DLRG-ELW ab 2 Ortsgruppen. Gezählt wird der fertige Vorschlag (alle AAOs zusammen).</p></div>
+  <div class="row" style="gap:6px"><button class="primary" onclick="aaoQtyAdd()">+ Regel</button>${JSON.stringify(R)!==JSON.stringify(AAO_QTY_DEFAULTS)?`<button onclick="if(confirm('Zusatzregeln auf Standard zurücksetzen?')){db.aaoQty=null;aaoQtyRules();save();render('aao')}">↺ Standard</button>`:""}</div></div>
+  ${R.length?R.map(row).join(""):`<p class="muted">Keine Regeln.</p>`}<datalist id="aaoQtyTypes">${types.map(t=>`<option value="${esc(t)}">`).join("")}</datalist></div>`;
+}
+function aaoQtySet(i,k,v){const q=aaoQtyRules()[i];if(!q)return;q[k]=v;save();render("aao")}
+function aaoQtyDel(i){const q=aaoQtyRules()[i];if(q&&confirm(`Regel „${q.name||"ohne Name"}“ löschen?`)){db.aaoQty.splice(i,1);save();render("aao")}}
+function aaoQtyAdd(){aaoQtyRules().push({id:"q"+Date.now(),name:"Neue Regel",active:true,what:"units",org:"",min:5,addType:"ELW",addOrg:"Feuerwehr",n:1});save();render("aao")}
 // DRK-Unterstützung (Verpflegung/Betreuung) bei größeren Brandeinsätzen: sobald mehr als 2
 // Feuerwehr-Fahrzeuge bei einem Feuer im Einsatz sind UND keine Personen gefährdet/verletzt
 // sind (sonst hat die Rettung von Menschen Vorrang, keine Verpflegungslage), wird automatisch
@@ -4742,10 +4783,17 @@ function evaluate0(){
    const fe=estimatedEtaMinutes(x), first=frFirstEta(selected);
    if(!(first-fe>frThreshold(c))){selected.splice(i,1);used.delete(x.id)}
  }
- {
-   const elw=maybeAddDlrgElw1(selected.filter(x=>!x.missing));
-   if(elw && !used.has(elw.id)){selected.push({...elw});used.add(elw.id)}
- }
+ // v5.65: Zusatzalarmierung nach Fahrzeugmenge (in der AAO-Liste einstellbar, ersetzt die feste DLRG-ELW-Regel)
+ c.qtyAdded=[];
+ for(let pass=0;pass<3;pass++){let any=false;
+   for(const q of aaoQtyRules()){
+     if(q.active===false||!q.addType||!aaoQtyMatch(q,selected.filter(x=>!x.missing),a))continue;
+     const have=selected.filter(x=>!x.missing&&x.type===q.addType&&(!q.addOrg||x.org===q.addOrg)).length;
+     for(let k=have;k<(Number(q.n)||1);k++){const u=availableUnits(q.addType,q.addOrg||null).filter(x=>!used.has(x.id))[0];
+       if(!u){selected.push({missing:true,type:q.addType,org:q.addOrg||null});break}
+       selected.push({...u,qtyRule:q.name});used.add(u.id);any=true;c.qtyAdded.push(`${u.opta||u.name} (${q.name})`)}
+   }
+   if(!any)break}
  {
    const drk=maybeAddDrkSupport(selected.filter(x=>!x.missing),c);
    if(drk && !used.has(drk.id)){selected.push({...drk});used.add(drk.id)}
@@ -5188,7 +5236,7 @@ function crewPlan(u,call){
      crewSds(u,call,`Übernehme Patient ${P.pid!=null?`(Anhängekarte ${P.pid}) `:""}SK IV – palliative Betreuung an der Einsatzstelle, kein Transport.`);return}
    P.unit=u.id;
    const sev=P.sk===1?"critical":P.sk===2?"urgent":P.sk===4?"critical":"minor";
-   const t={1:rint(10,15),2:rint(12,20),3:rint(15,30),4:rint(25,40)}[P.sk];
+   const t0={1:rint(10,15),2:rint(12,20),3:rint(15,30),4:rint(25,40)}[P.sk], t=call.manvFuAss?Math.max(6,Math.round(t0*0.75)):t0; // v5.65: Führungsassistenz → schnellere Transportorganisation
    const card=P.pid!=null&&call.manvTruth&&call.manvTruth.pats?call.manvTruth.pats.find(q=>q.n===P.pid):null;
    const inf={...info,sev,sk:P.sk,age:card?card.age:rint(16,85),gender:card?card.gender:(Math.random()<0.5?"M":"W"),card:card?card.n:null,inj:card?card.inj:null};
    u.crew={callId:String(call.id),mode:"transport",patient:P.n,sk:P.sk,departAt:now+t*60000,registerAt:now+Math.max(2,t-rint(3,6))*60000,info:inf};
@@ -5418,6 +5466,36 @@ function manvStationTick(call,now){
  }
  return ch;
 }
+// ─── v5.65: DRK-ELW stellt beim MANV Führungsassistenten für den OrgL/LNA ─────────────────────────
+// Wirkung: ärztliche Sichtung/Lagemeldung des OrgL kommt schneller, die Transportorganisation
+// (Registrierung, Zielklinik, Abfahrtsreihenfolge) läuft zügiger, regelmäßige Zwischenmeldungen
+// an die Leitstelle mit Bedarf an weiteren Transportmitteln.
+function manvFuAssUnit(call){return callUnits(call).find(u=>u.org==="DRK"&&/^ELW/.test(u.type)&&String(u.status)==="4")||null}
+function manvFuAssTick(call,now){
+ const u=manvFuAssUnit(call); if(!u)return false; let ch=false;
+ const orgl=callUnits(call).find(x=>x.type==="OrgL/LNA"&&String(x.status)==="4");
+ if(!call.manvFuAss){
+   call.manvFuAss={unitId:u.id,label:u.opta||u.name,at:now,next:now+rint(8,10)*60000};
+   if(call._orglDelay)call._orglDelay=Math.round(call._orglDelay*0.6); else call._orglDelay=rint(3,6)*60000;
+   const t=`MANV: Führungsassistenz ${orgl?`für ${orgl.opta||orgl.name} `:""}übernommen – Lagekarte, Patientenregistrierung und Transportorganisation (Zielkliniken, Abfahrtsreihenfolge) laufen über uns.`;
+   crewSds(u,call,t); (call.history=call.history||[]).push({q:`📋 Führungsassistenz (${u.opta||u.name})`,a:t}); return true;
+ }
+ const F=call.manvFuAss, P=call.manvPatients;
+ if(!P||!(call.manvReports||[]).length||now<F.next)return false;
+ F.next=now+rint(9,12)*60000;
+ const tot=P.length, away=P.filter(x=>x.unit&&!x.care).length, care=P.filter(x=>x.care).length, wait=P.filter(x=>!x.unit&&x.sk<=3);
+ const us=callUnits(call), coming=us.filter(x=>CREW_TRANSPORT.has(x.type)&&!MANV_AIR.has(x.type)&&(String(x.status)==="3"||(String(x.status)==="4"&&(!x.crew||x.crew.mode==="none"||x.crew.mode==="standby")))).length;
+ const shuttle=us.filter(x=>CREW_TRANSPORT.has(x.type)&&["7","8"].includes(String(x.status))).length;
+ const need=Math.max(0,wait.length-coming-Math.floor(shuttle/2));
+ if(!wait.length&&!P.some(x=>x.sk===4&&!x.unit))return false;
+ const sk=k=>wait.filter(x=>x.sk===k).length;
+ let t=`Zwischenmeldung MANV: ${tot} Patienten – ${away} von Transportmitteln übernommen${care?`, ${care} palliativ vor Ort`:""}, ${wait.length} warten (${sk(1)} rot, ${sk(2)} gelb, ${sk(3)} grün). Transportmittel anfahrend/frei: ${coming}, im Pendelverkehr: ${shuttle}.`;
+ if(need>0){t+=` Bitte noch ${need} Transportmittel (RTW/KTW) nachalarmieren.`;if(need!==F.lastNeed)(call.nafo=call.nafo||[]).push({reason:`MANV: noch ${need} Transportmittel benötigt (Führungsassistenz)`,at:new Date().toISOString()})}
+ else t+=" Transportkapazität reicht.";
+ F.lastNeed=need;
+ crewSds(u,call,t); (call.history=call.history||[]).push({q:`📋 Zwischenmeldung (${u.opta||u.name})`,a:t}); ch=true;
+ return ch;
+}
 function manvPlaceLabel(call,pid){const P=(call.manvPatients||[]).find(x=>x.pid===pid);if(!P)return "";if(P.care)return "🕯️ palliativ vor Ort";if(P.unit)return "🚑 Transport";if(P.place==="san")return "⛑️ im BHP (DRK)";if(P.place==="bet")return "🫂 in der Betreuungsstelle (DRK)";return "Schadenstelle"}
 // v5.60: SK IV (blau, ohne Überlebenschance) – kein Transport; Patient verstirbt an der Einsatzstelle
 function manvDeathTick(call,now){
@@ -5548,6 +5626,7 @@ function crewSurplusTick(){
    const free=(u,txt)=>{if(unitPhoneLive(u)){if(!u._relSds){u._relSds=1;crewSds(u,call,txt+" (Bitte Status 1 melden.)")}return}crewSds(u,call,txt);setUnitStatus(u,"1");delete u.crew;(call.history=call.history||[]).push({q:`↩️ ${u.opta||u.name}`,a:txt});ch=true};
    const rd=u=>CREW_TRANSPORT.has(u.type)||u.type==="NEF";
    if(isManvCall(call)&&manvStationTick(call,now))ch=true;
+   if(isManvCall(call)&&manvFuAssTick(call,now))ch=true; // v5.65
    if(call.evac&&evacTick(call,now))ch=true; // v5.63
    if(call.manvPatients&&manvDeathTick(call,now))ch=true;
    if(call.manvPatients&&(call.manvReports||[]).length){
@@ -5862,6 +5941,7 @@ function manvStripHTML(c){
   <div style="margin-top:3px">${dot("#d71920",R.rot,"rot – SK I")}${dot("#f2c200",R.gelb,"gelb – SK II")}${dot("#22c55e",R.gruen,"grün – SK III")}${dot("#2563eb",R.blau,"blau – SK IV")}${dot("#111827",R.schwarz,"verstorben")}${tr.length?`<small class="muted">· ${done}/${tr.length} Pat. von Rettungsmitteln übernommen</small>`:""}</div>
   ${(()=>{const open=tr.filter(p=>!p.unit),free=callUnits(c).filter(u=>CREW_TRANSPORT.has(u.type)&&["3","4"].includes(String(u.status))&&!(u.crew&&u.crew.mode==="transport")).length,miss=open.length-free;return miss>0?`<div style="margin-top:3px;color:#b91c1c;font-weight:800">⚠️ ${miss} Pat. noch ohne Transportmittel (${["SK1","SK2","SK3","SK4"].map((k,i)=>{const n=open.filter(p=>p.sk===i+1).length;return n?`${n}× ${k}`:""}).filter(Boolean).join(", ")}) – nachalarmieren!</div>`:""})()}`:`<div>🚨 MANV – Rückmeldung von der Einsatzstelle steht noch aus</div>`}
   ${R?`<div style="margin-top:4px"><button onclick="event.stopPropagation();render('manv')" style="font-size:11px;padding:2px 8px">🚨 Alle Patienten</button> <button onclick="event.stopPropagation();manvListDialog('${esc(String(c.id))}')" style="font-size:11px;padding:2px 8px">📋 Sichtung (mSTaRT)</button> <button onclick="event.stopPropagation();mstartTrain=null;manvTrainDialog('${esc(String(c.id))}',true)" style="font-size:11px;padding:2px 8px">🎓 Selbst sichten</button></div>`:""}
+  ${c.manvFuAss?`<div style="margin-top:3px">📋 Führungsassistenz: ${esc(c.manvFuAss.label)} (DRK-ELW)</div>`:""}
   ${(()=>{const ST=Object.values(c.manvStations||{});if(!ST.length)return "";const P=c.manvPatients||[];
     return `<div style="margin-top:3px">${["san","bet"].filter(k=>ST.some(x=>x.kind===k)).map(k=>{const xs=ST.filter(x=>x.kind===k),rd=xs.filter(x=>x.ready&&!x.closed),cap=rd.reduce((a,x)=>a+x.cap,0),n=P.filter(p=>p.place===k&&!p.unit).length;
       return `<span style="margin-right:10px;font-weight:800">${MANV_ST[k].icon} ${MANV_ST[k].name}: ${rd.length?`${n}/${cap}`:xs.some(x=>x.closed)?"abgebaut":"im Aufbau"}</span>`}).join("")}</div>`})()}
@@ -8455,7 +8535,7 @@ const UNIT_RUNTIME_KEYS=["status1Since","status2Due","status3Since","status4Sinc
 function exportSetup(kind){
  const now=new Date();
  const data={format:"leitstelle.sim",kind,version:(document.getElementById("versionTag")?.textContent||""),scenario:currentScenarioId,exportedAt:now.toISOString()};
- if(kind==="aao"){data.aao=JSON.parse(JSON.stringify(db.aao||[]));data.deletedAaoIds=db.deletedAaoIds||[];data.qsConfig=JSON.parse(JSON.stringify(db.qsConfig||{}))}
+ if(kind==="aao"){data.aao=JSON.parse(JSON.stringify(db.aao||[]));data.deletedAaoIds=db.deletedAaoIds||[];data.qsConfig=JSON.parse(JSON.stringify(db.qsConfig||{}));data.aaoQty=JSON.parse(JSON.stringify(aaoQtyRules()))}
  else{
    data.units=(db.units||[]).filter(u=>!u.neighborLoan).map(u=>{const x=JSON.parse(JSON.stringify(u));UNIT_RUNTIME_KEYS.forEach(k=>delete x[k]);return x});
    data.deletedUnitOptas=db.deletedUnitOptas||[];
@@ -8504,6 +8584,7 @@ function applySetupData(kind,d){
  if(kind==="aao"){
    db.aao=d.aao; db.deletedAaoIds=Array.isArray(d.deletedAaoIds)?d.deletedAaoIds:(db.deletedAaoIds||[]);
    if(d.qsConfig&&typeof d.qsConfig==="object"){db.qsConfig=d.qsConfig;try{qsSyncRuleFields()}catch(e){}}
+   if(Array.isArray(d.aaoQty))db.aaoQty=d.aaoQty;
  }else{
    const old=new Map((db.units||[]).map(u=>[String(u.id),u]));
    const loans=(db.units||[]).filter(u=>u.neighborLoan);
@@ -8560,7 +8641,7 @@ function ghSaveToken(kind){
 function b64utf8(str){const bytes=new TextEncoder().encode(str);let bin="";for(let i=0;i<bytes.length;i+=0x8000)bin+=String.fromCharCode.apply(null,bytes.subarray(i,i+0x8000));return btoa(bin)}
 function setupData(kind){
  const data={format:"leitstelle.sim",kind,version:(document.getElementById("versionTag")?.textContent||""),scenario:currentScenarioId,exportedAt:new Date().toISOString()};
- if(kind==="aao"){data.aao=JSON.parse(JSON.stringify(db.aao||[]));data.deletedAaoIds=db.deletedAaoIds||[];data.qsConfig=JSON.parse(JSON.stringify(db.qsConfig||{}))}
+ if(kind==="aao"){data.aao=JSON.parse(JSON.stringify(db.aao||[]));data.deletedAaoIds=db.deletedAaoIds||[];data.qsConfig=JSON.parse(JSON.stringify(db.qsConfig||{}));data.aaoQty=JSON.parse(JSON.stringify(aaoQtyRules()))}
  else{data.units=(db.units||[]).filter(u=>!u.neighborLoan).map(u=>{const x=JSON.parse(JSON.stringify(u));UNIT_RUNTIME_KEYS.forEach(k=>delete x[k]);delete x.status;return x});data.deletedUnitOptas=db.deletedUnitOptas||[]}
  return data;
 }
@@ -8594,7 +8675,7 @@ async function cfgPut(kind,manual=false){
 }
 function setupListJSON(kind,d){const x=JSON.parse(JSON.stringify(kind==="aao"?(d.aao||[]):(d.units||[])));return JSON.stringify(x)+(kind==="aao"?JSON.stringify(d.qsConfig||{}):"")}
 function hasOwnEdits(kind){
- if(kind==="aao")return JSON.stringify(db.aao||[])!==JSON.stringify(defaults.aao||[])||(db.deletedAaoIds||[]).length>0||Object.keys(db.qsConfig||{}).length>0;
+ if(kind==="aao")return JSON.stringify(db.aao||[])!==JSON.stringify(defaults.aao||[])||(db.deletedAaoIds||[]).length>0||Object.keys(db.qsConfig||{}).length>0||JSON.stringify(aaoQtyRules())!==JSON.stringify(AAO_QTY_DEFAULTS);
  return (db.units||[]).some(u=>u.custom||u.userEdited||u.duty)||(db.deletedUnitOptas||[]).length>0;
 }
 async function cfgSync(kind,manual=false){
@@ -8790,7 +8871,7 @@ function aaoGroupsHTML(){
 function aao(){
  if(aaoDraft)return aaoEditor();
  document.getElementById("app").innerHTML=`<div class="card"><div class="row between"><div><h2>🧠 AAO / Einsatzstichworte</h2><p class="muted">Die AAO steuert den Alarmvorschlag. Passen mehrere AAOs, wird nur die höchste alarmiert (die mit den meisten Fahrzeugen; bei Gleichstand die spezifischere). Rettungsdienst aus XABCDE (RD_X…RD_D) kommt immer dazu.</p></div><div class="row" style="gap:6px;flex-wrap:wrap;justify-content:flex-end"><button onclick="cfgPut('aao',true);if(ghToken())saveSetupToGitHub('aao')" title="Änderungen werden automatisch dauerhaft gespeichert – hier von Hand">☁️ Speichern</button><button onclick="cfgSync('aao',true)" title="Dauerhaft gespeicherten Stand laden">📥 Gespeicherten Stand laden</button><button onclick="ghOpenSetup('aao')" title="Optional: zusätzlich in GitHub speichern (Token)">🔑</button>${(db.deletedAaoIds||[]).some(id=>(defaults.aao||[]).some(a=>String(a.id)===String(id)))?`<button onclick="restoreDeletedStdAao()" title="Gelöschte Standard-AAOs zurückholen">↺ Gelöschte Standard-AAOs</button>`:""}<button class="primary" onclick="editAAO(null)">＋ AAO anlegen</button></div></div>
- ${aaoGroupsHTML()}</div>${qsEditorHTML()}`;
+ ${aaoGroupsHTML()}</div>${aaoQtyHTML()}${qsEditorHTML()}`;
 }
 function editAAO(id){
  const src=id==null?null:db.aao.find(x=>String(x.id)===String(id));
