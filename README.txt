@@ -1607,6 +1607,15 @@ Version 5.05:
   („a, b“ = a ODER b). Mit „🚑 NA-Indikation“ markierte Knöpfe ziehen weiterhin einen Notarzt.
 - Nur „Unauffällig“ (ohne weitere Befunde) zählt weiter als unauffälliges E (R0 möglich).
 
+Version 5.71:
+- Fahrzeug-Handy: Bei Status 4 schließt sich das Navi und die Funkansicht erscheint. Bei Status 7 öffnet sich das Navi und führt über die Straßenroute zur Klinik aus der IVENA-Zuweisung. Das gilt egal, ob der Status am Handy gedrückt oder von der Leitstelle gesetzt wird.
+- MANV/MANI/MANB: In der Funkansicht gibt es eine Karte „📢 Rückmeldung“ mit zwei Knöpfen:
+  - „Erste Lagemeldung“: geschätzte Betroffene, was passiert ist, Gefahren, was zusätzlich gebraucht wird.
+  - „Rückmeldung Betroffene (detailliert)“: Anzahl je Sichtungskategorie, davon eingeklemmt, bei MANI/MANB zusätzlich Unverletzte/Betreuung, Bemerkung. Vorausgefüllt mit den eigenen Sichtungskarten.
+  - Die Leitstelle bekommt beides als SDS, im Einsatzverlauf und im MANV-Kasten. Die simulierte Sichtung läuft unabhängig davon weiter.
+- Navi: Neuer Knopf „🧭 Ohne Route“. Dann wird keine Straßenroute berechnet. Ein Pfeil zeigt zum Ziel, dazu die Entfernung in Luftlinie und die Himmelsrichtung. Ohne Ziel folgt die Karte nur dem Fahrzeug. Das gleiche Bild erscheint, wenn keine Straßenroute geladen werden kann.
+- Fehler behoben (seit 5.64): Das Navi-Ziel „Wache“ lag bei Fahrzeugen mit eigenem Wachen-Standort bei Koordinate 0,0.
+
 Version 5.70:
 - Navi (Bodenfahrzeuge): Unter der Karte gibt es ein Meldungsfenster. Es zeigt Stichwort, Einsatzort, Bereitstellungsraum, Meldetext, die letzte Nachforderung, die alarmierten Mittel und die SDS der letzten Stunde (höchstens 2).
 - Das Fenster nimmt etwa ein Fünftel bis ein knappes Drittel der Bildschirmhöhe ein und lässt sich bei langem Text scrollen. Die Karte ist dafür entsprechend kleiner.

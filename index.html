@@ -170,7 +170,7 @@ html[data-device="handy"] #floatDock{left:8px;right:8px;width:auto;top:auto;bott
 </head>
 <body>
 <div style="padding:6px 10px;font-size:11px;color:#94a3b8;font-weight:700;display:flex;flex-wrap:wrap;align-items:center;gap:10px;position:sticky;top:0;z-index:10;background:var(--bg)">
- <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v5.70</span>
+ <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v5.71</span>
  <span id="syncState"></span> <a id="deskTag" href="#" onclick="renameDesk();return false" title="Name dieses Platzes (für „offen an …“) – antippen zum Ändern" style="color:#64748b;font-weight:700;text-decoration:none"></a>
  <span id="simCtl" style="position:absolute;left:50%;transform:translateX(-50%);display:flex;gap:6px;align-items:center"></span>
  <a id="homeLink" href="#" onclick="render('leitstelle');return false" class="hidden" style="color:#64748b;text-decoration:underline;font-weight:600">🖥️ Leitstelle</a>
@@ -2209,7 +2209,7 @@ function unitPoint(u){
  return unitPointBase(u);
 }
 function unitPointBase(u){
- if(Number.isFinite(Number(u.lat)) && Number.isFinite(Number(u.lng)))return [Number(u.lat),Number(u.lng)];
+ if(numOk(u.lat)&&numOk(u.lng))return [Number(u.lat),Number(u.lng)]; // v5.71: null/"" ist keine Position (sonst 0,0)
  if(numOk(u.homeLat)&&numOk(u.homeLng))return [Number(u.homeLat),Number(u.homeLng)]; // eigener Standort (Editor)
  const override=STATION_OVERRIDE[`${u.org}__${u.location}`];
  if(override)return override;
@@ -6272,7 +6272,7 @@ function triageCardCount(u){
 }
 function triageUnitTag(u){const s=String(u&&(u.opta||u.name)||"?");const m=s.match(/(\d+[\/-]\d+(?:-\d+)?)\s*$/);return m?m[1]:s.slice(-8)}
 function triageCardId(u,n){return `${triageUnitTag(u)}-${String(n).padStart(2,"0")}`}
-function isManvLike(c){return !!c&&(!!c.manv||/MANV/.test(c.keyword||"")||Number(c.answers&&c.answers.count)>3)}
+function isManvLike(c){return !!c&&(!!c.manv||/MAN[VIB]/.test(c.keyword||"")||["MANI","MANB"].includes(c.answers&&c.answers.event)||Number(c.answers&&c.answers.count)>3)}
 // Alle Patienten eines MANV: Handy-Sichtungen der Einsatzkräfte + simulierte Vorsichtung
 function manvAllPatients(c){
  const out=[];
@@ -6337,6 +6337,17 @@ function manvApplyTriage(call,fb){
  call.manvCards[key]={unitId:fb.unitId,label:fb.unitLabel,card:fb.card,cardId:fb.cardId||`${fb.unitId}-${fb.card}`,sk:Number(fb.sk),at:fb.time,hist,fbIds:(old&&old.fbIds||[]).concat([String(fb.id)]).slice(-20)};
  call.manv=true; return true;
 }
+// v5.71: Rückmeldung vom Fahrzeug-Handy (Erste Lagemeldung / detaillierte Rückmeldung Betroffene)
+function manvApplyPhoneReport(call,fb){
+ call.manvPhoneFb=call.manvPhoneFb||[]; if(call.manvPhoneFb.includes(String(fb.id)))return false;
+ call.manvPhoneFb.push(String(fb.id)); call.manv=true;
+ // getrennt von den simulierten Meldungen gespeichert, damit die Simulation unverändert weiterläuft
+ (call.manvPhoneReports=call.manvPhoneReports||[]).push({stage:fb.stage,by:fb.unitLabel,at:Date.now(),text:fb.text});
+ (call.history=call.history||[]).push({q:`📢 Rückmeldung (${fb.unitLabel})`,a:fb.text});
+ sdsLog({dir:"in",fbId:fb.id,unitId:fb.unitId,callId:String(call.id),opta:fb.unitLabel||String(fb.unitId),text:fb.text,read:false});
+ toast(`📢 ${fb.unitLabel}: ${String(fb.text).slice(0,90)}`);
+ return true;
+}
 function manvReport(c,u,kind){
  const T=manvTruth(c), jit=v=>Math.max(0,v+(Math.random()<0.5?0:pick([-1,1])));
  manvPats(c);
@@ -6367,7 +6378,7 @@ function manvStripHTML(c){
  return `<div style="margin-top:6px;padding:6px 8px;border-radius:8px;background:#fff7ed;border:1px solid #fdba74;font-size:13px">
   ${R?`<div>${manvKind(c)!=="MANV"?`<span class="pill" style="font-weight:800">${manvKind(c)==="MANI"?"🦠 MANI":"🫂 MANB"}</span> `:""}<b>${R.total} Betroffene</b> <small class="muted">(${R.kind==="first"?"erste Meldung":"Sichtung"} ${esc(R.by)} ${hhmm(R.at)})</small></div>
   <div style="margin-top:3px">${dot("#d71920",R.rot,"rot – SK I")}${dot("#f2c200",R.gelb,"gelb – SK II")}${dot("#22c55e",R.gruen,"grün – SK III")}${dot("#2563eb",R.blau,"blau – SK IV")}${dot("#111827",R.schwarz,"verstorben")}${tr.length?`<small class="muted">· ${done}/${tr.length} Pat. von Rettungsmitteln übernommen</small>`:""}</div>
-  ${(()=>{const open=tr.filter(p=>!p.unit),free=callUnits(c).filter(u=>CREW_TRANSPORT.has(u.type)&&["3","4"].includes(String(u.status))&&!(u.crew&&u.crew.mode==="transport")).length,miss=open.length-free;return miss>0?`<div style="margin-top:3px;color:#b91c1c;font-weight:800">⚠️ ${miss} Pat. noch ohne Transportmittel (${["SK1","SK2","SK3","SK4"].map((k,i)=>{const n=open.filter(p=>p.sk===i+1).length;return n?`${n}× ${k}`:""}).filter(Boolean).join(", ")}) – nachalarmieren!</div>`:""})()}`:`<div>🚨 ${manvKind(c)} – ${policeHold(c)?"Rettungsdienst wartet auf Freigabe durch die Polizei":"Rückmeldung von der Einsatzstelle steht noch aus"}</div>`}
+  ${(()=>{const open=tr.filter(p=>!p.unit),free=callUnits(c).filter(u=>CREW_TRANSPORT.has(u.type)&&["3","4"].includes(String(u.status))&&!(u.crew&&u.crew.mode==="transport")).length,miss=open.length-free;return miss>0?`<div style="margin-top:3px;color:#b91c1c;font-weight:800">⚠️ ${miss} Pat. noch ohne Transportmittel (${["SK1","SK2","SK3","SK4"].map((k,i)=>{const n=open.filter(p=>p.sk===i+1).length;return n?`${n}× ${k}`:""}).filter(Boolean).join(", ")}) – nachalarmieren!</div>`:""})()}`:`<div>🚨 ${manvKind(c)} – ${policeHold(c)?"Rettungsdienst wartet auf Freigabe durch die Polizei":(c.manvPhoneReports||[]).length?"Rückmeldung vom Fahrzeug – simulierte Sichtung läuft noch":"Rückmeldung von der Einsatzstelle steht noch aus"}</div>`}
   ${(()=>{const S=c.manvStay||[];if(!S.length)return "";const d=S.filter(x=>x.done).length,b=S.filter(x=>x.place&&!x.done).length,w=S.length-d-b; // v5.66
     return manvKind(c)==="MANI"?`<div style="margin-top:3px">🏠 Vor Ort versorgt (kein Transport): <b>${d}</b>${S.length-d?` · in Versorgung ${S.length-d}`:""}</div>`:`<div style="margin-top:3px">🫂 Betreuung: übergeben <b>${d}</b> · in der Betreuungsstelle <b>${b}</b>${w?` · <span style="color:#b91c1c;font-weight:800">warten ${w}</span>`:""}</div>`})()}
   ${R?`<div style="margin-top:4px"><button onclick="event.stopPropagation();render('manv')" style="font-size:11px;padding:2px 8px">🚨 Alle Patienten</button> <button onclick="event.stopPropagation();manvListDialog('${esc(String(c.id))}')" style="font-size:11px;padding:2px 8px">📋 Sichtung (mSTaRT)</button> <button onclick="event.stopPropagation();mstartTrain=null;manvTrainDialog('${esc(String(c.id))}',true)" style="font-size:11px;padding:2px 8px">🎓 Selbst sichten</button></div>`:""}
@@ -6376,6 +6387,7 @@ function manvStripHTML(c){
     return `<div style="margin-top:3px">${["pa","san","bet"].filter(k=>ST.some(x=>x.kind===k)).map(k=>{const xs=ST.filter(x=>x.kind===k),rd=xs.filter(x=>x.ready&&!x.closed),cap=rd.reduce((a,x)=>a+x.cap,0),n=P.filter(p=>p.place===k&&!p.unit).length+(k==="bet"?(c.manvStay||[]).filter(s=>s.place==="bet"&&!s.done).length:0);
       return `<span style="margin-right:10px;font-weight:800">${MANV_ST[k].icon} ${MANV_ST[k].name}: ${rd.length?`${n}/${cap}`:xs.some(x=>x.closed)?"abgebaut":"im Aufbau"}</span>`}).join("")}</div>`})()}
   ${pcHTML}
+  ${(c.manvPhoneReports||[]).length?(()=>{const x=c.manvPhoneReports.slice(-1)[0];return `<div style="margin-top:3px">📱 ${esc(x.by)} ${hhmm(x.at)}: ${esc(x.text)}</div>`})():""}
   ${manvCompHTML(c)}
   ${br?`<div style="margin-top:4px">${br}</div>`:""}</div>`;
 }
@@ -7288,6 +7300,7 @@ async function pollCloudUnits(){
      const call=allCalls.find(c=>String(c.id)===String(fb.callId));
      if(!call)continue;
      if(fb.kind==="triage"){if(manvApplyTriage(call,fb))changed=true;continue}
+     if(fb.kind==="manvLage"){if(manvApplyPhoneReport(call,fb))changed=true;continue} // v5.71
      call.orglFeedback=call.orglFeedback||[];
      if(!call.orglFeedback.some(x=>String(x.id)===String(fb.id))){
        call.orglFeedback.unshift(fb);
@@ -8262,8 +8275,10 @@ async function renderVehicleTerminal(unitId,dburl,sid){
    const remoteUnits=await vehicleFetch(dburl,sid,"units");
    if(remoteUnits&&typeof remoteUnits==="object")vehicleUnitsCache=Object.values(remoteUnits).filter(Boolean);
    let triageMine={};
+   const fbsAll=calls.some(isManvLike)?(await vehicleFetch(dburl,sid,"orglFeedback")||{}):{};
+   Object.values(fbsAll).filter(x=>x&&x.kind==="manvLage"&&String(x.unitId)===String(unitId)).forEach(x=>{const m=vehicleManvSent[x.callId]=vehicleManvSent[x.callId]||{};m[x.stage]=Math.max(m[x.stage]||0,new Date(x.time).getTime()||1)});
    if(calls.some(isManvLike)&&triageCardCount({...(local||{}),...(unit||{})})){
-     const fbs=await vehicleFetch(dburl,sid,"orglFeedback")||{};
+     const fbs=fbsAll;
      Object.values(fbs).filter(x=>x&&x.kind==="triage"&&String(x.unitId)===String(unitId)).sort((a,b)=>new Date(a.time)-new Date(b.time)).forEach(x=>{(triageMine[x.callId]=triageMine[x.callId]||{})[x.card]=Number(x.sk)});
      Object.entries(vehicleTriageLocal).forEach(([cid,m])=>{Object.keys(m).forEach(k=>{if(triageMine[cid]&&triageMine[cid][k]===m[k])delete m[k]})});
    }
@@ -8283,6 +8298,7 @@ async function renderVehicleTerminal(unitId,dburl,sid){
      if(keypad)keypad.innerHTML=radioKeypadHTML(local,unit?.status,unitId,dburl,sid);
    }
    vehicleNaviData={unit:{...(local||{}),...(unit||{})},local,calls,sds:sdsList};
+   vehicleStatusHook(unit?.status);
    vehicleNaviCtx={unitId,dburl,sid};
    if(vehicleNaviOpen&&["7","8"].includes(String(unit?.status))&&Date.now()-(NAV.asgAt||0)>15000){NAV.asgAt=Date.now();
      try{const all=await vehicleFetch(dburl,sid,"ivenaAssignments")||{};const L=(Array.isArray(all)?all:Object.values(all)).filter(a=>a&&!a.deleted&&(a.vehicleIds||[]).some(id=>String(id)===String(unitId))).sort((a,b)=>new Date(b.createdAt||0)-new Date(a.createdAt||0));NAV.asg=L[0]||null}catch(e){}}
@@ -8299,6 +8315,7 @@ async function renderVehicleTerminal(unitId,dburl,sid){
        <div class="suggest"><b>Alarmierte Mittel</b><div>${esc(c.suggestion||"—")}</div></div>
        ${Array.isArray(c.nafo)&&c.nafo.length?`<div class="card" style="background:#fff7ed"><b>📟 Nachforderung / Lageänderung</b>${c.nafo.slice(-3).map(n=>`<div>${esc(n.reason||"")}</div>`).join("")}</div>`:""}
      </div>`).join(""):""}
+    ${calls.filter(isManvLike).map(c=>vehicleManvReportHTML(unitId,dburl,sid,c,unit)).join("")}
     ${calls.filter(isManvLike).map(c=>["4","7"].includes(String(unit?.status))?vehicleTriageHTML(local,unit,unitId,dburl,sid,c,triageMine[String(c.id)]||{}):"").join("")}
     ${["1","2"].includes(String(unit?.status))?vehicleQualHTML(local,unit,unitId,dburl,sid):""}
     ${vehicleIvenaCache?renderIvenaMini(vehicleIvenaCache):""}`;
@@ -8448,6 +8465,7 @@ function naviBuildRoute(js,tgt){
 async function naviFetchRoute(from,tgt){
  if(NAV.fetching)return; NAV.fetching=true; NAV.lastRoute=Date.now();
  try{
+   if(NAV.noRoute)throw new Error("ohne Route"); // v5.71: Navi ohne Routing – nur Richtung und Luftlinie
    const url=`https://router.project-osrm.org/route/v1/driving/${from[1].toFixed(6)},${from[0].toFixed(6)};${tgt.lng.toFixed(6)},${tgt.lat.toFixed(6)}?overview=full&geometries=geojson&steps=true`;
    const res=await fetch(url); if(!res.ok)throw new Error("HTTP "+res.status);
    const R=naviBuildRoute(await res.json(),tgt); if(!R)throw new Error("keine Route");
@@ -8455,7 +8473,7 @@ async function naviFetchRoute(from,tgt){
  }catch(e){ // Ersatz: Luftlinie
    const co=[from,[tgt.lat,tgt.lng]], d=haversine(from[0],from[1],tgt.lat,tgt.lng)*1000;
    NAV.route={co,cum:[0,d],steps:[{type:"depart",modifier:"straight",name:"",idx:0},{type:"arrive",idx:1,name:""}],dist:d,dur:d/13,tgt,straight:true};NAV.idx=0;NAV.said={};
-   NAV.err="Keine Straßenroute verfügbar (offline?) – Luftlinie";
+   NAV.err=NAV.noRoute?"":"Keine Straßenroute verfügbar (offline?) – Richtung und Luftlinie";
  }finally{NAV.fetching=false}
  naviGroundRender();
 }
@@ -8482,6 +8500,7 @@ async function naviSendStatus(d){
  try{await vehicleSetStatus(C.unitId,d,C.dburl,C.sid)}catch(e){toast("Status nicht gesendet")}
  if(typeof terminalRefreshFn==="function")terminalRefreshFn();
 }
+function naviToggleNoRoute(){NAV.noRoute=!NAV.noRoute;NAV.route=null;NAV.key="";NAV.err="";if(NAV.sim){clearInterval(NAV.sim);NAV.sim=null}NAV.follow=true;naviGroundRender()}
 function naviSetMode(m){NAV.mode=m;NAV.route=null;NAV.key="";naviGroundRender()}
 function naviToggleSim(){
  if(NAV.sim){clearInterval(NAV.sim);NAV.sim=null;naviGroundRender();return}
@@ -8519,16 +8538,22 @@ function naviGroundRender(){
    document.body.appendChild(o);
  }
  // Ziel geändert → neue Route
- const key=tgt?`${tgt.kind}|${tgt.lat.toFixed(5)},${tgt.lng.toFixed(5)}`:"";
+ const key=tgt?`${tgt.kind}|${tgt.lat.toFixed(5)},${tgt.lng.toFixed(5)}|${NAV.noRoute?"frei":"route"}`:"";
  if(tgt&&from&&key!==NAV.key&&!NAV.fetching){NAV.key=key;NAV.route=null;if(NAV.sim){clearInterval(NAV.sim);NAV.sim=null}naviFetchRoute(from,tgt)}
  const P=NAV.route?naviProgress():null;
  // weit neben der Route (nur echte GPS-Fahrt) → neu berechnen
- if(P&&!NAV.sim&&vehicleNaviGps&&P.off>60&&Date.now()-NAV.lastRoute>12000&&tgt)naviFetchRoute(P.p,tgt);
+ if(P&&!NAV.route.straight&&!NAV.sim&&vehicleNaviGps&&P.off>60&&Date.now()-NAV.lastRoute>12000&&tgt)naviFetchRoute(P.p,tgt);
  const ban=document.getElementById("naviBanner"), then=document.getElementById("naviThen");
- if(!tgt){ban.innerHTML=`<div style="font-size:18px;font-weight:800">Kein Ziel – kein Einsatz, Wache unbekannt</div>`}
+ if(!tgt){ban.innerHTML=`<div style="font-size:18px;font-weight:800">${NAV.noRoute?"🧭 Freie Fahrt – Karte folgt dem Fahrzeug":"Kein Ziel – kein Einsatz, Wache unbekannt"}</div>`;then.style.display="none"}
  else if(!NAV.route){ban.innerHTML=`<div style="font-size:18px;font-weight:800">${from?"Route wird berechnet …":"Kein Standort – GPS AN tippen"}</div>`}
  else if(P){
    const arrived=P.rest<40||P.next.type==="arrive"&&P.toNext<40;
+   if(NAV.route.straight&&!arrived){ // v5.71: ohne Straßenroute – Pfeil zeigt zum Ziel, Entfernung Luftlinie
+     const mp=from||P.p, brg=naviBearing(mp,[tgt.lat,tgt.lng]), hd=vehicleNaviGps&&vehicleNaviGps[2]!=null&&!NAV.sim?vehicleNaviGps[2]:(NAV.head||0), rel=((brg-hd)%360+360)%360;
+     const km=haversine(mp[0],mp[1],tgt.lat,tgt.lng), dir=["Norden","Nordosten","Osten","Südosten","Süden","Südwesten","Westen","Nordwesten"][Math.round(brg/45)%8];
+     ban.innerHTML=`<div style="font-size:48px;line-height:1;width:56px;text-align:center;transform:rotate(${Math.round(rel)}deg)">⬆</div><div style="min-width:0"><div style="font-size:30px;font-weight:900;line-height:1.1">${naviFmtDist(km*1000)}</div><div style="font-size:16px;font-weight:600">Luftlinie Richtung ${dir}${NAV.noRoute?" · ohne Route":""}</div></div>`;
+     then.style.display="none";
+   }else{
    ban.innerHTML=arrived?`<div style="font-size:44px;line-height:1">🏁</div><div><div style="font-size:24px;font-weight:900">Ziel erreicht</div><div style="font-size:14px">${esc(tgt.label)}${tgt.kind==="einsatz"?" – Status 4 drücken":tgt.kind==="klinik"?" – Status 8 drücken":""}</div></div>`
     :`<div style="font-size:52px;line-height:1;font-weight:900;width:56px;text-align:center">${naviArrow(P.next)}</div><div style="min-width:0"><div style="font-size:30px;font-weight:900;line-height:1.1">${naviFmtDist(P.toNext)}</div><div style="font-size:16px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(naviStepText(P.next))}</div></div>`;
    if(P.after&&!arrived&&P.toNext<400){then.style.display="block";then.textContent=`danach: ${naviStepText(P.after)}`}else then.style.display="none";
@@ -8536,14 +8561,15 @@ function naviGroundRender(){
    const sid=String(P.next.idx);
    if(arrived){if(!NAV.said.arr){NAV.said.arr=1;naviSay(`Sie haben Ihr Ziel erreicht. ${tgt.label}.`)}}
    else if(P.toNext<45&&!NAV.said[sid+"n"]){NAV.said[sid+"n"]=NAV.said[sid+"f"]=1;naviSay(`Jetzt ${naviStepText(P.next)}`)}
-   else if(P.toNext<320&&P.toNext>=45&&!NAV.said[sid+"f"]){NAV.said[sid+"f"]=1;naviSay(`In ${naviFmtDist(P.toNext).replace(" m"," Metern").replace(" km"," Kilometern")} ${naviStepText(P.next)}`)}
+   else if(!NAV.route.straight&&P.toNext<320&&P.toNext>=45&&!NAV.said[sid+"f"]){NAV.said[sid+"f"]=1;naviSay(`In ${naviFmtDist(P.toNext).replace(" m"," Metern").replace(" km"," Kilometern")} ${naviStepText(P.next)}`)}
+   }
  }
  const eta=P?new Date(Date.now()+P.restSec*1000).toLocaleTimeString("de-DE",{hour:"2-digit",minute:"2-digit"}):"—";
  document.getElementById("naviInfo").innerHTML=`<div><div style="font-size:22px;font-weight:900;color:#4ade80">${eta}</div><div style="font-size:11px;opacity:.7">Ankunft</div></div>
    <div style="text-align:center"><div style="font-size:18px;font-weight:800">${P?naviFmtDist(P.rest):"—"}</div><div style="font-size:11px;opacity:.7">${P?Math.max(1,Math.round(P.restSec/60))+" min":""}</div></div>
    <div style="text-align:right;min-width:0;flex:1"><div style="font-size:13px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${tgt?({einsatz:"🚨 ",klinik:"🏥 ",wache:"🏠 "}[tgt.kind]||"")+esc(tgt.label):"—"}</div><div style="font-size:11px;opacity:.7;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${tgt&&tgt.kw?esc(tgt.kw):""}</div></div>`;
  const H=naviHospital(), sel=(m,l,ok)=>`<button ${ok?"":"disabled"} onclick="naviSetMode('${m}')" style="flex:1;padding:4px;border-radius:6px;font-size:12px;border:1px solid ${NAV.mode===m?"#4ade80":"#334155"};background:${NAV.mode===m?"#14532d":"#0f172a"};color:${ok?"#fff":"#64748b"}">${l}</button>`;
- document.getElementById("naviTgtSel").innerHTML=sel("auto","Auto",true)+sel("einsatz","🚨 Einsatz",!!naviTarget())+sel("klinik","🏥 Klinik",!!H)+sel("wache","🏠 Wache",!!naviHome());
+ document.getElementById("naviTgtSel").innerHTML=sel("auto","Auto",true)+sel("einsatz","🚨 Einsatz",!!naviTarget())+sel("klinik","🏥 Klinik",!!H)+sel("wache","🏠 Wache",!!naviHome())+`<button onclick="naviToggleNoRoute()" title="Navi ohne Straßenroute: nur Karte, Richtung und Entfernung" style="flex:1;padding:4px;border-radius:6px;font-size:12px;border:1px solid ${NAV.noRoute?"#facc15":"#334155"};background:${NAV.noRoute?"#713f12":"#0f172a"};color:#fff">🧭 Ohne Route</button>`;
  document.getElementById("naviKeys").innerHTML=naviStatusKeys();
  const mh=naviMsgHTML(), mEl=document.getElementById("naviMsg"); if(mEl&&mEl._h!==mh){mEl._h=mh;mEl.innerHTML=mh;if(NAV.map)setTimeout(()=>NAV.map&&NAV.map.invalidateSize(),50)} // v5.70: Einsatzmeldung unter der Karte
  document.getElementById("naviVoiceBtn").textContent=NAV.voice?"🔊":"🔇";
@@ -8669,6 +8695,66 @@ async function sendOrglSituationReport(unitId,dburl,sid,callId){
 async function vehicleSetStatus(unitId,status,dburl,sid){
  await vehicleFetch(dburl,sid,`units/${encodeURIComponent(unitId)}`,"PATCH",{status:String(status),phoneControlled:true,updatedAt:new Date().toISOString()});
  toast(`Status ${status} gesendet`);
+ if(vehicleNaviData&&vehicleNaviData.unit)vehicleNaviData.unit.status=String(status);
+ vehicleStatusHook(status);
+}
+// v5.71: Status 4 → Navi zu, Funkansicht. Status 7 → Navi auf, Route zur angemeldeten Klinik.
+let vehicleLastStatus=null;
+function vehicleStatusHook(st){
+ st=st==null?null:String(st); if(st===vehicleLastStatus)return;
+ const prev=vehicleLastStatus; vehicleLastStatus=st; if(prev===null)return; // erster Abruf: nichts umschalten
+ if(st==="4"&&vehicleNaviOpen){vehicleNaviToggle();window.scrollTo&&window.scrollTo(0,0)}
+ else if(st==="7"&&!vehicleNaviOpen&&vehicleNaviData){NAV.mode="auto";NAV.asg=null;NAV.asgAt=0;NAV.route=null;NAV.key="";vehicleNaviToggle();if(typeof terminalRefreshFn==="function")setTimeout(terminalRefreshFn,100)}
+}
+// v5.71: MANV/MANI/MANB – Rückmeldung aus dem Fahrzeug: erst Erste Lagemeldung, danach detaillierte Rückmeldung der Betroffenen
+let vehicleManvSent={};
+function vehicleManvReportHTML(unitId,dburl,sid,c,unit){
+ const q=x=>String(x).replace(/\\/g,"\\\\").replace(/'/g,"\\'"), m=vehicleManvSent[c.id]||{};
+ const kind=/MANI/.test(c.keyword||"")||c.answers?.event==="MANI"?"MANI":/MANB/.test(c.keyword||"")||c.answers?.event==="MANB"?"MANB":"MANV";
+ const t=x=>new Date(x).toLocaleTimeString("de-DE",{hour:"2-digit",minute:"2-digit"});
+ const a=`'${q(unitId)}','${q(dburl)}','${q(sid)}','${q(String(c.id))}'`;
+ return `<div class="card" style="margin-top:12px;border-left:6px solid #dc2626"><h2 style="margin:0">📢 ${kind}-Rückmeldung</h2>
+  <div class="muted" style="font-size:12px;margin:2px 0 8px">${esc(c.keyword||"")}</div>
+  <div style="display:grid;gap:6px">
+   <button class="${m.first?"":"primary"}" onclick="vehicleManvDialog(${a},'first','${kind}')" style="padding:12px;font-size:16px">📢 Erste Lagemeldung${m.first?` <small>(gesendet ${t(m.first)})</small>`:""}</button>
+   <button class="${m.first?"primary":""}" onclick="vehicleManvDialog(${a},'detail','${kind}')" style="padding:12px;font-size:16px">📋 Rückmeldung Betroffene (detailliert)${m.detail?` <small>(zuletzt ${t(m.detail)})</small>`:""}</button>
+  </div></div>`;
+}
+function vehicleManvDialog(unitId,dburl,sid,callId,stage,kind){
+ const q=x=>String(x).replace(/'/g,"\\'"), a=`'${q(unitId)}','${q(dburl)}','${q(sid)}','${q(callId)}','${stage}'`;
+ const num=(id,l,col)=>`<div style="display:flex;align-items:center;gap:8px;margin:4px 0"><span style="width:14px;height:14px;border-radius:50%;background:${col};border:1px solid #0003;display:inline-block"></span><span style="flex:1">${l}</span><input id="${id}" type="number" min="0" value="0" style="width:80px"></div>`;
+ const mine=Object.values(vehicleTriageLocal[callId]||{});
+ if(stage==="first")showModal(`<h3 style="margin-top:0">📢 Erste Lagemeldung (${kind})</h3>
+  <label>Betroffene geschätzt</label><input id="vmTotal" type="number" min="0" placeholder="z. B. 15">
+  <label style="margin-top:8px">Was ist passiert?</label><input id="vmWhat" placeholder="z. B. Busunfall, Reizgas, Brechdurchfall">
+  <label style="margin-top:8px">Gefahren / Besonderheiten</label><input id="vmDanger" placeholder="z. B. Eingeklemmte, Rauch, Gefahrstoff">
+  <label style="margin-top:8px">Benötigt zusätzlich</label><input id="vmNeed" placeholder="z. B. 3 RTW, Feuerwehr, Betreuung">
+  <div class="row" style="justify-content:flex-end;gap:6px;margin-top:10px"><button onclick="closeModal()">Abbrechen</button><button class="primary" onclick="vehicleManvSend(${a})">📤 Senden</button></div>`);
+ else showModal(`<h3 style="margin-top:0">📋 Rückmeldung Betroffene (${kind})</h3>
+  <p class="muted" style="font-size:12px;margin:0 0 6px">Anzahl je Sichtungskategorie${mine.length?" – vorausgefüllt mit euren eigenen Sichtungskarten":""}.</p>
+  ${num("vmR","SK I – rot","#dc2626")}${num("vmG","SK II – gelb","#facc15")}${num("vmGr","SK III – grün","#16a34a")}${num("vmB","SK IV – blau","#2563eb")}${num("vmS","verstorben","#111")}
+  ${num("vmEk","davon eingeklemmt/verschüttet","#94a3b8")}
+  ${kind!=="MANV"?num("vmUnv","Unverletzte / nur Betreuung","#a78bfa"):""}
+  <label style="margin-top:8px">Bemerkung</label><input id="vmNote" placeholder="z. B. 2 Kinder, Patientenablage eingerichtet">
+  <div class="row" style="justify-content:flex-end;gap:6px;margin-top:10px"><button onclick="closeModal()">Abbrechen</button><button class="primary" onclick="vehicleManvSend(${a})">📤 Senden</button></div>`);
+ if(stage==="detail"&&mine.length){[["vmR",1],["vmG",2],["vmGr",3],["vmB",4],["vmS",5]].forEach(([id,k])=>{const e=document.getElementById(id);if(e)e.value=mine.filter(v=>v===k).length})}
+}
+async function vehicleManvSend(unitId,dburl,sid,callId,stage){
+ const v=id=>{const e=document.getElementById(id);return e?e.value.trim():""}, n=id=>Math.max(0,parseInt(v(id),10)||0);
+ const local=db.units.find(x=>String(x.id)===String(unitId)), unitLabel=local?.opta||local?.name||unitId;
+ let fb;
+ if(stage==="first"){
+   const total=n("vmTotal"); if(!v("vmTotal"))return toast("Bitte die geschätzte Zahl der Betroffenen eingeben");
+   const text=`Erste Lagemeldung: ca. ${total} Betroffene${v("vmWhat")?` – ${v("vmWhat")}`:""}${v("vmDanger")?`. Gefahren: ${v("vmDanger")}`:""}${v("vmNeed")?`. Benötigt: ${v("vmNeed")}`:""}.`;
+   fb={kind:"manvLage",stage:"first",callId,unitId,unitLabel,total,text};
+ }else{
+   const r=n("vmR"),g=n("vmG"),gr=n("vmGr"),b=n("vmB"),sc=n("vmS"),ek=n("vmEk"),unv=n("vmUnv"),tot=r+g+gr+b+sc;
+   if(!tot&&!unv)return toast("Bitte mindestens eine Zahl eintragen");
+   const text=`Rückmeldung Betroffene: ${tot} Patienten – ${r} rot (SK I), ${g} gelb (SK II), ${gr} grün (SK III), ${b} blau (SK IV), ${sc} verstorben${ek?`, davon ${ek} eingeklemmt/verschüttet`:""}${unv?`; ${unv} Unverletzte/Betreuung`:""}${v("vmNote")?`. ${v("vmNote")}`:""}.`;
+   fb={kind:"manvLage",stage:"detail",callId,unitId,unitLabel,rot:r,gelb:g,gruen:gr,blau:b,schwarz:sc,eingeklemmt:ek,unverletzt:unv,text};
+ }
+ try{await pushFeedbackEntry(dburl,sid,fb);const m=vehicleManvSent[callId]=vehicleManvSent[callId]||{};m[stage]=Date.now();closeModal();toast("📤 Rückmeldung gesendet");if(typeof terminalRefreshFn==="function")terminalRefreshFn()}
+ catch(e){toast("Senden fehlgeschlagen – bitte nochmal")}
 }
 async function openVehicleIvenaAssignment(unitId,dburl,sid,callId){
  const local=db.units.find(x=>String(x.id)===String(unitId));
