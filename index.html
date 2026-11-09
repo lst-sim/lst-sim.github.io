@@ -170,7 +170,7 @@ html[data-device="handy"] #floatDock{left:8px;right:8px;width:auto;top:auto;bott
 </head>
 <body>
 <div style="padding:6px 10px;font-size:11px;color:#94a3b8;font-weight:700;display:flex;flex-wrap:wrap;align-items:center;gap:10px;position:sticky;top:0;z-index:10;background:var(--bg)">
- <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v5.65</span>
+ <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v5.66</span>
  <span id="syncState"></span> <a id="deskTag" href="#" onclick="renameDesk();return false" title="Name dieses Platzes (für „offen an …“) – antippen zum Ändern" style="color:#64748b;font-weight:700;text-decoration:none"></a>
  <span id="simCtl" style="position:absolute;left:50%;transform:translateX(-50%);display:flex;gap:6px;align-items:center"></span>
  <a id="homeLink" href="#" onclick="render('leitstelle');return false" class="hidden" style="color:#64748b;text-decoration:underline;font-weight:600">🖥️ Leitstelle</a>
@@ -473,6 +473,10 @@ const DEFAULTS_FRI_WHV={
   {"id":24,"name":"MANV 50 – 31 bis 50 Betroffene","rules":{"count":">3"},"units":[{"type":"RTW","n":12},{"type":"NEF","n":5},{"type":"KTW","n":6},{"type":"RTH","n":2},{"type":"OrgL/LNA","n":2,"org":"Rettungsdienst"},{"type":"ELW","n":2,"org":"Feuerwehr"},{"type":"ELW1","n":1,"org":"DRK"},{"type":"HLF","n":3,"org":"Feuerwehr"},{"type":"MTW","n":4,"org":"DRK"}]},
   {"id":25,"name":"MANV >50 – mehr als 50 Betroffene","rules":{"count":">3"},"units":[{"type":"RTW","n":16},{"type":"NEF","n":6},{"type":"KTW","n":8},{"type":"RTH","n":3},{"type":"OrgL/LNA","n":2,"org":"Rettungsdienst"},{"type":"ELW","n":3,"org":"Feuerwehr"},{"type":"ELW1","n":2,"org":"DRK"},{"type":"HLF","n":4,"org":"Feuerwehr"},{"type":"MTW","n":6,"org":"DRK"}]},
   {"id":26,"name":"Evakuierung – Gebäude/Einrichtung räumen (v5.63)","keyword":"EVAK","rules":{"event":"Evakuierung"},"units":[{"type":"ELW","n":1,"org":"Feuerwehr"},{"type":"HLF","n":1,"org":"Feuerwehr"},{"type":"RTW","n":1,"org":"Rettungsdienst"},{"type":"KTW","n":2,"org":"Rettungsdienst"},{"type":"NEF","n":1,"org":"Rettungsdienst"},{"type":"OrgL/LNA","n":1,"org":"Rettungsdienst"},{"type":"GW-Betreuung","n":1,"org":"DRK"},{"type":"ELW1","n":1,"org":"DRK"},{"type":"MTW","n":2,"org":"DRK"}]},
+  // v5.66: Polizeilage (RD wartet im Bereitstellungsraum auf Freigabe), MANI, MANB
+  {"id":27,"name":"Polizeilage – Gewalt/Amok (RD im Bereitstellungsraum, v5.66)","keyword":"POL","rules":{"event":"Polizeilage"},"units":[{"type":"RTW","n":1,"org":"Rettungsdienst"},{"type":"NEF","n":1,"org":"Rettungsdienst"}]},
+  {"id":28,"name":"MANI – Massenanfall von Infizierten/Erkrankten (v5.66)","keyword":"MANI","rules":{"event":"MANI"},"units":[{"type":"RTW","n":2,"org":"Rettungsdienst"},{"type":"KTW","n":2,"org":"Rettungsdienst"},{"type":"NEF","n":1,"org":"Rettungsdienst"},{"type":"OrgL/LNA","n":1,"org":"Rettungsdienst"},{"type":"ELW1","n":1,"org":"DRK"},{"type":"MTW","n":1,"org":"DRK"}]},
+  {"id":29,"name":"MANB – Massenanfall von Betroffenen (v5.66)","keyword":"MANB","rules":{"event":"MANB"},"units":[{"type":"RTW","n":1,"org":"Rettungsdienst"},{"type":"NEF","n":1,"org":"Rettungsdienst"},{"type":"OrgL/LNA","n":1,"org":"Rettungsdienst"},{"type":"ELW","n":1,"org":"Feuerwehr"},{"type":"ELW1","n":1,"org":"DRK"},{"type":"GW-Betreuung","n":1,"org":"DRK"},{"type":"MTW","n":2,"org":"DRK"}]},
   {"id":10,"name":"Rettungsdienst – RD_X kritische Blutung","keyword":"R1N1_Trauma schwer","rules":{"x_massive":"Ja"},"units":[{"type":"RTW","n":1,"org":"Rettungsdienst"},{"type":"NEF","n":1,"org":"Rettungsdienst"}]},
   {"id":11,"name":"Rettungsdienst – RD_B Atemstillstand","keyword":"R1N1_Reanimation","rules":{"b_breath":"Keine normale Atmung"},"units":[{"type":"RTW","n":1,"org":"Rettungsdienst"},{"type":"NEF","n":1,"org":"Rettungsdienst"}]},
   {"id":12,"name":"Rettungsdienst – RD_C relevante Blutung","keyword":"R1N1_Med. Notfall schwer","rules":{"c_circ":"Relevante Blutung"},"units":[{"type":"RTW","n":1,"org":"Rettungsdienst"},{"type":"NEF","n":1,"org":"Rettungsdienst"}]},
@@ -2696,7 +2700,7 @@ function addManualUnit(){
 // an alle Fahrzeuge (Fahrzeug-Terminals klingeln erneut).
 const CALL_EDIT_OPTIONS={
  calltype:["112","116117","110"],
- event112:["Medizinischer Notfall","Reanimation","Feuer / Rauchentwicklung","Verkehrsunfall","Technische Hilfeleistung","Person im Wasser","Vermisste Person","Evakuierung","Sonstiger Notfall"],
+ event112:["Medizinischer Notfall","Reanimation","Feuer / Rauchentwicklung","Verkehrsunfall","Technische Hilfeleistung","Person im Wasser","Vermisste Person","Evakuierung","Polizeilage","MANI","MANB","Sonstiger Notfall"],
  xyn:["Nein","Ja","Unklar"], xairway:["Frei","Gefährdet","Verlegt","Unklar"], xbreathing:["Normal","Auffällig","Keine normale Atmung","Unklar"],
  xcirc:["Unauffällig","Auffällig","Schockzeichen","Relevante Blutung","Sonstiges","Unklar"],
  xdisability:["Wach / orientiert","Bewusstseinsgetrübt","Bewusstlos","Krampfanfall","Neurologisch auffällig","Unklar"],
@@ -3195,7 +3199,7 @@ function incidentCard(c,isSelected){
     <span class="status ${stateClass}">${state}</span>
    </div>
    ${callPhaseHTML(c,false)}
-   ${c.alarmTime&&isManvCall(c)?manvStripHTML(c):""}${c.alarmTime&&c.evac?evacStripHTML(c):""}${c.heliLanding?`<div style="margin-top:6px;font-size:13px">🚁 Landeplatz: ${esc(c.heliLanding.name)}</div>`:""}
+   ${c.alarmTime&&c.police?policeStripHTML(c):""}${c.alarmTime&&isManvCall(c)?manvStripHTML(c):""}${c.alarmTime&&c.evac?evacStripHTML(c):""}${c.heliLanding?`<div style="margin-top:6px;font-size:13px">🚁 Landeplatz: ${esc(c.heliLanding.name)}</div>`:""}
    <hr>
    <div class="formgrid">
     <div><label>Einsatzstichwort</label><div class="big">${esc(c.keyword||"Noch keine Bewertung")}</div></div>
@@ -3334,7 +3338,7 @@ function dashboard(){
     const stateColor=CALL_PHASES[callPhase(c)][1];
     return `<div onclick="toggleIncidentExpand('${esc(String(c.id))}')" title="${esc(CALL_PHASES[callPhase(c)][0])}" style="cursor:pointer;background:var(--panel);border:1px solid var(--line);border-left:6px solid ${stateColor};border-radius:10px;padding:8px 14px;margin-top:${i===0?0:-9}px;position:relative;z-index:${sortedCalls.length-i};box-shadow:0 2px 5px rgba(0,0,0,.10);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">
       ${callPhaseHTML(c,true)}<b>#${esc(c.id)}</b>${waitBadgeHTML(c)}${deskBadgeHTML(c)} <span class="muted">${esc(c.keyword||"Noch keine Bewertung")}</span>
-      ${c.alarmTime&&isManvCall(c)?manvStripHTML(c):""}${c.alarmTime&&c.evac?evacStripHTML(c):""}
+      ${c.alarmTime&&c.police?policeStripHTML(c):""}${c.alarmTime&&isManvCall(c)?manvStripHTML(c):""}${c.alarmTime&&c.evac?evacStripHTML(c):""}
      </div>`;
   }).join("")}</div>
    <p class="muted" style="margin-top:8px;font-size:11px">📂 Wie ein Aktensortierer: dringende Einsätze oben, R0 danach, bereits alarmierte ganz unten. Auf einen Eintrag tippen, um alle Infos zu sehen.</p>`:`<div class="card"><h2>Keine offenen Einsätze</h2><p class="muted">Starte einen Übungsnotruf.</p></div>`}
@@ -3344,6 +3348,7 @@ function dashboard(){
    <button onclick="openSdsCompose()" style="margin-top:10px;width:100%">✉️ SDS schreiben</button>
   </div>
   ${sdsInHTML()}
+  ${bigEventCardHTML()}
  </aside></div>
  `; // v5.21: Funkrufgruppen-Leiste entfernt (auf Wunsch)
 }
@@ -3417,7 +3422,7 @@ const KT_QS=[
 const QS_LOCKED=new Set(["callType","location","event","ktType"]);
 const QS_DEP_EVENT=new Set(["evacTotal","evacLying","evacChair","fireKind","trapped","firePeople","water","waterState","personDanger","x_massive","a_airway","b_breath","c_circ","d_disability","e_exposure","psy","patientName","patientAge","patientGender"]);
 const QS_KINDS={text:"Kurzer Text",textarea:"Langer Text",number:"Zahl",yesno:"Ja / Nein / Unbekannt",choice:"Auswahl (eigene Antwortknöpfe)"};
-const QS_EVENTS=["Medizinischer Notfall","Reanimation","Feuer / Rauchentwicklung","Verkehrsunfall","Technische Hilfeleistung","Person im Wasser","Vermisste Person","Evakuierung","Sonstiger Notfall"];
+const QS_EVENTS=["Medizinischer Notfall","Reanimation","Feuer / Rauchentwicklung","Verkehrsunfall","Technische Hilfeleistung","Person im Wasser","Vermisste Person","Evakuierung","Polizeilage","MANI","MANB","Sonstiger Notfall"];
 const QS_ANSWER_INFO={calltype:"112 / 116117 / 110",event112:"Ereignis-Knöpfe",fireDetail:"Feuer: was zu sehen / was brennt",count:"Zahl",ynTech:"Zahl",ynFire:"Zahl",ynQ:"Ja / Nein / ?",waterState:"Lebenszeichen / Vermisst / Bergung",ynPersonDanger:"Zahl",
  xyn:"Nein / Ja / Unklar",xairway:"Frei / Gefährdet / Verlegt / Unklar",xbreathing:"Normal / Auffällig / Keine normale Atmung / Unklar",xcirc:"Unauffällig / Auffällig / Schock / Blutung / Sonstiges / Unklar",
  xdisability:"Wach … Bewusstlos …",textarea:"Freitext",text:"Text",ynPsy:"Ja / Nein",yn:"ja / nein / unbekannt",gender:"M / W / Divers / Unbekannt",ktType:"Entlassung / Verlegung / Einweisung"};
@@ -3556,7 +3561,7 @@ function qsAnswerPick(id,i){
  qsPendingLabel=(!a.own&&a.label!==a.value)?{id,label:a.label}:null;
  answer(id,v);
 }
-const QS_ANS_ICON={event:{"Medizinischer Notfall":"🚑","Reanimation":"❤️","Feuer / Rauchentwicklung":"🔥","Verkehrsunfall":"🚗","Technische Hilfeleistung":"🛠️","Person im Wasser":"🌊","Vermisste Person":"🛸","Evakuierung":"🏃","Sonstiger Notfall":"❓"},waterState:{"Lebenszeichen":"🟢","Vermisst":"🔍","Bergung":"⚫"}};
+const QS_ANS_ICON={event:{"Medizinischer Notfall":"🚑","Reanimation":"❤️","Feuer / Rauchentwicklung":"🔥","Verkehrsunfall":"🚗","Technische Hilfeleistung":"🛠️","Person im Wasser":"🌊","Vermisste Person":"🛸","Evakuierung":"🏃","Polizeilage":"👮","MANI":"🦠","MANB":"🫂","Sonstiger Notfall":"❓"},waterState:{"Lebenszeichen":"🟢","Vermisst":"🔍","Bergung":"⚫"}};
 function qsAnswerButtonsHTML(id,label){
  const ic=QS_ANS_ICON[id]||{};
  return `<label>${label}</label><div class="answer">${qsAnswerList(id).map((a,i)=>`<button onclick="qsAnswerPick('${id}',${i})">${!a.own&&ic[a.value]?ic[a.value]+" ":""}${esc(a.label)}</button>`).join("")}</div>`;
@@ -3764,7 +3769,7 @@ function needsXABCDE(c=db.currentCall){
  if(!c)return false;
  if(isManv(c))return false; // MANV: Sichtung statt Einzel-XABCDE
  const a=c.answers||{}, e=a.event||"";
- if(["Reanimation","Medizinischer Notfall","Verkehrsunfall"].includes(e))return true;
+ if(["Reanimation","Medizinischer Notfall","Verkehrsunfall","Polizeilage"].includes(e))return true;
  if(e==="Person im Wasser" && a.waterState!=="Bergung")return true;
  if(e==="Feuer / Rauchentwicklung" && answerYes(a.firePeople))return true;
  if(answerYes(a.personDanger))return true;
@@ -3832,7 +3837,7 @@ function qsMaskSkip(c,id){
  if(["evacTotal","evacLying","evacChair"].includes(id))return e==="Evakuierung"?null:"nicht zutreffend";
  if(id==="trapped")return ["Verkehrsunfall","Technische Hilfeleistung"].includes(e)?null:"nicht zutreffend";
  if(id==="firePeople")return e==="Feuer / Rauchentwicklung"?null:"nicht zutreffend";
- if(id==="personDanger")return ["Reanimation","Medizinischer Notfall","Person im Wasser","Verkehrsunfall"].includes(e)?"=count":null;
+ if(id==="personDanger")return ["Reanimation","Medizinischer Notfall","Person im Wasser","Verkehrsunfall","Polizeilage","MANI","MANB"].includes(e)?"=count":null;
  if(id==="water")return e==="Person im Wasser"?null:"nein";
  if(id==="waterState")return e==="Person im Wasser"?null:"nicht zutreffend";
  if(id==="psy")return (!needsXABCDE(c)||reaShortcutActive(c))?"nicht erhoben":null;
@@ -4134,6 +4139,9 @@ function questionHTML(q){
    <button onclick="answer('event','Person im Wasser')">🌊 Person im Wasser</button>
    <button onclick="answer('event','Vermisste Person')">🛸 Vermisste Person (Suche)</button>
    <button onclick="answer('event','Evakuierung')">🏃 Evakuierung (Gebäude/Einrichtung räumen)</button>
+   <button onclick="answer('event','Polizeilage')">👮 Polizeilage (Gewalt / Amok)</button>
+   <button onclick="answer('event','MANI')">🦠 MANI – viele Infizierte/Erkrankte</button>
+   <button onclick="answer('event','MANB')">🫂 MANB – viele Betroffene (unverletzt)</button>
    <button onclick="answer('event','Sonstiger Notfall')">❓ Sonstiger Notfall</button>
  </div>`;
  if(type==="ynPsy") return `<label>${label} <span class="muted" style="font-weight:500">(optional)</span></label><div class="answer">
@@ -4531,6 +4539,17 @@ function evaluate0(){
    keyword=kw(26,"EVAK");
    addAao(26,x=>x.type==="KTW"?Math.min(10,Math.max(aaoN(x,a),Math.ceil((T.lying+T.chair/2)/3))):x.type==="MTW"?Math.min(6,Math.max(aaoN(x,a),Math.ceil(T.walk/40))):aaoN(x,a));
    keyword=`${keyword} – Evakuierung – ${T.total||"?"} Personen${T.lying?`, ${T.lying} liegend`:""}${T.chair?`, ${T.chair} Rollstuhl`:""}`; kwMap[26]=keyword;
+ } else if(e==="Polizeilage"){
+   // v5.66: Gewalt/Amok – Rettungsdienst sammelt im Bereitstellungsraum, bis die Polizei freigibt
+   keyword=kw(27,"POL – Polizeilage, RD in Bereitstellung");
+   addAao(27);
+ } else if(e==="MANI"||e==="MANB"){
+   // v5.66: MANI (viele Infizierte/Erkrankte) und MANB (viele unverletzt Betroffene) – eigene AAO, skaliert nach Anzahl
+   const n=Math.max(1,Number(a.count)||1), id=e==="MANI"?28:29;
+   keyword=kw(id,e==="MANI"?"MANI – Massenanfall von Infizierten/Erkrankten":"MANB – Massenanfall von Betroffenen");
+   addAao(id,x=>e==="MANI"?(x.type==="RTW"?Math.min(12,Math.max(aaoN(x,a),Math.ceil(n*0.12))):x.type==="KTW"?Math.min(12,Math.max(aaoN(x,a),Math.ceil(n*0.2))):x.type==="NEF"?Math.max(aaoN(x,a),n>30?2:1):aaoN(x,a))
+     :(x.type==="GW-Betreuung"?Math.max(aaoN(x,a),Math.ceil(n/50)):x.type==="MTW"?Math.min(6,Math.max(aaoN(x,a),Math.ceil(n/20))):x.type==="RTW"?Math.max(aaoN(x,a),Math.ceil(n/40)):aaoN(x,a)));
+   if(n>3){keyword=`${keyword} – ${n} Betroffene`;kwMap[id]=keyword}
  } else if(e==="Sonstiger Notfall"){
    keyword="NOTFALL – Disponentenentscheidung";
    sr=false;
@@ -4611,7 +4630,7 @@ function evaluate0(){
  }
 
  const cnt=Number(a.count)||0;
- if(cnt>3){
+ if(cnt>3&&e!=="MANI"&&e!=="MANB"){ // v5.66: MANI/MANB haben eigene AAOs (oben)
    // RTW-Anzahl skaliert weiterhin mit der Verletztenzahl (mind. 1 RTW je 3 Verletzte).
    var manvSt=manvStage(cnt), manvId=manvSt[1];
    addAao(manvId,x=>x.type==="RTW"?Math.max(aaoN(x,a),Math.ceil(cnt/3)):aaoN(x,a));
@@ -4856,6 +4875,7 @@ function evaluate0(){
    const ok=new Set(offer.flatMap(o=>o.unitIds||(o.unitId!=null?[o.unitId]:[])).map(String));
    c.optionalChecked=(c.optionalChecked||[]).filter(id=>ok.has(String(id)));
  }
+ if(e==="Polizeilage"&&!/\bPOL\b/.test(keyword))keyword=`POL · ${keyword}`; // v5.66: Polizeilage immer im Stichwort erkennbar
  c.keyword=keyword;
  c.proposedUnitIds=selected.filter(x=>!x.missing&&!x.neighbor).map(x=>x.id);
  c.neighborProposal=selected.filter(x=>x.neighbor).map(x=>x.id);
@@ -5291,7 +5311,7 @@ function crewTick(){
    if(unitPhoneLive(u))continue;
    // v5.55: erstes eintreffendes Fahrzeug gibt noch aus dem Fahrzeug eine Kurzlage
    if(String(u.status)==="4"){const cl=findUnitCall(u);
-     if(cl&&cl.alarmTime&&!cl.firstReportAt&&!cl.kt&&(isManvCall(cl)||isVuCall(cl))&&(!cl.deskId||cl.deskId===DEVICE_ID)){cl.firstReportAt=new Date(now).toISOString();const t=firstLageText(cl,u);crewSds(u,cl,t);(cl.history=cl.history||[]).push({q:`📻 Kurzlage (${u.opta||u.name})`,a:t});changed=true}}
+     if(cl&&cl.alarmTime&&!cl.firstReportAt&&!cl.kt&&!policeHold(cl)&&(isManvCall(cl)||isVuCall(cl))&&(!cl.deskId||cl.deskId===DEVICE_ID)){cl.firstReportAt=new Date(now).toISOString();const t=firstLageText(cl,u);crewSds(u,cl,t);(cl.history=cl.history||[]).push({q:`📻 Kurzlage (${u.opta||u.name})`,a:t});changed=true}}
    // mehrere Plätze: nur der Platz, der den Einsatz hat, steuert die Besatzung (sonst doppelte SDS/IVENA)
    if(u.crew&&u.crew.owner&&u.crew.owner!==DEVICE_ID)continue;
    const st=String(u.status), isT=CREW_TRANSPORT.has(u.type), isNef=u.type==="NEF";
@@ -5308,6 +5328,8 @@ function crewTick(){
    if(st==="4"){
      if(!call||call.kt)continue; // Krankentransporte: wie bisher von Hand
      if(call.deskId&&call.deskId!==DEVICE_ID)continue;
+     // v5.66 Polizeilage: im Bereitstellungsraum warten, bis die Polizei freigibt
+     if(policeHold(call)){if(u._polWait!==String(call.id)){u._polWait=String(call.id);delete u.crew;crewSds(u,call,"Im Bereitstellungsraum eingetroffen – warten auf Freigabe durch die Polizei.");changed=true}continue}
      if(!u.crew||u.crew.callId!==String(call.id)){
        // vom Disponenten schon eine IVENA-Zuweisung für dieses Fahrzeug? → die gilt
        const asg=findUnitHospitalAssignment(u);
@@ -5395,12 +5417,14 @@ function crewTick(){
         crewSds(u,call,`${n} Person${n>1?"en":""} übergeben (${E.dest}) – wieder einsatzbereit.`);setUnitStatus(u,"1");delete u.crew;changed=true;evacCheckDone(call,now);continue}
       if(!C.nef){const asg=(db.ivenaAssignments||[]).find(a=>String(a.id)===String(C.asgId));
         // v5.62 MANV-Shuttle: noch Patienten an der Einsatzstelle → direkt wieder hin
-        const left=call&&!u.neighborLoan?manvShuttleNeed(call,u):0;
+        const left=call&&(!u.neighborLoan||u.manvComp)?manvShuttleNeed(call,u):0; // v5.66: MANV-Komponenten pendeln mit
         if(left){const hp=asg&&hospitalPoint(asg.hospitalId);
-          crewSds(u,call,`Pat. ${asg?`im ${asg.hospitalName} `:""}übergeben – MANV: noch ${left} Patient${left>1?"en":""} an der Einsatzstelle, fahren wieder hin (Shuttle).`);
+          crewSds(u,call,`Pat. ${asg?`im ${asg.hospitalName} `:""}übergeben – ${manvKind(call)}: noch ${left} Patient${left>1?"en":""} an der Einsatzstelle, fahren wieder hin (Shuttle)${manvKind(call)==="MANI"?" – gleicher Erreger, ohne Zwischendesinfektion":""}.`);
           (call.history=call.history||[]).push({q:`🔁 Shuttle (${u.opta||u.name})`,a:`erneut zur Einsatzstelle alarmiert – noch ${left} Pat.`});
           setUnitStatus(u,"3"); if(hp)u.shuttleFrom=hp; delete u.crew; changed=true; continue}
-        crewSds(u,call||{id:C.callId},`Pat. ${asg?`im ${asg.hospitalName} `:""}übergeben – wieder einsatzbereit.`)}
+        // v5.66 MANI: nach dem letzten Infektionstransport wird das Fahrzeug desinfiziert
+        if(call&&!C.desinf&&CREW_TRANSPORT.has(u.type)&&manvKind(call)==="MANI"&&isManvCall(call)){C.desinf=true;C.handoverAt=now+rint(20,30)*60000;crewSds(u,call,`Pat. ${asg?`im ${asg.hospitalName} `:""}übergeben – Fahrzeug wird desinfiziert (Infektionstransport), danach wieder einsatzbereit.`);changed=true;continue}
+        crewSds(u,call||{id:C.callId},`Pat. ${asg?`im ${asg.hospitalName} `:""}übergeben – ${C.desinf?"Desinfektion abgeschlossen, ":""}wieder einsatzbereit.`)}
        setUnitStatus(u,"1"); delete u.crew; changed=true;
      }
    }
@@ -5419,6 +5443,9 @@ function firstLageText(call,u){
  const d=call.sim&&call.sim.d||{}, info=crewCaseInfo(call), ev=info.ev||"", txt=info.text||"", A=call.answers||{};
  // v5.56: nur noch beim MANV – Kurzlage aus dem Fahrzeug, bevor die Vorsichtung beginnt
  if(isManvCall(call)){const T=call.manvTruth||null, n=T?T.total:Number(A.count)||info.pats||0, est=Math.max(4,Math.round(n*(0.8+Math.random()*0.4)));
+   const mk=manvKind(call); // v5.66
+   if(mk==="MANI")return `Kurzlage aus dem Fahrzeug: MANI bestätigt, geschätzt ${est} Erkrankte – Infektionsschutz angelegt, Sichtung beginnt. Weitere Kräfte zum Bereitstellungsraum.`;
+   if(mk==="MANB")return `Kurzlage aus dem Fahrzeug: MANB bestätigt, geschätzt ${est} Betroffene, augenscheinlich überwiegend unverletzt – Sichtung und Registrierung beginnen, Betreuung erforderlich.`;
    return `Kurzlage aus dem Fahrzeug: MANV bestätigt, geschätzt ${est} Betroffene${/unfall|bus/i.test(ev+" "+txt)?", mehrere Fahrzeuge beteiligt":""}${/brand|feuer|rauch/i.test(ev+" "+txt)?", Rauchentwicklung":""} – übernehme Einsatzabschnitt, Vorsichtung nach mSTaRT beginnt. Weitere Kräfte zum Bereitstellungsraum.`}
  const place=String(d.loc&&d.loc.facility||(call.sim&&call.sim.loc&&call.sim.loc.facility)||"").replace(/[,\s]+$/,"");
  const trapped=Number(A.trapped)||(/eingeklemmt/.test(txt)?1:0);
@@ -5433,17 +5460,17 @@ function firstLageText(call,u){
 }
 // v5.57 MANV: DRK GW-San (und GW-SEG) baut eine Sanitätsstelle auf (rote, gelbe, blaue Patienten),
 // GW-Betreuung (bzw. GW-SEG, wenn keine Betreuung da ist) eine Betreuungsstelle (grüne Patienten).
-const MANV_ST={san:{name:"Behandlungsplatz (BHP)",icon:"⛑️",cap:10,sk:[1,2,4]},bet:{name:"Betreuungsstelle",icon:"🫂",cap:25,sk:[3]}};
+const MANV_ST={san:{name:"Behandlungsplatz (BHP)",icon:"⛑️",cap:10,sk:[1,2,4]},bet:{name:"Betreuungsstelle",icon:"🫂",cap:25,sk:[3]},pa:{name:"Patientenablage (MANV-PA)",icon:"🩹",cap:15,sk:[1,2,3,4],quota:{1:5,2:3,3:7,4:5}}}; // v5.66: PA laut Nds. MBl. 2015: 5 SK I, 3 SK II, 7 SK III
 function manvStationTick(call,now){
  let ch=false; const us=callUnits(call); call.manvStations=call.manvStations||{};
  const ST=call.manvStations;
  for(const u of us){
    if(String(u.status)!=="4"||unitPhoneLive(u)||ST[u.id])continue;
-   let kind=/^GW-San/i.test(u.type)?"san":/^GW-Betreuung/i.test(u.type)?"bet":/^GW-SEG/i.test(u.type)?null:null;
+   let kind=u.manvComp==="PA"?(/^GW-San/i.test(u.type)?"pa":null):/^GW-San/i.test(u.type)?"san":/^GW-Betreuung/i.test(u.type)?"bet":/^GW-SEG/i.test(u.type)?null:null;
    if(/^GW-SEG/i.test(u.type)){const has=k=>Object.values(ST).some(x=>x.kind===k)||us.some(x=>x!==u&&(k==="san"?/^GW-San/i:/^GW-Betreuung/i).test(x.type));kind=!has("san")?"san":!has("bet")?"bet":"san"}
    if(!kind)continue;
-   const t=rint(4,6); ST[u.id]={kind,unitId:u.id,label:u.opta||u.name,startAt:now,readyAt:now+t*60000,cap:MANV_ST[kind].cap,ready:false};
-   crewSds(u,call,`MANV: Beginne Aufbau ${MANV_ST[kind].name} (${kind==="san"?"rote/gelbe/blaue":"grüne"} Patienten) – betriebsbereit in ca. ${t} min.`);
+   const t=kind==="pa"?rint(8,12):rint(4,6); ST[u.id]={kind,unitId:u.id,label:u.opta||u.name,startAt:now,readyAt:now+t*60000,cap:MANV_ST[kind].cap,ready:false};
+   crewSds(u,call,`MANV: Beginne Aufbau ${MANV_ST[kind].name} (${kind==="pa"?"bis zu 5 rote, 3 gelbe, 7 grüne":kind==="san"?"rote/gelbe/blaue":"grüne"} Patienten) – betriebsbereit in ca. ${t} min.`);
    (call.history=call.history||[]).push({q:`${MANV_ST[kind].icon} ${u.opta||u.name}`,a:`Aufbau ${MANV_ST[kind].name}`}); ch=true;
  }
  for(const st of Object.values(ST)){
@@ -5452,14 +5479,15 @@ function manvStationTick(call,now){
  }
  // Patienten, die noch kein Transportmittel haben, kommen in die passende Stelle (bis sie voll ist)
  const P=call.manvPatients||[];
- for(const kind of ["san","bet"]){
-   const cap=Object.values(ST).filter(x=>x.kind===kind&&x.ready&&!x.closed).reduce((a,x)=>a+x.cap,0);
-   let used=P.filter(x=>x.place===kind&&!x.unit).length;
+ for(const kind of ["pa","san","bet"]){ // v5.66: Patientenablage (MANV-PA) zuerst – liegt am Rand des Gefahrenbereichs
+   const rdy=Object.values(ST).filter(x=>x.kind===kind&&x.ready&&!x.closed), cap=rdy.reduce((a,x)=>a+x.cap,0);
+   let used=P.filter(x=>x.place===kind&&!x.unit).length+(kind==="bet"?(call.manvStay||[]).filter(s=>s.place==="bet"&&!s.done).length:0);
+   const Q=MANV_ST[kind].quota, qn=k=>rdy.length*(Q[k]||0), inQ=k=>P.filter(x=>x.place==="pa"&&!x.unit&&(k===1?(x.sk===1||x.sk===4):x.sk===k)).length;
    for(const x of P){ if(x.unit){if(!x.care&&x.place&&x.place!=="transport"){x.place="transport";ch=true}continue}
-     if(!x.place&&MANV_ST[kind].sk.includes(x.sk)&&used<cap){x.place=kind;used++;ch=true} }
+     if(!x.place&&MANV_ST[kind].sk.includes(x.sk)&&used<cap&&(!Q||inQ(x.sk===4?1:x.sk)<qn(x.sk===4?1:x.sk))){x.place=kind;used++;ch=true;if(kind==="pa"&&(x.sk===1||x.sk===4)&&!x.doc)x.paDoc=true} }
  }
  // alle Patienten abtransportiert → Stelle abbauen, Fahrzeug nach 15–25 min frei
- if(P.length&&P.every(x=>x.unit||x.sk>4))for(const st of Object.values(ST)){
+ if((P.length||(call.manvStay||[]).length)&&P.every(x=>x.unit||x.sk>4)&&!manvStayOpen(call))for(const st of Object.values(ST)){
    const u=db.units.find(x=>String(x.id)===String(st.unitId)); if(!u||st.closed)continue;
    if(!st.closeAt){st.closeAt=now+rint(10,15)*60000;crewSds(u,call,`MANV: alle Patienten abtransportiert – ${MANV_ST[st.kind].name} wird abgebaut.`);ch=true}
    else if(now>=st.closeAt&&String(u.status)==="4"){st.closed=true;crewSds(u,call,"Abbau beendet – einsatzbereit, rücken ein.");setUnitStatus(u,"1");ch=true}
@@ -5496,7 +5524,295 @@ function manvFuAssTick(call,now){
  crewSds(u,call,t); (call.history=call.history||[]).push({q:`📋 Zwischenmeldung (${u.opta||u.name})`,a:t}); ch=true;
  return ch;
 }
-function manvPlaceLabel(call,pid){const P=(call.manvPatients||[]).find(x=>x.pid===pid);if(!P)return "";if(P.care)return "🕯️ palliativ vor Ort";if(P.unit)return "🚑 Transport";if(P.place==="san")return "⛑️ im BHP (DRK)";if(P.place==="bet")return "🫂 in der Betreuungsstelle (DRK)";return "Schadenstelle"}
+// ═══ v5.66: MANI/MANB, MANV-Komponenten (S/T/PA), Polizeilagen, Großveranstaltungen ═══════════
+// Art der Massenlage: MANV (Verletzte), MANI (Infizierte/Erkrankte), MANB (unverletzt Betroffene)
+function manvKind(c){
+ if(!c)return "MANV"; if(c.manvKind)return c.manvKind;
+ const ev=String((c.answers&&c.answers.event)||(c.sim&&c.sim.d&&c.sim.d.f&&c.sim.d.f.event)||"");
+ return ev==="MANI"?"MANI":ev==="MANB"?"MANB":"MANV";
+}
+// Befunde auf den Anhängekarten passend zur Lage
+const MANV_INJ_KIND={
+ MANI:{3:["Übelkeit und Durchfall, kreislaufstabil, läuft","Erbrechen seit heute Nacht, trinkt noch, läuft","Bauchkrämpfe und Durchfall, läuft","Fieber 38,5, sonst stabil, läuft"],
+   2:["starkes Erbrechen und Durchfall, ausgetrocknet, kann nicht aufstehen","Fieber 39,8, sehr schwach, kommt nicht hoch","Kreislaufschwäche bei Brechdurchfall, liegt"],
+   1:{af_hi:"hohes Fieber, atmet schnell und flach (Verdacht Sepsis)",radial:"stark ausgetrocknet, blass, Puls nicht tastbar",cmd:"eingetrübt, reagiert kaum (Austrocknung)"}},
+ MANB:{3:["unverletzt, friert","unverletzt, aufgeregt, möchte Angehörige erreichen","unverletzt, Kind mit Mutter","unverletzt, braucht seine Medikamente","leicht unterkühlt, läuft"],
+   2:["Kreislaufschwäche nach langem Warten in der Kälte, kann nicht aufstehen","älterer Herr, beim Aussteigen gestürzt, Hüftschmerzen"],
+   1:{radial:"Kreislaufkollaps, blass, Puls kaum tastbar",cmd:"Unterzuckerung, reagiert nicht auf Aufforderungen"}},
+ POL:{3:["Schnittverletzung an der Hand, läuft","unverletzt, steht unter Schock","Prellungen bei der Flucht, läuft","Platzwunde am Kopf, blutet leicht"],
+   2:["Schussverletzung Unterschenkel, Blutung steht","Stichverletzung Oberarm, Druckverband hält","Schussverletzung Schulter, kreislaufstabil"],
+   1:{bleed:"Schussverletzung Oberschenkel, spritzende Blutung",af_hi:"Stichverletzung Brustkorb, atmet schnell und flach",af_lo:"Kopfschuss, atmet ganz langsam",radial:"Schussverletzung Bauch, blass, kaltschweißig",cmd:"Schlag auf den Kopf, befolgt keine Aufforderungen",airway:"bewusstlos nach Schussverletzung, Atemwege verlegt – nach Freimachen atmet er"},
+   4:["Kopfschuss, Atmung schnappend","mehrere Schussverletzungen am Rumpf, kaum Lebenszeichen"]}
+};
+function manvInjKind(c){const k=manvKind(c);if(k!=="MANV")return k;return isPoliceCall(c)?"POL":null}
+function manvInjAdapt(p,kind){
+ const T=MANV_INJ_KIND[kind]; if(!T)return;
+ if(p.sk===3&&T[3])p.inj=pick(T[3]);
+ else if(p.sk===2&&T[2])p.inj=pick(T[2]);
+ else if(p.sk===4&&T[4])p.inj=pick(T[4]);
+ else if(p.sk===1&&T[1]){
+   if(!T[1][p.reason]){ // Grund passt nicht zur Lage (z. B. spritzende Blutung beim MANI) → passenden Grund würfeln
+     const r=pick(Object.keys(T[1])), kid=p.age<8;
+     Object.assign(p,{breath:true,airway:false,bleed:false,radial:true,cmd:true,af:kid?rint(20,38):rint(13,24),reason:r});
+     if(r==="af_hi")p.af=kid?rint(48,60):rint(32,44); if(r==="af_lo")p.af=kid?rint(9,13):rint(5,8);
+     if(r==="bleed")p.bleed=true; if(r==="radial")p.radial=false; if(r==="cmd")p.cmd=false;
+     if(r==="airway"){p.breath=false;p.airway=true;p.cmd=false}
+     p.vs=mstartClassify(p).sk;
+   }
+   p.inj=T[1][p.reason];
+ }
+}
+// MANI/MANB: nicht jeder Betroffene muss ins Krankenhaus.
+//  MANI: ca. 60 % der leicht Erkrankten (grün) werden vor Ort ärztlich versorgt und bleiben (Einrichtung/ambulant).
+//  MANB: alle Unverletzten (grün) kommen in die Betreuungsstelle und werden dort an Angehörige/Notunterkunft übergeben.
+function manvSplitStay(c,list){
+ const kind=manvKind(c); if(kind==="MANV")return list;
+ c.manvStay=c.manvStay||[]; c.manvTrKeep=c.manvTrKeep||[];
+ const key=it=>it.pid!=null?String(it.pid):"n"+it.n;
+ // nach der ärztlichen Sichtung: wer doch nicht grün ist, kommt zurück in die Transportliste
+ c.manvStay=c.manvStay.filter(s=>s.done||list.some(it=>key(it)===s.key&&it.sk===3)||!list.some(it=>key(it)===s.key));
+ const stayKeys=new Set(c.manvStay.map(s=>s.key)), now=Date.now();
+ return list.filter(it=>{
+   if(it.sk!==3||it.unit||it.doc)return true;
+   const k=key(it); if(stayKeys.has(k))return false;
+   if(c.manvTrKeep.includes(k))return true;
+   if(kind==="MANI"&&Math.random()<0.4){c.manvTrKeep.push(k);return true} // Vorerkrankung/Pflegebedarf → doch Transport
+   c.manvStay.push({key:k,pid:it.pid,sk:3,kind,at:now,needBet:kind==="MANB"});return false;
+ });
+}
+function manvStayOpen(c){return (c.manvStay||[]).some(s=>!s.done)}
+function manvStayLabel(c,pid){const s=(c.manvStay||[]).find(x=>x.pid===pid);if(!s)return "";
+ if(s.kind==="MANI")return s.done?"🏠 vor Ort versorgt – kein Transport":"🏠 wird vor Ort versorgt";
+ return s.done?"🫂 betreut und übergeben":s.place?"🫂 in der Betreuungsstelle (DRK)":"🫂 wartet auf Betreuung"}
+function manvStayTick(call,now){
+ const S=call.manvStay; if(!S||!S.length)return false; let ch=false;
+ const kind=manvKind(call), us=callUnits(call), lead=us.find(u=>u.type==="OrgL/LNA"&&String(u.status)==="4")||us.find(u=>RD_TYPES.has(u.type)&&String(u.status)==="4");
+ const ST=Object.values(call.manvStations||{}).filter(x=>x.kind==="bet"&&x.ready&&!x.closed);
+ let cap=ST.reduce((a,x)=>a+x.cap,0)-(call.manvPatients||[]).filter(p=>p.place==="bet"&&!p.unit).length-S.filter(s=>s.place==="bet"&&!s.done).length;
+ const fresh=[];
+ for(const s of S){
+   if(s.done)continue;
+   if(!s.needBet){if(!s.doneAt){s.doneAt=s.at+rint(10,25)*60000;ch=true}}
+   else if(!s.place&&cap>0){s.place="bet";cap--;s.doneAt=now+rint(25,50)*60000;ch=true}
+   if(s.doneAt&&now>=s.doneAt){s.done=true;s.doneTs=now;fresh.push(s);ch=true}
+ }
+ call._stayNew=(call._stayNew||0)+fresh.length;
+ if(call._stayNew&&(!call._stayMsgAt||now-call._stayMsgAt>3*60000||S.every(s=>s.done))){
+   const n=call._stayNew; call._stayNew=0; call._stayMsgAt=now;
+   const txt=kind==="MANI"?`MANI: ${n} leicht Erkrankte${n===1?"r":""} vor Ort ärztlich versorgt – kein Transport (verbleiben in der Einrichtung bzw. gehen nach Hause).`:`MANB: ${n} Betroffene${n===1?"r":""} betreut und an Angehörige übergeben bzw. zur Notunterkunft gebracht.`;
+   if(lead)crewSds(lead,call,txt); (call.history=call.history||[]).push({q:kind==="MANI"?"🏠 Versorgung vor Ort":"🫂 Betreuung",a:txt}); ch=true;
+ }
+ // MANB ohne Betreuungsstelle → Nachforderung (einmal)
+ const wait=S.filter(s=>s.needBet&&!s.place&&!s.done).length;
+ if(wait&&!call._betAsked&&lead&&now-Math.min(...S.map(s=>s.at))>12*60000&&!Object.values(call.manvStations||{}).some(x=>x.kind==="bet")){
+   call._betAsked=true; const n=Math.max(1,Math.ceil(wait/25));
+   crewSds(lead,call,`MANB: ${wait} Betroffene ohne Betreuung – bitte ${n}× GW-Betreuung (Betreuungsstelle) nachalarmieren.`);
+   (call.nafo=call.nafo||[]).push({reason:`MANB: ${n}× GW-Betreuung für ${wait} Betroffene`,at:new Date().toISOString()}); ch=true;
+ }
+ return ch;
+}
+
+// ─── MANV-Komponenten nach dem Niedersächsischen Rahmenkonzept (Nds. MBl. Nr. 5/2015 S. 136) ───
+//  MANV-S (Sofortkomponente): 1 NEF + 2 RTW aus dem Regelrettungsdienst benachbarter Rettungsdienstbereiche
+//  MANV-T (Transport): RTW oder KTW für 5 liegende + 5 sitzende Patienten, Abmarsch 30 min nach Alarmierung
+//  MANV-PA (Patientenablage): 2 MTW + GW-San (mit Notarzt), versorgt 10–15 Patienten (5 SK I, 3 SK II, 7 SK III), Abmarsch 30 min
+//  Hier: MANV-S mit echten Nachbar-Fahrzeugen. MANV-T/-PA als Übungsfahrzeuge ohne echte Kennung (die realen
+//  Komponenten sind nicht hinterlegt); MANV-T angenommen als 2 RTW + 3 KTW, Standort = Mitte des Nachbarkreises.
+const MANV_COMP={
+ S:{label:"MANV-S",name:"Sofortkomponente",info:"1 NEF + 2 RTW aus dem Regelrettungsdienst eines Nachbarkreises – fahren sofort"},
+ T:{label:"MANV-T",name:"Transportkomponente",info:"5 RTW/KTW für 5 liegende + 5 sitzende Patienten – Abmarsch ca. 30 min nach Alarmierung"},
+ PA:{label:"MANV-PA",name:"Patientenablage",info:"2 MTW + GW-San mit Notarzt – versorgt 10–15 Patienten (5 rot, 3 gelb, 7 grün), Abmarsch ca. 30 min nach Alarmierung"}};
+function nbDistricts(){const m=new Map();(db.neighborUnits||[]).forEach(n=>{if(!Number.isFinite(n.lat)||!Number.isFinite(n.lng))return;const d=m.get(n.district)||{name:n.district,lat:0,lng:0,k:0};d.lat+=n.lat;d.lng+=n.lng;d.k++;m.set(n.district,d)});return [...m.values()].map(d=>({name:d.name,lat:d.lat/d.k,lng:d.lng/d.k}))}
+function nbLstOf(d){return NEIGHBOR_LEITSTELLE[d]==="ostfriesland"?"KRLS Ostfriesland":"GOL"}
+function manvCompRequest(callId,kind){
+ const c=allOpenCalls().find(x=>String(x.id)===String(callId)); if(!c||!MANV_COMP[kind])return;
+ const ip=callDestinationPoint({...c,staging:null},null); if(!ip){toast("Einsatzort unbekannt");return}
+ const ds=nbDistricts().map(d=>({...d,km:haversine(ip[0],ip[1],d.lat,d.lng)})).sort((a,b)=>a.km-b.km);
+ if(!ds.length){toast("Keine Nachbarkreise hinterlegt");return}
+ c.manvComps=c.manvComps||[];
+ const used=new Set(c.manvComps.filter(x=>x.kind===kind).map(x=>x.district)), now=Date.now(), K=MANV_COMP[kind];
+ let d, entry;
+ if(kind==="S"){
+   const free=(dn,t)=>(db.neighborUnits||[]).filter(n=>n.district===dn&&n.type===t&&["1","2"].includes(String(n.status))&&Number.isFinite(n.lat)).map(n=>({n,km:haversine(ip[0],ip[1],n.lat,n.lng)})).sort((a,b)=>a.km-b.km).map(x=>x.n);
+   const ok=x=>free(x.name,"NEF").length>=1&&free(x.name,"RTW").length>=2;
+   d=ds.find(x=>!used.has(x.name)&&ok(x))||ds.find(ok);
+   if(!d){toast("⚠️ MANV-S: kein Nachbarkreis hat noch 1 NEF + 2 RTW frei");return}
+   const loaned=[free(d.name,"NEF")[0],...free(d.name,"RTW").slice(0,2)].map(n=>{const u=manvNbAlarm(c,n);u.manvComp="S";return u});
+   entry={id:now,kind,district:d.name,lst:nbLstOf(d.name),reqAt:now,dueAt:now,created:true,unitIds:loaned.map(u=>u.id)};
+ }else{
+   d=ds.find(x=>!used.has(x.name))||ds[0];
+   entry={id:now,kind,district:d.name,lst:nbLstOf(d.name),reqAt:now,dueAt:now+rint(25,35)*60000,lat:d.lat,lng:d.lng,created:false,unitIds:[]};
+ }
+ c.manvComps.push(entry);
+ const txt=`✅ ${K.label} (${K.name}) aus LK ${d.name} zugesagt – ${kind==="S"?"Fahrzeuge sind alarmiert und fahren sofort":`Abmarsch ca. ${hhmm(entry.dueAt)} Uhr`}.`;
+ sdsLog({dir:"in",opta:nbLstOf(d.name),callId:String(c.id),text:txt,read:false});
+ (c.history=c.history||[]).push({q:`🚑 ${K.label} angefordert (${nbLstOf(d.name)})`,a:`LK ${d.name} – ${K.info}`});
+ toast(`🚑 ${txt}`); save(); render(currentPage);
+}
+function manvCompTick(call,now){
+ let ch=false;
+ for(const k of call.manvComps||[]){
+   if(k.created||now<k.dueAt)continue;
+   k.created=true; const K=MANV_COMP[k.kind], spec=k.kind==="T"?[["RTW",2],["KTW",3]]:[["MTW",2],["GW-San",1]];
+   call.alarmedUnits=call.alarmedUnits||[];
+   for(const [type,n] of spec)for(let j=1;j<=n;j++){
+     const u={id:Date.now()+Math.floor(Math.random()*1e6),name:`${K.label} ${k.district} ${type} ${j}`,opta:`${K.label} LK ${k.district} – ${type} ${j}`,type,org:"Rettungsdienst",
+       location:`LK ${k.district}`,lat:k.lat+rnd(-0.003,0.003),lng:k.lng+rnd(-0.003,0.003),crew:type==="MTW"?"6":type==="GW-San"?"4":"2",
+       skills:k.kind==="T"?"MANV-Transportkomponente":type==="GW-San"?"MANV-Patientenablage (mit Notarzt)":"MANV-Patientenablage",
+       neighborLoan:true,homeDistrict:k.district,manvComp:k.kind,verified:"Übungsfahrzeug – echte Kennung nicht hinterlegt",status:"1"};
+     db.units.push(u); setUnitStatus(u,"3"); appendUnitToCall(call,u,`${K.label} LK ${k.district}`); call.alarmedUnits.push(u.id); k.unitIds.push(u.id);
+   }
+   const txt=`${K.label} aus LK ${k.district} ausgerückt (${spec.map(([t,n])=>`${n}× ${t}`).join(", ")}) – Anfahrt zum ${call.staging?"Bereitstellungsraum":"Einsatzort"}.`;
+   sdsLog({dir:"in",opta:k.lst,callId:String(call.id),text:txt,read:false});
+   (call.history=call.history||[]).push({q:`🚑 ${K.label} unterwegs`,a:txt}); toast(`🚑 ${txt}`); ch=true;
+ }
+ return ch;
+}
+function manvCompHTML(c){
+ const id=esc(String(c.id)), L=c.manvComps||[];
+ const st=k=>{if(!k.created)return `Abmarsch ${hhmm(k.dueAt)}`;const us=k.unitIds.map(i=>db.units.find(u=>String(u.id)===String(i))).filter(Boolean);if(!us.length)return "zurück";const s=us.map(u=>String(u.status));return s.includes("4")?"vor Ort":s.includes("3")?"unterwegs":s.some(x=>["7","8"].includes(x))?"im Transport":"frei"};
+ return `<div style="margin-top:4px">➕ Komponenten: ${Object.entries(MANV_COMP).map(([k,K])=>`<button title="${esc(K.info)}" onclick="event.stopPropagation();manvCompRequest('${id}','${k}')" style="font-size:11px;padding:2px 8px">${K.label}</button>`).join(" ")}
+  ${L.length?`<div style="margin-top:2px;font-size:12px">${L.map(k=>`${MANV_COMP[k.kind].label} LK ${esc(k.district)}: <b>${st(k)}</b>`).join(" · ")}</div>`:""}</div>`;
+}
+
+// ─── Polizeilagen (Gewalt, Amok): Rettungsdienst wartet im Bereitstellungsraum auf die Freigabe ───
+function isPoliceCall(c){if(!c)return false;if(c.police)return true;const ev=String((c.answers&&c.answers.event)||(c.sim&&c.sim.d&&c.sim.d.f&&c.sim.d.f.event)||"");return ev==="Polizeilage"}
+function policeHold(c){return !!(c&&c.police&&!c.police.safe)}
+function policeMsg(c,text){sdsLog({dir:"in",opta:"👮 Polizei (Einsatzleitung)",callId:String(c.id),text,read:false});(c.history=c.history||[]).push({q:"👮 Polizei",a:text});toast(`👮 Polizei: ${text.slice(0,90)}${text.length>90?"…":""}`)}
+const POL_BR_BUSY=new Set();
+async function policePickStaging(c){
+ const key=String(c.id); if(POL_BR_BUSY.has(key)||c.staging)return; POL_BR_BUSY.add(key);
+ const ip=callDestinationPoint({...c,staging:null},null); let pl=null;
+ if(ip)try{pl=await findNearbyOpenArea(ip[0],ip[1],["parking","pitch"],0.012,0.3)}catch(e){}
+ POL_BR_BUSY.delete(key); if(c.staging||!c.police||c.police.safe||!ip)return;
+ const st=pl?{name:`${OPEN_KIND_DE[pl.k]||"Fläche"} ${pl.name&&!/^\d/.test(pl.name)?pl.name:""} (ca. ${Math.round(pl.km*1000/50)*50} m entfernt)`.replace(/\s+/g," ").trim(),lat:pl.lat,lng:pl.lng}
+   :{name:"Sammelpunkt ca. 500 m vor der Einsatzstelle (Ort geschätzt)",lat:ip[0]+0.0045,lng:ip[1]};
+ c.brMode="police"; applyStaging(c,st);
+ policeMsg(c,`Bereitstellungsraum für den Rettungsdienst: ${st.name}. Nicht weiter vorfahren – die Freigabe kommt von uns.`); save();
+ if(["leitstelle","karte"].includes(currentPage))bgRender(currentPage);
+}
+function policeTick(c,now){
+ if(!c.alarmTime||!isPoliceCall(c))return false; let ch=false;
+ if(!c.police){
+   const d=c.sim&&c.sim.d||{}, txt=`${c.keyword||""} ${d.event||""} ${(d.f&&d.f.e)||""} ${(c.answers&&c.answers.freeText)||""} ${(c.answers&&c.answers.e_exposure)||""}`.toLowerCase();
+   const amok=!!d.amok||/amok|schütze|schüsse|schießt|geschossen|bedrohungslage|anschlag/.test(txt);
+   const safe=!amok&&(d.policeSafe===true||(d.policeSafe==null&&Math.random()<0.35));
+   c.police={kind:amok?"amok":"gewalt",safe,since:now,safeAt:safe?now:now+(amok?rint(15,30):rint(5,14))*60000,mode:amok?"handover":"advance"};
+   policeMsg(c,safe?"Polizei ist vor Ort, die Lage ist sicher – Rettungsdienst kann direkt anfahren."
+     :amok?"AMOKLAGE – Täter noch nicht gestellt! Rettungsdienst NICHT zur Einsatzstelle, nur in den Bereitstellungsraum. Wir melden uns mit der Patientenübergabestelle."
+     :"Lage noch nicht sicher (Täter nicht gestellt) – Rettungsdienst bitte im Bereitstellungsraum halten, die Freigabe kommt von uns.");
+   ch=true;
+ }
+ const P=c.police;
+ if(!P.safe&&!c.staging)policePickStaging(c);
+ if(!P.safe&&now>=P.safeAt){
+   P.safe=true; P.safeTs=now;
+   if(P.mode==="handover"){
+     if(c.staging&&!/^Patientenübergabestelle/.test(c.staging.name))c.staging.name=`Patientenübergabestelle am BR – ${c.staging.name}`;
+     policeMsg(c,"Täter gestellt, Lage teilweise unter Kontrolle. Verletzte werden von Polizeikräften zur Patientenübergabestelle am Bereitstellungsraum gebracht – Versorgung dort. Gefahrenbereich weiter NICHT betreten!");
+   }else{
+     const st=c.staging; delete c.staging;
+     policeMsg(c,"Täter festgenommen – die Einsatzstelle ist freigegeben. Rettungsdienst kann vorrücken.");
+     if(st)for(const u of callUnits(c)){if(String(u.status)==="4"&&!unitPhoneLive(u)&&!waterCapable(u)){setUnitStatus(u,"3");u.shuttleFrom=[Number(st.lat),Number(st.lng)];delete u.crew;delete u._polWait;crewSds(u,c,"Freigabe durch die Polizei – rücken vom Bereitstellungsraum zur Einsatzstelle vor.")}}
+   }
+   ch=true;
+ }
+ return ch;
+}
+function policeAsk(id){
+ const c=allOpenCalls().find(x=>String(x.id)===String(id)); if(!c||!c.police)return;
+ const P=c.police, now=Date.now();
+ if(P.safe){policeMsg(c,"Lage ist sicher – siehe Freigabe.");save();render(currentPage);return}
+ const m=Math.max(2,Math.round((P.safeAt-now)/60000)+pick([-2,-1,0,1,2,3]));
+ policeMsg(c,`Lage noch nicht sicher, ${P.kind==="amok"?"Spezialkräfte sind im Einsatz":"Fahndung läuft"}. Freigabe voraussichtlich in ca. ${m} min – Kräfte bitte weiter im Bereitstellungsraum halten.`);
+ save(); render(currentPage);
+}
+function policeStripHTML(c){
+ const P=c.police; if(!P)return "";
+ const held=!P.safe?callUnits(c).filter(u=>String(u.status)==="4").length:0;
+ return `<div style="margin-top:6px;padding:6px 8px;border-radius:8px;background:${P.safe?"#ecfdf5":"#eff6ff"};border:1px solid ${P.safe?"#6ee7b7":"#93c5fd"};font-size:13px">
+  <b>👮 ${P.kind==="amok"?"Amoklage":"Polizeilage (Gewalt)"}</b> – ${P.safe?`✅ ${P.mode==="handover"?"Patientenübergabe am Bereitstellungsraum":"Einsatzstelle freigegeben"}${P.safeTs?` (${hhmm(P.safeTs)})`:""}`:`⛔ <b>nicht freigegeben</b> – Rettungsdienst wartet im Bereitstellungsraum${held?` (${held} Fz. dort)`:""}`}
+  ${c.staging?`<div>🅿️ ${esc(c.staging.name)}</div>`:!P.safe?`<div class="muted">🅿️ Bereitstellungsraum wird festgelegt …</div>`:""}
+  ${!P.safe?`<button onclick="event.stopPropagation();policeAsk('${esc(String(c.id))}')" style="font-size:11px;padding:2px 8px;margin-top:3px">📞 Polizei nach der Lage fragen</button>`:""}</div>`;
+}
+
+// ─── Großveranstaltungen mit Sanitätswachdienst (Übung) ───────────────────────────────────────
+// Veranstaltung läuft eine einstellbare Zeit. Der Sanitätsdienst (SanWD) fordert ab und zu einen RTW an.
+// Verlauf: alles bleibt ruhig, kleiner MANV (6–12 Verletzte) oder großer MANV (25–55 Verletzte).
+// Veranstaltungen und Orte sind Übungsannahmen, keine echten Termine.
+const BIG_VENUES=[
+ {key:"stadtfest",name:"Stadtfest",town:"Varel",text:"beim Stadtfest in der Innenstadt Varel, Sanitätsstation am Neumarktplatz",lat:53.3969,lng:8.1362,visitors:[3000,8000]},
+ {key:"konzert",name:"Open-Air-Konzert",town:"Jever",text:"beim Open-Air-Konzert in Jever, Sanitätsstation am Alten Markt",lat:53.5737,lng:7.8996,visitors:[2000,6000]},
+ {key:"lauf",name:"Volkslauf",town:"Schortens",text:"beim Volkslauf in Schortens, Sanitätsstation im Zielbereich",lat:53.5333,lng:7.9500,visitors:[800,2500]},
+ {key:"hafen",name:"Hafenfest",town:"Wilhelmshaven",text:"beim Hafenfest in Wilhelmshaven, Sanitätsstation am Festplatz",lat:53.5259,lng:8.1080,visitors:[5000,15000]}];
+const BIG_MINOR=["ve_kreislauf","ve_alkohol","ve_schnitt","ve_sturz","ve_asthma"];
+function bigEventDialog(){
+ showModal(`<h3 style="margin-top:0">🎪 Großveranstaltung starten (Übung)</h3>
+  <label>Veranstaltung</label><select id="beVenue">${BIG_VENUES.map(v=>`<option value="${v.key}">${esc(v.name)} – ${esc(v.town)}</option>`).join("")}</select>
+  <label style="margin-top:8px">Dauer</label><select id="beDur"><option value="30">30 min</option><option value="60" selected>1 Stunde</option><option value="90">1,5 Stunden</option><option value="120">2 Stunden</option></select>
+  <label style="margin-top:8px">Verlauf</label><select id="beMode"><option value="zufall" selected>🎲 Zufall (Überraschung)</option><option value="ruhig">😌 Alles bleibt ruhig</option><option value="klein">🟡 Kleiner MANV</option><option value="gross">🔴 Großer MANV</option></select>
+  <p class="muted" style="font-size:12px">Der Sanitätsdienst vor Ort meldet sich bei Dienstbeginn. Ab und zu fordert er einen RTW an. Bei einem MANV gibt er die erste Lagemeldung.</p>
+  <div class="row" style="justify-content:flex-end;gap:6px"><button onclick="closeModal()">Abbrechen</button><button class="primary" onclick="bigEventStart(document.getElementById('beVenue').value,Number(document.getElementById('beDur').value),document.getElementById('beMode').value)">▶️ Starten</button></div>`);
+}
+function bigEventStart(key,dur,mode){
+ const v=BIG_VENUES.find(x=>x.key===key)||BIG_VENUES[0], now=Date.now(); dur=Math.max(10,Number(dur)||60);
+ const outcome=mode==="ruhig"?"ruhig":mode==="klein"?"klein":mode==="gross"?"gross":(()=>{const r=Math.random();return r<0.55?"ruhig":r<0.85?"klein":"gross"})();
+ const plan=[], endAt=now+dur*60000, span=(a,b)=>now+rnd(a,b)*dur*60000;
+ const nMinor=outcome==="ruhig"?rint(0,Math.max(1,Math.round(dur/40))):rint(1,Math.max(1,Math.round(dur/30)));
+ for(let i=0;i<nMinor;i++)plan.push({at:span(0.08,0.92),caseId:pick(BIG_MINOR)});
+ if(outcome!=="ruhig")plan.push({at:span(0.3,0.7),caseId:outcome==="klein"?"ve_manv_klein":"ve_manv_gross"});
+ plan.sort((a,b)=>a.at-b.at);
+ const visitors=Math.round(rint(v.visitors[0],v.visitors[1])/100)*100;
+ db.bigEvent={id:"be"+now.toString(36),key:v.key,name:v.name,town:v.town,text:v.text,lat:v.lat,lng:v.lng,visitors,startAt:now,endAt,outcome,plan,calls:[],owner:DEVICE_ID,sanCrew:rint(8,24)};
+ const E=db.bigEvent;
+ sdsLog({dir:"in",opta:`SanWD ${E.name} ${E.town}`,callId:"",text:`Dienstbeginn Sanitätswachdienst ${E.name} ${E.town}: ${E.sanCrew} Einsatzkräfte, Sanitätsstation besetzt, erwartet ca. ${visitors.toLocaleString("de-DE")} Besucher, Ende ca. ${hhmm(endAt)} Uhr.`,read:false});
+ closeModal(); toast(`🎪 ${E.name} ${E.town} läuft – Sanitätsdienst hat sich angemeldet`); save(); render(currentPage);
+}
+function bigEventRing(caseId){
+ const E=db.bigEvent; if(!E)return null;
+ const noAi=simMakeCall.noAi, noTier=simMakeCall0.noTier; simMakeCall.noAi=true; simMakeCall0.noTier=true; simMakeCall0.forceCase=caseId;
+ let s; try{s=simMakeCall0()}finally{simMakeCall.noAi=noAi;simMakeCall0.noTier=noTier;simMakeCall0.forceCase=null}
+ if(!s||s.caseId!==caseId)return null;
+ s.loc={kind:"road",text:E.text,addr:E.town,town:E.town,lat:E.lat+rnd(-0.0006,0.0006),lng:E.lng+rnd(-0.0006,0.0006),facility:`${E.name} ${E.town}`};
+ s.d.bigEvent=E.id; s.d.eventName=`${E.name} ${E.town}`;
+ s.d.open=(s.d.open||[]).map(t=>t.replace(/\{ev\}/g,`${E.name} ${E.town}`)); s.d.event=String(s.d.event||"").replace(/\{ev\}/g,`${E.name} ${E.town}`);
+ E.calls.push({caseId,at:Date.now(),simId:s.id}); simRing(s); return s;
+}
+function bigEventTick(now){
+ const E=db.bigEvent; if(!E||E.ended||E.owner!==DEVICE_ID)return false; let ch=false;
+ for(const p of E.plan){if(!p.done&&now>=p.at){p.done=true;ch=true;try{bigEventRing(p.caseId)}catch(e){console.warn(e)}}}
+ if(now>=E.endAt)bigEventEnd(false),ch=true;
+ return ch;
+}
+function bigEventEnd(manual){
+ const E=db.bigEvent; if(!E||E.ended)return;
+ E.ended=true; E.endTs=Date.now(); E.plan.forEach(p=>p.done=true);
+ const help=Math.max(E.calls.length,Math.round(E.visitors*rnd(0.002,0.006))), tr=E.calls.length;
+ E.summary={help,tr};
+ sdsLog({dir:"in",opta:`SanWD ${E.name} ${E.town}`,callId:"",text:`${manual?"Veranstaltung vorzeitig beendet":"Veranstaltung beendet"} – Dienstende Sanitätswachdienst. ${help} Hilfeleistungen vor Ort, ${tr} Anforderung${tr===1?"":"en"} über die Leitstelle${E.outcome==="ruhig"&&tr<=1?" – ruhiger Dienst, keine besonderen Vorkommnisse":""}.`,read:false});
+ toast(`🎪 ${E.name} ${E.town}: Dienstende`); save(); if(manual)render(currentPage);
+}
+function bigEventClear(){db.bigEvent=null;save();render(currentPage)}
+function bigEventCardHTML(){
+ const E=db.bigEvent;
+ if(!E)return `<div class="card"><h2>🎪 Großveranstaltung</h2><p class="muted" style="font-size:13px">Übung: Eine Veranstaltung mit Sanitätswachdienst läuft. Mal bleibt alles ruhig, mal gibt es einen kleinen oder großen MANV.</p><button onclick="bigEventDialog()" style="width:100%">🎪 Veranstaltung starten</button></div>`;
+ const left=Math.max(0,Math.round((E.endAt-Date.now())/60000));
+ return `<div class="card" style="border-left:6px solid #7c3aed"><h2 style="margin:0">🎪 ${esc(E.name)} ${esc(E.town)}</h2>
+  <div class="muted" style="font-size:13px">ca. ${E.visitors.toLocaleString("de-DE")} Besucher · SanWD ${E.sanCrew} Kräfte · ${hhmm(E.startAt)}–${hhmm(E.endAt)} Uhr</div>
+  <div style="margin-top:6px;font-size:13px">${E.ended?`✅ beendet – ${E.summary?`${E.summary.help} Hilfeleistungen vor Ort, ${E.summary.tr} über die Leitstelle`:""}`:`⏱️ läuft noch ${left} min · 📞 Anforderungen bisher: ${E.calls.length}`}</div>
+  <div class="row" style="gap:6px;margin-top:8px">${E.ended?`<button onclick="bigEventClear()" style="width:100%">Schließen</button>`:`<button onclick="if(confirm('Veranstaltung vorzeitig beenden?'))bigEventEnd(true)" style="width:100%">⏹️ Vorzeitig beenden</button>`}</div></div>`;
+}
+// Sanitätsdienst vor Ort gibt beim MANV auf der Veranstaltung die erste Lagemeldung und betreibt eine kleine Sanitätsstation
+function bigEventManvTick(c,now){
+ const d=c.sim&&c.sim.d; if(!d||!d.sanWd||!c.alarmTime||!isManvCall(c))return false; let ch=false;
+ const at=new Date(c.alarmTime).getTime()||now;
+ const san={id:"sanwd-"+c.id,opta:`SanWD ${d.eventName||"Veranstaltung"}`,name:"SanWD",type:"SanWD"};
+ if(!(c.manvReports||[]).some(r=>r.kind==="first")&&now-at>=(c._sanFirst||(c._sanFirst=rint(2,4)*60000))){manvReport(c,san,"first");ch=true}
+ c.manvStations=c.manvStations||{};
+ if(!c.manvStations[san.id]&&(c.manvReports||[]).length){c.manvStations[san.id]={kind:"san",unitId:san.id,label:`Sanitätsstation ${san.opta}`,startAt:now,readyAt:now,cap:6,ready:true,readyAtIso:new Date(now).toISOString()};ch=true}
+ return ch;
+}
+function manvPlaceLabel(call,pid){const P=(call.manvPatients||[]).find(x=>x.pid===pid);if(!P)return "";if(P.care)return "🕯️ palliativ vor Ort";if(P.unit)return "🚑 Transport";if(P.place==="pa")return "🩹 in der Patientenablage (MANV-PA)";if(P.place==="san")return "⛑️ im BHP (DRK)";if(P.place==="bet")return "🫂 in der Betreuungsstelle (DRK)";return "Schadenstelle"}
 // v5.60: SK IV (blau, ohne Überlebenschance) – kein Transport; Patient verstirbt an der Einsatzstelle
 function manvDeathTick(call,now){
  let ch=false;
@@ -5627,6 +5943,7 @@ function crewSurplusTick(){
    const rd=u=>CREW_TRANSPORT.has(u.type)||u.type==="NEF";
    if(isManvCall(call)&&manvStationTick(call,now))ch=true;
    if(isManvCall(call)&&manvFuAssTick(call,now))ch=true; // v5.65
+   if(isManvCall(call)&&manvStayTick(call,now))ch=true; // v5.66 MANI/MANB: Versorgung/Betreuung vor Ort
    if(call.evac&&evacTick(call,now))ch=true; // v5.63
    if(call.manvPatients&&manvDeathTick(call,now))ch=true;
    if(call.manvPatients&&(call.manvReports||[]).length){
@@ -5634,7 +5951,7 @@ function crewSurplusTick(){
      const openSk1=call.manvPatients.filter(P=>!P.unit&&P.sk===1).length;
      // (v5.58: Hubschrauber und überzählige NEF bleiben, bis alle Patienten versorgt sind)
      // Notärzte: so viele NEF bleiben, wie rote/blaue Patienten noch ohne Notarzt sind
-     let docNeed=call.manvPatients.filter(P=>(P.sk===1||(P.sk===4&&!P.unit))&&!P.doc&&(!P.unit||["3","4"].includes(String((db.units.find(y=>String(y.id)===String(P.unit))||{}).status)))).length;
+     let docNeed=call.manvPatients.filter(P=>(P.sk===1||(P.sk===4&&!P.unit))&&!P.doc&&!P.paDoc&&(!P.unit||["3","4"].includes(String((db.units.find(y=>String(y.id)===String(P.unit))||{}).status)))).length;
      if(open===0){
        for(const u of us){
          if(!rd(u))continue; const st=String(u.status), C=u.crew;
@@ -5693,8 +6010,12 @@ function manvTruth(c){
  const S=c.sim&&c.sim.d&&c.sim.d.f, tot=Math.max(4,Number((S&&S.count)||c.answers?.count||4)||4);
  // v5.63: Verteilung ca. 15 % rot, 20 % gelb, 60 % grün, 5 % blau, < 5 % verstorben (nur wenn die Lage das hergibt)
  const pr=x=>{const f=Math.floor(x);return f+(Math.random()<x-f?1:0)}; // zufällig gerundet – auch kleine Lagen haben mal einen blauen
- const txt=`${c.keyword||""} ${c.answers?.event||""} ${c.text||""} ${(S&&S.ev)||""}`.toLowerCase();
- const heavy=/explosion|brand|feuer|zug|bahn|bus|verkehrsunfall|vu|einsturz|flugzeug|absturz|kollision|massenkarambolage/.test(txt);
+ // v5.66: MANI – meist leicht erkrankt (ca. 5 % rot, 25 % gelb, Rest grün); MANB – fast alle unverletzt (ca. 4 % gelb)
+ const kind=manvKind(c);
+ if(kind==="MANI"){const rot=pr(tot*0.05),gelb=Math.min(tot-rot,Math.max(1,Math.round(tot*0.25)));c.manvTruth={total:tot,rot,gelb,gruen:tot-rot-gelb,blau:0,schwarz:0,entrap:false,kind};return c.manvTruth}
+ if(kind==="MANB"){const gelb=pr(tot*0.04);c.manvTruth={total:tot,rot:0,gelb,gruen:tot-gelb,blau:0,schwarz:0,entrap:false,kind};return c.manvTruth}
+ const txt=`${c.keyword||""} ${c.answers?.event||""} ${c.text||""} ${(S&&S.ev)||""} ${(c.sim&&c.sim.d&&c.sim.d.event)||""}`.toLowerCase();
+ const heavy=/explosion|brand|feuer|zug|bahn|bus|verkehrsunfall|vu|einsturz|flugzeug|absturz|kollision|massenkarambolage|amok|schuss|schüsse|anschlag|tribüne|zelt/.test(txt);
  const entrap=/eingeklemmt|einsturz|zug|bahn|bus|verkehrsunfall|vu|karambolage/.test(txt);
  const schwarz=heavy?pr(tot*rnd(0,0.045)):0;
  const blau=Math.min(pr(tot*0.05),Math.max(0,tot-schwarz-2));
@@ -5759,6 +6080,7 @@ function manvPats(c){
    // Nummern wie Anhängekarten in Fundreihenfolge (gemischt)
    // v5.63: bei Einklemmungen ist ein blauer Patient einer, dessen Rettung zu lange dauern würde
    if(T.entrap){const b=L.find(p=>p.sk===4);if(b){b.inj="schwerst eingeklemmt – technische Rettung würde zu lange dauern, Kreislauf instabil";b.longRescue=true}}
+   const ik=manvInjKind(c); if(ik)L.forEach(p=>manvInjAdapt(p,ik)); // v5.66: Befunde passend zur Lage (MANI, MANB, Polizei)
    L.sort(()=>Math.random()-0.5).forEach((p,i)=>p.n=i+1); T.pats=L}
  return T.pats;
 }
@@ -5787,7 +6109,7 @@ function manvListDialog(id){
  const P=manvPats(c), orgl=(c.manvReports||[]).some(r=>r.kind==="orgl");
  const rows=P.slice().sort((a,b)=>(orgl?a.sk-b.sk:a.vs-b.vs)||a.n-b.n).map(p=>{const k=orgl?p.sk:p.vs, tr=(c.manvPatients||[]).find(x=>x.pid===p.n), u=tr&&tr.unit?db.units.find(x=>String(x.id)===String(tr.unit)):null;
    return `<tr style="border-bottom:1px solid var(--line)"><td style="padding:4px;font-weight:800">${p.n}</td><td>${mstartDot(k,14)}${orgl&&p.sk!==p.vs?` <small class="muted" title="Vorsichtung">(vorher ${MSTART_COL[p.vs][1]})</small>`:""}</td>
-   <td style="font-size:12px">${p.gender==="W"?"♀":"♂"} ${p.age} J. – ${esc(p.inj)}<br><span class="muted">${esc(mstartFindings(p))}</span></td><td style="font-size:12px">${tr&&tr.care?`🕯️ palliativ vor Ort${u?` (${esc(u.opta||u.name)})`:""}`:u?`🚑 ${esc(u.opta||u.name)}`:k===5?"—":tr&&tr.place&&tr.place!=="transport"?esc(manvPlaceLabel(c,p.n)):"<span class='muted'>wartet</span>"}</td></tr>`}).join("");
+   <td style="font-size:12px">${p.gender==="W"?"♀":"♂"} ${p.age} J. – ${esc(p.inj)}<br><span class="muted">${esc(mstartFindings(p))}</span></td><td style="font-size:12px">${tr&&tr.care?`🕯️ palliativ vor Ort${u?` (${esc(u.opta||u.name)})`:""}`:u?`🚑 ${esc(u.opta||u.name)}`:k===5?"—":manvStayLabel(c,p.n)?esc(manvStayLabel(c,p.n)):tr&&tr.place&&tr.place!=="transport"?esc(manvPlaceLabel(c,p.n)):"<span class='muted'>wartet</span>"}</td></tr>`}).join("");
  showModal(`<h3 style="margin-top:0">📋 Sichtung nach mSTaRT – Einsatz #${esc(String(c.id))}</h3>
   <p class="muted" style="font-size:13px;margin-top:0">${orgl?"Stand nach ärztlicher Sichtung (OrgL/LNA).":"Vorsichtung durch das ersteintreffende Rettungsmittel."} Nummer = Anhängekarte.</p>
   <div style="max-height:55vh;overflow:auto"><table style="width:100%;border-collapse:collapse"><tr style="text-align:left;font-size:12px"><th>Nr.</th><th>Kat.</th><th>Patient / Befund</th><th>Verbleib</th></tr>${rows}</table></div>
@@ -5915,7 +6237,7 @@ function manvReport(c,u,kind){
  const R=kind==="first"?{rot:jit(T.rot),gelb:jit(T.gelb),gruen:jit(T.gruen),blau:T.blau,schwarz:T.schwarz}:{rot:T.rot,gelb:T.gelb,gruen:T.gruen,blau:T.blau,schwarz:T.schwarz};
  R.total=R.rot+R.gelb+R.gruen+R.blau+R.schwarz; R.kind=kind; R.by=u.opta||u.name; R.type=u.type; R.at=Date.now();
  c.manvReports=c.manvReports||[]; c.manvReports.push(R); c.manv=true;
- const txt=`${kind==="first"?"Erste Lagemeldung – Vorsichtung nach mSTaRT":"Ärztliche Sichtung abgeschlossen"}: ${manvStage(R.total)[2]}, ${R.total} Betroffene – ${R.rot} rot (SK I), ${R.gelb} gelb (SK II), ${R.gruen} grün (SK III), ${R.blau} blau (SK IV), ${R.schwarz} verstorben.${kind==="first"?" Sichtung läuft.":""}`;
+ const txt=`${kind==="first"?"Erste Lagemeldung – Vorsichtung nach mSTaRT":"Ärztliche Sichtung abgeschlossen"}: ${manvStage(R.total)[2].replace("MANV",manvKind(c))}, ${R.total} Betroffene – ${R.rot} rot (SK I), ${R.gelb} gelb (SK II), ${R.gruen} grün (SK III), ${R.blau} blau (SK IV), ${R.schwarz} verstorben.${kind==="first"?" Sichtung läuft.":""}`;
  crewSds(u,c,txt); (c.history=c.history||[]).push({q:`🚨 MANV-Rückmeldung (${R.by})`,a:txt});
  // Patientenliste für die Transporte (nach dem Sichtungsergebnis, sonst nach der ersten Meldung)
  if(kind==="orgl"||!c.manvPatients){
@@ -5927,7 +6249,7 @@ function manvReport(c,u,kind){
      list[i].unit=k.unit;list[i].doc=k.doc;
      // Besatzungen auf die neue Patientennummer umstellen (RTW: patient, NEF: docFor)
      [k.unit,k.doc].filter(Boolean).forEach(id=>{const x=db.units.find(y=>String(y.id)===String(id));if(x&&x.crew){if(x.crew.patient===k.n)x.crew.patient=list[i].n;if(x.crew.docFor===k.n)x.crew.docFor=list[i].n}})});
-   c.manvPatients=list;
+   c.manvPatients=manvSplitStay(c,list); // v5.66: MANI/MANB – nicht alle müssen transportiert werden
  }
 }
 function manvStripHTML(c){
@@ -5937,15 +6259,18 @@ function manvStripHTML(c){
  const br=c.staging?`🅿️ BR: ${esc(c.staging.name)}`:c.brMode==="orgl"?"🅿️ BR: OrgL legt fest …":isManvCall(c)?`<button onclick="event.stopPropagation();lstSetStaging('${esc(String(c.id))}')" style="font-size:11px;padding:2px 8px">🅿️ BR festlegen</button> <button onclick="event.stopPropagation();setBrMode('${esc(String(c.id))}','orgl')" style="font-size:11px;padding:2px 8px">OrgL legt fest</button>`:"";
  const tr=(c.manvPatients||[]), done=tr.filter(p=>p.unit).length;
  return `<div style="margin-top:6px;padding:6px 8px;border-radius:8px;background:#fff7ed;border:1px solid #fdba74;font-size:13px">
-  ${R?`<div><b>${R.total} Betroffene</b> <small class="muted">(${R.kind==="first"?"erste Meldung":"Sichtung"} ${esc(R.by)} ${hhmm(R.at)})</small></div>
+  ${R?`<div>${manvKind(c)!=="MANV"?`<span class="pill" style="font-weight:800">${manvKind(c)==="MANI"?"🦠 MANI":"🫂 MANB"}</span> `:""}<b>${R.total} Betroffene</b> <small class="muted">(${R.kind==="first"?"erste Meldung":"Sichtung"} ${esc(R.by)} ${hhmm(R.at)})</small></div>
   <div style="margin-top:3px">${dot("#d71920",R.rot,"rot – SK I")}${dot("#f2c200",R.gelb,"gelb – SK II")}${dot("#22c55e",R.gruen,"grün – SK III")}${dot("#2563eb",R.blau,"blau – SK IV")}${dot("#111827",R.schwarz,"verstorben")}${tr.length?`<small class="muted">· ${done}/${tr.length} Pat. von Rettungsmitteln übernommen</small>`:""}</div>
-  ${(()=>{const open=tr.filter(p=>!p.unit),free=callUnits(c).filter(u=>CREW_TRANSPORT.has(u.type)&&["3","4"].includes(String(u.status))&&!(u.crew&&u.crew.mode==="transport")).length,miss=open.length-free;return miss>0?`<div style="margin-top:3px;color:#b91c1c;font-weight:800">⚠️ ${miss} Pat. noch ohne Transportmittel (${["SK1","SK2","SK3","SK4"].map((k,i)=>{const n=open.filter(p=>p.sk===i+1).length;return n?`${n}× ${k}`:""}).filter(Boolean).join(", ")}) – nachalarmieren!</div>`:""})()}`:`<div>🚨 MANV – Rückmeldung von der Einsatzstelle steht noch aus</div>`}
+  ${(()=>{const open=tr.filter(p=>!p.unit),free=callUnits(c).filter(u=>CREW_TRANSPORT.has(u.type)&&["3","4"].includes(String(u.status))&&!(u.crew&&u.crew.mode==="transport")).length,miss=open.length-free;return miss>0?`<div style="margin-top:3px;color:#b91c1c;font-weight:800">⚠️ ${miss} Pat. noch ohne Transportmittel (${["SK1","SK2","SK3","SK4"].map((k,i)=>{const n=open.filter(p=>p.sk===i+1).length;return n?`${n}× ${k}`:""}).filter(Boolean).join(", ")}) – nachalarmieren!</div>`:""})()}`:`<div>🚨 ${manvKind(c)} – ${policeHold(c)?"Rettungsdienst wartet auf Freigabe durch die Polizei":"Rückmeldung von der Einsatzstelle steht noch aus"}</div>`}
+  ${(()=>{const S=c.manvStay||[];if(!S.length)return "";const d=S.filter(x=>x.done).length,b=S.filter(x=>x.place&&!x.done).length,w=S.length-d-b; // v5.66
+    return manvKind(c)==="MANI"?`<div style="margin-top:3px">🏠 Vor Ort versorgt (kein Transport): <b>${d}</b>${S.length-d?` · in Versorgung ${S.length-d}`:""}</div>`:`<div style="margin-top:3px">🫂 Betreuung: übergeben <b>${d}</b> · in der Betreuungsstelle <b>${b}</b>${w?` · <span style="color:#b91c1c;font-weight:800">warten ${w}</span>`:""}</div>`})()}
   ${R?`<div style="margin-top:4px"><button onclick="event.stopPropagation();render('manv')" style="font-size:11px;padding:2px 8px">🚨 Alle Patienten</button> <button onclick="event.stopPropagation();manvListDialog('${esc(String(c.id))}')" style="font-size:11px;padding:2px 8px">📋 Sichtung (mSTaRT)</button> <button onclick="event.stopPropagation();mstartTrain=null;manvTrainDialog('${esc(String(c.id))}',true)" style="font-size:11px;padding:2px 8px">🎓 Selbst sichten</button></div>`:""}
   ${c.manvFuAss?`<div style="margin-top:3px">📋 Führungsassistenz: ${esc(c.manvFuAss.label)} (DRK-ELW)</div>`:""}
   ${(()=>{const ST=Object.values(c.manvStations||{});if(!ST.length)return "";const P=c.manvPatients||[];
-    return `<div style="margin-top:3px">${["san","bet"].filter(k=>ST.some(x=>x.kind===k)).map(k=>{const xs=ST.filter(x=>x.kind===k),rd=xs.filter(x=>x.ready&&!x.closed),cap=rd.reduce((a,x)=>a+x.cap,0),n=P.filter(p=>p.place===k&&!p.unit).length;
+    return `<div style="margin-top:3px">${["pa","san","bet"].filter(k=>ST.some(x=>x.kind===k)).map(k=>{const xs=ST.filter(x=>x.kind===k),rd=xs.filter(x=>x.ready&&!x.closed),cap=rd.reduce((a,x)=>a+x.cap,0),n=P.filter(p=>p.place===k&&!p.unit).length+(k==="bet"?(c.manvStay||[]).filter(s=>s.place==="bet"&&!s.done).length:0);
       return `<span style="margin-right:10px;font-weight:800">${MANV_ST[k].icon} ${MANV_ST[k].name}: ${rd.length?`${n}/${cap}`:xs.some(x=>x.closed)?"abgebaut":"im Aufbau"}</span>`}).join("")}</div>`})()}
   ${pcHTML}
+  ${manvCompHTML(c)}
   ${br?`<div style="margin-top:4px">${br}</div>`:""}</div>`;
 }
 function setBrMode(id,mode){const c=allOpenCalls().find(x=>String(x.id)===String(id));if(!c)return;c.brMode=mode;(c.history=c.history||[]).push({q:"🅿️ Bereitstellungsraum",a:mode==="orgl"?"wird vom OrgL vor Ort festgelegt":"legt die Leitstelle fest"});save();render(currentPage)}
@@ -5959,11 +6284,11 @@ async function lstSetStaging(id){
  }catch(e){toast("Adresssuche nicht erreichbar")}
 }
 // Freie Fläche in der Nähe suchen (echte OSM-Daten über Nominatim): Sportplatz, Park, Parkplatz
-async function findNearbyOpenArea(lat,lng,kinds,radiusDeg=0.012){
+async function findNearbyOpenArea(lat,lng,kinds,radiusDeg=0.012,minKm=0.05){
  for(const k of kinds){
    try{const vb=[lng-radiusDeg,lat+radiusDeg,lng+radiusDeg,lat-radiusDeg].join(",");
      const rows=await (await fetch(`https://nominatim.openstreetmap.org/search?format=jsonv2&limit=8&bounded=1&viewbox=${vb}&q=${encodeURIComponent("["+k+"]")}`,{headers:{"Accept":"application/json"}})).json();
-     const best=(rows||[]).map(r=>({name:r.name||r.display_name.split(",")[0],lat:Number(r.lat),lng:Number(r.lon),km:haversine(lat,lng,Number(r.lat),Number(r.lon)),k})).filter(x=>x.km>0.05).sort((a,b)=>a.km-b.km)[0];
+     const best=(rows||[]).map(r=>({name:r.name||r.display_name.split(",")[0],lat:Number(r.lat),lng:Number(r.lon),km:haversine(lat,lng,Number(r.lat),Number(r.lon)),k})).filter(x=>x.km>minKm).sort((a,b)=>a.km-b.km)[0];
      if(best)return best;
    }catch(e){}
  }
@@ -5992,20 +6317,22 @@ async function heliPickLanding(c){
 // alle 2 s: MANV-Rückmeldungen, BR durch OrgL, Landeplatz, Einsätze automatisch abschließen
 function callTick(){
  const now=Date.now(); let changed=false;
+ try{if(bigEventTick(now))changed=true}catch(e){console.warn(e)} // v5.66 Großveranstaltung
  for(const c of allOpenCalls()){
    if(c.kt||c.mergedInto||(c.deskId&&c.deskId!==DEVICE_ID))continue;
    const us=callUnits(c);
+   try{if(policeTick(c,now))changed=true;if(c.manvComps&&manvCompTick(c,now))changed=true;if(bigEventManvTick(c,now))changed=true}catch(e){console.warn(e)} // v5.66
    if(c.alarmTime&&us.some(isAirUnit)&&!c.heliLanding&&Number.isFinite(Number(c.lat)))heliPickLanding(c);
-   if(c.alarmTime&&isManvCall(c)){
+   if(c.alarmTime&&isManvCall(c)&&!policeHold(c)){
      if(!c.brMode&&!c.staging)c.brMode=us.some(u=>u.type==="OrgL/LNA")?"orgl":"lst";
      const first=us.filter(u=>RD_TYPES.has(u.type)&&u.type!=="OrgL/LNA"&&String(u.status)==="4"&&u.status4Since).sort((a,b)=>a.status4Since-b.status4Since)[0];
-     if(first&&!(c.manvReports||[]).some(r=>r.kind==="first")&&now-first.status4Since>=(c._firstDelay||(c._firstDelay=rint(2,4)*60000))){manvReport(c,first,"first");changed=true}
+     if(first&&!(c.manvReports||[]).some(r=>r.kind==="first"||r.kind==="orgl")&&now-first.status4Since>=(c._firstDelay||(c._firstDelay=rint(2,4)*60000))){manvReport(c,first,"first");changed=true}
      const orgl=us.find(u=>u.type==="OrgL/LNA"&&String(u.status)==="4"&&u.status4Since);
      if(orgl&&!(c.manvReports||[]).some(r=>r.kind==="orgl")&&now-orgl.status4Since>=(c._orglDelay||(c._orglDelay=rint(5,10)*60000))){manvReport(c,orgl,"orgl");changed=true}
      if(orgl&&c.brMode==="orgl"&&!c.staging&&now-orgl.status4Since>=120000)orglPickStaging(c,orgl);
    }
    // Übrige Fahrzeuge (Feuerwehr, THW, DLRG, OrgL, ELW …) beenden ihre Arbeit nach realistischer Zeit
-   if(c.alarmTime)for(const u of us){
+   if(c.alarmTime&&!policeHold(c))for(const u of us){
      if(String(u.status)!=="4"||!u.status4Since||unitPhoneLive(u)||u.crew||CREW_TRANSPORT.has(u.type)||u.type==="NEF")continue;
      if(findUnitCall(u)!==c)continue;
      if(u.sceneCall!==String(c.id)||!u.sceneUntil){
@@ -6016,13 +6343,14 @@ function callTick(){
      if(now<u.sceneUntil)continue;
      // Führung (OrgL, ELW) bleibt, bis alle Patienten weg sind
      if(c.evac&&!c.evac.complete)continue; // v5.63: alle bleiben, bis die Evakuierung abgeschlossen ist
-     if(["OrgL/LNA","ELW","ELW1","ELW2"].includes(u.type)&&(us.some(x=>x!==u&&CREW_TRANSPORT.has(x.type)&&String(x.status)==="4")||(c.manvPatients||[]).some(p=>!p.unit&&p.sk<=4)))continue;
+     if((["OrgL/LNA","ELW","ELW1","ELW2"].includes(u.type)||u.manvComp)&&(us.some(x=>x!==u&&CREW_TRANSPORT.has(x.type)&&String(x.status)==="4")||(c.manvPatients||[]).some(p=>!p.unit&&p.sk<=4)||manvStayOpen(c)))continue; // v5.66: auch MANV-PA und Betreuung (MANB)
+     if(manvKind(c)==="MANB"&&/^(MTW|GW-Betreuung|GW-SEG|Küchenwagen)$/.test(u.type)&&u.org==="DRK"&&manvStayOpen(c))continue;
      setUnitStatus(u,"1"); delete u.sceneUntil; delete u.sceneCall; changed=true;
    }
    // Einsatz selbst abschließen, wenn alle Fahrzeuge wieder frei sind (Status 1/2)
    if(c.alarmTime&&us.length&&!(uiLocked&&c===db.currentCall)){
      const free=us.every(u=>["1","2"].includes(String(u.status))||allOpenCalls().some(o=>o!==c&&String(o.id)!==String(c.id)&&(o.alarmedUnits||[]).some(id=>String(id)===String(u.id))));
-     const open=c.manvPatients&&c.manvPatients.some(p=>!p.unit&&p.sk<=4);
+     const open=(c.manvPatients&&c.manvPatients.some(p=>!p.unit&&p.sk<=4))||manvStayOpen(c)||(c.manvComps||[]).some(k=>!k.created)||policeHold(c);
      if(free&&!open){c.allFreeSince=c.allFreeSince||now;if(now-c.allFreeSince>=60000){(c.history=c.history||[]).push({q:"✅ Einsatz automatisch abgeschlossen",a:"alle Fahrzeuge wieder frei (Status 1/2)"});toast(`✅ Einsatz #${c.id} abgeschlossen – alle Fahrzeuge frei`);finishCall(c.id);changed=true;continue}}
      else delete c.allFreeSince;
    }
@@ -8483,7 +8811,7 @@ function setStatusFromSelect(id,status){
 // Bedingungen nicht (die ergeben sich aus der Abfragelogik). Eigene AAOs haben frei wählbare
 // Bedingungen auf die Notrufabfrage und alarmieren ZUSÄTZLICH, wenn alle Bedingungen passen.
 const AAO_RULE_FIELDS={
- event:{label:"Was ist passiert?",values:["Medizinischer Notfall","Reanimation","Feuer / Rauchentwicklung","Verkehrsunfall","Technische Hilfeleistung","Person im Wasser","Vermisste Person","Evakuierung","Sonstiger Notfall"]},
+ event:{label:"Was ist passiert?",values:["Medizinischer Notfall","Reanimation","Feuer / Rauchentwicklung","Verkehrsunfall","Technische Hilfeleistung","Person im Wasser","Vermisste Person","Evakuierung","Polizeilage","MANI","MANB","Sonstiger Notfall"]},
  count:{label:"Anzahl Betroffene",free:true,placeholder:"z. B. >3, 2, <=5"},
  patients:{label:"Anzahl Patienten (inkl. Angabe bei X)",free:true,placeholder:"z. B. 2, >1, <=3"},
  waterState:{label:"Person im Wasser – Zustand",values:["Lebenszeichen","Vermisst","Bergung"]},
@@ -8505,7 +8833,7 @@ const AAO_RULE_FIELDS={
  locationIsWater:{label:"Einsatzort auf dem Wasser",values:["ja","nein"]},
  freeText:{label:"Freitext enthält",free:true,placeholder:"Stichwort(e), mehrere mit Komma = eins davon"}
 };
-const LINKED_AAO_IDS=new Set(["26","22","23","24","25","1","2","3","4","5","6","7","8","9","10","11","12","13","14","15","16","17","18","19","20","21"]);
+const LINKED_AAO_IDS=new Set(["26","27","28","29","22","23","24","25","1","2","3","4","5","6","7","8","9","10","11","12","13","14","15","16","17","18","19","20","21"]);
 // "Vollalarm DLRG" / "Vollalarm DRK": alle freien Fahrzeuge der NÄCHSTEN Ortsgruppe (Standort mit
 // der kürzesten Entfernung zum Einsatzort, mit mindestens einem freien, erreichbaren Fahrzeug).
 // Ältere AAOs mit "Vollalarm DLRG <Ort>" funktionieren weiter (feste Ortsgruppe).
@@ -10206,6 +10534,99 @@ const SIM_CASES=[
    evacWalkShare:0.25,evacDest:"Notunterkunft Sporthalle",
    onset:"Gefunden vor einer halben Stunde.",hist:"",danger:"Die Bombe hat einen Aufschlagzünder, sagt der Räumdienst.",
    extra:["Die Polizei sperrt schon ab.","Die Notunterkunft in der Sporthalle macht die Stadt auf.","Wann können Ihre Leute da sein?"]}}},
+ // ── v5.66: Polizeilagen – die Polizei fordert den Rettungsdienst an (Gewalt, Amok) ──
+ {id:"pol_messer",w:0.7,num:"112",loc:"road",mk:()=>{const c=simPerson("m"),p=simPerson("m"),age=rint(18,45);return {rel:"der Verletzte",caller:c,patient:p,age,staff:true,policeCaller:true,policeSafe:false,
+   open:[`Polizei, Einsatzleitstelle, ${c.last}. Wir brauchen den Rettungsdienst: Messerangriff, eine Person mit Stichverletzung. Der Täter ist flüchtig – bitte Ihre Kräfte erst in einen Bereitstellungsraum!`],
+   event:"Bei einem Streit ist ein Mann mit einem Messer angegriffen worden, er hat eine Stichverletzung im Bauch und blutet stark. Der Täter ist geflüchtet, wir fahnden mit mehreren Streifen.",
+   f:{event:"Polizeilage",count:"1",x:"Ja",a:"Frei",b:"Auffällig",c:"Schockzeichen",d:"Wach / orientiert",e:"Stichverletzung linker Oberbauch, blutet stark",psy:"Nein",danger:"ja"},
+   onset:"Vor etwa fünf Minuten.",hist:"Dazu haben wir keine Erkenntnisse.",danger:"Der Täter ist noch nicht gefasst und hat das Messer vermutlich noch bei sich.",
+   extra:["Unsere Kollegen sind gleich bei ihm und drücken auf die Wunde.","Wir geben Ihnen Bescheid, sobald die Einsatzstelle sicher ist.","Bitte Ihren Kräften sagen: nicht vorfahren, bis wir freigeben."]}}},
+ {id:"pol_schlaegerei",w:0.9,num:"112",loc:"road",mk:()=>{const c=simPerson(),p=simPerson("m"),age=rint(18,35),n=pick([1,2,2,3]);return {rel:"ein Mann",caller:c,patient:p,age,passerby:true,panic:true,
+   open:["Hallo! Hier schlagen sich mehrere Leute, einer liegt schon am Boden und blutet!","Bitte kommen Sie schnell, hier ist eine Schlägerei, einer bewegt sich kaum noch!"],
+   event:`Vor der Kneipe haben sich mehrere Männer geprügelt. ${n>1?`${n} sind verletzt. `:""}Einer liegt am Boden und blutet am Kopf, der ist ganz benommen. Die anderen pöbeln noch rum.`,
+   f:{event:"Polizeilage",count:String(n),x:"Nein",a:"Frei",b:"Normal",c:"Unauffällig",d:"Bewusstseinsgetrübt",e:"Kopfplatzwunde nach Schlägen, benommen",psy:"Nein",danger:"ja"},
+   onset:"Gerade eben, vor zwei Minuten.",hist:"Ich kenn die nicht.",danger:"Die anderen sind noch total aggressiv, einer hat eine Flasche in der Hand.",
+   extra:["Ist die Polizei auch unterwegs?","Jetzt kommen noch mehr Leute dazu.","Ich trau mich nicht näher ran."]}}},
+ {id:"pol_haeuslich",w:0.6,num:"112",loc:"home",mk:()=>{const c=simPerson("w"),p=simPerson("w"),age=rint(22,55);return {rel:"die Geschädigte",caller:c,patient:p,age,staff:true,policeCaller:true,policeSafe:true,
+   open:[`Polizei, ${c.last}. Wir sind vor Ort bei häuslicher Gewalt und brauchen einen RTW – die Frau hat eine Kopfplatzwunde. Der Täter ist festgenommen, die Lage ist sicher.`],
+   event:"Der Mann hat seine Frau geschlagen und gestoßen, sie ist mit dem Kopf gegen den Türrahmen gefallen. Platzwunde an der Stirn, sie war kurz benommen. Der Mann ist festgenommen.",
+   f:{event:"Polizeilage",count:"1",x:"Nein",a:"Frei",b:"Normal",c:"Unauffällig",d:"Wach / orientiert",e:"Kopfplatzwunde Stirn, kurz benommen, Prellungen an den Armen",psy:"Nein",danger:"nein"},
+   onset:"Vor etwa zwanzig Minuten.",hist:"Sie nimmt keine Medikamente, sagt sie.",danger:"Nein, der Täter sitzt bei uns im Streifenwagen.",
+   extra:["Wir bleiben vor Ort, bis Ihre Kollegen da sind.","Die Kinder sind bei der Nachbarin."]}}},
+ {id:"pol_amok",w:0.12,num:"112",loc:"home",locPrefix:"im Einkaufszentrum, ",mk:()=>{const c=simPerson(),n=rint(8,24);return {rel:"die Verletzten",caller:c,patient:simPerson(),age:35,staff:true,policeCaller:true,amok:true,
+   open:[`Polizei, Einsatzleitstelle, ${c.last}. AMOKLAGE im Einkaufszentrum! Es sind Schüsse gefallen, mehrere Verletzte – wir brauchen Rettungsdienst in großer Zahl. Täter noch nicht gestellt, Kräfte nur in den Bereitstellungsraum!`],
+   event:`Im Einkaufszentrum sind Schüsse gefallen. Nach ersten Meldungen sind mindestens ${n} Personen verletzt, einige schwer. Der Täter ist noch im Gebäude, Spezialkräfte sind angefordert.`,
+   f:{event:"Polizeilage",count:String(n),x:"Ja",a:"",b:"",c:"",d:"",e:"Schuss- und Stichverletzungen",psy:"Nein",danger:"ja"},
+   onset:"Vor etwa acht Minuten kam der erste Notruf bei uns.",hist:"",danger:"Der Täter ist bewaffnet und noch nicht gestellt. Gefahrenbereich ist das ganze Gelände!",
+   extra:["Wir richten eine Patientenübergabestelle am Bereitstellungsraum ein.","Bitte keine Kräfte auf das Gelände!","Weitere Verletzte melden wir nach."]}}},
+ // ── v5.66: MANI – Massenanfall von Infizierten/Erkrankten ──
+ {id:"mani_noro",w:0.35,num:"112",loc:"home",locPrefix:"im Seniorenpflegeheim, ",mk:()=>{const c=simPerson("w"),n=rint(10,26);return {rel:"die Bewohner",caller:c,patient:simPerson(),age:84,staff:true,
+   open:[`${c.first} ${c.last}, Pflegeheim. Bei uns haben seit heute Nacht ganz viele Bewohner Brechdurchfall – einigen geht es richtig schlecht!`],
+   event:`Seit heute Nacht haben ${n} Bewohner Erbrechen und Durchfall, dazu zwei Pflegekräfte. Einige sind ganz schlapp und trinken nicht mehr, eine Bewohnerin ist kaum noch wach. Wir vermuten Noroviren.`,
+   f:{event:"MANI",count:String(n),x:"",a:"",b:"",c:"",d:"",e:"Erbrechen, Durchfall, Austrocknung – Verdacht Norovirus",psy:"Nein",danger:"nein"},
+   onset:"Seit heute Nacht, und es werden immer mehr.",hist:"Die meisten sind sehr alt und haben viele Vorerkrankungen.",danger:"Das ist ansteckend – bitte mit Schutzkleidung kommen.",
+   extra:["Das Gesundheitsamt haben wir schon informiert.","Die Hausärztin ist heute nicht erreichbar.","Schutzkittel haben wir hier, falls Ihre Leute welche brauchen."]}}},
+ {id:"mani_essen",w:0.35,num:"112",loc:"home",mk:()=>{const c=simPerson(),n=rint(8,30);return {rel:"die Gäste",caller:c,patient:simPerson(),age:45,panic:true,
+   open:["Hallo, wir sind auf einer Hochzeitsfeier – ganz vielen ist schlecht geworden, die übergeben sich alle!"],
+   event:`Nach dem Essen ist ganz vielen Gästen schlecht geworden, so ${n} Leute. Die übergeben sich und haben Bauchkrämpfe, eine ältere Frau ist umgekippt.`,
+   f:{event:"MANI",count:String(n),x:"",a:"",b:"",c:"",d:"",e:"Übelkeit, Erbrechen, Bauchkrämpfe nach dem Essen – Verdacht Lebensmittelvergiftung",psy:"Nein",danger:"nein"},
+   onset:"So eine Stunde nach dem Essen ging das los.",hist:"Die waren alle am gleichen Buffet.",
+   extra:["Es werden immer mehr.","Der Caterer ist schon weg.","Sollen wir Wasser verteilen?"]}}},
+ // ── v5.66: MANB – Massenanfall von (unverletzt) Betroffenen ──
+ {id:"manb_bus",w:0.35,num:"112",loc:"road",mk:()=>{const c=simPerson("m"),n=rint(25,48);return {rel:"die Fahrgäste",caller:c,patient:simPerson(),age:70,staff:true,
+   open:[`${c.last}, ich bin Busfahrer. Mein Reisebus hat Qualm aus dem Motorraum gehabt – ich habe ${n} Fahrgäste draußen am Straßenrand stehen.`],
+   event:`Der Reisebus hatte Rauch aus dem Motorraum, ich habe alle rausgeholt. Verletzt ist eigentlich keiner, aber es sind ${n} ältere Leute, viele frieren, einige brauchen ihre Medikamente aus dem Gepäck, und eine Dame ist beim Aussteigen gestürzt.`,
+   f:{event:"MANB",count:String(n),x:"",a:"",b:"",c:"",d:"",e:"Reisegruppe, unverletzt, Kälte, eine Person gestürzt",psy:"Nein",danger:"ja"},
+   onset:"Vor zehn Minuten.",hist:"Das ist eine Seniorenreisegruppe.",danger:"Der Bus steht auf dem Seitenstreifen, die Leute stehen an der Leitplanke.",
+   extra:["Ein Ersatzbus kommt frühestens in zwei Stunden.","Es fängt an zu regnen.","Die Feuerwehr ist auch schon unterwegs, glaube ich."]}}},
+ {id:"manb_brand",w:0.35,num:"112",loc:"home",mk:()=>{const c=simPerson("m"),n=rint(15,35);return {rel:"die Bewohner",caller:c,patient:simPerson(),age:40,staff:true,
+   open:[`Feuerwehr, Einsatzleiter ${c.last}. Wohnungsbrand im Mehrfamilienhaus ist unter Kontrolle, aber das Haus ist nicht mehr bewohnbar – wir haben ${n} Bewohner, die betreut und untergebracht werden müssen.`],
+   event:`Brand im Keller, Rauch durchs ganze Treppenhaus. Alle ${n} Bewohner sind draußen, verletzt ist nach unserem Stand keiner, aber darunter sind Kinder und ältere Leute. Das Haus kann heute keiner mehr betreten.`,
+   f:{event:"MANB",count:String(n),x:"",a:"",b:"",c:"",d:"",e:"Bewohner unverletzt, Haus unbewohnbar, Betreuung und Unterkunft nötig",psy:"Nein",danger:"nein"},
+   onset:"Der Brand war vor einer halben Stunde.",hist:"",danger:"Nein, das Feuer ist aus.",
+   extra:["Die Stadt kümmert sich um eine Notunterkunft.","Die Leute stehen gerade im Bus der Verkehrsbetriebe zum Aufwärmen.","Einer hat Rauch eingeatmet, sagt er – den sollte sich mal jemand ansehen."]}}},
+ // ── v5.66: Großveranstaltung – Anforderungen des Sanitätswachdienstes (w:0, kommen nur über die Veranstaltung) ──
+ {id:"ve_kreislauf",w:0,num:"112",loc:"road",mk:()=>{const c=simPerson(),p=simPerson(),age=rint(16,80);return {rel:p.g==="w"?"eine Besucherin":"ein Besucher",caller:c,patient:p,age,staff:true,sanWd:true,
+   open:[`${c.first} ${c.last}, Einsatzleitung Sanitätsdienst beim {ev}. Wir brauchen einen RTW zur Sanitätsstation – Kreislaufprobleme, die sich nicht bessern.`],
+   event:"Kollaps im Gedränge, war kurz weg. Blutdruck 85 zu 50, Puls 120, jetzt wach, aber sehr blass.",
+   f:{event:"Medizinischer Notfall",count:"1",x:"Nein",a:"Frei",b:"Normal",c:"Auffällig",d:"Wach / orientiert",e:"Synkope, RR 85/50, HF 120, blass",psy:"Nein",danger:"nein"},
+   onset:"Vor etwa zwanzig Minuten.",hist:"Hat heute kaum getrunken, sonst gesund.",
+   extra:["Einen Zugang haben wir schon gelegt.","Zufahrt über die Feuerwehrzufahrt hinter der Bühne, wir schicken einen Einweiser."]}}},
+ {id:"ve_alkohol",w:0,num:"112",loc:"road",mk:()=>{const c=simPerson(),p=simPerson("m"),age=rint(16,19);return {rel:"ein Jugendlicher",caller:c,patient:p,age,staff:true,sanWd:true,
+   open:[`Sanitätsdienst beim {ev}, ${c.last}. Wir haben einen Jugendlichen, stark alkoholisiert, kaum weckbar – bitte RTW zur Sanitätsstation.`],
+   event:"Freunde haben ihn zu uns gebracht, er hat viel Schnaps getrunken. Er reagiert nur auf Schmerzreiz, hat sich einmal übergeben. Atmung ist ausreichend, wir haben ihn in Seitenlage.",
+   f:{event:"Medizinischer Notfall",count:"1",x:"Nein",a:"Gefährdet",b:"Normal",c:"Unauffällig",d:"Bewusstseinsgetrübt",e:"Alkoholintoxikation, reagiert nur auf Schmerzreiz, erbrochen",psy:"Nein",danger:"nein"},
+   onset:"Die Freunde sagen, seit einer Stunde immer schlimmer.",hist:"Nichts bekannt, die Eltern versuchen wir zu erreichen.",
+   extra:["Blutzucker ist 92.","Er ist 17, sagen die Freunde."]}}},
+ {id:"ve_schnitt",w:0,num:"112",loc:"road",mk:()=>{const c=simPerson(),p=simPerson(),age=rint(18,60);return {rel:"ein Besucher",caller:c,patient:p,age,staff:true,sanWd:true,
+   open:[`Sanitätsdienst beim {ev}. Wir bräuchten einen Transport ins Krankenhaus – Schnittverletzung durch eine Glasscherbe, muss genäht werden.`],
+   event:"Tiefe Schnittwunde am Unterarm durch eine Glasscherbe. Blutung ist mit Druckverband gestillt, Kreislauf stabil.",
+   f:{event:"Medizinischer Notfall",count:"1",x:"Nein",a:"Frei",b:"Normal",c:"Unauffällig",d:"Wach / orientiert",e:"Schnittwunde Unterarm, Blutung gestillt, muss genäht werden",psy:"Nein",danger:"nein"},
+   onset:"Vor einer Viertelstunde.",hist:"Gesund.",extra:["Ist kein Notfall, kann auch ein KTW sein.","Er wartet bei uns im Zelt."]}}},
+ {id:"ve_sturz",w:0,num:"112",loc:"road",mk:()=>{const c=simPerson(),p=simPerson("w"),age=rint(25,75);return {rel:"eine Besucherin",caller:c,patient:p,age,staff:true,sanWd:true,
+   open:[`Sanitätsdienst beim {ev}, ${c.last}. Eine Besucherin ist von einer Treppe gestürzt – Sprunggelenk mit Fehlstellung, bitte RTW.`],
+   event:"Sie ist auf der Tribünentreppe umgeknickt und gestürzt. Das Sprunggelenk steht schief, starke Schmerzen, Durchblutung ist noch da.",
+   f:{event:"Medizinischer Notfall",count:"1",x:"Nein",a:"Frei",b:"Normal",c:"Unauffällig",d:"Wach / orientiert",e:"Sprunggelenk mit Fehlstellung, starke Schmerzen",psy:"Nein",danger:"nein"},
+   onset:"Vor zehn Minuten.",hist:"Sie nimmt keine Blutverdünner.",extra:["Schmerzmittel dürfen wir nicht geben, wir haben keinen Arzt hier.","Wir haben das Bein geschient."]}}},
+ {id:"ve_asthma",w:0,num:"112",loc:"road",mk:()=>{const c=simPerson(),p=simPerson(),age=rint(14,50);return {rel:"ein Besucher",caller:c,patient:p,age,staff:true,sanWd:true,
+   open:[`Sanitätsdienst beim {ev}. Asthmaanfall, das eigene Spray hilft nicht – bitte RTW mit Notarzt prüfen.`],
+   event:"Schwerer Asthmaanfall, Sättigung 88 Prozent, spricht nur in kurzen Sätzen. Zwei Hübe vom eigenen Spray ohne Besserung, Sauerstoff läuft.",
+   f:{event:"Medizinischer Notfall",count:"1",x:"Nein",a:"Frei",b:"Auffällig",c:"Unauffällig",d:"Wach / orientiert",e:"Asthmaanfall, SpO2 88 %, Spray ohne Wirkung",psy:"Nein",danger:"nein"},
+   onset:"Seit zwanzig Minuten.",hist:"Bekanntes Asthma.",extra:["Es ist sehr staubig hier.","Sauerstoff haben wir dran, 6 Liter."]}}},
+ {id:"ve_manv_klein",w:0,num:"112",loc:"road",mk:()=>{const c=simPerson(),n=rint(6,12);return {rel:"die Verletzten",caller:c,patient:simPerson(),age:25,staff:true,sanWd:true,panic:true,
+   open:[`Einsatzleitung Sanitätsdienst beim {ev}, ${c.last}! Vor der Bühne ist im Gedränge ein Absperrgitter umgekippt – mehrere Leute sind gestürzt und überrannt worden. Wir haben etwa ${n} Verletzte!`],
+   event:`Im Gedränge vor der Bühne ist ein Absperrgitter umgekippt, Leute sind gestürzt und wurden überrannt. Wir zählen etwa ${n} Verletzte, ein paar liegen und kommen nicht hoch, einer ist bewusstlos. Die Musik ist gestoppt.`,
+   f:{event:"Technische Hilfeleistung",count:String(n),trapped:"0",x:"",a:"",b:"",c:"",d:"",e:"Sturz- und Quetschverletzungen im Gedränge",psy:"Nein",danger:"ja"},
+   trappedText:"Nein, eingeklemmt ist keiner mehr, die liegen alle frei.",
+   onset:"Gerade eben, vor zwei Minuten.",hist:"",danger:"Hier ist noch viel Gedränge, der Veranstalter macht gerade Durchsagen.",
+   extra:["Meine Leute sichten schon.","Wir brauchen mehr Tragen!","Zufahrt über die Feuerwehrzufahrt, wir stellen Einweiser."]}}},
+ {id:"ve_manv_gross",w:0,num:"112",loc:"road",mk:()=>{const c=simPerson(),n=rint(25,55),t=rint(2,5);return {rel:"die Verletzten",caller:c,patient:simPerson(),age:30,staff:true,sanWd:true,panic:true,
+   open:[`Einsatzleitung Sanitätsdienst beim {ev}! Eine Sturmböe hat das Bühnendach und ein Zelt umgeworfen – sehr viele Verletzte, einige liegen noch darunter!`],
+   event:`Eine Sturmböe hat das Bühnendach und das Festzelt daneben umgeworfen. Wir schätzen ${n} Verletzte, ${t} Personen liegen noch unter Trümmerteilen. Panik, die Leute laufen durcheinander.`,
+   f:{event:"Technische Hilfeleistung",count:String(n),trapped:String(t),x:"",a:"",b:"",c:"",d:"",e:"Einsturz Bühnendach/Zelt, Polytrauma, eingeklemmte Personen",psy:"Nein",danger:"ja"},
+   trappedText:`Ja, ${t} Leute liegen noch unter den Trümmern vom Dach.`,
+   onset:"Gerade eben!",hist:"",danger:"Es stürmt weiter, Teile vom Dach hängen noch lose.",
+   extra:["Wir brauchen alles, was Sie haben!","Meine Leute sind schon an den Verletzten, aber wir sind viel zu wenige.","Die Polizei sperrt die Zufahrt für Sie frei."]}}},
  // ── v5.35: Einsätze im Altenheim / Pflegeheim (Anrufer: Pflegekraft) ──
  {id:"heim_sturz",w:2,num:"112",loc:"home",locPrefix:"im Seniorenpflegeheim, ",mk:()=>{const p=simPerson("w"),c=simPerson("w"),age=rint(78,96);return {rel:"eine Bewohnerin",caller:c,patient:p,age,staff:true,
    open:[`Guten Tag, ${c.first} ${c.last}, Pflegefachkraft im Seniorenpflegeheim. Eine Bewohnerin ist gestürzt und kann nicht mehr aufstehen.`,"Hallo, hier ist das Pflegeheim, Wohnbereich 2 – eine Bewohnerin ist vor dem Bett gestürzt, die Hüfte tut ihr sehr weh."],
@@ -12271,7 +12692,7 @@ function simPreparedTick(){
  db.simPrepared=list.filter(x=>!mine.includes(x)); save();
  mine.forEach(x=>{try{simRing(simFromParams(x.p))}catch(e){console.warn(e)}});
 }
-const SIM_DEFAULT_EVENT_TEXT={"Medizinischer Notfall":"Es geht ihm ganz schlecht.","Reanimation":"Er ist einfach umgefallen und reagiert nicht mehr!","Feuer / Rauchentwicklung":"Hier brennt es!","Verkehrsunfall":"Hier ist ein Unfall passiert!","Technische Hilfeleistung":"Hier brauchen wir die Feuerwehr.","Person im Wasser":"Da ist jemand im Wasser in Not!","Vermisste Person":"Wir vermissen jemanden.","Sonstiger Notfall":"Ich brauche Hilfe."};
+const SIM_DEFAULT_EVENT_TEXT={"Medizinischer Notfall":"Es geht ihm ganz schlecht.","Reanimation":"Er ist einfach umgefallen und reagiert nicht mehr!","Feuer / Rauchentwicklung":"Hier brennt es!","Verkehrsunfall":"Hier ist ein Unfall passiert!","Technische Hilfeleistung":"Hier brauchen wir die Feuerwehr.","Person im Wasser":"Da ist jemand im Wasser in Not!","Vermisste Person":"Wir vermissen jemanden.","Polizeilage":"Hier ist jemand angegriffen worden!","MANI":"Hier sind ganz viele Leute krank geworden.","MANB":"Hier stehen ganz viele Leute, die versorgt werden müssen.","Sonstiger Notfall":"Ich brauche Hilfe."};
 function simFromParams(p){
  const ev=p.evt||"Medizinischer Notfall";
  const pat={g:p.patG==="w"?"w":p.patG==="m"?"m":pick(["m","w"])};

@@ -1607,6 +1607,27 @@ Version 5.05:
   („a, b“ = a ODER b). Mit „🚑 NA-Indikation“ markierte Knöpfe ziehen weiterhin einen Notarzt.
 - Nur „Unauffällig“ (ohne weitere Befunde) zählt weiter als unauffälliges E (R0 möglich).
 
+Version 5.66:
+- Neue Ereignisse in der Notrufabfrage: „👮 Polizeilage (Gewalt / Amok)“, „🦠 MANI“ und „🫂 MANB“ (mit eigenen AAOs 27, 28, 29).
+- Polizeilagen: Die Polizei meldet, ob die Lage sicher ist.
+  - Nicht sicher: Sie legt einen Bereitstellungsraum fest, der Rettungsdienst wartet dort und versorgt noch nicht.
+  - Gewalt: Nach der Festnahme gibt die Polizei frei und die Fahrzeuge rücken zur Einsatzstelle vor.
+  - Amok: Die Polizei bringt die Verletzten zur Patientenübergabestelle am Bereitstellungsraum; der MANV läuft dort.
+  - Knopf „📞 Polizei nach der Lage fragen“. Neue Übungsanrufe: Messerangriff, Schlägerei, häusliche Gewalt, Amoklage.
+- MANI (viele Infizierte/Erkrankte): ca. 5 % rot, 25 % gelb, Rest grün. Ein Teil der Grünen wird vor Ort versorgt und nicht transportiert.
+  - Nach dem letzten Transport werden die Fahrzeuge 20–30 min desinfiziert. Übungsanrufe: Norovirus im Pflegeheim, Lebensmittelvergiftung auf einer Feier.
+- MANB (viele unverletzt Betroffene): fast alle grün. Sie kommen in die Betreuungsstelle (GW-Betreuung) und werden dort übergeben, nicht ins Krankenhaus.
+  - Ohne Betreuungsstelle fordert der OrgL nach ca. 12 min GW-Betreuung nach. Übungsanrufe: liegengebliebener Reisebus, Wohnungsbrand mit unbewohnbarem Haus.
+- MANV/MANI/MANB: Knöpfe für die MANV-Komponenten nach dem niedersächsischen Rahmenkonzept (Nds. MBl. Nr. 5/2015 S. 136).
+  - MANV-S: 1 NEF + 2 RTW aus einem Nachbarkreis (echte Nachbar-Fahrzeuge), fahren sofort.
+  - MANV-T: 5 RTW/KTW für 5 liegende + 5 sitzende Patienten, Abmarsch ca. 30 min nach Alarmierung, pendeln mit.
+  - MANV-PA: 2 MTW + GW-San mit Notarzt, Patientenablage für bis zu 15 Patienten (5 rot, 3 gelb, 7 grün), Abmarsch ca. 30 min.
+  - Annahmen: MANV-T und MANV-PA sind Übungsfahrzeuge ohne echte Kennung (die echten Komponenten sind nicht hinterlegt). MANV-T als 2 RTW + 3 KTW, Standort = Mitte des Nachbarkreises.
+- Großveranstaltung (Leitstelle, rechte Spalte): Veranstaltung mit Sanitätswachdienst starten (Stadtfest Varel, Open-Air Jever, Volkslauf Schortens, Hafenfest Wilhelmshaven – Übungsannahmen, keine echten Termine).
+  - Dauer 30 min bis 2 h, Verlauf: Zufall, ruhig, kleiner MANV (6–12) oder großer MANV (25–55).
+  - Der Sanitätsdienst meldet Dienstbeginn/-ende und fordert ab und zu einen RTW an. Beim MANV gibt er die erste Lagemeldung und betreibt eine kleine Sanitätsstation.
+- Kleinigkeit: Ist die ärztliche Sichtung des OrgL schon da, kommt keine spätere Vorsichtung mehr, die sie überschreibt.
+
 Version 5.65:
 - MANV: Der DRK-ELW stellt Führungsassistenten für den OrgL/LNA.
   - Bei Ankunft meldet er die Übernahme von Lagekarte, Patientenregistrierung und Transportorganisation.
