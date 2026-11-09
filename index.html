@@ -170,7 +170,7 @@ html[data-device="handy"] #floatDock{left:8px;right:8px;width:auto;top:auto;bott
 </head>
 <body>
 <div style="padding:6px 10px;font-size:11px;color:#94a3b8;font-weight:700;display:flex;flex-wrap:wrap;align-items:center;gap:10px;position:sticky;top:0;z-index:10;background:var(--bg)">
- <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v5.67</span>
+ <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v5.68</span>
  <span id="syncState"></span> <a id="deskTag" href="#" onclick="renameDesk();return false" title="Name dieses Platzes (für „offen an …“) – antippen zum Ändern" style="color:#64748b;font-weight:700;text-decoration:none"></a>
  <span id="simCtl" style="position:absolute;left:50%;transform:translateX(-50%);display:flex;gap:6px;align-items:center"></span>
  <a id="homeLink" href="#" onclick="render('leitstelle');return false" class="hidden" style="color:#64748b;text-decoration:underline;font-weight:600">🖥️ Leitstelle</a>
@@ -5790,66 +5790,115 @@ function policeStripHTML(c){
 // Veranstaltung läuft eine einstellbare Zeit. Der Sanitätsdienst (SanWD) fordert ab und zu einen RTW an.
 // Verlauf: alles bleibt ruhig, kleiner MANV (6–12 Verletzte) oder großer MANV (25–55 Verletzte).
 // Veranstaltungen und Orte sind Übungsannahmen, keine echten Termine.
+// v5.68: Name, Ort, Sanitätsstation, Besucher und Betriebszeiten frei wählbar; Dauer 1–4 Tage.
+// Anforderungen kommen nur während der täglichen Betriebszeit.
 const BIG_VENUES=[
- {key:"stadtfest",name:"Stadtfest",town:"Varel",text:"beim Stadtfest in der Innenstadt Varel, Sanitätsstation am Neumarktplatz",lat:53.3969,lng:8.1362,visitors:[3000,8000]},
- {key:"konzert",name:"Open-Air-Konzert",town:"Jever",text:"beim Open-Air-Konzert in Jever, Sanitätsstation am Alten Markt",lat:53.5737,lng:7.8996,visitors:[2000,6000]},
- {key:"lauf",name:"Volkslauf",town:"Schortens",text:"beim Volkslauf in Schortens, Sanitätsstation im Zielbereich",lat:53.5333,lng:7.9500,visitors:[800,2500]},
- {key:"hafen",name:"Hafenfest",town:"Wilhelmshaven",text:"beim Hafenfest in Wilhelmshaven, Sanitätsstation am Festplatz",lat:53.5259,lng:8.1080,visitors:[5000,15000]}];
+ {key:"stadtfest",name:"Stadtfest",town:"Varel",ort:"Innenstadt Varel",san:"am Neumarktplatz",lat:53.3969,lng:8.1362,visitors:[3000,8000],h0:10,h1:1},
+ {key:"konzert",name:"Open-Air-Konzert",town:"Jever",ort:"Alter Markt, Jever",san:"am Alten Markt",lat:53.5737,lng:7.8996,visitors:[2000,6000],h0:14,h1:1},
+ {key:"lauf",name:"Volkslauf",town:"Schortens",ort:"Schortens",san:"im Zielbereich",lat:53.5333,lng:7.9500,visitors:[800,2500],h0:8,h1:18},
+ {key:"hafen",name:"Hafenfest",town:"Wilhelmshaven",ort:"Festplatz, Wilhelmshaven",san:"am Festplatz",lat:53.5259,lng:8.1080,visitors:[5000,15000],h0:10,h1:1}];
 const BIG_MINOR=["ve_kreislauf","ve_alkohol","ve_schnitt","ve_sturz","ve_asthma"];
-function bigEventDialog(){
- showModal(`<h3 style="margin-top:0">🎪 Großveranstaltung starten (Übung)</h3>
-  <label>Veranstaltung</label><select id="beVenue">${BIG_VENUES.map(v=>`<option value="${v.key}">${esc(v.name)} – ${esc(v.town)}</option>`).join("")}</select>
-  <label style="margin-top:8px">Dauer</label><select id="beDur"><option value="30">30 min</option><option value="60" selected>1 Stunde</option><option value="90">1,5 Stunden</option><option value="120">2 Stunden</option></select>
-  <label style="margin-top:8px">Verlauf</label><select id="beMode"><option value="zufall" selected>🎲 Zufall (Überraschung)</option><option value="ruhig">😌 Alles bleibt ruhig</option><option value="klein">🟡 Kleiner MANV</option><option value="gross">🔴 Großer MANV</option></select>
-  <p class="muted" style="font-size:12px">Der Sanitätsdienst vor Ort meldet sich bei Dienstbeginn. Ab und zu fordert er einen RTW an. Bei einem MANV gibt er die erste Lagemeldung.</p>
-  <div class="row" style="justify-content:flex-end;gap:6px"><button onclick="closeModal()">Abbrechen</button><button class="primary" onclick="bigEventStart(document.getElementById('beVenue').value,Number(document.getElementById('beDur').value),document.getElementById('beMode').value)">▶️ Starten</button></div>`);
+function beLabel(E){return E.label||`${E.name} ${E.town}`}
+function beDT(t){return new Date(t).toLocaleString("de-DE",{weekday:"short",day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"})}
+function beLeft(ms){const m=Math.max(0,Math.round(ms/60000)),d=Math.floor(m/1440),h=Math.floor(m%1440/60),mi=m%60;return (d?`${d} Tag${d>1?"e":""} `:"")+(d||h?`${h} h `:"")+`${mi} min`}
+function beOpen(E,t){const dd=new Date(t),h=dd.getHours()+dd.getMinutes()/60,a=Number(E.h0??0),b=Number(E.h1??24);if(a===b)return true;return a<b?(h>=a&&h<b):(h>=a||h<b)}
+function beHoursText(E){const a=Number(E.h0??0),b=Number(E.h1??24);return a===b?"rund um die Uhr":`täglich ${String(a).padStart(2,"0")}–${String(b).padStart(2,"0")} Uhr`}
+function bigEventFill(){
+ const v=BIG_VENUES.find(x=>x.key===document.getElementById("beVenue").value), g=id=>document.getElementById(id);
+ if(!v){["beName","beOrt","beSan"].forEach(id=>g(id).value="");g("beVis").value=3000;return}
+ g("beName").value=v.name; g("beOrt").value=v.ort; g("beSan").value=v.san; g("beVis").value=Math.round((v.visitors[0]+v.visitors[1])/2/100)*100; g("beH0").value=v.h0; g("beH1").value=v.h1;
 }
-function bigEventStart(key,dur,mode){
- const v=BIG_VENUES.find(x=>x.key===key)||BIG_VENUES[0], now=Date.now(); dur=Math.max(10,Number(dur)||60);
+function bigEventDialog(){
+ const hs=sel=>Array.from({length:24},(_,h)=>`<option value="${h}" ${h===sel?"selected":""}>${String(h).padStart(2,"0")}:00</option>`).join("");
+ showModal(`<h3 style="margin-top:0">🎪 Großveranstaltung starten (Übung)</h3>
+  <label>Vorlage</label><select id="beVenue" onchange="bigEventFill()"><option value="">✏️ Eigene Veranstaltung</option>${BIG_VENUES.map(v=>`<option value="${v.key}">${esc(v.name)} – ${esc(v.town)}</option>`).join("")}</select>
+  <label style="margin-top:8px">Name der Veranstaltung</label><input id="beName" placeholder="z. B. Schützenfest">
+  <label style="margin-top:8px">Ort / Adresse</label><input id="beOrt" placeholder="z. B. Schlossplatz, Jever">
+  <label style="margin-top:8px">Sanitätsstation (wo genau?)</label><input id="beSan" placeholder="z. B. am Haupteingang">
+  <div class="row" style="gap:8px;margin-top:8px"><div style="flex:1"><label>Besucher</label><input id="beVis" type="number" min="100" step="100" value="3000"></div>
+   <div style="flex:1"><label>Dauer</label><select id="beDur"><option value="1" selected>1 Tag</option><option value="2">2 Tage</option><option value="3">3 Tage</option><option value="4">4 Tage</option></select></div></div>
+  <div class="row" style="gap:8px;margin-top:8px"><div style="flex:1"><label>Betrieb täglich ab</label><select id="beH0">${hs(10)}</select></div><div style="flex:1"><label>bis</label><select id="beH1">${hs(1)}</select></div></div>
+  <label style="margin-top:8px">Verlauf</label><select id="beMode"><option value="zufall" selected>🎲 Zufall (Überraschung)</option><option value="ruhig">😌 Alles bleibt ruhig</option><option value="klein">🟡 Kleiner MANV</option><option value="gross">🔴 Großer MANV</option></select>
+  <p class="muted" style="font-size:12px">Die Veranstaltung beginnt jetzt. Der Sanitätsdienst meldet sich bei Dienstbeginn. Anforderungen kommen nur während der Betriebszeit. Bei einem MANV gibt er die erste Lagemeldung.</p>
+  <div id="beErr" style="color:#b91c1c;font-size:13px"></div>
+  <div class="row" style="justify-content:flex-end;gap:6px"><button onclick="closeModal()">Abbrechen</button><button class="primary" id="beGo" onclick="bigEventStartFromDialog()">▶️ Starten</button></div>`);
+}
+async function bigEventStartFromDialog(){
+ const g=id=>document.getElementById(id), err=t=>{g("beErr").textContent=t;g("beGo").disabled=false};
+ const name=g("beName").value.trim(), ort=g("beOrt").value.trim();
+ if(!name)return err("Bitte einen Namen eingeben."); if(!ort)return err("Bitte einen Ort eingeben.");
+ g("beGo").disabled=true; g("beErr").textContent="Ort wird gesucht …";
+ const v=BIG_VENUES.find(x=>x.key===g("beVenue").value);
+ let pt=null, town="";
+ if(v&&ort===v.ort){pt=[v.lat,v.lng];town=v.town}
+ else{
+   try{const rows=await (await fetch(`https://nominatim.openstreetmap.org/search?format=jsonv2&addressdetails=1&limit=1&countrycodes=de&q=${encodeURIComponent(ort)}`,{headers:{"Accept":"application/json"}})).json();
+     if(rows&&rows[0]){pt=[Number(rows[0].lat),Number(rows[0].lon)];const ad=rows[0].address||{};town=ad.city||ad.town||ad.village||ad.municipality||""}}catch(e){}
+   if(!pt){const k=Object.keys(AREA_CENTERS).find(a=>ort.toLowerCase().includes(a.toLowerCase()));if(k){pt=AREA_CENTERS[k];town=k}}
+ }
+ if(!pt)return err("Ort nicht gefunden. Bitte genauer angeben, z. B. „Straße, Ort“.");
+ bigEventStart({key:v?v.key:"custom",name,ort,town:town||ort,san:g("beSan").value.trim(),lat:pt[0],lng:pt[1],visitors:Math.max(100,Number(g("beVis").value)||3000),days:Number(g("beDur").value)||1,h0:Number(g("beH0").value),h1:Number(g("beH1").value)},g("beMode").value);
+}
+function bigEventStart(o,mode){
+ if(typeof o==="string"){const v=BIG_VENUES.find(x=>x.key===o)||BIG_VENUES[0];o={key:v.key,name:v.name,ort:v.ort,town:v.town,san:v.san,lat:v.lat,lng:v.lng,visitors:rint(v.visitors[0],v.visitors[1]),days:1,h0:v.h0,h1:v.h1};if(typeof mode==="number"){o.days=mode/1440;o.h0=o.h1=0;mode=arguments[2]}} // alte Aufrufe/Tests (Schlüssel, Minuten, Verlauf)
+ const now=Date.now(), days=Number(o.days)>0?Number(o.days):1, endAt=now+days*1440*60000;
+ const label=o.name.toLowerCase().includes(String(o.town).toLowerCase())?o.name:`${o.name} ${o.town}`;
+ const E0={h0:o.h0,h1:o.h1};
+ // Betriebsstunden insgesamt (in 15-min-Schritten gezählt)
+ let openH=0; for(let t=now;t<endAt;t+=900000)if(beOpen(E0,t))openH+=0.25;
+ const at=(a,b)=>{for(let i=0;i<300;i++){const t=now+rnd(a,b)*(endAt-now);if(beOpen(E0,t))return t}return now+rnd(a,b)*(endAt-now)};
  const outcome=mode==="ruhig"?"ruhig":mode==="klein"?"klein":mode==="gross"?"gross":(()=>{const r=Math.random();return r<0.55?"ruhig":r<0.85?"klein":"gross"})();
- const plan=[], endAt=now+dur*60000, span=(a,b)=>now+rnd(a,b)*dur*60000;
- const nMinor=outcome==="ruhig"?rint(0,Math.max(1,Math.round(dur/40))):rint(1,Math.max(1,Math.round(dur/30)));
- for(let i=0;i<nMinor;i++)plan.push({at:span(0.08,0.92),caseId:pick(BIG_MINOR)});
- if(outcome!=="ruhig")plan.push({at:span(0.3,0.7),caseId:outcome==="klein"?"ve_manv_klein":"ve_manv_gross"});
+ // Annahme: ruhig ca. 0,05–0,15 RTW-Anforderungen je Betriebsstunde, sonst 0,15–0,35
+ const nMinor=outcome==="ruhig"?rint(Math.max(1,Math.round(openH*0.05)),Math.max(1,Math.round(openH*0.15))):rint(Math.max(1,Math.round(openH*0.15)),Math.max(2,Math.round(openH*0.35)));
+ const plan=[]; for(let i=0;i<nMinor;i++)plan.push({at:at(0.02,0.98),caseId:pick(BIG_MINOR)});
+ if(outcome!=="ruhig")plan.push({at:at(0.2,0.8),caseId:outcome==="klein"?"ve_manv_klein":"ve_manv_gross"});
  plan.sort((a,b)=>a.at-b.at);
- const visitors=Math.round(rint(v.visitors[0],v.visitors[1])/100)*100;
- db.bigEvent={id:"be"+now.toString(36),key:v.key,name:v.name,town:v.town,text:v.text,lat:v.lat,lng:v.lng,visitors,startAt:now,endAt,outcome,plan,calls:[],owner:DEVICE_ID,sanCrew:rint(8,24)};
+ const visitors=Math.round(Number(o.visitors)/100)*100||100;
+ const text=`bei der Veranstaltung „${o.name}“, ${o.ort}${o.san?`, Sanitätsstation ${o.san}`:""}`;
+ db.bigEvent={id:"be"+now.toString(36),key:o.key,name:o.name,town:o.town,ort:o.ort,san:o.san,label,text,lat:o.lat,lng:o.lng,visitors,days,h0:o.h0,h1:o.h1,startAt:now,endAt,outcome,plan,calls:[],owner:DEVICE_ID,sanCrew:rint(8,24)};
  const E=db.bigEvent;
- sdsLog({dir:"in",opta:`SanWD ${E.name} ${E.town}`,callId:"",text:`Dienstbeginn Sanitätswachdienst ${E.name} ${E.town}: ${E.sanCrew} Einsatzkräfte, Sanitätsstation besetzt, erwartet ca. ${visitors.toLocaleString("de-DE")} Besucher, Ende ca. ${hhmm(endAt)} Uhr.`,read:false});
- closeModal(); toast(`🎪 ${E.name} ${E.town} läuft – Sanitätsdienst hat sich angemeldet`); save(); render(currentPage);
+ sdsLog({dir:"in",opta:`SanWD ${label}`,callId:"",text:`Dienstbeginn Sanitätswachdienst ${label}: ${E.sanCrew} Einsatzkräfte, Sanitätsstation${o.san?` ${o.san}`:""} besetzt, erwartet ca. ${visitors.toLocaleString("de-DE")} Besucher, Betrieb ${beHoursText(E)}, Ende ${beDT(endAt)} Uhr.`,read:false});
+ closeModal(); toast(`🎪 ${label} läuft – Sanitätsdienst hat sich angemeldet`); save(); render(currentPage);
 }
 function bigEventRing(caseId){
  const E=db.bigEvent; if(!E)return null;
  const noAi=simMakeCall.noAi, noTier=simMakeCall0.noTier; simMakeCall.noAi=true; simMakeCall0.noTier=true; simMakeCall0.forceCase=caseId;
  let s; try{s=simMakeCall0()}finally{simMakeCall.noAi=noAi;simMakeCall0.noTier=noTier;simMakeCall0.forceCase=null}
  if(!s||s.caseId!==caseId)return null;
- s.loc={kind:"road",text:E.text,addr:E.town,town:E.town,lat:E.lat+rnd(-0.0006,0.0006),lng:E.lng+rnd(-0.0006,0.0006),facility:`${E.name} ${E.town}`};
- s.d.bigEvent=E.id; s.d.eventName=`${E.name} ${E.town}`;
- s.d.open=(s.d.open||[]).map(t=>t.replace(/\{ev\}/g,`${E.name} ${E.town}`)); s.d.event=String(s.d.event||"").replace(/\{ev\}/g,`${E.name} ${E.town}`);
+ const L=beLabel(E);
+ s.loc={kind:"road",text:E.text,addr:E.ort||E.town,town:E.town,lat:E.lat+rnd(-0.0006,0.0006),lng:E.lng+rnd(-0.0006,0.0006),facility:L};
+ s.d.bigEvent=E.id; s.d.eventName=L;
+ s.d.open=(s.d.open||[]).map(t=>t.replace(/\{ev\}/g,L)); s.d.event=String(s.d.event||"").replace(/\{ev\}/g,L);
  E.calls.push({caseId,at:Date.now(),simId:s.id}); simRing(s); return s;
 }
 function bigEventTick(now){
  const E=db.bigEvent; if(!E||E.ended||E.owner!==DEVICE_ID)return false; let ch=false;
- for(const p of E.plan){if(!p.done&&now>=p.at){p.done=true;ch=true;try{bigEventRing(p.caseId)}catch(e){console.warn(e)}}}
+ for(const p of E.plan){
+   if(p.done||now<p.at)continue;
+   // App war zu (z. B. über Nacht): verpasste kleine Anforderungen entfallen, der MANV kommt etwas später
+   if(now-p.at>15*60000){if(/manv/.test(p.caseId)){p.at=now+rint(3,10)*60000}else{p.done=true;p.missed=true}ch=true;continue}
+   p.done=true;ch=true;try{bigEventRing(p.caseId)}catch(e){console.warn(e)}
+ }
  if(now>=E.endAt)bigEventEnd(false),ch=true;
  return ch;
 }
 function bigEventEnd(manual){
  const E=db.bigEvent; if(!E||E.ended)return;
  E.ended=true; E.endTs=Date.now(); E.plan.forEach(p=>p.done=true);
- const help=Math.max(E.calls.length,Math.round(E.visitors*rnd(0.002,0.006))), tr=E.calls.length;
+ const help=Math.max(E.calls.length,Math.round(E.visitors*rnd(0.002,0.006)*(E.days||1))), tr=E.calls.length, L=beLabel(E);
  E.summary={help,tr};
- sdsLog({dir:"in",opta:`SanWD ${E.name} ${E.town}`,callId:"",text:`${manual?"Veranstaltung vorzeitig beendet":"Veranstaltung beendet"} – Dienstende Sanitätswachdienst. ${help} Hilfeleistungen vor Ort, ${tr} Anforderung${tr===1?"":"en"} über die Leitstelle${E.outcome==="ruhig"&&tr<=1?" – ruhiger Dienst, keine besonderen Vorkommnisse":""}.`,read:false});
- toast(`🎪 ${E.name} ${E.town}: Dienstende`); save(); if(manual)render(currentPage);
+ sdsLog({dir:"in",opta:`SanWD ${L}`,callId:"",text:`${manual?"Veranstaltung vorzeitig beendet":"Veranstaltung beendet"} – Dienstende Sanitätswachdienst. ${help} Hilfeleistungen vor Ort, ${tr} Anforderung${tr===1?"":"en"} über die Leitstelle${E.outcome==="ruhig"&&tr<=1?" – ruhiger Dienst, keine besonderen Vorkommnisse":""}.`,read:false});
+ toast(`🎪 ${L}: Dienstende`); save(); if(manual)render(currentPage);
 }
 function bigEventClear(){db.bigEvent=null;save();render(currentPage)}
 function bigEventCardHTML(){
  const E=db.bigEvent;
- if(!E)return `<div class="card"><h2>🎪 Großveranstaltung</h2><p class="muted" style="font-size:13px">Übung: Eine Veranstaltung mit Sanitätswachdienst läuft. Mal bleibt alles ruhig, mal gibt es einen kleinen oder großen MANV.</p><button onclick="bigEventDialog()" style="width:100%">🎪 Veranstaltung starten</button></div>`;
- const left=Math.max(0,Math.round((E.endAt-Date.now())/60000));
- return `<div class="card" style="border-left:6px solid #7c3aed"><h2 style="margin:0">🎪 ${esc(E.name)} ${esc(E.town)}</h2>
-  <div class="muted" style="font-size:13px">ca. ${E.visitors.toLocaleString("de-DE")} Besucher · SanWD ${E.sanCrew} Kräfte · ${hhmm(E.startAt)}–${hhmm(E.endAt)} Uhr</div>
-  <div style="margin-top:6px;font-size:13px">${E.ended?`✅ beendet – ${E.summary?`${E.summary.help} Hilfeleistungen vor Ort, ${E.summary.tr} über die Leitstelle`:""}`:`⏱️ läuft noch ${left} min · 📞 Anforderungen bisher: ${E.calls.length}`}</div>
+ if(!E)return `<div class="card"><h2>🎪 Großveranstaltung</h2><p class="muted" style="font-size:13px">Übung: Eine Veranstaltung mit Sanitätswachdienst läuft einen oder mehrere Tage. Mal bleibt alles ruhig, mal gibt es einen kleinen oder großen MANV.</p><button onclick="bigEventDialog()" style="width:100%">🎪 Veranstaltung starten</button></div>`;
+ const open=beOpen(E,Date.now());
+ return `<div class="card" style="border-left:6px solid #7c3aed"><h2 style="margin:0">🎪 ${esc(beLabel(E))}</h2>
+  <div class="muted" style="font-size:13px">${E.ort?`📍 ${esc(E.ort)} · `:""}ca. ${E.visitors.toLocaleString("de-DE")} Besucher · SanWD ${E.sanCrew} Kräfte</div>
+  <div class="muted" style="font-size:13px">${beDT(E.startAt)} – ${beDT(E.endAt)} Uhr · Betrieb ${beHoursText(E)}</div>
+  <div style="margin-top:6px;font-size:13px">${E.ended?`✅ beendet – ${E.summary?`${E.summary.help} Hilfeleistungen vor Ort, ${E.summary.tr} über die Leitstelle`:""}`:`⏱️ läuft noch ${beLeft(E.endAt-Date.now())} · ${open?"🟢 gerade geöffnet":"🌙 gerade geschlossen"} · 📞 Anforderungen bisher: ${E.calls.length}`}</div>
   <div class="row" style="gap:6px;margin-top:8px">${E.ended?`<button onclick="bigEventClear()" style="width:100%">Schließen</button>`:`<button onclick="if(confirm('Veranstaltung vorzeitig beenden?'))bigEventEnd(true)" style="width:100%">⏹️ Vorzeitig beenden</button>`}</div></div>`;
 }
 // Sanitätsdienst vor Ort gibt beim MANV auf der Veranstaltung die erste Lagemeldung und betreibt eine kleine Sanitätsstation

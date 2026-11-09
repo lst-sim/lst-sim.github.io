@@ -1607,6 +1607,13 @@ Version 5.05:
   („a, b“ = a ODER b). Mit „🚑 NA-Indikation“ markierte Knöpfe ziehen weiterhin einen Notarzt.
 - Nur „Unauffällig“ (ohne weitere Befunde) zählt weiter als unauffälliges E (R0 möglich).
 
+Version 5.68:
+- Großveranstaltung: Name, Ort/Adresse, Sanitätsstation und Besucherzahl sind frei wählbar. Die bisherigen Veranstaltungen gibt es weiter als Vorlage, alle Felder lassen sich ändern.
+- Der Ort wird über die Adresssuche (OpenStreetMap) gefunden. Klappt das nicht, reicht ein bekannter Ortsname im Text (z. B. „Jever“).
+- Dauer jetzt 1 bis 4 Tage. Neu ist die tägliche Betriebszeit (z. B. 10–01 Uhr). Anforderungen kommen nur, solange geöffnet ist.
+- Die Zahl der RTW-Anforderungen richtet sich nach den Betriebsstunden. Bei ruhigem Verlauf sind es ca. 0,05–0,15 je Stunde, sonst ca. 0,15–0,35. Das ist eine Annahme.
+- War die App zu (z. B. über Nacht), entfallen verpasste kleine Anforderungen. Ein geplanter MANV kommt dann ein paar Minuten später.
+
 Version 5.67:
 - OrgL und LNA sind jetzt getrennt. Die bisherigen „OrgL/LNA Varel“ und „OrgL/LNA Sande“ heißen „OrgL Varel“ und „OrgL Sande“ (Fahrzeugtyp „OrgL“).
 - Neu: „LNA Friesland 1“ und „LNA Friesland 2“ (Typ „LNA“). Das sind Übungs-LNA, weil die echte LNA-Gruppe und ihre Rufnamen nicht hinterlegt sind.
