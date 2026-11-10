@@ -1607,6 +1607,13 @@ Version 5.05:
   („a, b“ = a ODER b). Mit „🚑 NA-Indikation“ markierte Knöpfe ziehen weiterhin einen Notarzt.
 - Nur „Unauffällig“ (ohne weitere Befunde) zählt weiter als unauffälliges E (R0 möglich).
 
+Version 5.76:
+- Abrollbehälter Wilhelmshaven laut BOS-Fahrzeuge ergänzt:
+  - FuRW 1: 01/AB-SEGS und 01/AB-U.
+  - OF Rüstringen: 20/AB-Mulde, 20/AB-Ölwehr, 20/AB-Rett, 20/AB-Schlauch und 20/AB-TWS (Tank-Wasser-Schaum).
+  - Der AB-Dekon in Bant-Heppens war schon drin.
+- Unsicher: Dass AB-U der „AB-Umweltschutz“ und AB-SEGS der „AB-Schiffsbrandbekämpfung“ von der Wachenseite ist, ist nur vermutet.
+
 Version 5.75:
 - Neu oben in der Kopfzeile: Auswahl „Friesland + WHV“, „nur Friesland“ oder „nur Wilhelmshaven“ (nur im Szenario Friesland/WHV). Die Einstellung gilt pro Gerät.
   - Übungsanrufe kommen nur aus dem gewählten Bereich. Wasser-Einsätze kommen immer.
