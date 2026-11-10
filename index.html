@@ -170,7 +170,7 @@ html[data-device="handy"] #floatDock{left:8px;right:8px;width:auto;top:auto;bott
 </head>
 <body>
 <div style="padding:6px 10px;font-size:11px;color:#94a3b8;font-weight:700;display:flex;flex-wrap:wrap;align-items:center;gap:10px;position:sticky;top:0;z-index:10;background:var(--bg)">
- <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v5.77</span>
+ <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v5.78</span>
  <span id="syncState"></span> <select id="areaSel" onchange="setDispatchArea(this.value)" title="Welcher Bereich wird disponiert?" style="display:none;font-size:11px;font-weight:700;padding:1px 4px;border-radius:6px;border:1px solid #cbd5e1;background:#fff;color:#334155"><option value="beide">📍 Friesland + WHV</option><option value="fri">📍 nur Friesland</option><option value="whv">📍 nur Wilhelmshaven</option></select> <a id="deskTag" href="#" onclick="renameDesk();return false" title="Name dieses Platzes (für „offen an …“) – antippen zum Ändern" style="color:#64748b;font-weight:700;text-decoration:none"></a>
  <span id="simCtl" style="position:absolute;left:50%;transform:translateX(-50%);display:flex;gap:6px;align-items:center"></span>
  <a id="homeLink" href="#" onclick="render('leitstelle');return false" class="hidden" style="color:#64748b;text-decoration:underline;font-weight:600">🖥️ Leitstelle</a>
@@ -2453,6 +2453,7 @@ function inDispatchArea(u){const a=dispatchArea();if(a==="beide")return true;con
 // werden deshalb ohne Telefonabsprache mit vorgeschlagen: wenn im eigenen Bereich keines dieses Typs frei ist
 // (bzw. für weitere benötigte Fahrzeuge hinten angehängt) oder wenn es mindestens 5 min schneller da ist.
 // Feuerwehr bleibt getrennt.
+function isWhvBF(u){return !!u&&u.org==="Feuerwehr"&&/^Florian Wilhelmshaven 0[12]\//.test(String(u.opta||""))}
 function crossAreaRd(u){return dispatchArea()!=="beide"&&u&&u.org==="Rettungsdienst"&&!inDispatchArea(u)}
 function areaBlend(list){
  if(dispatchArea()==="beide")return list;
@@ -4946,6 +4947,21 @@ function evaluate0(){
    });
    return best;
  };
+ // v5.78: Wasser-Einsätze in Wilhelmshaven übernimmt die Berufsfeuerwehr – keine DLRG. DLRG-Boot → RTB der
+ // BF, DLRG-GW Wasserrettung → GW-W der BF (01/58-01), übrige DLRG-Fahrzeuge entfallen; Feuerwehr nur BF.
+ const whvWater=currentScenarioId==="fri-whv"&&!CUSTOM_SC_EARLY()&&/wilhelmshaven/i.test(`${c.location||""} ${c.geocodedAddress||""}`)&&(e==="Person im Wasser"||!!c.locationIsWater);
+ if(whvWater){
+   const gww=db.units.find(u=>u.opta==="Florian Wilhelmshaven 01/58-01");
+   req=req.flatMap(r=>{
+     if(r.org==="DLRG"||(r.org==null&&/^(GW Wasserrettung|GW Taucher|GW Drohne|GW-Boot|MZB)/.test(String(r.type)))){
+       if(r.type==="RTB")return [{...r,org:"Feuerwehr",bfOnly:true}];
+       if(r.type==="GW Wasserrettung"&&gww)return [{...r,type:gww.type,org:"Feuerwehr",exact:["1","2"].includes(String(gww.status))?gww.id:undefined,bfOnly:true}];
+       return [];
+     }
+     if(r.org==="Feuerwehr"||r.org==null&&FW_TYPE_LONG[r.type])return [{...r,org:r.org||"Feuerwehr",bfOnly:true}];
+     return [r];
+   }).filter((r,i,arr)=>!(r.exact&&arr.findIndex(x=>x.exact===r.exact)!==i));
+ }
  const abPlans=[];
  for(const r of req){
    // Abrollbehälter nur zusammen mit einem WLF (frei – sonst eines von einem anderen Einsatz)
@@ -4965,6 +4981,7 @@ function evaluate0(){
    else if(r.exact)continue; // Fahrzeug schon eingeplant – nicht doppelt
    else {
      let arr=availableUnits(r.type,r.org).filter(x=>!used.has(x.id));
+     if(r.bfOnly)arr=arr.filter(isWhvBF); // v5.78
      u=arr[0]||null;
    }
    // Nachbar-LK nie bei R0 (ohne Sonderrechte) – dann fährt das eigene Fahrzeug, auch wenn weit weg.

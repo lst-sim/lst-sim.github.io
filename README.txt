@@ -1607,6 +1607,14 @@ Version 5.05:
   („a, b“ = a ODER b). Mit „🚑 NA-Indikation“ markierte Knöpfe ziehen weiterhin einen Notarzt.
 - Nur „Unauffällig“ (ohne weitere Befunde) zählt weiter als unauffälliges E (R0 möglich).
 
+Version 5.78:
+- Wasser-Einsätze in Wilhelmshaven (Person im Wasser oder Einsatzort auf dem Wasser) alarmieren nur noch die Berufsfeuerwehr, keine DLRG mehr:
+  - statt DLRG-Boot das Rettungsboot der BF (01/78-01, sonst 02/78-01)
+  - statt DLRG-GW Wasserrettung den GW-W der BF (01/58-01)
+  - Drohne, Taucher und MTW der DLRG entfallen
+  - auch HLF und ELW kommen nur von der BF
+- Rettungsdienst und Hubschrauber bleiben wie in der AAO. In Friesland bleibt alles wie bisher.
+
 Version 5.77:
 - Neue hafentypische Einsätze in Wilhelmshaven. Sie kommen nur, wenn Wilhelmshaven mit disponiert wird:
   - Person im Hafenbecken am Bontekai
