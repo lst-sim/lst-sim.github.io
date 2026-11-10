@@ -1607,6 +1607,17 @@ Version 5.05:
   („a, b“ = a ODER b). Mit „🚑 NA-Indikation“ markierte Knöpfe ziehen weiterhin einen Notarzt.
 - Nur „Unauffällig“ (ohne weitere Befunde) zählt weiter als unauffälliges E (R0 möglich).
 
+Version 5.77:
+- Neue hafentypische Einsätze in Wilhelmshaven. Sie kommen nur, wenn Wilhelmshaven mit disponiert wird:
+  - Person im Hafenbecken am Bontekai
+  - Arbeitsunfall am Container Terminal (JadeWeserPort), Lascher zwischen Containern eingeklemmt
+  - Seemann mit Brustschmerz an Bord eines Containerschiffs (steile Gangway)
+  - Brand im Maschinenraum eines Schiffes am Bontekai
+  - Gefahrstoffaustritt aus einem Tankcontainer (Klasse 8, UN 1789), 2 Betroffene
+  Die Orte sind echt, die Positionen ungefähr. Neu ist auch der Badeort „Südstrand Wilhelmshaven“.
+- Wasser-Einsätze richten sich jetzt auch nach dem gewählten Bereich.
+- Rettungsdienst über die Bereichsgrenze: Bei „nur WHV“ bzw. „nur Friesland“ schlägt der Vorschlag Rettungsmittel des anderen Bereichs ohne Telefonabsprache mit vor (gleiche Leitstelle). Das passiert, wenn im eigenen Bereich keines dieses Typs frei ist oder mehr gebraucht werden, oder wenn es mindestens 5 Minuten schneller da ist. Im Vorschlag steht dann „(aus Friesland)“ bzw. „(aus WHV)“. Die Feuerwehr bleibt getrennt.
+
 Version 5.76:
 - Abrollbehälter Wilhelmshaven laut BOS-Fahrzeuge ergänzt:
   - FuRW 1: 01/AB-SEGS und 01/AB-U.

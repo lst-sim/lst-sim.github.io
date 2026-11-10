@@ -170,7 +170,7 @@ html[data-device="handy"] #floatDock{left:8px;right:8px;width:auto;top:auto;bott
 </head>
 <body>
 <div style="padding:6px 10px;font-size:11px;color:#94a3b8;font-weight:700;display:flex;flex-wrap:wrap;align-items:center;gap:10px;position:sticky;top:0;z-index:10;background:var(--bg)">
- <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v5.76</span>
+ <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v5.77</span>
  <span id="syncState"></span> <select id="areaSel" onchange="setDispatchArea(this.value)" title="Welcher Bereich wird disponiert?" style="display:none;font-size:11px;font-weight:700;padding:1px 4px;border-radius:6px;border:1px solid #cbd5e1;background:#fff;color:#334155"><option value="beide">📍 Friesland + WHV</option><option value="fri">📍 nur Friesland</option><option value="whv">📍 nur Wilhelmshaven</option></select> <a id="deskTag" href="#" onclick="renameDesk();return false" title="Name dieses Platzes (für „offen an …“) – antippen zum Ändern" style="color:#64748b;font-weight:700;text-decoration:none"></a>
  <span id="simCtl" style="position:absolute;left:50%;transform:translateX(-50%);display:flex;gap:6px;align-items:center"></span>
  <a id="homeLink" href="#" onclick="render('leitstelle');return false" class="hidden" style="color:#64748b;text-decoration:underline;font-weight:600">🖥️ Leitstelle</a>
@@ -2449,6 +2449,23 @@ function setDispatchArea(v){try{localStorage.setItem(AREA_KEY,v)}catch(e){};toas
 function areaOfText(t){return /wilhelmshaven/i.test(String(t||""))?"whv":"fri"}
 function unitArea(u){if(!u||u.neighborLoan||!["Feuerwehr","Rettungsdienst"].includes(u.org))return null;return /wilhelmshaven/i.test(`${u.location||""} ${u.opta||""}`)?"whv":"fri"}
 function inDispatchArea(u){const a=dispatchArea();if(a==="beide")return true;const ua=unitArea(u);return !ua||ua===a}
+// v5.77: Friesland und Wilhelmshaven haben eine gemeinsame Leitstelle. Rettungsmittel des anderen Bereichs
+// werden deshalb ohne Telefonabsprache mit vorgeschlagen: wenn im eigenen Bereich keines dieses Typs frei ist
+// (bzw. für weitere benötigte Fahrzeuge hinten angehängt) oder wenn es mindestens 5 min schneller da ist.
+// Feuerwehr bleibt getrennt.
+function crossAreaRd(u){return dispatchArea()!=="beide"&&u&&u.org==="Rettungsdienst"&&!inDispatchArea(u)}
+function areaBlend(list){
+ if(dispatchArea()==="beide")return list;
+ const inA=list.filter(inDispatchArea), other=list.filter(crossAreaRd);
+ if(!other.length)return inA;
+ const out=[...inA];
+ other.forEach(o=>{const same=out.findIndex(x=>x.type===o.type);
+   if(same<0){out.push(o);return}
+   const eo=estimatedEtaMinutes(o), ei=estimatedEtaMinutes(out[same]);
+   if(Number.isFinite(eo)&&Number.isFinite(ei)&&eo+5<=ei)out.splice(same,0,o);else out.push(o);});
+ return out;
+}
+function crossAreaLabel(u){return crossAreaRd(u)?(unitArea(u)==="whv"?" (aus WHV)":" (aus Friesland)"):""}
 function areaSelSync(){const e=document.getElementById("areaSel");if(!e)return;const show=currentScenarioId==="fri-whv"&&!CUSTOM_SC_EARLY()&&!isTerminalLink&&!IS_MONITOR;e.style.display=show?"":"none";if(show&&e.value!==dispatchArea())e.value=dispatchArea()}
 // Boote von DRK und DLRG auf Wangerooge bleiben an der Insel: nur Einsätze auf der Insel oder auf
 // dem Wasser rund um Wangerooge (bis 8 km von der Inselmitte). Der Seenotrettungskreuzer/-boot der
@@ -2472,9 +2489,9 @@ function drkBackground(u){return u&&u.org==="DRK"&&["RTW","KTW","NKTW","NEF"].in
 let AVAIL_MANV=false; // v5.34: beim MANV gehören auch die DRK-Hintergrund-Rettungsmittel in den Vorschlag
 function availableUnits(type,org=null){
  const orgOk=u=>!org||u.org===org||(org==="DLRG"&&u.wasserrettung);
- const prim=nearestFirst(db.units.filter(u=>(!u.neighborLoan||u.cover)&&(!type||u.type===type)&&orgOk(u)&&(org==="DRK"||!drkBackground(u))&&["1","2"].includes(u.status)&&islandReachable(u)&&inDispatchArea(u)));
+ const prim=areaBlend(nearestFirst(db.units.filter(u=>(!u.neighborLoan||u.cover)&&(!type||u.type===type)&&orgOk(u)&&(org==="DRK"||!drkBackground(u))&&["1","2"].includes(u.status)&&islandReachable(u))));
  if(prim.length)return prim;
- return nearestFirst(db.units.filter(u=>(!u.neighborLoan||u.cover)&&(!type||u.type===type)&&orgOk(u)&&(org==="DRK"||!drkBackground(u))&&u.status==="8"&&islandReachable(u)&&inDispatchArea(u)));
+ return areaBlend(nearestFirst(db.units.filter(u=>(!u.neighborLoan||u.cover)&&(!type||u.type===type)&&orgOk(u)&&(org==="DRK"||!drkBackground(u))&&u.status==="8"&&islandReachable(u))));
 }
 function chooseOne(type,org=null){return availableUnits(type,org)[0]||null}
 
@@ -2536,9 +2553,9 @@ function thwGroup(u){return String(u.fachgruppe||THW_GROUP_DEFAULT[u.opta]||"Ohn
 function chooseAvailableByType(type,org=null){
  const types=Array.isArray(type)?type:[type];
  const orgOk=u=>!org||u.org===org;
- const primary=nearestFirst(db.units.filter(u=>(!u.neighborLoan||u.cover)&&orgOk(u)&&(org==="DRK"||!drkBackground(u))&&islandReachable(u)&&inDispatchArea(u)&&types.includes(u.type) && ["1","2"].includes(String(u.status))));
+ const primary=areaBlend(nearestFirst(db.units.filter(u=>(!u.neighborLoan||u.cover)&&orgOk(u)&&(org==="DRK"||!drkBackground(u))&&islandReachable(u)&&types.includes(u.type) && ["1","2"].includes(String(u.status)))));
  if(primary.length)return primary[0];
- const fallback=nearestFirst(db.units.filter(u=>(!u.neighborLoan||u.cover)&&orgOk(u)&&(org==="DRK"||!drkBackground(u))&&islandReachable(u)&&inDispatchArea(u)&&types.includes(u.type) && String(u.status)==="8"));
+ const fallback=areaBlend(nearestFirst(db.units.filter(u=>(!u.neighborLoan||u.cover)&&orgOk(u)&&(org==="DRK"||!drkBackground(u))&&islandReachable(u)&&types.includes(u.type) && String(u.status)==="8")));
  return fallback[0]||null;
 }
 // Wasserrettungszug Friesland: Das Führungsfahrzeug (Pelikan Friesland 71/11-01, ELW1) wird
@@ -3809,8 +3826,8 @@ function newKtCall(){
 let notrufDetailsVisible=false;
 function toggleNotrufDetails(){notrufDetailsVisible=!notrufDetailsVisible;notruf();}
 function nearestAvailableUnits(limit=6){
- const avail=db.units.filter(u=>["1","2","8"].includes(String(u.status))&&!notAlarmable(u)&&inDispatchArea(u));
- return ktLast(nearestFirst(avail)).slice(0,limit);
+ const avail=db.units.filter(u=>["1","2","8"].includes(String(u.status))&&!notAlarmable(u));
+ return ktLast(areaBlend(nearestFirst(avail))).slice(0,limit);
 }
 function overrideJurisdiction(){
  if(db.currentCall){db.currentCall.jurisdictionOverride=true;save()}
@@ -5054,7 +5071,7 @@ function evaluate0(){
  c.neighborProposal=selected.filter(x=>x.neighbor).map(x=>x.id);
  c.proposal=selected;
  c.abPlans=abPlans;
- c.suggestion=selected.map(x=>x.wlfFor?`${x.opta||x.name} – WLF (holt ${x.wlfFor} an der FTZ${x.wlfBusy?`, kommt von Einsatz #${x.wlfFrom} und setzt dort ab`:""} · ca. ${x.wlfTotal} min)`:x.abWith?`${x.opta||x.name} – ${x.type} (auf ${x.abWith})`:x.missing?`⚠️ ${x.type} (${x.org||"beliebig"}) nicht verfügbar`:x.neighbor?`🤝 ${x.opta} – ${x.type} (Nachbar-LK ${x.district}, ca. ${x.neighborEta} min)`:`${x.opta||x.name} – ${x.type}${x.firstResponder?" (First Responder)":""}${isLNA(x)?" (Privat-PKW, nicht ortbar)":Number.isFinite(geographicRank(x))&&geographicRank(x)<999?` (ca. ${estimatedEtaMinutes(x)} min)`:``}`).join(" · ");
+ c.suggestion=selected.map(x=>x.wlfFor?`${x.opta||x.name} – WLF (holt ${x.wlfFor} an der FTZ${x.wlfBusy?`, kommt von Einsatz #${x.wlfFrom} und setzt dort ab`:""} · ca. ${x.wlfTotal} min)`:x.abWith?`${x.opta||x.name} – ${x.type} (auf ${x.abWith})`:x.missing?`⚠️ ${x.type} (${x.org||"beliebig"}) nicht verfügbar`:x.neighbor?`🤝 ${x.opta} – ${x.type} (Nachbar-LK ${x.district}, ca. ${x.neighborEta} min)`:`${x.opta||x.name} – ${x.type}${x.firstResponder?" (First Responder)":""}${crossAreaLabel(x)}${isLNA(x)?" (Privat-PKW, nicht ortbar)":Number.isFinite(geographicRank(x))&&geographicRank(x)<999?` (ca. ${estimatedEtaMinutes(x)} min)`:``}`).join(" · ");
  c.sr=sr;
 }
 
@@ -10825,7 +10842,8 @@ const SIM_WATER=[
  {n:"am Strand in Schillig",lat:53.7058,lng:8.0300,town:"Wangerland-Schillig"},
  {n:"am Badestrand in Hooksiel",lat:53.6395,lng:8.0850,town:"Wangerland-Hooksiel"},
  {n:"am Strand in Horumersiel",lat:53.6870,lng:8.0225,town:"Wangerland-Horumersiel"},
- {n:"am Hauptstrand auf Wangerooge",lat:53.7925,lng:7.8990,town:"Wangerooge"}
+ {n:"am Hauptstrand auf Wangerooge",lat:53.7925,lng:7.8990,town:"Wangerooge"},
+ {n:"am Südstrand in Wilhelmshaven",lat:53.5118,lng:8.1390,town:"Wilhelmshaven"} // v5.77, Position ungefähr
 ];
 const SIM_ROADS=[
  {n:"auf der Oldenburger Straße in Varel",town:"Varel",c:[53.3900,8.1450]},
@@ -10855,7 +10873,7 @@ async function simReverse(sim){
 }
 function simAreaPool(list,key){const a=dispatchArea();if(a==="beide")return list;const f=list.filter(x=>areaOfText(x[key])===a);return f.length?f:list}
 function simHomeLoc(){if(CUSTOM_SC)return csSimLoc("home");const t=pick(simAreaPool(SIM_TOWNS,"t"));const st=pick(t.s);const no=rint(1,48);const off=()=>rnd(-0.004,0.004);return {kind:"home",text:`${st} ${no} in ${t.t}`,addr:`${st} ${no}, ${t.t.split("-")[0]}`,town:t.t,lat:t.c[0]+off(),lng:t.c[1]+off(),geo:true}}
-function simWaterLoc(){const w=pick(SIM_WATER);return {kind:"water",text:w.n,addr:`${w.n.replace(/^(am|auf) /,"")}`,town:w.town,lat:w.lat,lng:w.lng,water:true}}
+function simWaterLoc(){const w=pick(simAreaPool(SIM_WATER,"town"));return {kind:"water",text:w.n,addr:`${w.n.replace(/^(am|auf) /,"")}`,town:w.town,lat:w.lat,lng:w.lng,water:true}}
 function simRoadLoc(){if(CUSTOM_SC)return csSimLoc("road");const r=pick(simAreaPool(SIM_ROADS,"town"));return {kind:"road",text:r.n,addr:r.n.replace(/^auf der /,""),town:r.town,lat:r.c[0]+rnd(-0.003,0.003),lng:r.c[1]+rnd(-0.003,0.003)}}
 
 // Fall-Bibliothek. f = Fakten (Antworten für den Anrufer), say = feste Sätze, extra = spontane Sätze.
@@ -10867,6 +10885,39 @@ const SIM_CASES=[
    f:{event:"Medizinischer Notfall",count:"2",x:"Nein",a:"Frei",b:"Normal",c:"Unauffällig",d:"Bewusstseinsgetrübt",e:"Kopfschmerzen, Übelkeit, Bewusstseinsstörung – CO-Melder piept, Verdacht Kohlenmonoxid",psy:"Nein",danger:"ja"},
    onset:"Seit etwa einer halben Stunde.",hist:"Eigentlich ist er gesund.",
    extra:["Soll ich die Fenster aufmachen?","Mir ist auch ganz schwindelig.","Der Melder hängt im Flur und piept ununterbrochen."]}}},
+ // ── v5.77: Hafentypische Einsätze Wilhelmshaven (nur wenn WHV disponiert wird). Orte real, Positionen ungefähr ──
+ {id:"whv_hafenbecken",w:1.5,num:"112",loc:"water",fixedLoc:{kind:"water",text:"am Bontekai in Wilhelmshaven, im Hafenbecken",addr:"Bontekai, Wilhelmshaven",town:"Wilhelmshaven",lat:53.5155,lng:8.1222,water:true,facility:"Bontekai"},mk:()=>{const p=simPerson("m"),age=rint(19,45);return {rel:"ein Mann",caller:simPerson(),patient:p,age,passerby:true,panic:true,
+   open:["Hallo, hier ist gerade einer am Bontekai ins Hafenbecken gefallen!","Schnell, da ist ein Mann von der Kaimauer ins Wasser gestürzt, am Bontekai!"],
+   event:"Ein Mann ist von der Kaimauer ins Hafenbecken gefallen. Er hält sich an einem Fender fest, aber die Kaimauer ist viel zu hoch, der kommt da allein nicht raus.",
+   f:{event:"Person im Wasser",count:"1",water:"Ja",waterState:"Lebenszeichen",x:"",a:"",b:"",c:"",d:"",e:"",danger:"ja"},
+   onset:"Gerade eben, vor einer Minute.",hist:"Der war vorher mit Freunden unterwegs, ich glaub, die haben getrunken.",danger:"Die Mauer ist bestimmt drei Meter hoch, hier gibt es keine Leiter in der Nähe.",
+   extra:["Er sagt, ihm ist total kalt!","Jemand hat einen Rettungsring runtergeworfen.","Jetzt lässt er den Fender los, er paddelt zur Leiter da hinten!"]}}},
+ {id:"whv_containerunfall",w:1.5,num:"112",loc:"road",fixedLoc:{kind:"road",text:"am Container Terminal Wilhelmshaven (JadeWeserPort), auf dem Terminalgelände",addr:"Container Terminal Wilhelmshaven, JadeWeserPort",town:"Wilhelmshaven",lat:53.5935,lng:8.1490,facility:"Container Terminal Wilhelmshaven"},mk:()=>{const c=simPerson("m"),p=simPerson("m"),age=rint(24,58);return {rel:"ein Kollege",caller:c,patient:p,age,staff:true,
+   open:[`${c.first} ${c.last}, Container Terminal am JadeWeserPort, Schichtleitung. Ein Kollege ist zwischen zwei Containern eingeklemmt worden!`],
+   event:"Beim Absetzen ist ein Container verrutscht und hat einen Lascher am Bein gegen den Nachbarcontainer gedrückt. Der hängt da fest, wir kriegen ihn nicht raus. Der Van-Carrier ist gestoppt.",
+   f:{event:"Technische Hilfeleistung",count:"1",trapped:"1",x:"Nein",a:"Frei",b:"Normal",c:"Auffällig",d:"Wach / orientiert",e:"Unterschenkel eingeklemmt, starke Schmerzen",psy:"Nein",danger:"ja"},
+   trappedText:"Ja, sein rechtes Bein steckt zwischen den Containern fest, der kommt da nicht raus!",
+   onset:"Vor zwei Minuten.",hist:"Der ist gesund, soweit ich weiß.",danger:"Der Bereich ist gesperrt, aber auf der Fahrspur fahren noch Van-Carrier. Wir schicken einen Einweiser zum Tor.",
+   extra:["Er ist ganz blass und schwitzt.","Unser Werksanitäter ist jetzt bei ihm.","Zufahrt bitte über das Haupttor, da wartet ein Kollege mit Warnweste."]}}},
+ {id:"whv_seemann",w:1.5,num:"112",loc:"road",fixedLoc:{kind:"road",text:"am Container Terminal Wilhelmshaven (JadeWeserPort), an Bord eines Containerschiffs am Liegeplatz",addr:"Container Terminal Wilhelmshaven, JadeWeserPort",town:"Wilhelmshaven",lat:53.5960,lng:8.1520,facility:"Containerschiff am Liegeplatz"},mk:()=>{const c=simPerson("m"),p=simPerson("m"),age=rint(38,62);return {rel:"ein Besatzungsmitglied",caller:c,patient:p,age,staff:true,
+   open:[`${c.first} ${c.last}, Schiffsagentur, ich rufe für ein Containerschiff am JadeWeserPort an. An Bord hat ein Seemann starke Brustschmerzen!`],
+   event:"Ein Matrose hat seit einer halben Stunde starke Schmerzen in der Brust, die in den linken Arm ziehen. Er ist ganz grau im Gesicht und schwitzt. Der spricht nur wenig Englisch.",
+   f:{event:"Medizinischer Notfall",count:"1",x:"Nein",a:"Frei",b:"Auffällig",c:"Auffällig",d:"Wach / orientiert",e:"Brustschmerz mit Ausstrahlung in den linken Arm, kaltschweißig",psy:"Nein",danger:"nein"},
+   onset:"Seit etwa einer halben Stunde.",hist:"Er nimmt Tabletten gegen hohen Blutdruck, sagt der Kapitän.",
+   danger:"Die Gangway ist steil und schmal, eine Trage geht da kaum hoch. Der Kapitän fragt, ob die Feuerwehr mit einer Drehleiter oder dem Kran helfen kann.",
+   extra:["Der Kapitän spricht Englisch, der Patient kaum Deutsch oder Englisch.","Er liegt jetzt in seiner Kabine, drei Decks über der Gangway.","Ein Offizier wartet unten an der Gangway auf den Rettungsdienst."]}}},
+ {id:"whv_schiffsbrand",w:0.8,num:"112",loc:"road",fixedLoc:{kind:"road",text:"im Großen Hafen in Wilhelmshaven, an Bord eines Schiffes am Bontekai",addr:"Bontekai, Wilhelmshaven",town:"Wilhelmshaven",lat:53.5150,lng:8.1240,facility:"Schiff am Bontekai"},mk:()=>{const c=simPerson("m"),p=simPerson("m");return {rel:"ein Maschinist",caller:c,patient:p,age:44,staff:true,fire:true,
+   open:[`${c.first} ${c.last}, ich bin an Bord eines Schiffes am Bontekai. Bei uns brennt es im Maschinenraum!`],
+   event:"Im Maschinenraum ist ein Feuer ausgebrochen, wahrscheinlich am Generator. Überall ist schwarzer Rauch. Ein Maschinist hat Rauch eingeatmet und hustet stark, den haben wir an Deck gebracht.",
+   f:{event:"Feuer / Rauchentwicklung",count:"1",firePeople:"0",x:"Nein",a:"Frei",b:"Auffällig",c:"Normal",d:"Wach / orientiert",e:"Rauchgasinhalation, starker Husten",psy:"Nein",danger:"ja"},
+   onset:"Vor etwa fünf Minuten.",hist:"",inside:"Nein, die Besatzung ist vollständig an Deck, wir haben durchgezählt.",
+   extra:["Wir haben die Schotten zum Maschinenraum geschlossen.","An Bord sind etwa 300 Liter Diesel im Tagestank.","Der Rauch zieht jetzt rüber zur Kaje."]}}},
+ {id:"whv_gefahrstoff",w:0.8,num:"112",loc:"road",fixedLoc:{kind:"road",text:"am Container Terminal Wilhelmshaven (JadeWeserPort), Gefahrgutstellplatz",addr:"Container Terminal Wilhelmshaven, JadeWeserPort",town:"Wilhelmshaven",lat:53.5910,lng:8.1460,facility:"Gefahrgutstellplatz"},mk:()=>{const c=simPerson("m"),p=simPerson("m");return {rel:"zwei Kollegen",caller:c,patient:p,age:36,staff:true,
+   open:[`${c.first} ${c.last}, Container Terminal Wilhelmshaven. Aus einem Gefahrgutcontainer läuft eine Flüssigkeit aus, zwei Kollegen haben Atemprobleme!`],
+   event:"An einem Tankcontainer auf dem Gefahrgutstellplatz tropft es aus einem Ventil, es riecht stechend. Zwei Kollegen, die nachgesehen haben, husten und haben brennende Augen. Die Gefahrzettel sagen Klasse 8, ätzend, UN-Nummer kann ich ablesen.",
+   f:{event:"Technische Hilfeleistung",count:"2",x:"Nein",a:"Frei",b:"Auffällig",c:"Normal",d:"Wach / orientiert",e:"Reizhusten, brennende Augen nach Kontakt mit Dämpfen",psy:"Nein",danger:"ja"},
+   onset:"Vor ungefähr zehn Minuten bemerkt.",hist:"",danger:"Wir haben den Bereich weiträumig abgesperrt. Der Wind kommt von Westen.",
+   extra:["Die UN-Nummer ist 1789, steht auf der orangen Tafel.","Die beiden sitzen jetzt im Sozialraum, die Augen haben wir gespült.","Ein Kollege hat auch etwas an die Hand bekommen, die ist ganz rot."]}}},
  // ── v5.63: Evakuierungen (Pflegeheim mit Rauch, Gasaustritt, Bombenfund) ──
  {id:"evak_heim",w:0.6,num:"112",loc:"home",locPrefix:"im Seniorenpflegeheim, ",mk:()=>{const c=simPerson(),tot=rint(18,36),l=rint(5,10),r=rint(4,9);return {rel:"die Bewohner",caller:c,patient:simPerson(),age:85,staff:true,panic:true,
    open:[`${c.first} ${c.last}, Pflegeheim – wir haben Rauch im Wohnbereich 2, wir müssen den ganzen Bereich räumen!`,"Hallo, hier ist das Pflegeheim! Bei uns brennt es im Keller, der Rauch zieht hoch – wir müssen die Bewohner rausholen!"],
@@ -11416,7 +11467,7 @@ function simMakeCall0(){
  // Mit KI: bevorzugt ein von der KI frisch erfundener Fall (im Hintergrund vorbereitet)
  if(simAiReady()&&simAiCases.length&&!simMakeCall.noAi){const s=simAiCases.shift();s.created=Date.now();if(s.loc.geo)simGeocode(s);setTimeout(simAiFill,500);return s}
  // Krankentransporte (19222) rufen nicht automatisch an – nur Notrufe 112
- const areaOk=c=>!c.fixedLoc||dispatchArea()==="beide"||c.fixedLoc.water||areaOfText(`${c.fixedLoc.town||""} ${c.fixedLoc.text||""}`)===dispatchArea(); // v5.75
+ const areaOk=c=>!c.fixedLoc||dispatchArea()==="beide"||areaOfText(`${c.fixedLoc.town||""} ${c.fixedLoc.text||""}`)===dispatchArea(); // v5.75/v5.77
  const pool=SIM_CASES.filter(c=>!c.kt&&c.w>0&&!(CUSTOM_SC&&c.loc==="water")&&areaOk(c)); // eigenes Szenario: keine Wasser-Fälle (keine Gewässerdaten)
  const tot=pool.reduce((a,c)=>a+c.w,0); let r=Math.random()*tot, cs=pool[0];
  for(const c of pool){r-=c.w;if(r<=0){cs=c;break}}
