@@ -1607,6 +1607,10 @@ Version 5.05:
   („a, b“ = a ODER b). Mit „🚑 NA-Indikation“ markierte Knöpfe ziehen weiterhin einen Notarzt.
 - Nur „Unauffällig“ (ohne weitere Befunde) zählt weiter als unauffälliges E (R0 möglich).
 
+Version 5.86:
+- Neue Ansicht zum Bearbeiten der Fachrichtungen einer Klinik: große Kacheln zum Antippen (grün mit Haken = vorhanden, mit Kürzel wie in der IVENA-Tabelle), Anzahl oben rechts, „Alle wählen“ und „Keine“, Speichern und Abbrechen.
+- Die Ansicht bleibt in der normalen Seite mit der rechten Leiste und geht beim automatischen Neuzeichnen nicht verloren.
+
 Version 5.85:
 - Fehler behoben (seit 5.79): Die WHV-AAOs ließen sich über „✏️ Bearbeiten“ und „Löschen“ nicht öffnen. Der Knopf hat wegen der neuen AAO-Kennung („whv-…“) nichts gemacht. Das betraf alle WHV-AAOs, auch die Wasserrettung.
 - Wird eine WHV-AAO gelöscht, alarmiert sie wie bei Friesland nichts mehr. Bisher wäre stattdessen die Friesland-Fassung (mit DLRG) genommen worden.

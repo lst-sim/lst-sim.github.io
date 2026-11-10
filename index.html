@@ -191,6 +191,17 @@ html:not([data-device="handy"]) .bereiche-card nav button span[style*="font-size
 .ivena-tbl td:nth-child(11){min-width:110px}
 .ivena-tbl td:nth-child(15){min-width:96px;word-break:break-word}
 @media (max-width:1100px){.ivena-tbl th,.ivena-tbl td{font-size:10px!important}.ivena-tbl [style*="font-size:15px"]{font-size:12px!important}}
+/* v5.86: Fachrichtungen-Editor */
+.fach-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:8px}
+.fach-tile{display:flex;align-items:center;gap:10px;text-align:left;padding:10px 12px;border:1px solid var(--line);border-radius:12px;background:#fff;color:#0f172a;font-weight:700;font-size:14px;cursor:pointer;min-height:52px;box-shadow:none}
+.fach-tile:hover{background:#f8fafc}
+.fach-tile .fach-chk{flex:0 0 22px;height:22px;border-radius:6px;border:2px solid #cbd5e1;display:flex;align-items:center;justify-content:center;font-size:14px;color:#fff}
+.fach-tile .fach-name{flex:1;min-width:0;line-height:1.2;overflow-wrap:anywhere}
+.fach-tile .fach-ab{font-size:11px;font-weight:800;color:#64748b;background:#f1f5f9;border-radius:6px;padding:2px 6px}
+.fach-tile.on{background:#ecfdf5;border-color:#16a34a}
+.fach-tile.on .fach-chk{background:#16a34a;border-color:#16a34a}
+.fach-tile.on .fach-ab{background:#dcfce7;color:#166534}
+html[data-device="handy"] .fach-grid{grid-template-columns:1fr}
 /* v5.79: Kopfzeile */
 #topbar{height:auto;min-height:0;justify-content:initial;position:sticky;top:0;z-index:10;display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:10px;padding:6px 12px;background:rgba(255,255,255,.92);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);border-bottom:1px solid var(--line);font-size:12px;color:#64748b;font-weight:700}
 #topbar .tb-left,#topbar .tb-right{display:flex;align-items:center;gap:8px;min-width:0;flex-wrap:wrap}
@@ -220,7 +231,7 @@ html:not([data-device="handy"]) .bereiche-card nav button span[style*="font-size
 <header id="topbar">
  <div class="tb-left">
   <span class="tb-brand">🚑 Leitstelle<span>.sim</span></span>
-  <span id="versionTag" class="tb-ver">v5.85</span>
+  <span id="versionTag" class="tb-ver">v5.86</span>
   <span id="syncState"></span>
   <a id="deskTag" href="#" onclick="renameDesk();return false" title="Name dieses Platzes (für „offen an …“) – antippen zum Ändern"></a>
  </div>
@@ -10637,32 +10648,46 @@ function ivenaManvBannerHTML(){
   </div></div>`;
 }
 function ivenaZuweisungen(){
+ if(ivenaFachEdit){document.getElementById("app").innerHTML=ivenaFachEditorHTML();if(ivenaFachEdit)return}
  // Klinikansicht wie im echten IVENA: Krankenhaus auswählen → alle Zuweisungen dieses Hauses.
  document.getElementById("app").innerHTML=`${ivenaManvBannerHTML()}<div class="card ivc">
   <div class="row between ivc-head"><div><h2>📋 IVENA-Zuweisungen</h2><p class="muted">Simulierte Patiententransporte: Fahrzeug(e) → Zielklinik. Rein trainingsintern, keine Verbindung zum realen IVENA.</p></div><button class="primary" onclick="openIvenaAssignment()">➕ Neue Zuweisung</button></div>
   ${ivenaIncomingHTML()}
  </div>`;
 }
+// v5.86: Fachrichtungen-Editor neu – Kacheln zum Antippen, bleibt in der normalen Seitenansicht
+let ivenaFachEdit=null; // {hid, sel:Set}
 function openIvenaFachrichtungen(hid){
  const h=db.ivena.find(x=>String(x.id)===String(hid));if(!h)return;
- const current=new Set(h.fachrichtungen||[]);
- document.getElementById("app").innerHTML=`<div class="card">
-  <h2>🏷️ Fachrichtungen – ${esc(h.name)}</h2>
-  <p class="muted">Welche Fachrichtungen bietet diese Klinik real an? Wird für die Fachrichtungs-Ansicht und für IVENA-Anmeldungen genutzt – bitte bei Bedarf an die tatsächlichen Fachabteilungen anpassen.</p>
-  <div class="answer" id="fachBoxes" style="flex-direction:column;align-items:flex-start">
-   ${IVENA_FACHRICHTUNGEN.map(f=>`<label style="display:flex;align-items:center;gap:8px;padding:6px 0"><input type="checkbox" value="${esc(f)}" ${current.has(f)?"checked":""}> ${esc(f)}</label>`).join("")}
+ ivenaFachEdit={hid:String(hid),sel:new Set(h.fachrichtungen||[])};
+ render(currentPage==="ivenaZuweisungen"?"ivenaZuweisungen":"ivena"); window.scrollTo(0,0);
+}
+function ivenaFachToggle(f){if(!ivenaFachEdit)return;const S=ivenaFachEdit.sel;S.has(f)?S.delete(f):S.add(f);const el=document.querySelector(`[data-fach="${CSS.escape(f)}"]`);if(el)el.outerHTML=ivenaFachTile(f);const n=document.getElementById("fachCount");if(n)n.textContent=S.size}
+function ivenaFachAll(on){if(!ivenaFachEdit)return;ivenaFachEdit.sel=new Set(on?IVENA_FACHRICHTUNGEN:[]);render(currentPage)}
+function ivenaFachTile(f){
+ const on=ivenaFachEdit&&ivenaFachEdit.sel.has(f), ab=IVENA_FACH_ABBR[f]||"";
+ return `<button type="button" data-fach="${esc(f)}" class="fach-tile${on?" on":""}" onclick="ivenaFachToggle(${esc(JSON.stringify(f))})"><span class="fach-chk">${on?"✓":""}</span><span class="fach-name">${esc(f)}</span>${ab?`<span class="fach-ab">${esc(ab)}</span>`:""}</button>`;
+}
+function ivenaFachEditorHTML(){
+ const h=db.ivena.find(x=>String(x.id)===String(ivenaFachEdit.hid)); if(!h){ivenaFachEdit=null;return ""}
+ return `<div class="card">
+  <div class="row between" style="align-items:flex-start;gap:10px">
+   <div><h2 style="margin-bottom:4px">🏷️ Fachrichtungen</h2><div style="font-weight:800;font-size:16px">${esc(h.name)}</div><div class="muted" style="font-size:13px">${esc([h.place,h.area].filter(Boolean).join(" · "))}</div></div>
+   <span class="pill" style="font-size:13px"><b id="fachCount">${ivenaFachEdit.sel.size}</b> gewählt</span>
   </div>
-  <div class="row" style="margin-top:14px">
-   <button onclick="render(currentPage)">Abbrechen</button>
-   <button class="primary" onclick="saveIvenaFachrichtungen('${hid}')">✅ Speichern</button>
+  <p class="muted" style="font-size:13px;margin:10px 0">Antippen zum An- oder Abwählen. Patienten werden nur in Kliniken gebracht, die die passende Fachrichtung haben.</p>
+  <div class="fach-grid">${IVENA_FACHRICHTUNGEN.map(ivenaFachTile).join("")}</div>
+  <div class="row" style="gap:6px;margin-top:10px"><button style="font-size:13px;padding:5px 10px" onclick="ivenaFachAll(true)">Alle wählen</button><button style="font-size:13px;padding:5px 10px" onclick="ivenaFachAll(false)">Keine</button></div>
+  <div class="row" style="gap:8px;margin-top:16px;border-top:1px solid var(--line);padding-top:12px">
+   <button class="primary" onclick="saveIvenaFachrichtungen('${esc(String(h.id))}')">💾 Speichern</button>
+   <button onclick="ivenaFachEdit=null;render(currentPage)">Abbrechen</button>
   </div>
  </div>`;
 }
 function saveIvenaFachrichtungen(hid){
- const h=db.ivena.find(x=>String(x.id)===String(hid));if(!h)return;
- const boxes=document.querySelectorAll('#fachBoxes input[type="checkbox"]');
- h.fachrichtungen=[...boxes].filter(b=>b.checked).map(b=>b.value);
- save();pushIvenaCloud();toast("Fachrichtungen gespeichert");render(currentPage);
+ const h=db.ivena.find(x=>String(x.id)===String(hid));if(!h||!ivenaFachEdit)return;
+ h.fachrichtungen=IVENA_FACHRICHTUNGEN.filter(f=>ivenaFachEdit.sel.has(f)).concat((h.fachrichtungen||[]).filter(f=>!IVENA_FACHRICHTUNGEN.includes(f)&&ivenaFachEdit.sel.has(f)));
+ ivenaFachEdit=null; save();pushIvenaCloud();toast("Fachrichtungen gespeichert");render(currentPage);
 }
 function toggleIvenaViewMode(){
  db.ivenaViewMode=db.ivenaViewMode==="fachrichtung"?"klinik":"fachrichtung";
@@ -10799,6 +10824,7 @@ function ivenaIncomingHTML(){
 // Leitstellen-Kennung in der IVENA-Tabelle (Telefonnummer bewusst nicht hinterlegt – nicht verifiziert).
 const IVENA_LST_LABEL="LST FRI/WHV";
 function ivena(){
+ if(ivenaFachEdit){document.getElementById("app").innerHTML=ivenaFachEditorHTML();if(ivenaFachEdit)return}
  const areas=[...new Set(db.ivena.map(h=>h.area||"Sonstige"))];
  const rows=db.ivena.filter(h=>db.ivenaAreaFilter.includes(h.area||"Sonstige"));
  const isAuto=db.ivenaMode==="auto";
