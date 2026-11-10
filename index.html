@@ -208,14 +208,14 @@ html:not([data-device="handy"]) .bereiche-card nav button span[style*="font-size
 <header id="topbar">
  <div class="tb-left">
   <span class="tb-brand">🚑 Leitstelle<span>.sim</span></span>
-  <span id="versionTag" class="tb-ver">v5.81</span>
+  <span id="versionTag" class="tb-ver">v5.82</span>
   <span id="syncState"></span>
   <a id="deskTag" href="#" onclick="renameDesk();return false" title="Name dieses Platzes (für „offen an …“) – antippen zum Ändern"></a>
  </div>
  <span id="simCtl"></span>
  <div class="tb-right">
   <div id="areaSel" class="seg tb-area" title="Welcher Bereich wird disponiert?" style="display:none"><button data-v="fri" onclick="setDispatchArea('fri')">Friesland</button><button data-v="whv" onclick="setDispatchArea('whv')">Wilhelmshaven</button></div>
-  <a id="homeLink" href="#" onclick="render('leitstelle');return false" class="hidden tb-btn" title="Zur Leitstelle">🖥️ <span>Leitstelle</span></a>
+  <a id="homeLink" href="#" onclick="render('leitstelle');return false" class="hidden tb-btn" title="Zur Leitstelle">🏠 <span>Leitstelle</span></a>
   <a id="monitorLink" href="#" onclick="showMonitorQR();return false" class="tb-btn" title="Monitor hinzufügen">📺 <span>Monitor</span></a>
   <a id="deviceSwitchLink" href="#" onclick="switchViewLink();return false" class="tb-btn" title="Ansicht wechseln (Tablet/Handy)">📱 <span>Ansicht</span></a>
   <a href="#" onclick="localStorage.removeItem('dlrg-jet-scenario');location.reload();return false" class="tb-btn" title="Szenario wechseln">🔀 <span>Szenario</span></a>
@@ -971,7 +971,7 @@ const isTerminalLink=(()=>{
  return !!(p.get("vehicle")||p.get("neighbor")||p.get("caller"));
 })();
 const NAV_PAGES_ALL=[
- ["leitstelle","🖥️ Leitstelle"],["karte","🗺️ Karte"],["mittel","🚤 Fahrzeuge"],["aao","🧠 AAO"],["ivena","🏥 IVENA"],["ivenaZuweisungen","📋 IVENA-Zuweisungen"],["nachbarLks","🚑 Nachbar LKs"],["funk","📻 Funkrufgruppen"],["manv","🚨 MANV"],["veranstaltung","🎪 Großveranstaltung"]
+ ["leitstelle","🏠 Leitstelle"],["karte","🗺️ Karte"],["mittel","🚑 Fahrzeuge"],["aao","🧠 AAO"],["ivena","🏥 IVENA"],["ivenaZuweisungen","📨 IVENA-Zuweisungen"],["nachbarLks","🤝 Nachbar LKs"],["funk","📻 Funkrufgruppen"],["manv","👥 MANV"],["veranstaltung","🎪 Großveranstaltung"]
 ];
 // Zusatz-Monitor (per QR vom Hauptplatz geöffnet): vollwertige Leitstellen-Oberfläche, die ihren
 // kompletten Zustand in Echtzeit mit dem Hauptplatz und allen anderen Monitoren teilt.
@@ -3655,7 +3655,7 @@ function dashboard(){
   </div>`:""}
  <div class="grid">
  <section>
-  <div class="card"><div class="row between"><div><h2>🖥️ Leitstelle</h2><div class="muted">Mehrere Übungseinsätze können parallel geführt werden.</div></div><div class="row"><button class="primary" onclick="newCall()">📞 Notruf annehmen</button><button onclick="newKtCall()" style="background:#1d4ed8;color:#fff;border-color:#1d4ed8">🚑 Krankentransport annehmen</button></div></div>
+  <div class="card"><div class="row between"><div><h2>🏠 Leitstelle</h2><div class="muted">Mehrere Übungseinsätze können parallel geführt werden.</div></div><div class="row"><button class="primary" onclick="newCall()">📞 Notruf annehmen</button><button onclick="newKtCall()" style="background:#1d4ed8;color:#fff;border-color:#1d4ed8">🚑 Krankentransport annehmen</button></div></div>
    ${hasAlarmed?`<div class="row" style="margin-top:10px;flex-wrap:wrap">
      <button onclick="openExternalRequest('polizei')">👮 Polizeileitstelle</button>
      <button onclick="openExternalRequest('gol')">📠 LST GOL</button>

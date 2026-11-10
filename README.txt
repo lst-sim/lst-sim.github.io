@@ -1607,6 +1607,9 @@ Version 5.05:
   („a, b“ = a ODER b). Mit „🚑 NA-Indikation“ markierte Knöpfe ziehen weiterhin einen Notarzt.
 - Nur „Unauffällig“ (ohne weitere Befunde) zählt weiter als unauffälliges E (R0 möglich).
 
+Version 5.82:
+- Neue Symbole in der rechten Leiste: 🏠 Leitstelle, 🗺️ Karte, 🚑 Fahrzeuge, AAO, 🏥 IVENA, 📨 IVENA-Zuweisungen, 🤝 Nachbar-LKs, 📻 Funkrufgruppen, 👥 MANV, 🎪 Großveranstaltung.
+
 Version 5.81:
 - „🎲 Realistisch“ (Fahrzeuge) spielt jetzt die letzten 3 Stunden im Zeitraffer durch:
   - Einsätze in Friesland und Wilhelmshaven werden zu ihrer Zeit angelegt und alarmiert. Die Besatzungen arbeiten wie immer: Anfahrt, Versorgung, IVENA-Anmeldung, Transport, Übergabe.
