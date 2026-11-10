@@ -1609,6 +1609,7 @@ Version 5.05:
 
 Version 5.74:
 - Fahrzeuge: Neuer Knopf „📤 Als Datei“. Er speichert die Fahrzeugliste als Datei oder öffnet auf iPhone/iPad das Teilen-Menü. Damit können eigene Änderungen fest in die Standarddaten übernommen werden.
+- Fehler behoben (seit 5.67): Wurde ein älterer gespeicherter Stand (Cloud oder Datei) geladen, konnten wieder „OrgL/LNA“-Einträge auftauchen und OrgL Varel/Sande doppelt erscheinen. Die Umstellung läuft jetzt auch nach jedem Laden. Eigene Angaben wie Standort oder Besatzung bleiben dabei erhalten.
 
 Version 5.73:
 - LNA mit Handy: Hat das Handy GPS (höchstens 2 Minuten alt), rechnet die SDS die Ankunftszeit vom echten Standort aus. Der Ort in „komme aus …“ ist dann der echte nächstgelegene Ort.

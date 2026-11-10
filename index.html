@@ -982,22 +982,34 @@ const RETIRED_UNIT_OPTAS=[
 db.units=db.units.filter(u=>!RETIRED_UNIT_OPTAS.includes(u.opta));
 // v5.67: OrgL und LNA getrennt. Bisherige „OrgL/LNA“-Fahrzeuge werden zum OrgL (Typ „OrgL“), reine
 // LNA-Einträge zum LNA (Privat-PKW). In allen AAOs wird „OrgL/LNA“ zu „OrgL“ und zusätzlich 1 LNA alarmiert.
-if(!db.lnaSplitV567){
+// v5.74: läuft bei jedem Start UND nach dem Laden eines gespeicherten Stands (Cloud/Datei), damit ältere
+// gespeicherte Stände nicht wieder „OrgL/LNA“ einführen oder doppelte OrgL-Fahrzeuge entstehen.
+function lnaSplitMigrate(){
+ let ch=false;
  (db.units||[]).forEach(u=>{
-   if(u.type!=="OrgL/LNA")return;
    const nm=String(u.opta||u.name||"");
-   if(/\bLNA\b/.test(nm)&&!/OrgL/.test(nm)){u.type="LNA";return}
-   u.type="OrgL";
-   const m=/^Rettungsdienst Friesland – OrgL\/LNA (Varel|Sande)$/.exec(nm);
-   if(m&&!u.userEdited){u.opta=`Rettungsdienst Friesland – OrgL ${m[1]}`;u.name=`OrgL ${m[1]}`;u.skills="Organisatorischer Leiter Rettungsdienst"}
+   const m=/^Rettungsdienst Friesland – OrgL\/LNA (Varel|Sande)$/.exec(String(u.opta||""));
+   if(m){ // alte Standard-Kennung: Kennung umbenennen, eigene Angaben (Standort, Besatzung …) bleiben
+     u.opta=`Rettungsdienst Friesland – OrgL ${m[1]}`; if(/^OrgL\/LNA /.test(String(u.name||"")))u.name=`OrgL ${m[1]}`;
+     if(/Leitender Notarzt/.test(String(u.skills||"")))u.skills="Organisatorischer Leiter Rettungsdienst"; u.type="OrgL"; ch=true;
+   }
+   if(u.type!=="OrgL/LNA")return;
+   u.type=(/\bLNA\b/.test(nm)&&!/OrgL/.test(nm))?"LNA":"OrgL"; ch=true;
  });
+ // gleiche Kennung doppelt (alter Stand + neues Standardfahrzeug) → nur einmal behalten
+ const seen=new Set(); const before=(db.units||[]).length;
+ db.units=(db.units||[]).filter(u=>{if(u.neighborLoan||!u.opta)return true;if(seen.has(u.opta))return false;seen.add(u.opta);return true});
+ if(db.units.length!==before)ch=true;
  (db.aao||[]).forEach(a=>{
    if(!Array.isArray(a.units)||!a.units.some(x=>x.type==="OrgL/LNA"))return;
    a.units.forEach(x=>{if(x.type==="OrgL/LNA")x.type="OrgL"});
    if(!a.units.some(x=>x.type==="LNA"))a.units.splice(a.units.findIndex(x=>x.type==="OrgL")+1,0,{type:"LNA",n:1,org:"Rettungsdienst"});
+   ch=true;
  });
  db.lnaSplitV567=true;
+ return ch;
 }
+lnaSplitMigrate();
 // Neu hinzugekommene Standardfahrzeuge (z. B. per Update ergänzt) bei bereits genutzten
 // Installationen automatisch nachziehen, ohne eigene/manuell angelegte Einträge anzutasten.
 if(!Array.isArray(db.deletedUnitOptas))db.deletedUnitOptas=[];
@@ -1063,6 +1075,7 @@ if(!db.aaoSyncV394){
    if(!existingIds.has(a.id)&&!existingNames.has(a.name)&&!db.deletedAaoIds.includes(String(a.id)))db.aao.push(JSON.parse(JSON.stringify(a)));
  });
 }
+lnaSplitMigrate(); // v5.74: nochmals nach dem AAO-Abgleich (gespeicherte AAOs werden erst hier vollständig geladen)
 if(!Array.isArray(db.activeCalls))db.activeCalls=[];
 // Einmalig (v4.45, auf Wunsch): Fahrzeuge stehen standardmäßig auf Status 2 statt 1. Freie
 // Fahrzeuge in Status 1, die keinem Einsatz zugeordnet sind und nicht gerade zur Wache
@@ -9144,13 +9157,15 @@ function applySetupData(kind,d){
    db.aao=d.aao; db.deletedAaoIds=Array.isArray(d.deletedAaoIds)?d.deletedAaoIds:(db.deletedAaoIds||[]);
    if(d.qsConfig&&typeof d.qsConfig==="object"){db.qsConfig=d.qsConfig;try{qsSyncRuleFields()}catch(e){}}
    if(Array.isArray(d.aaoQty))db.aaoQty=d.aaoQty;
+   if(lnaSplitMigrate()){db.cfgDirty_aao=true;setTimeout(()=>{try{cfgPut("aao")}catch(e){}},1500)} // v5.74
  }else{
    const old=new Map((db.units||[]).map(u=>[String(u.id),u]));
    const loans=(db.units||[]).filter(u=>u.neighborLoan);
    db.units=[...d.units.map(u=>{const o=old.get(String(u.id));const x={...u,userEdited:true};if(o){UNIT_RUNTIME_KEYS.forEach(k=>{if(o[k]!==undefined)x[k]=o[k]});x.status=o.status}else if(!x.status)x.status="2";return x}),...loans];
    if(Array.isArray(d.deletedUnitOptas))db.deletedUnitOptas=d.deletedUnitOptas;
    // Korrekturen/neue Standardfahrzeuge auch auf den geladenen Stand anwenden und wieder speichern
-   if(applyDefaultUnitCorrections()){db.cfgDirty_units=true;setTimeout(()=>{try{cfgPut("units")}catch(e){}},1500)}
+   const mig=lnaSplitMigrate(); // v5.74
+   if(applyDefaultUnitCorrections()||mig){db.cfgDirty_units=true;setTimeout(()=>{try{cfgPut("units")}catch(e){}},1500)}
  }
 }
 function importSetup(kind,text){
