@@ -1607,6 +1607,18 @@ Version 5.05:
   („a, b“ = a ODER b). Mit „🚑 NA-Indikation“ markierte Knöpfe ziehen weiterhin einen Notarzt.
 - Nur „Unauffällig“ (ohne weitere Befunde) zählt weiter als unauffälliges E (R0 möglich).
 
+Version 5.81:
+- „🎲 Realistisch“ (Fahrzeuge) spielt jetzt die letzten 3 Stunden im Zeitraffer durch:
+  - Einsätze in Friesland und Wilhelmshaven werden zu ihrer Zeit angelegt und alarmiert. Die Besatzungen arbeiten wie immer: Anfahrt, Versorgung, IVENA-Anmeldung, Transport, Übergabe.
+  - Einsätze, die danach noch laufen, stehen ganz normal auf dem Startbildschirm und lassen sich weiter bearbeiten. Fertige Einsätze stehen in den Protokollen.
+  - Die SDS aus dem Zeitraffer gelten als gelesen.
+  - Deine eigenen offenen Einsätze bleiben unverändert.
+- IVENA bekommt dazu Anmeldungen der letzten 14 Stunden für die Kliniken in Friesland/WHV, GOL und Ostfriesland. Sie kommen von eigenen Fahrzeugen und aus den Nachbar-LKs (nur Fahrzeuge bis ca. 45 km von der Klinik). In der Spalte „LST“ steht die jeweilige Leitstelle. Einige Fahrzeuge sind noch auf der Anfahrt.
+  Mengen und Uhrzeiten sind Annahmen: tagsüber ca. 0,5–1 Anmeldung je Stunde und Klinik, nachts weniger.
+- Rechte Leiste neu gestaltet: helle Kacheln ohne Lücken dazwischen, die aktive ist rot. Die Kachel „📞 Notruf“ ist weg (Notrufe nimmst du über „Notruf annehmen“ an bzw. öffnest sie über die Einsatzliste).
+- Neu: Kachel „🎪 Großveranstaltung“ mit eigener Seite. Auf dem Startbildschirm steht nur noch ein kurzer Hinweis, solange eine Veranstaltung läuft.
+- Startbildschirm rechts: kompakte Kennzahlen (offene Einsätze, davon alarmiert, Fahrzeuge im Einsatz) und „SDS schreiben“.
+
 Version 5.80:
 - Ein Platz disponiert jetzt entweder Friesland oder Wilhelmshaven. „Beide“ gibt es nicht mehr, Standard ist Friesland.
 - Die Wahl gilt je Fenster. Ein zweiter Bildschirm, ein zweites Fenster oder ein zweites Gerät kann so den anderen Bereich disponieren.
