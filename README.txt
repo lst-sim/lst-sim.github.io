@@ -1607,6 +1607,9 @@ Version 5.05:
   („a, b“ = a ODER b). Mit „🚑 NA-Indikation“ markierte Knöpfe ziehen weiterhin einen Notarzt.
 - Nur „Unauffällig“ (ohne weitere Befunde) zählt weiter als unauffälliges E (R0 möglich).
 
+Version 5.72:
+- LNA: 1–3 Minuten nach der Alarmierung schickt der LNA eine SDS, z. B. „Alarm erhalten, komme mit dem Privat-PKW aus Jever. Eintreffen in ca. 25 min (ca. 10:40 Uhr).“ Die genannte Zeit ist die, zu der er in der Simulation tatsächlich eintrifft.
+
 Version 5.71:
 - Fahrzeug-Handy: Bei Status 4 schließt sich das Navi und die Funkansicht erscheint. Bei Status 7 öffnet sich das Navi und führt über die Straßenroute zur Klinik aus der IVENA-Zuweisung. Das gilt egal, ob der Status am Handy gedrückt oder von der Leitstelle gesetzt wird.
 - MANV/MANI/MANB: In der Funkansicht gibt es eine Karte „📢 Rückmeldung“ mit zwei Knöpfen:

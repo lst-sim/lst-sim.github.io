@@ -170,7 +170,7 @@ html[data-device="handy"] #floatDock{left:8px;right:8px;width:auto;top:auto;bott
 </head>
 <body>
 <div style="padding:6px 10px;font-size:11px;color:#94a3b8;font-weight:700;display:flex;flex-wrap:wrap;align-items:center;gap:10px;position:sticky;top:0;z-index:10;background:var(--bg)">
- <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v5.71</span>
+ <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v5.72</span>
  <span id="syncState"></span> <a id="deskTag" href="#" onclick="renameDesk();return false" title="Name dieses Platzes (für „offen an …“) – antippen zum Ändern" style="color:#64748b;font-weight:700;text-decoration:none"></a>
  <span id="simCtl" style="position:absolute;left:50%;transform:translateX(-50%);display:flex;gap:6px;align-items:center"></span>
  <a id="homeLink" href="#" onclick="render('leitstelle');return false" class="hidden" style="color:#64748b;text-decoration:underline;font-weight:600">🖥️ Leitstelle</a>
@@ -1796,6 +1796,16 @@ function autoAdvanceEnRoute(){
      if(home&&dest){
        const km=haversine(home[0],home[1],dest[0],dest[1]);
        const etaMs=(etaMinutesForDistance(u,km)||10)*60000;
+       // v5.72: LNA meldet sich nach der Alarmierung per SDS mit voraussichtlicher Ankunftszeit
+       if(isLNA(u)&&u._lnaSdsFor!==u.status3Since){
+         if(!u._lnaSdsAt||u._lnaSdsBase!==u.status3Since){u._lnaSdsBase=u.status3Since;u._lnaSdsAt=u.status3Since+Math.min(etaMs*0.5,(1+Math.random()*2)*60000);changed=true}
+         if(now>=u._lnaSdsAt){
+           u._lnaSdsFor=u.status3Since; const arr=u.status3Since+etaMs, rest=Math.max(1,Math.round((arr-now)/60000));
+           const tw=LNA_TOWNS.filter(t=>AREA_CENTERS[t]).map(t=>[t,haversine(home[0],home[1],AREA_CENTERS[t][0],AREA_CENTERS[t][1])]).sort((x,y)=>x[1]-y[1])[0];
+           crewSds(u,call,`Alarm erhalten, komme mit dem Privat-PKW${tw&&tw[1]<8?` aus ${tw[0]}`:""}. Eintreffen in ca. ${rest} min (ca. ${hhmm(arr)} Uhr).`);
+           changed=true;
+         }
+       }
        if(now-u.status3Since>=etaMs){setUnitStatus(u,"4");changed=true;}
      }
    } else if(u.crew&&["4","7","8"].includes(status)){
