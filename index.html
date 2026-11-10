@@ -220,7 +220,7 @@ html:not([data-device="handy"]) .bereiche-card nav button span[style*="font-size
 <header id="topbar">
  <div class="tb-left">
   <span class="tb-brand">🚑 Leitstelle<span>.sim</span></span>
-  <span id="versionTag" class="tb-ver">v5.84</span>
+  <span id="versionTag" class="tb-ver">v5.85</span>
   <span id="syncState"></span>
   <a id="deskTag" href="#" onclick="renameDesk();return false" title="Name dieses Platzes (für „offen an …“) – antippen zum Ändern"></a>
  </div>
@@ -9652,7 +9652,8 @@ function ensureWhvAaos(){
  return ch;
 }
 function aaoEntry(id){
- if(AAO_AREA_CTX==="whv"&&!/^whv-/.test(String(id))&&LINKED_AAO_IDS.has(String(id))&&!(db.deletedAaoIds||[]).map(String).includes("whv-"+id)){
+ if(AAO_AREA_CTX==="whv"&&!/^whv-/.test(String(id))&&LINKED_AAO_IDS.has(String(id))){
+   if((db.deletedAaoIds||[]).map(String).includes("whv-"+id))return null; // v5.85: gelöschte WHV-AAO alarmiert nichts (kein Rückfall auf Friesland)
    const w=(db.aao||[]).find(a=>String(a.id)==="whv-"+id); if(w)return w;
  }
  const own=(db.aao||[]).find(a=>String(a.id)===String(id)); if(own)return own;
@@ -9768,7 +9769,7 @@ function aaoTopicsList(){const extra=[...new Set((db.aao||[]).map(aaoTopic))].fi
 function aaoSortKey(a){return `${a.active===false?"1":"0"}|${String(a.keyword||a.name||"").toLowerCase()}|${String(a.name||"").toLowerCase()}`}
 function aaoRowHTML(a){
    const builtin=isBuiltinAao(a.id);
-   return `<tr style="${a.active===false?"opacity:.5":""}"><td><b>${esc(a.name)}</b>${a.keyword?`<br><small class="muted">${esc(a.keyword)}</small>`:""}${a.lead?` <span class="pill" title="Liefert den Anfang des Stichworts">🎯 führt</span>`:""}${builtin&&!a.rulesEdited?"":`<br><span class="pill">${builtin?"Bedingungen geändert":"eigene"}${a.active===false?" · inaktiv":""}</span>`}</td><td>${aaoRulesText(a)}</td><td>${(a.units||[]).map(x=>`${x.n==="pat"?`${esc(x.type)} je Patient`:`${aaoNText(x)}× ${esc(x.type)}`}${x.org?` <small class="muted">(${esc(x.org)}${x.bf?", nur BF WHV":""})</small>`:""}${x.opta?` <small class="muted">= ${esc(x.opta)}</small>`:""}${x.opt?` <span class="pill">optional</span>`:""}`).join(", ")||`<span class="muted">keine</span>`}</td><td><small>${aaoCombineText(a)}</small></td><td style="white-space:nowrap"><button onclick="editAAO(${JSON.stringify(a.id)})">✏️ Bearbeiten</button><button onclick="deleteAAO(${JSON.stringify(a.id)})">Löschen</button></td></tr>`;
+   return `<tr style="${a.active===false?"opacity:.5":""}"><td><b>${esc(a.name)}</b>${a.keyword?`<br><small class="muted">${esc(a.keyword)}</small>`:""}${a.lead?` <span class="pill" title="Liefert den Anfang des Stichworts">🎯 führt</span>`:""}${builtin&&!a.rulesEdited?"":`<br><span class="pill">${builtin?"Bedingungen geändert":"eigene"}${a.active===false?" · inaktiv":""}</span>`}</td><td>${aaoRulesText(a)}</td><td>${(a.units||[]).map(x=>`${x.n==="pat"?`${esc(x.type)} je Patient`:`${aaoNText(x)}× ${esc(x.type)}`}${x.org?` <small class="muted">(${esc(x.org)}${x.bf?", nur BF WHV":""})</small>`:""}${x.opta?` <small class="muted">= ${esc(x.opta)}</small>`:""}${x.opt?` <span class="pill">optional</span>`:""}`).join(", ")||`<span class="muted">keine</span>`}</td><td><small>${aaoCombineText(a)}</small></td><td style="white-space:nowrap"><button onclick="editAAO('${esc(String(a.id))}')">✏️ Bearbeiten</button><button onclick="deleteAAO('${esc(String(a.id))}')">Löschen</button></td></tr>`;
 }
 function aaoAreaView(){try{return localStorage.getItem("lst-aao-area")==="whv"?"whv":"fri"}catch(e){return "fri"}}
 function setAaoAreaView(v){try{localStorage.setItem("lst-aao-area",v)}catch(e){};render("aao")}
