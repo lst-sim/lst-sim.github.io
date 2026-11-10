@@ -1607,6 +1607,9 @@ Version 5.05:
   („a, b“ = a ODER b). Mit „🚑 NA-Indikation“ markierte Knöpfe ziehen weiterhin einen Notarzt.
 - Nur „Unauffällig“ (ohne weitere Befunde) zählt weiter als unauffälliges E (R0 möglich).
 
+Version 5.74:
+- Fahrzeuge: Neuer Knopf „📤 Als Datei“. Er speichert die Fahrzeugliste als Datei oder öffnet auf iPhone/iPad das Teilen-Menü. Damit können eigene Änderungen fest in die Standarddaten übernommen werden.
+
 Version 5.73:
 - LNA mit Handy: Hat das Handy GPS (höchstens 2 Minuten alt), rechnet die SDS die Ankunftszeit vom echten Standort aus. Der Ort in „komme aus …“ ist dann der echte nächstgelegene Ort.
 - Hat das Handy kein GPS, wartet die SDS bis zu 5 Minuten darauf. Danach kommt „Eintreffzeit noch unklar (kein GPS)“.

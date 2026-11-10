@@ -170,7 +170,7 @@ html[data-device="handy"] #floatDock{left:8px;right:8px;width:auto;top:auto;bott
 </head>
 <body>
 <div style="padding:6px 10px;font-size:11px;color:#94a3b8;font-weight:700;display:flex;flex-wrap:wrap;align-items:center;gap:10px;position:sticky;top:0;z-index:10;background:var(--bg)">
- <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v5.73</span>
+ <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v5.74</span>
  <span id="syncState"></span> <a id="deskTag" href="#" onclick="renameDesk();return false" title="Name dieses Platzes (für „offen an …“) – antippen zum Ändern" style="color:#64748b;font-weight:700;text-decoration:none"></a>
  <span id="simCtl" style="position:absolute;left:50%;transform:translateX(-50%);display:flex;gap:6px;align-items:center"></span>
  <a id="homeLink" href="#" onclick="render('leitstelle');return false" class="hidden" style="color:#64748b;text-decoration:underline;font-weight:600">🖥️ Leitstelle</a>
@@ -8935,6 +8935,7 @@ function mittel(){
        <button onclick="openCloudSetup()">☁️ Live-Verbindung</button>
        <button onclick="cfgPut('units',true);if(ghToken())saveSetupToGitHub('units')" title="Änderungen werden automatisch dauerhaft gespeichert – hier von Hand">☁️ Speichern</button>
        <button onclick="cfgSync('units',true)" title="Dauerhaft gespeicherten Stand laden">📥 Gespeicherten Stand laden</button>
+       <button onclick="exportSetup('units')" title="Fahrzeugliste als Datei speichern oder teilen (z. B. um sie an Claude zu schicken)">📤 Als Datei</button>
        <button onclick="ghOpenSetup('units')" title="Optional: zusätzlich in GitHub speichern (Token)">🔑</button>
        <button class="primary" onclick="addUnit()">＋ Fahrzeug</button>
      </div>
