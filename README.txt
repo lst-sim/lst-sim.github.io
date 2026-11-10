@@ -1607,6 +1607,17 @@ Version 5.05:
   („a, b“ = a ODER b). Mit „🚑 NA-Indikation“ markierte Knöpfe ziehen weiterhin einen Notarzt.
 - Nur „Unauffällig“ (ohne weitere Befunde) zählt weiter als unauffälliges E (R0 möglich).
 
+Version 5.87:
+- Neue, seltenere Übungsnotrufe für die übrigen Fachrichtungen. Zusammen sind das ca. 6 % aller Anrufe, ein einzelner Fall ist also deutlich seltener als ein Herz- oder Sturzfall:
+  - Geburtshilfe: einsetzende Geburt (39. SSW, Blasensprung, Pressdrang), Geburt zu Hause schon erfolgt, Blutung in der 30.–35. SSW
+  - Gynäkologie: Unterbauchschmerzen mit Blutung
+  - Pädiatrie: Pseudokrupp, Fieberkrampf
+  - Urologie: Nierenkolik, akuter Harnverhalt
+  - Augenheilkunde: akutes rotes, schmerzhaftes Auge mit Sehverschlechterung
+  - HNO: Nachblutung nach Mandel-OP
+- Die Besatzungen erkennen diese Fälle und melden mit dem passenden PZC in IVENA an, z. B. 536 einsetzende Geburt, 512 Pseudokrupp, 711 Nierenkolik, 721 akute Augenerkrankung, 732 HNO-Nachblutung. Angefahren werden nur Kliniken mit der passenden Fachrichtung.
+- „Realistisch“ und die IVENA-Vorgeschichte enthalten diese Fälle jetzt auch, in kleinerem Anteil.
+
 Version 5.86:
 - Neue Ansicht zum Bearbeiten der Fachrichtungen einer Klinik: große Kacheln zum Antippen (grün mit Haken = vorhanden, mit Kürzel wie in der IVENA-Tabelle), Anzahl oben rechts, „Alle wählen“ und „Keine“, Speichern und Abbrechen.
 - Die Ansicht bleibt in der normalen Seite mit der rechten Leiste und geht beim automatischen Neuzeichnen nicht verloren.

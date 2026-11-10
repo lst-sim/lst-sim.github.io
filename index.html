@@ -231,7 +231,7 @@ html[data-device="handy"] .fach-grid{grid-template-columns:1fr}
 <header id="topbar">
  <div class="tb-left">
   <span class="tb-brand">🚑 Leitstelle<span>.sim</span></span>
-  <span id="versionTag" class="tb-ver">v5.86</span>
+  <span id="versionTag" class="tb-ver">v5.87</span>
   <span id="syncState"></span>
   <a id="deskTag" href="#" onclick="renameDesk();return false" title="Name dieses Platzes (für „offen an …“) – antippen zum Ändern"></a>
  </div>
@@ -2572,7 +2572,7 @@ function chooseOne(type,org=null){return availableUnits(type,org)[0]||null}
 // Was danach noch läuft, steht ganz normal auf dem Startbildschirm und kann weiter bearbeitet werden.
 // Zusätzlich: IVENA-Anmeldungen der letzten 14 h (eigene und aus den Nachbar-LKs), auch noch anfahrende.
 // Mengen und Zeiten sind eigene Annahmen.
-const RM_RD_CASES=["acs","stroke","fall","fall","dyspnoe","hypo","seizure","childfever","psych","unconscious","cut","heim_sturz","heim_atemnot","heim_vigil","vu_light"];
+const RM_RD_CASES=["acs","acs","stroke","fall","fall","dyspnoe","dyspnoe","hypo","seizure","childfever","psych","unconscious","cut","heim_sturz","heim_atemnot","heim_vigil","vu_light","uro_kolik","geb_wehen","paed_krupp","gyn_blutung"];
 const RM_FW_CASES=["fire_kitchen","fire_bin","tree","vu_trapped"];
 function rmWithClock(fn){
  const RD=Date; let T=RD.now();
@@ -2607,7 +2607,8 @@ function rmMakeCall(area,caseId,t){
 }
 function rmIvenaHistory(fromT,toT){
  const hs=(db.ivena||[]).filter(h=>!h.hbo&&/LST Friesland|GOL|KRLS Ostfriesland/.test(h.area||"")&&hospitalPointOf(h));
- const RMIS=[["331",3],["421",2],["311",3],["272",3],["273",2],["329",3],["322",2],["414",1],["353",2],["214",2],["224",2],["412",1],["393",1],["435",1],["325",1]];
+ const RMIS=[["331",3],["421",2],["311",3],["272",3],["273",2],["329",3],["322",2],["414",1],["353",2],["214",2],["224",2],["412",1],["393",1],["435",1],["325",1],
+   ["536",0.4],["545",0.2],["551",0.4],["512",0.3],["513",0.2],["711",0.6],["713",0.4],["721",0.2],["731",0.3],["732",0.2],["432",0.3]]; // v5.87: seltenere Fachrichtungen
  const pickRmi=()=>{let t=RMIS.reduce((x,y)=>x+y[1],0)*Math.random();for(const [r,w] of RMIS){t-=w;if(t<=0)return r}return "329"};
  const own=(db.units||[]).filter(u=>["RTW","NKTW","KTW"].includes(u.type)&&u.org==="Rettungsdienst"&&!u.neighborLoan);
  const out=[]; let n=0;
@@ -5459,6 +5460,17 @@ function alarmProposal(){
 // Gilt für alle Einsätze – auch für Übungsnotrufe (dort zählt der wahre Zustand des Patienten).
 const CREW_TRANSPORT=new Set(["RTW","NKTW","KTW","RTH","ITH","KTH","SRTW","Baby-NAW","NAW","ITW"]);
 const CREW_RMI=[
+ // v5.87: seltenere Fachrichtungen zuerst (spezifischer als die allgemeinen Muster unten)
+ [/präklinische geburt|entbunden|baby ist da/,"526"],
+ [/schwangerschaft.*(3[0-6])\. ssw|(3[0-6])\. ssw.*blutung/,"545"],
+ [/wehen|blasensprung|39\. ssw/,"536"],
+ [/vaginale blutung|unterbauchschmerzen gynäkolog/,"551"],
+ [/pseudokrupp|stridor|bellend/,"512"],
+ [/fieberkrampf/,"513"],
+ [/nierenkolik|flankenschmerz/,"711"],
+ [/harnverhalt/,"713"],
+ [/akute augenerkrankung|rotes schmerzhaftes auge/,"721"],
+ [/tonsillektomie|mandel-op|nachblutung/,"732"],
  [/co-melder|kohlenmonoxid|co-vergiftung|co-hb/,"370"],
  [/reanim|herzstillstand|keine normale atmung.*bewusstlos/,"132"],
  [/brust|herzinfarkt|druck auf der brust|engegefühl|ausstrahl/,"331"],
@@ -11183,6 +11195,67 @@ const SIM_CASES=[
    f:{event:"Technische Hilfeleistung",count:"2",x:"Nein",a:"Frei",b:"Auffällig",c:"Normal",d:"Wach / orientiert",e:"Reizhusten, brennende Augen nach Kontakt mit Dämpfen",psy:"Nein",danger:"ja"},
    onset:"Vor ungefähr zehn Minuten bemerkt.",hist:"",danger:"Wir haben den Bereich weiträumig abgesperrt. Der Wind kommt von Westen.",
    extra:["Die UN-Nummer ist 1789, steht auf der orangen Tafel.","Die beiden sitzen jetzt im Sozialraum, die Augen haben wir gespült.","Ein Kollege hat auch etwas an die Hand bekommen, die ist ganz rot."]}}},
+ // ── v5.87: seltenere Fachrichtungen (Gynäkologie/Geburtshilfe, Pädiatrie, Urologie, Augen, HNO) ──
+ {id:"geb_wehen",w:0.9,num:"112",loc:"home",mk:()=>{const p=simPerson("w"),c=simPerson("m"),age=rint(22,39),n=rint(5,8);return {rel:"meine Frau",caller:c,patient:p,age,panic:true,
+   open:["Hallo, meine Frau hat Wehen, die kommen jetzt ganz schnell hintereinander!","Meine Frau bekommt das Baby, die Wehen sind schon alle paar Minuten!"],
+   event:`Sie ist in der 39. Woche, die Wehen kommen jetzt alle ${pick(["zwei","drei"])} Minuten und sind richtig stark. Die Fruchtblase ist vor einer halben Stunde geplatzt. Es ist ihr ${n===5?"erstes":"zweites"} Kind.`,
+   f:{count:"1",x:"Nein",a:"Frei",b:"Normal",c:"Unauffällig",d:"Wach / orientiert",e:"Schwangerschaft 39. SSW, Wehen alle 2–3 min, Blasensprung",psy:"Nein",danger:"nein"},
+   onset:"Seit gut einer Stunde, jetzt wird es immer heftiger.",hist:"Die Schwangerschaft war ganz normal. Wir wollten ins Johannes-Hospital nach Varel.",
+   extra:["Sie sagt, sie muss pressen!","Wir schaffen es nicht mehr selbst ins Krankenhaus, das Auto ist auch weg.","Soll ich Handtücher holen?"]}}},
+ {id:"geb_praeklinisch",w:0.25,num:"112",loc:"home",mk:()=>{const p=simPerson("w"),c=simPerson("w"),age=rint(24,38);return {rel:"meine Tochter",caller:c,patient:p,age,panic:true,
+   open:["Hilfe, das Baby ist da! Meine Tochter hat gerade im Badezimmer entbunden!"],
+   event:"Das Kind ist eben im Bad gekommen, ganz schnell. Es schreit, ich hab es in ein Handtuch gewickelt und auf ihren Bauch gelegt. Die Nabelschnur ist noch dran. Sie blutet ein bisschen.",
+   f:{count:"2",x:"Nein",a:"Frei",b:"Normal",c:"Unauffällig",d:"Wach / orientiert",e:"präklinische Geburt ab 37. SSW, Neugeborenes schreit, Nabelschnur nicht abgenabelt",psy:"Nein",danger:"nein"},
+   onset:"Vor zwei Minuten.",hist:"38. Woche, zweites Kind. Beim ersten ging es auch so schnell.",
+   extra:["Das Baby ist ganz glitschig, darf ich die Nabelschnur durchschneiden?","Die Nachgeburt ist noch nicht da.","Ist das normal, dass es so blutet?"]}}},
+ {id:"gyn_ssw_blutung",w:0.6,num:"112",loc:"home",mk:()=>{const p=simPerson("w"),age=rint(24,38),w=rint(30,35);return {rel:"ich selbst",caller:p,patient:p,age,
+   open:[`Hallo, ich bin in der ${w}. Woche schwanger und blute plötzlich ziemlich stark.`],
+   event:`Ich bin in der ${w}. Schwangerschaftswoche. Seit einer Viertelstunde blute ich, und der Bauch ist ganz hart und tut weh. Das Baby bewegt sich weniger als sonst.`,
+   f:{count:"1",x:"Nein",a:"Frei",b:"Normal",c:"Auffällig",d:"Wach / orientiert",e:`Schwangerschaft ${w}. SSW, vaginale Blutung, harter Bauch, Unterbauchschmerz`,psy:"Nein",danger:"nein"},
+   onset:"Seit etwa 15 Minuten.",hist:"Bisher war alles in Ordnung, letzte Vorsorge war letzte Woche.",
+   extra:["Mir wird ein bisschen schwindelig.","Mein Mann ist auf der Arbeit, ich bin allein mit unserem Großen.","Soll ich mich hinlegen?"]}}},
+ {id:"gyn_blutung",w:0.5,num:"112",loc:"home",mk:()=>{const p=simPerson("w"),c=simPerson("m"),age=rint(28,48);return {rel:"meine Frau",caller:c,patient:p,age,
+   open:["Hallo, meine Frau hat ganz starke Unterleibsschmerzen und blutet."],
+   event:"Sie hat seit heute Mittag starke Schmerzen im Unterbauch, eher rechts, und eine Blutung, die nicht ihre Regel ist. Sie ist ganz blass.",
+   f:{count:"1",x:"Nein",a:"Frei",b:"Normal",c:"Auffällig",d:"Wach / orientiert",e:"Unterbauchschmerzen gynäkologisch, vaginale Blutung, blass",psy:"Nein",danger:"nein"},
+   onset:"Seit heute Mittag, jetzt viel schlimmer.",hist:"Sie meint, die Regel ist ein paar Wochen überfällig.",
+   extra:["Sie hat sich gerade übergeben.","Ihr ist schwindelig, wenn sie aufsteht."]}}},
+ {id:"paed_krupp",w:0.8,num:"112",loc:"home",mk:()=>{const p=simPerson(),age=rint(1,4);return {rel:p.g==="m"?"mein Sohn":"meine Tochter",caller:simPerson("w"),patient:p,age,panic:true,
+   open:["Mein Kind kriegt ganz schlecht Luft und hustet so komisch bellend!"],
+   event:`${p.g==="m"?"Er":"Sie"} ist nachts aufgewacht und hustet ganz bellend, wie ein Seehund. Beim Einatmen pfeift es, und ${p.g==="m"?"er":"sie"} weint und hat Angst.`,
+   f:{count:"1",x:"Nein",a:"Frei",b:"Auffällig",c:"Unauffällig",d:"Wach / orientiert",e:"bellender Husten, inspiratorischer Stridor, Kind (Pseudokrupp)",psy:"Nein",danger:"nein"},
+   onset:"Seit einer halben Stunde.",hist:"Seit zwei Tagen erkältet, sonst gesund.",
+   extra:["Ich hab das Fenster aufgemacht, das hat ein bisschen geholfen.","Die Lippen sind nicht blau, oder? Doch, ein bisschen vielleicht."]}}},
+ {id:"paed_fieberkrampf",w:0.7,num:"112",loc:"home",mk:()=>{const p=simPerson(),age=rint(1,3);return {rel:p.g==="m"?"mein Sohn":"meine Tochter",caller:simPerson("w"),patient:p,age,panic:true,
+   open:["Hilfe, mein Kind hat einen Krampfanfall, es zuckt am ganzen Körper!"],
+   event:`${p.g==="m"?"Er":"Sie"} hatte heute schon Fieber, und eben hat ${p.g==="m"?"er":"sie"} plötzlich die Augen verdreht und am ganzen Körper gezuckt. Jetzt hat es aufgehört, ${p.g==="m"?"er":"sie"} ist aber ganz schläfrig.`,
+   f:{count:"1",x:"Nein",a:"Frei",b:"Normal",c:"Unauffällig",d:"Bewusstseinsgetrübt",e:"Fieberkrampf, Kleinkind, jetzt schläfrig, Fieber 39,5",psy:"Nein",danger:"nein"},
+   onset:"Vor drei Minuten, der Krampf hat vielleicht eine Minute gedauert.",hist:"Das hatte sie noch nie. Sonst gesund.",
+   extra:["Jetzt macht das Kind die Augen wieder auf.","Soll ich ihr das Fieberzäpfchen geben?"]}}},
+ {id:"uro_kolik",w:1.0,num:"112",loc:"home",mk:()=>{const p=simPerson("m"),age=rint(30,60);return {rel:"ich selbst",caller:p,patient:p,age,
+   open:["Hallo, ich hab so wahnsinnige Schmerzen in der Flanke, ich halt das nicht mehr aus."],
+   event:"Seit einer Stunde habe ich ganz heftige, wellenartige Schmerzen links in der Flanke, die bis in die Leiste ziehen. Ich kann nicht still sitzen, mir ist übel.",
+   f:{count:"1",x:"Nein",a:"Frei",b:"Normal",c:"Unauffällig",d:"Wach / orientiert",e:"Flankenschmerz kolikartig links, Ausstrahlung Leiste, Übelkeit (Nierenkolik)",psy:"Nein",danger:"nein"},
+   onset:"Seit ungefähr einer Stunde.",hist:"Ich hatte vor drei Jahren schon mal einen Nierenstein.",
+   extra:["Ich muss mich gleich übergeben.","Ich lauf hier nur im Kreis."]}}},
+ {id:"uro_harnverhalt",w:0.6,num:"112",loc:"home",mk:()=>{const p=simPerson("m"),age=rint(68,88);return {rel:"mein Mann",caller:simPerson("w"),patient:p,age,
+   open:["Mein Mann kann seit heute Morgen kein Wasser mehr lassen und hat starke Schmerzen."],
+   event:"Er war seit heute früh nicht mehr auf Toilette, er muss ganz dringend, aber es kommt nichts. Der Unterbauch ist ganz dick und tut ihm sehr weh.",
+   f:{count:"1",x:"Nein",a:"Frei",b:"Normal",c:"Unauffällig",d:"Wach / orientiert",e:"akuter Harnverhalt, prall gefüllte Blase, Unterbauchschmerz",psy:"Nein",danger:"nein"},
+   onset:"Seit heute Morgen.",hist:"Er hat Probleme mit der Prostata und nimmt Tabletten dafür.",
+   extra:["Der Hausarzt hat heute nicht auf.","Er ist ganz unruhig."]}}},
+ {id:"auge_akut",w:0.4,num:"112",loc:"home",mk:()=>{const p=simPerson("w"),age=rint(55,85);return {rel:"meine Mutter",caller:simPerson(),patient:p,age,
+   open:["Meine Mutter hat ganz plötzlich furchtbare Schmerzen im Auge und sieht kaum noch was."],
+   event:"Seit einer Stunde hat sie starke Schmerzen im rechten Auge, das Auge ist knallrot und sie sieht nur noch verschwommen und Ringe um die Lampen. Sie hat Kopfschmerzen und muss sich übergeben.",
+   f:{count:"1",x:"Nein",a:"Frei",b:"Normal",c:"Unauffällig",d:"Wach / orientiert",e:"akute Augenerkrankung, rotes schmerzhaftes Auge, Sehverschlechterung, Erbrechen",psy:"Nein",danger:"nein"},
+   onset:"Seit ungefähr einer Stunde.",hist:"Sie hat grauen Star, sonst nichts Besonderes.",
+   extra:["Das Auge fühlt sich ganz hart an, sagt sie.","Der Augenarzt hat geschlossen."]}}},
+ {id:"hno_nachblutung",w:0.5,num:"112",loc:"home",mk:()=>{const p=simPerson(),age=rint(16,35);return {rel:p.g==="m"?"mein Sohn":"meine Tochter",caller:simPerson("w"),patient:p,age,panic:true,
+   open:["Mein Kind ist vor einer Woche an den Mandeln operiert worden und spuckt jetzt Blut!"],
+   event:`${p.g==="m"?"Er":"Sie"} hatte vor sieben Tagen eine Mandel-OP. Seit zehn Minuten spuckt ${p.g==="m"?"er":"sie"} hellrotes Blut, immer wieder, schon fast eine halbe Tasse.`,
+   f:{count:"1",x:"Ja",a:"Gefährdet",b:"Normal",c:"Auffällig",d:"Wach / orientiert",e:"Nachblutung nach Tonsillektomie, spuckt hellrotes Blut",psy:"Nein",danger:"nein"},
+   onset:"Seit zehn Minuten.",hist:"Mandel-OP vor einer Woche im Klinikum, sonst gesund.",
+   extra:["Es hört nicht auf!","Soll sie sich hinlegen oder sitzen bleiben?"]}}},
  // ── v5.63: Evakuierungen (Pflegeheim mit Rauch, Gasaustritt, Bombenfund) ──
  {id:"evak_heim",w:0.6,num:"112",loc:"home",locPrefix:"im Seniorenpflegeheim, ",mk:()=>{const c=simPerson(),tot=rint(18,36),l=rint(5,10),r=rint(4,9);return {rel:"die Bewohner",caller:c,patient:simPerson(),age:85,staff:true,panic:true,
    open:[`${c.first} ${c.last}, Pflegeheim – wir haben Rauch im Wohnbereich 2, wir müssen den ganzen Bereich räumen!`,"Hallo, hier ist das Pflegeheim! Bei uns brennt es im Keller, der Rauch zieht hoch – wir müssen die Bewohner rausholen!"],
