@@ -1607,6 +1607,12 @@ Version 5.05:
   („a, b“ = a ODER b). Mit „🚑 NA-Indikation“ markierte Knöpfe ziehen weiterhin einen Notarzt.
 - Nur „Unauffällig“ (ohne weitere Befunde) zählt weiter als unauffälliges E (R0 möglich).
 
+Version 5.83:
+- Fehler behoben (seit 5.79): Im AAO-Editor war die Fahrzeugzeile durch das neue Häkchen „nur BF WHV“ zu voll. Auf Handy und iPad ließen sich Fahrzeugtyp und Organisation kaum noch eingeben. Die Zeile bricht jetzt sauber um.
+- Fehler behoben: Auf schmaleren Bildschirmen (z. B. iPad hochkant) war die AAO-Seite breiter als der Bildschirm. Breite Tabellen scrollen jetzt in sich.
+- Fehler behoben: In der Kopfzeile überlappten auf manchen Breiten der Bereichsumschalter und die Übungsnotruf-Knöpfe.
+- WHV: 01/58-01 (GW-W) der BF ist jetzt Typ „GW Wasserrettung“ statt „GW“ mit fest eingetragenem Fahrzeug. In den WHV-Wasser-AAOs steht dadurch ganz normal „GW Wasserrettung (Feuerwehr, nur BF WHV)“ und „RTB (Feuerwehr, nur BF WHV)“. Bestehende Stände werden automatisch umgestellt.
+
 Version 5.82:
 - Neue Symbole in der rechten Leiste: 🏠 Leitstelle, 🗺️ Karte, 🚑 Fahrzeuge, AAO, 🏥 IVENA, 📨 IVENA-Zuweisungen, 🤝 Nachbar-LKs, 📻 Funkrufgruppen, 👥 MANV, 🎪 Großveranstaltung.
 
