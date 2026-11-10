@@ -1607,6 +1607,16 @@ Version 5.05:
   („a, b“ = a ODER b). Mit „🚑 NA-Indikation“ markierte Knöpfe ziehen weiterhin einen Notarzt.
 - Nur „Unauffällig“ (ohne weitere Befunde) zählt weiter als unauffälliges E (R0 möglich).
 
+Version 5.84:
+- IVENA-Fachrichtungen jeder Klinik lassen sich jetzt leichter bearbeiten:
+  - IVENA-Übersicht: auf den Kliniknamen tippen
+  - IVENA-Zuweisungen: unter der Klinikauswahl stehen ihre Fachrichtungen mit dem Knopf „🏷️ Fachrichtungen bearbeiten“
+- Angefahren werden nur noch Kliniken, die die Fachrichtung haben:
+  - Besatzungen wählen nur Kliniken mit der passenden Fachrichtung. Sind alle diese Kliniken abgemeldet oder rot, gibt es eine Zwangszuweisung in die nächste davon, nicht mehr in eine Klinik ohne die Fachrichtung.
+  - Bei der Zuweisung von Hand (Leitstelle und Fahrzeug-Handy) sind Kliniken ohne die Fachrichtung des PZC ausgegraut („– ohne …“) und lassen sich nicht wählen.
+  - Auch die IVENA-Vorgeschichte aus „Realistisch“ nutzt nur passende Kliniken.
+- IVENA-Zuweisungen: Die Tabelle ist kompakter und passt jetzt auf die Bildschirmbreite.
+
 Version 5.83:
 - Fehler behoben (seit 5.79): Im AAO-Editor war die Fahrzeugzeile durch das neue Häkchen „nur BF WHV“ zu voll. Auf Handy und iPad ließen sich Fahrzeugtyp und Organisation kaum noch eingeben. Die Zeile bricht jetzt sauber um.
 - Fehler behoben: Auf schmaleren Bildschirmen (z. B. iPad hochkant) war die AAO-Seite breiter als der Bildschirm. Breite Tabellen scrollen jetzt in sich.
