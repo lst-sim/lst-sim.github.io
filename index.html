@@ -170,8 +170,8 @@ html[data-device="handy"] #floatDock{left:8px;right:8px;width:auto;top:auto;bott
 </head>
 <body>
 <div style="padding:6px 10px;font-size:11px;color:#94a3b8;font-weight:700;display:flex;flex-wrap:wrap;align-items:center;gap:10px;position:sticky;top:0;z-index:10;background:var(--bg)">
- <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v5.74</span>
- <span id="syncState"></span> <a id="deskTag" href="#" onclick="renameDesk();return false" title="Name dieses Platzes (für „offen an …“) – antippen zum Ändern" style="color:#64748b;font-weight:700;text-decoration:none"></a>
+ <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v5.75</span>
+ <span id="syncState"></span> <select id="areaSel" onchange="setDispatchArea(this.value)" title="Welcher Bereich wird disponiert?" style="display:none;font-size:11px;font-weight:700;padding:1px 4px;border-radius:6px;border:1px solid #cbd5e1;background:#fff;color:#334155"><option value="beide">📍 Friesland + WHV</option><option value="fri">📍 nur Friesland</option><option value="whv">📍 nur Wilhelmshaven</option></select> <a id="deskTag" href="#" onclick="renameDesk();return false" title="Name dieses Platzes (für „offen an …“) – antippen zum Ändern" style="color:#64748b;font-weight:700;text-decoration:none"></a>
  <span id="simCtl" style="position:absolute;left:50%;transform:translateX(-50%);display:flex;gap:6px;align-items:center"></span>
  <a id="homeLink" href="#" onclick="render('leitstelle');return false" class="hidden" style="color:#64748b;text-decoration:underline;font-weight:600">🖥️ Leitstelle</a>
  <a id="monitorLink" href="#" onclick="showMonitorQR();return false" style="color:#64748b;text-decoration:underline;font-weight:600;margin-left:auto">🖥️ Monitor hinzufügen</a>
@@ -205,6 +205,57 @@ const DEFAULTS_FRI_WHV={
   {id:2102,name:"WHV-01-83-02",opta:"Florian Wilhelmshaven 01/83-02",type:"RTW",org:"Rettungsdienst",location:"Wilhelmshaven FuRW 1",fixedLocation:true,status:"2",crew:"2",skills:"Notfallrettung",verified:"BOS-Fahrzeuge (BF Wilhelmshaven FuRW 1 RD)",address:"Mozartstraße 11, 26382 Wilhelmshaven",homeLat:53.5216,homeLng:8.1143,approxGeo:true},
   {id:2103,name:"WHV-02-83-01",opta:"Florian Wilhelmshaven 02/83-01",type:"RTW",org:"Rettungsdienst",location:"Wilhelmshaven FuRW 2",fixedLocation:true,status:"2",crew:"2",skills:"Notfallrettung",verified:"BOS-Fahrzeuge (BF Wilhelmshaven FuRW 2 RD)",address:"Inhauser Landstraße 20, 26388 Wilhelmshaven",homeLat:53.5640,homeLng:8.0980,approxGeo:true},
   {id:2104,name:"WHV-03-82-01",opta:"Florian Wilhelmshaven 03/82-01",type:"NEF",org:"Rettungsdienst",location:"Wilhelmshaven RW 3 (Klinikum)",fixedLocation:true,status:"2",crew:"2",skills:"Notarzt",verified:"BOS-Fahrzeuge (BF Wilhelmshaven RW 3)",address:"Friedrich-Paffrath-Straße 100, 26389 Wilhelmshaven",homeLat:53.54582,homeLng:8.08495},
+  // v5.75: Wilhelmshaven – Feuerwehr (BF + FF) und weitere Rettungsmittel laut BOS-Fahrzeuge-Wachenseiten (11/2026).
+  // Reserve, a.D., Anhänger, Abrollbehälter ohne Funkrufname, Aus-/Fortbildung und Land-Fahrzeuge nicht übernommen.
+  {id:2111,name:"WHV-01-10-01",opta:"Florian Wilhelmshaven 01/10-01",type:"KdoW",org:"Feuerwehr",location:"Wilhelmshaven FuRW 1",fixedLocation:true,status:"2",crew:"1",skills:"Kommandowagen Führungsdienst (KdoW FL)",verified:"BOS-Fahrzeuge (BF Wilhelmshaven FuRW 1 (FW))",address:"Mozartstraße 11, 26382 Wilhelmshaven",homeLat:53.5216,homeLng:8.1143,approxGeo:true},
+  {id:2112,name:"WHV-01-10-02",opta:"Florian Wilhelmshaven 01/10-02",type:"KdoW",org:"Feuerwehr",location:"Wilhelmshaven FuRW 1",fixedLocation:true,status:"2",crew:"1",skills:"Kommandowagen",verified:"BOS-Fahrzeuge (BF Wilhelmshaven FuRW 1 (FW))",address:"Mozartstraße 11, 26382 Wilhelmshaven",homeLat:53.5216,homeLng:8.1143,approxGeo:true},
+  {id:2113,name:"WHV-01-10-03",opta:"Florian Wilhelmshaven 01/10-03",type:"KdoW",org:"Feuerwehr",location:"Wilhelmshaven FuRW 1",fixedLocation:true,status:"2",crew:"1",skills:"Kommandowagen",verified:"BOS-Fahrzeuge (BF Wilhelmshaven FuRW 1 (FW))",address:"Mozartstraße 11, 26382 Wilhelmshaven",homeLat:53.5216,homeLng:8.1143,approxGeo:true},
+  {id:2114,name:"WHV-01-10-04",opta:"Florian Wilhelmshaven 01/10-04",type:"KdoW",org:"Feuerwehr",location:"Wilhelmshaven FuRW 1",fixedLocation:true,status:"2",crew:"1",skills:"Kommandowagen",verified:"BOS-Fahrzeuge (BF Wilhelmshaven FuRW 1 (FW))",address:"Mozartstraße 11, 26382 Wilhelmshaven",homeLat:53.5216,homeLng:8.1143,approxGeo:true},
+  {id:2115,name:"WHV-01-11-01",opta:"Florian Wilhelmshaven 01/11-01",type:"ELW",org:"Feuerwehr",location:"Wilhelmshaven FuRW 1",fixedLocation:true,status:"2",crew:"3",skills:"Einsatzleitung",verified:"BOS-Fahrzeuge (BF Wilhelmshaven FuRW 1 (FW))",address:"Mozartstraße 11, 26382 Wilhelmshaven",homeLat:53.5216,homeLng:8.1143,approxGeo:true},
+  {id:2116,name:"WHV-01-11-02",opta:"Florian Wilhelmshaven 01/11-02",type:"ELW",org:"Feuerwehr",location:"Wilhelmshaven FuRW 1",fixedLocation:true,status:"2",crew:"3",skills:"Einsatzleitung",verified:"BOS-Fahrzeuge (BF Wilhelmshaven FuRW 1 (FW))",address:"Mozartstraße 11, 26382 Wilhelmshaven",homeLat:53.5216,homeLng:8.1143,approxGeo:true},
+  {id:2117,name:"WHV-01-11-03",opta:"Florian Wilhelmshaven 01/11-03",type:"ELW",org:"Feuerwehr",location:"Wilhelmshaven FuRW 1",fixedLocation:true,status:"2",crew:"3",skills:"Einsatzleitung",verified:"BOS-Fahrzeuge (BF Wilhelmshaven FuRW 1 (FW))",address:"Mozartstraße 11, 26382 Wilhelmshaven",homeLat:53.5216,homeLng:8.1143,approxGeo:true},
+  {id:2118,name:"WHV-01-17-01",opta:"Florian Wilhelmshaven 01/17-01",type:"MTW",org:"Feuerwehr",location:"Wilhelmshaven FuRW 1",fixedLocation:true,status:"2",crew:"9",skills:"Mannschaftstransport",verified:"BOS-Fahrzeuge (BF Wilhelmshaven FuRW 1 (FW))",address:"Mozartstraße 11, 26382 Wilhelmshaven",homeLat:53.5216,homeLng:8.1143,approxGeo:true},
+  {id:2119,name:"WHV-01-30-01",opta:"Florian Wilhelmshaven 01/30-01",type:"DLK",org:"Feuerwehr",location:"Wilhelmshaven FuRW 1",fixedLocation:true,status:"2",crew:"3",skills:"DLK 23/12",verified:"BOS-Fahrzeuge (BF Wilhelmshaven FuRW 1 (FW))",address:"Mozartstraße 11, 26382 Wilhelmshaven",homeLat:53.5216,homeLng:8.1143,approxGeo:true},
+  {id:2120,name:"WHV-01-48-01",opta:"Florian Wilhelmshaven 01/48-01",type:"HLF",org:"Feuerwehr",location:"Wilhelmshaven FuRW 1",fixedLocation:true,status:"2",crew:"9",skills:"HLF 20",verified:"BOS-Fahrzeuge (BF Wilhelmshaven FuRW 1 (FW))",address:"Mozartstraße 11, 26382 Wilhelmshaven",homeLat:53.5216,homeLng:8.1143,approxGeo:true},
+  {id:2121,name:"WHV-01-50-01",opta:"Florian Wilhelmshaven 01/50-01",type:"GW-L1",org:"Feuerwehr",location:"Wilhelmshaven FuRW 1",fixedLocation:true,status:"2",crew:"3",skills:"Gerätewagen Logistik 1",verified:"BOS-Fahrzeuge (BF Wilhelmshaven FuRW 1 (FW))",address:"Mozartstraße 11, 26382 Wilhelmshaven",homeLat:53.5216,homeLng:8.1143,approxGeo:true},
+  {id:2122,name:"WHV-01-50-02",opta:"Florian Wilhelmshaven 01/50-02",type:"GW-L1",org:"Feuerwehr",location:"Wilhelmshaven FuRW 1",fixedLocation:true,status:"2",crew:"3",skills:"Gerätewagen Logistik 1",verified:"BOS-Fahrzeuge (BF Wilhelmshaven FuRW 1 (FW))",address:"Mozartstraße 11, 26382 Wilhelmshaven",homeLat:53.5216,homeLng:8.1143,approxGeo:true},
+  {id:2123,name:"WHV-01-58-01",opta:"Florian Wilhelmshaven 01/58-01",type:"GW",org:"Feuerwehr",location:"Wilhelmshaven FuRW 1",fixedLocation:true,status:"2",crew:"3",skills:"GW-W (laut BOS-Fahrzeuge)",verified:"BOS-Fahrzeuge (BF Wilhelmshaven FuRW 1 (FW))",address:"Mozartstraße 11, 26382 Wilhelmshaven",homeLat:53.5216,homeLng:8.1143,approxGeo:true},
+  {id:2124,name:"WHV-01-59-01",opta:"Florian Wilhelmshaven 01/59-01",type:"GW",org:"Feuerwehr",location:"Wilhelmshaven FuRW 1",fixedLocation:true,status:"2",crew:"3",skills:"GW-Tier (Tierrettung)",verified:"BOS-Fahrzeuge (BF Wilhelmshaven FuRW 1 (FW))",address:"Mozartstraße 11, 26382 Wilhelmshaven",homeLat:53.5216,homeLng:8.1143,approxGeo:true},
+  {id:2125,name:"WHV-01-66-01",opta:"Florian Wilhelmshaven 01/66-01",type:"WLF",org:"Feuerwehr",location:"Wilhelmshaven FuRW 1",fixedLocation:true,status:"2",crew:"2",skills:"Wechselladerfahrzeug",verified:"BOS-Fahrzeuge (BF Wilhelmshaven FuRW 1 (FW))",address:"Mozartstraße 11, 26382 Wilhelmshaven",homeLat:53.5216,homeLng:8.1143,approxGeo:true},
+  {id:2126,name:"WHV-01-67-02",opta:"Florian Wilhelmshaven 01/67-02",type:"WLF",org:"Feuerwehr",location:"Wilhelmshaven FuRW 1",fixedLocation:true,status:"2",crew:"2",skills:"WLF-K (mit Kran)",verified:"BOS-Fahrzeuge (BF Wilhelmshaven FuRW 1 (FW))",address:"Mozartstraße 11, 26382 Wilhelmshaven",homeLat:53.5216,homeLng:8.1143,approxGeo:true},
+  {id:2127,name:"WHV-01-69-01",opta:"Florian Wilhelmshaven 01/69-01",type:"MZF",org:"Feuerwehr",location:"Wilhelmshaven FuRW 1",fixedLocation:true,status:"2",crew:"3",skills:"Mehrzweckfahrzeug",verified:"BOS-Fahrzeuge (BF Wilhelmshaven FuRW 1 (FW))",address:"Mozartstraße 11, 26382 Wilhelmshaven",homeLat:53.5216,homeLng:8.1143,approxGeo:true},
+  {id:2128,name:"WHV-01-78-01",opta:"Florian Wilhelmshaven 01/78-01",type:"RTB",org:"Feuerwehr",location:"Wilhelmshaven FuRW 1",fixedLocation:true,status:"2",crew:"3",skills:"Rettungsboot",verified:"BOS-Fahrzeuge (BF Wilhelmshaven FuRW 1 (FW))",address:"Mozartstraße 11, 26382 Wilhelmshaven",homeLat:53.5216,homeLng:8.1143,approxGeo:true},
+  {id:2129,name:"WHV-02-17-01",opta:"Florian Wilhelmshaven 02/17-01",type:"MTW",org:"Feuerwehr",location:"Wilhelmshaven FuRW 2",fixedLocation:true,status:"2",crew:"9",skills:"Mannschaftstransport",verified:"BOS-Fahrzeuge (BF Wilhelmshaven FuRW 2)",address:"Inhauser Landstraße 17, 26388 Wilhelmshaven",homeLat:53.564,homeLng:8.098,approxGeo:true},
+  {id:2130,name:"WHV-02-48-01",opta:"Florian Wilhelmshaven 02/48-01",type:"HLF",org:"Feuerwehr",location:"Wilhelmshaven FuRW 2",fixedLocation:true,status:"2",crew:"9",skills:"HLF 20/20",verified:"BOS-Fahrzeuge (BF Wilhelmshaven FuRW 2)",address:"Inhauser Landstraße 17, 26388 Wilhelmshaven",homeLat:53.564,homeLng:8.098,approxGeo:true},
+  {id:2131,name:"WHV-02-50-01",opta:"Florian Wilhelmshaven 02/50-01",type:"GW-L1",org:"Feuerwehr",location:"Wilhelmshaven FuRW 2",fixedLocation:true,status:"2",crew:"3",skills:"Gerätewagen Logistik 1",verified:"BOS-Fahrzeuge (BF Wilhelmshaven FuRW 2)",address:"Inhauser Landstraße 17, 26388 Wilhelmshaven",homeLat:53.564,homeLng:8.098,approxGeo:true},
+  {id:2132,name:"WHV-02-78-01",opta:"Florian Wilhelmshaven 02/78-01",type:"RTB",org:"Feuerwehr",location:"Wilhelmshaven FuRW 2",fixedLocation:true,status:"2",crew:"3",skills:"Rettungsboot",verified:"BOS-Fahrzeuge (BF Wilhelmshaven FuRW 2)",address:"Inhauser Landstraße 17, 26388 Wilhelmshaven",homeLat:53.564,homeLng:8.098,approxGeo:true},
+  {id:2133,name:"WHV-11-11-01",opta:"Florian Wilhelmshaven 11/11-01",type:"ELW1",org:"Feuerwehr",location:"Wilhelmshaven FuRW 2",fixedLocation:true,status:"2",crew:"3",skills:"ELW 1 (SEG-Einsatzleitung)",verified:"BOS-Fahrzeuge (BF Wilhelmshaven FuRW 2)",address:"Inhauser Landstraße 17, 26388 Wilhelmshaven",homeLat:53.564,homeLng:8.098,approxGeo:true},
+  {id:2134,name:"WHV-11-17-01",opta:"Florian Wilhelmshaven 11/17-01",type:"MTW",org:"Feuerwehr",location:"Wilhelmshaven FuRW 2",fixedLocation:true,status:"2",crew:"9",skills:"MTW (SEG-Einsatzleitung)",verified:"BOS-Fahrzeuge (BF Wilhelmshaven FuRW 2)",address:"Inhauser Landstraße 17, 26388 Wilhelmshaven",homeLat:53.564,homeLng:8.098,approxGeo:true},
+  {id:2135,name:"WHV-10-17-01",opta:"Florian Wilhelmshaven 10/17-01",type:"MTW",org:"Feuerwehr",location:"Wilhelmshaven OF Bant-Heppens",fixedLocation:true,status:"2",crew:"9",skills:"Mannschaftstransport",verified:"BOS-Fahrzeuge (FF Wilhelmshaven OF Bant-Heppens) – Standort/Adresse nicht angegeben, Position ungefähr",homeLat:53.5288,homeLng:8.1092,approxGeo:true},
+  {id:2136,name:"WHV-10-17-02",opta:"Florian Wilhelmshaven 10/17-02",type:"MTW",org:"Feuerwehr",location:"Wilhelmshaven OF Bant-Heppens",fixedLocation:true,status:"2",crew:"9",skills:"Mannschaftstransport",verified:"BOS-Fahrzeuge (FF Wilhelmshaven OF Bant-Heppens) – Standort/Adresse nicht angegeben, Position ungefähr",homeLat:53.5288,homeLng:8.1092,approxGeo:true},
+  {id:2137,name:"WHV-10-30-01",opta:"Florian Wilhelmshaven 10/30-01",type:"DLK",org:"Feuerwehr",location:"Wilhelmshaven OF Bant-Heppens",fixedLocation:true,status:"2",crew:"3",skills:"Drehleiter mit Korb",verified:"BOS-Fahrzeuge (FF Wilhelmshaven OF Bant-Heppens) – Standort/Adresse nicht angegeben, Position ungefähr",homeLat:53.5288,homeLng:8.1092,approxGeo:true},
+  {id:2138,name:"WHV-10-47-01",opta:"Florian Wilhelmshaven 10/47-01",type:"LF",org:"Feuerwehr",location:"Wilhelmshaven OF Bant-Heppens",fixedLocation:true,status:"2",crew:"9",skills:"LF-KatS",verified:"BOS-Fahrzeuge (FF Wilhelmshaven OF Bant-Heppens) – Standort/Adresse nicht angegeben, Position ungefähr",homeLat:53.5288,homeLng:8.1092,approxGeo:true},
+  {id:2139,name:"WHV-10-48-01",opta:"Florian Wilhelmshaven 10/48-01",type:"HLF",org:"Feuerwehr",location:"Wilhelmshaven OF Bant-Heppens",fixedLocation:true,status:"2",crew:"9",skills:"Hilfeleistungslöschgruppenfahrzeug",verified:"BOS-Fahrzeuge (FF Wilhelmshaven OF Bant-Heppens) – Standort/Adresse nicht angegeben, Position ungefähr",homeLat:53.5288,homeLng:8.1092,approxGeo:true},
+  {id:2140,name:"WHV-10-59-30",opta:"Florian Wilhelmshaven 10/59-30",type:"MZF",org:"Feuerwehr",location:"Wilhelmshaven OF Bant-Heppens",fixedLocation:true,status:"2",crew:"3",skills:"Mehrzweckfahrzeug",verified:"BOS-Fahrzeuge (FF Wilhelmshaven OF Bant-Heppens) – Standort/Adresse nicht angegeben, Position ungefähr",homeLat:53.5288,homeLng:8.1092,approxGeo:true},
+  {id:2141,name:"WHV-10-66-01",opta:"Florian Wilhelmshaven 10/66-01",type:"WLF",org:"Feuerwehr",location:"Wilhelmshaven OF Bant-Heppens",fixedLocation:true,status:"2",crew:"2",skills:"Wechselladerfahrzeug",verified:"BOS-Fahrzeuge (FF Wilhelmshaven OF Bant-Heppens) – Standort/Adresse nicht angegeben, Position ungefähr",homeLat:53.5288,homeLng:8.1092,approxGeo:true},
+  {id:2142,name:"WHV-10-72-10",opta:"Florian Wilhelmshaven 10/72-10",type:"GW",org:"Feuerwehr",location:"Wilhelmshaven OF Bant-Heppens",fixedLocation:true,status:"2",crew:"3",skills:"LKW Dekon-P/G",verified:"BOS-Fahrzeuge (FF Wilhelmshaven OF Bant-Heppens) – Standort/Adresse nicht angegeben, Position ungefähr",homeLat:53.5288,homeLng:8.1092,approxGeo:true},
+  {id:2143,name:"WHV-10-AB-Dekon",opta:"Florian Wilhelmshaven 10/AB-Dekon",type:"AB-Dekon",org:"Feuerwehr",location:"Wilhelmshaven OF Bant-Heppens",fixedLocation:true,status:"2",crew:"0",skills:"Abrollbehälter Dekontamination",verified:"BOS-Fahrzeuge (FF Wilhelmshaven OF Bant-Heppens) – Standort/Adresse nicht angegeben, Position ungefähr",homeLat:53.5288,homeLng:8.1092,approxGeo:true},
+  {id:2144,name:"WHV-20-17-01",opta:"Florian Wilhelmshaven 20/17-01",type:"MTF",org:"Feuerwehr",location:"Wilhelmshaven OF Rüstringen",fixedLocation:true,status:"2",crew:"9",skills:"Mannschaftstransport",verified:"BOS-Fahrzeuge (FF Wilhelmshaven OF Rüstringen)",address:"Freiligrathstraße 430, 26386 Wilhelmshaven",homeLat:53.548,homeLng:8.098,approxGeo:true},
+  {id:2145,name:"WHV-20-41-01",opta:"Florian Wilhelmshaven 20/41-01",type:"TSF-W",org:"Feuerwehr",location:"Wilhelmshaven OF Rüstringen",fixedLocation:true,status:"2",crew:"6",skills:"Tragkraftspritzenfahrzeug mit Wasser",verified:"BOS-Fahrzeuge (FF Wilhelmshaven OF Rüstringen)",address:"Freiligrathstraße 430, 26386 Wilhelmshaven",homeLat:53.548,homeLng:8.098,approxGeo:true},
+  {id:2146,name:"WHV-20-44-01",opta:"Florian Wilhelmshaven 20/44-01",type:"LF",org:"Feuerwehr",location:"Wilhelmshaven OF Rüstringen",fixedLocation:true,status:"2",crew:"9",skills:"LF 20 KatS (Landesreihe)",verified:"BOS-Fahrzeuge (FF Wilhelmshaven OF Rüstringen)",address:"Freiligrathstraße 430, 26386 Wilhelmshaven",homeLat:53.548,homeLng:8.098,approxGeo:true},
+  {id:2147,name:"WHV-20-48-01",opta:"Florian Wilhelmshaven 20/48-01",type:"HLF",org:"Feuerwehr",location:"Wilhelmshaven OF Rüstringen",fixedLocation:true,status:"2",crew:"9",skills:"HLF 20",verified:"BOS-Fahrzeuge (FF Wilhelmshaven OF Rüstringen)",address:"Freiligrathstraße 430, 26386 Wilhelmshaven",homeLat:53.548,homeLng:8.098,approxGeo:true},
+  {id:2148,name:"WHV-20-56-01",opta:"Florian Wilhelmshaven 20/56-01",type:"GW",org:"Feuerwehr",location:"Wilhelmshaven OF Rüstringen",fixedLocation:true,status:"2",crew:"3",skills:"GW-A (Atemschutz)",verified:"BOS-Fahrzeuge (FF Wilhelmshaven OF Rüstringen)",address:"Freiligrathstraße 430, 26386 Wilhelmshaven",homeLat:53.548,homeLng:8.098,approxGeo:true},
+  {id:2149,name:"WHV-20-66-01",opta:"Florian Wilhelmshaven 20/66-01",type:"WLF",org:"Feuerwehr",location:"Wilhelmshaven OF Rüstringen",fixedLocation:true,status:"2",crew:"2",skills:"Wechselladerfahrzeug",verified:"BOS-Fahrzeuge (FF Wilhelmshaven OF Rüstringen)",address:"Freiligrathstraße 430, 26386 Wilhelmshaven",homeLat:53.548,homeLng:8.098,approxGeo:true},
+  {id:2150,name:"WHV-21-17-01",opta:"Florian Wilhelmshaven 21/17-01",type:"MTW",org:"Feuerwehr",location:"Wilhelmshaven OF Sengwarden",fixedLocation:true,status:"2",crew:"9",skills:"Mannschaftstransport",verified:"BOS-Fahrzeuge (FF Wilhelmshaven OF Sengwarden)",address:"Heddostraße 9, 26388 Wilhelmshaven",homeLat:53.598,homeLng:8.045,approxGeo:true},
+  {id:2151,name:"WHV-21-25-01",opta:"Florian Wilhelmshaven 21/25-01",type:"TLF",org:"Feuerwehr",location:"Wilhelmshaven OF Sengwarden",fixedLocation:true,status:"2",crew:"3",skills:"TLF 3000",verified:"BOS-Fahrzeuge (FF Wilhelmshaven OF Sengwarden)",address:"Heddostraße 9, 26388 Wilhelmshaven",homeLat:53.598,homeLng:8.045,approxGeo:true},
+  {id:2152,name:"WHV-21-48-01",opta:"Florian Wilhelmshaven 21/48-01",type:"HLF",org:"Feuerwehr",location:"Wilhelmshaven OF Sengwarden",fixedLocation:true,status:"2",crew:"9",skills:"HLF 20",verified:"BOS-Fahrzeuge (FF Wilhelmshaven OF Sengwarden)",address:"Heddostraße 9, 26388 Wilhelmshaven",homeLat:53.598,homeLng:8.045,approxGeo:true},
+  {id:2153,name:"WHV-21-52-01",opta:"Florian Wilhelmshaven 21/52-01",type:"RW",org:"Feuerwehr",location:"Wilhelmshaven OF Sengwarden",fixedLocation:true,status:"2",crew:"3",skills:"Rüstwagen",verified:"BOS-Fahrzeuge (FF Wilhelmshaven OF Sengwarden)",address:"Heddostraße 9, 26388 Wilhelmshaven",homeLat:53.598,homeLng:8.045,approxGeo:true},
+  {id:2154,name:"WHV-22-17-01",opta:"Florian Wilhelmshaven 22/17-01",type:"MTF",org:"Feuerwehr",location:"Wilhelmshaven OF Fedderwarden",fixedLocation:true,status:"2",crew:"9",skills:"Mannschaftstransport",verified:"BOS-Fahrzeuge (FF Wilhelmshaven OF Fedderwarden)",address:"Poststraße 18g, 26388 Wilhelmshaven",homeLat:53.57,homeLng:8.036,approxGeo:true},
+  {id:2155,name:"WHV-22-48-01",opta:"Florian Wilhelmshaven 22/48-01",type:"HLF",org:"Feuerwehr",location:"Wilhelmshaven OF Fedderwarden",fixedLocation:true,status:"2",crew:"9",skills:"HLF 20",verified:"BOS-Fahrzeuge (FF Wilhelmshaven OF Fedderwarden)",address:"Poststraße 18g, 26388 Wilhelmshaven",homeLat:53.57,homeLng:8.036,approxGeo:true},
+  {id:2156,name:"WHV-11-44-01",opta:"Florian Wilhelmshaven 11/44-01",type:"LF",org:"Feuerwehr",location:"Wilhelmshaven OF Fedderwarden",fixedLocation:true,status:"2",crew:"9",skills:"Typ auf BOS-Fahrzeuge nicht angegeben – LF laut Kennung (44) angenommen",verified:"BOS-Fahrzeuge (FF Wilhelmshaven OF Fedderwarden) – Fahrzeugtyp unsicher",address:"Poststraße 18g, 26388 Wilhelmshaven",homeLat:53.57,homeLng:8.036,approxGeo:true},
+  {id:2157,name:"WHV-02-83-02",opta:"Florian Wilhelmshaven 02/83-02",type:"RTW",org:"Rettungsdienst",location:"Wilhelmshaven FuRW 2",fixedLocation:true,status:"2",crew:"2",skills:"Notfallrettung",verified:"BOS-Fahrzeuge (BF Wilhelmshaven FuRW 2, Rettungsdienst BF)",address:"Inhauser Landstraße 20, 26388 Wilhelmshaven",homeLat:53.564,homeLng:8.098,approxGeo:true},
+  {id:2158,name:"WHV-50-83-01",opta:"Akkon Wilhelmshaven 50/83-01",type:"RTW",org:"Rettungsdienst",location:"Wilhelmshaven FuRW 2",fixedLocation:true,status:"2",crew:"2",skills:"Notfallrettung (Johanniter, an der FuRW 2)",verified:"BOS-Fahrzeuge (BF Wilhelmshaven FuRW 2, Rettungsdienst Johanniter)",address:"Inhauser Landstraße 20, 26388 Wilhelmshaven",homeLat:53.564,homeLng:8.098,approxGeo:true},
+  {id:2159,name:"WHV-50-92-01",opta:"Akkon Wilhelmshaven 50/92-01",type:"KTW",org:"Rettungsdienst",location:"Wilhelmshaven FuRW 2",fixedLocation:true,status:"2",crew:"2",skills:"Krankentransport (Johanniter, an der FuRW 2)",verified:"BOS-Fahrzeuge (BF Wilhelmshaven FuRW 2, Rettungsdienst Johanniter)",address:"Inhauser Landstraße 20, 26388 Wilhelmshaven",homeLat:53.564,homeLng:8.098,approxGeo:true},
   
   {id:1,name:"72-58-01",opta:"Pelikan Friesland 72-58-01",type:"GW Wasserrettung",org:"DLRG",location:"Varel",status:"2",crew:"2",skills:"Wasserrettungsgruppe-S (Wasserrettungszug Friesland) – Strömungsretter",verified:"Nutzerangabe"},
   {id:2,name:"72-17-01",opta:"Pelikan Friesland 72-17-01",type:"MTW",org:"DLRG",location:"Varel",status:"2",crew:"6",skills:"Wasserrettungsgruppe-S (Wasserrettungszug Friesland) – Mannschaftstransport",verified:"Nutzerangabe"},
@@ -571,6 +622,15 @@ const DEFAULTS_FRI_WHV={
  // Getrennt von db.units gehalten, damit sie nie für lokale Friesland-Alarmierungen/AAO/Karte
  // in Frage kommen. Status ist manuell steuerbar (Übungsleitung), keine echte Live-Anbindung.
  neighborUnits:[
+  // v5.75: ergänzt laut BOS-Fahrzeuge-Wachenseiten (11/2026); Reserve-, a.D.- und Insel-Fahrzeuge (Langeoog, Spiekeroog) nicht übernommen
+  {id:2401,name:"51-83-01",opta:"Akkon Oldenburg-Land 51/83-01",type:"RTW",district:"Oldenburg (Land)",status:"1",crew:"2",skills:"Notfallrettung",verified:"BOS-Fahrzeuge (JUH RW Ahlhorn)",address:"Wildeshauser Straße 7d, 26197 Großenkneten",lat:52.899,lng:8.234,approxGeo:true},
+  {id:2402,name:"51-92-01",opta:"Akkon Oldenburg-Land 51/92-01",type:"KTW",district:"Oldenburg (Land)",status:"1",crew:"2",skills:"Krankentransport",verified:"BOS-Fahrzeuge (JUH RW Ahlhorn)",address:"Wildeshauser Straße 7d, 26197 Großenkneten",lat:52.899,lng:8.234,approxGeo:true},
+  {id:2403,name:"62-83-01",opta:"Johannes Oldenburg-Land 62/83-01",type:"RTW",district:"Oldenburg (Land)",status:"1",crew:"2",skills:"Notfallrettung (24 h)",verified:"BOS-Fahrzeuge (MHD RW Sandkrug)",address:"Bümmersteder Str. 37, 26209 Hatten",lat:53.06,lng:8.25,approxGeo:true},
+  {id:2404,name:"62-83-02",opta:"Johannes Oldenburg-Land 62/83-02",type:"RTW",district:"Oldenburg (Land)",status:"1",crew:"2",skills:"Notfallrettung (laut BOS-Fahrzeuge nur Mo–Fr 8:30–13:00)",verified:"BOS-Fahrzeuge (MHD RW Sandkrug)",address:"Bümmersteder Str. 37, 26209 Hatten",lat:53.06,lng:8.25,approxGeo:true},
+  {id:2405,name:"62-93-01",opta:"Johannes Oldenburg-Land 62/93-01",type:"NKTW",district:"Oldenburg (Land)",status:"1",crew:"2",skills:"Notfall-KTW",verified:"BOS-Fahrzeuge (MHD RW Sandkrug)",address:"Bümmersteder Str. 37, 26209 Hatten",lat:53.06,lng:8.25,approxGeo:true},
+  {id:2406,name:"84-82-01",opta:"Rettung Wesermarsch 84/82-01",type:"NEF",district:"Wesermarsch",status:"1",crew:"2",skills:"Notarzt",verified:"BOS-Fahrzeuge (Kreis Wesermarsch NEF Nordenham, an den Helios Kliniken Wesermarsch) – genaue Adresse nicht angegeben",address:"Helios Kliniken Wesermarsch, 26954 Nordenham",lat:53.486,lng:8.476,approxGeo:true},
+  {id:2407,name:"45-83-01",opta:"Rotkreuz Leer 45/83-01",type:"RTW",district:"Leer",status:"1",crew:"2",skills:"Notfallrettung",verified:"BOS-Fahrzeuge (RW DRK Weener)",address:"Neue Straße 22, 26826 Weener",lat:53.163,lng:7.356,approxGeo:true},
+  {id:2408,name:"45-83-02",opta:"Rotkreuz Leer 45/83-02",type:"RTW",district:"Leer",status:"1",crew:"2",skills:"Notfallrettung",verified:"BOS-Fahrzeuge (RW DRK Weener)",address:"Neue Straße 22, 26826 Weener",lat:53.163,lng:7.356,approxGeo:true},
   // v5.50: weitere Rettungsmittel laut BOS-Fahrzeuge-Wachenseiten (11/2026); Reserve- und a.D.-Fahrzeuge nicht übernommen
   {id:194,name:"01-82-01",opta:"Florian Oldenburg 01/82-01",type:"NEF",district:"Oldenburg (Stadt)",status:"1",crew:"2",skills:"Notarzt",verified:"BOS-Fahrzeuge (BF Oldenburg FuRW 1 RD)",address:"Ibo-Koch-Straße 6, 26127 Oldenburg",lat:53.1557,lng:8.2045,approxGeo:true},
   {id:195,name:"01-83-01",opta:"Florian Oldenburg 01/83-01",type:"RTW",district:"Oldenburg (Stadt)",status:"1",crew:"2",skills:"Notfallrettung",verified:"BOS-Fahrzeuge (BF Oldenburg FuRW 1 RD)",address:"Ibo-Koch-Straße 6, 26127 Oldenburg",lat:53.1557,lng:8.2045,approxGeo:true},
@@ -2371,6 +2431,17 @@ function unitOnIsland(u){return u.island==="Wangerooge"||u.location==="Wangeroog
 // Nicht alarmierbare Einheiten (z. B. DLRG-Wachtürme): tauchen in keinem Vorschlag, keiner
 // Nachforderung und keinem Vollalarm auf – nur als First Responder, wenn besetzt und nah dran.
 function notAlarmable(u){return !!u&&(!!u.noAlarm||u.type==="Wachturm")}
+// ─── v5.75: Disponierter Bereich (nur Szenario Friesland/WHV): Friesland, Wilhelmshaven oder beide ──
+// Wirkt auf Übungsanrufe (Einsatzorte), Zuständigkeit (Weiterverbinden) und automatische Vorschläge.
+// Feuerwehr- und Rettungsdienst-Fahrzeuge des anderen Bereichs bleiben von Hand alarmierbar.
+const AREA_KEY="lst-dispatch-area";
+function dispatchArea(){if(currentScenarioId!=="fri-whv"||CUSTOM_SC_EARLY())return "beide";try{const v=localStorage.getItem(AREA_KEY);return ["fri","whv"].includes(v)?v:"beide"}catch(e){return "beide"}}
+function CUSTOM_SC_EARLY(){return !!((SCENARIOS[currentScenarioId]||{}).custom)}
+function setDispatchArea(v){try{localStorage.setItem(AREA_KEY,v)}catch(e){};toast(v==="fri"?"📍 Es wird nur Friesland disponiert":v==="whv"?"📍 Es wird nur Wilhelmshaven disponiert":"📍 Es werden Friesland und Wilhelmshaven disponiert");render(currentPage)}
+function areaOfText(t){return /wilhelmshaven/i.test(String(t||""))?"whv":"fri"}
+function unitArea(u){if(!u||u.neighborLoan||!["Feuerwehr","Rettungsdienst"].includes(u.org))return null;return /wilhelmshaven/i.test(`${u.location||""} ${u.opta||""}`)?"whv":"fri"}
+function inDispatchArea(u){const a=dispatchArea();if(a==="beide")return true;const ua=unitArea(u);return !ua||ua===a}
+function areaSelSync(){const e=document.getElementById("areaSel");if(!e)return;const show=currentScenarioId==="fri-whv"&&!CUSTOM_SC_EARLY()&&!isTerminalLink&&!IS_MONITOR;e.style.display=show?"":"none";if(show&&e.value!==dispatchArea())e.value=dispatchArea()}
 // Boote von DRK und DLRG auf Wangerooge bleiben an der Insel: nur Einsätze auf der Insel oder auf
 // dem Wasser rund um Wangerooge (bis 8 km von der Inselmitte). Der Seenotrettungskreuzer/-boot der
 // DGzRS fährt dagegen überall hin.
@@ -2393,9 +2464,9 @@ function drkBackground(u){return u&&u.org==="DRK"&&["RTW","KTW","NKTW","NEF"].in
 let AVAIL_MANV=false; // v5.34: beim MANV gehören auch die DRK-Hintergrund-Rettungsmittel in den Vorschlag
 function availableUnits(type,org=null){
  const orgOk=u=>!org||u.org===org||(org==="DLRG"&&u.wasserrettung);
- const prim=nearestFirst(db.units.filter(u=>(!u.neighborLoan||u.cover)&&(!type||u.type===type)&&orgOk(u)&&(org==="DRK"||!drkBackground(u))&&["1","2"].includes(u.status)&&islandReachable(u)));
+ const prim=nearestFirst(db.units.filter(u=>(!u.neighborLoan||u.cover)&&(!type||u.type===type)&&orgOk(u)&&(org==="DRK"||!drkBackground(u))&&["1","2"].includes(u.status)&&islandReachable(u)&&inDispatchArea(u)));
  if(prim.length)return prim;
- return nearestFirst(db.units.filter(u=>(!u.neighborLoan||u.cover)&&(!type||u.type===type)&&orgOk(u)&&(org==="DRK"||!drkBackground(u))&&u.status==="8"&&islandReachable(u)));
+ return nearestFirst(db.units.filter(u=>(!u.neighborLoan||u.cover)&&(!type||u.type===type)&&orgOk(u)&&(org==="DRK"||!drkBackground(u))&&u.status==="8"&&islandReachable(u)&&inDispatchArea(u)));
 }
 function chooseOne(type,org=null){return availableUnits(type,org)[0]||null}
 
@@ -2457,9 +2528,9 @@ function thwGroup(u){return String(u.fachgruppe||THW_GROUP_DEFAULT[u.opta]||"Ohn
 function chooseAvailableByType(type,org=null){
  const types=Array.isArray(type)?type:[type];
  const orgOk=u=>!org||u.org===org;
- const primary=nearestFirst(db.units.filter(u=>(!u.neighborLoan||u.cover)&&orgOk(u)&&(org==="DRK"||!drkBackground(u))&&islandReachable(u)&&types.includes(u.type) && ["1","2"].includes(String(u.status))));
+ const primary=nearestFirst(db.units.filter(u=>(!u.neighborLoan||u.cover)&&orgOk(u)&&(org==="DRK"||!drkBackground(u))&&islandReachable(u)&&inDispatchArea(u)&&types.includes(u.type) && ["1","2"].includes(String(u.status))));
  if(primary.length)return primary[0];
- const fallback=nearestFirst(db.units.filter(u=>(!u.neighborLoan||u.cover)&&orgOk(u)&&(org==="DRK"||!drkBackground(u))&&islandReachable(u)&&types.includes(u.type) && String(u.status)==="8"));
+ const fallback=nearestFirst(db.units.filter(u=>(!u.neighborLoan||u.cover)&&orgOk(u)&&(org==="DRK"||!drkBackground(u))&&islandReachable(u)&&inDispatchArea(u)&&types.includes(u.type) && String(u.status)==="8"));
  return fallback[0]||null;
 }
 // Wasserrettungszug Friesland: Das Führungsfahrzeug (Pelikan Friesland 71/11-01, ELW1) wird
@@ -2996,7 +3067,7 @@ const FW_TYPE_LONG={ELW:"Einsatzleitwagen",ELW1:"Einsatzleitwagen 1",ELW2:"Einsa
  HLF:"Hilfeleistungslöschgruppenfahrzeug",LF:"Löschgruppenfahrzeug",RW:"Rüstwagen",SW:"Schlauchwagen",TLF:"Tanklöschfahrzeug",MZF:"Mehrzweckfahrzeug","GW-L1":"Gerätewagen Logistik 1",
  RTB:"Rettungsboot",KLF:"Kleinlöschfahrzeug",WLF:"Wechselladerfahrzeug",GW:"Gerätewagen",ErkKW:"Erkundungskraftwagen (CBRN)",KdoW:"Kommandowagen",TSF:"Tragkraftspritzenfahrzeug",
  "TSF-W":"Tragkraftspritzenfahrzeug mit Wassertank","AB-Küche":"Abrollbehälter Küche","AB-Logistik":"Abrollbehälter Logistik","AB-Mulde":"Abrollbehälter Mulde",
- "AB-TEL":"Abrollbehälter Technische Einsatzleitung","AB-Übung Leckage":"Abrollbehälter Übung Leckage"};
+ "AB-TEL":"Abrollbehälter Technische Einsatzleitung","AB-Dekon":"Abrollbehälter Dekontamination","AB-Übung Leckage":"Abrollbehälter Übung Leckage"};
 function fwTypeLong(t,org){if(org&&org!=="Feuerwehr")return "";return FW_TYPE_LONG[t]||(/^AB-/.test(String(t||""))?"Abrollbehälter":"")}
 function resourcePickerCatsHTML(mode){
  const orgs=[...new Set([...UNIT_CATEGORIES,...(db.units||[]).map(u=>u.org).filter(Boolean)])].filter(o=>(db.units||[]).some(u=>u.org===o&&!u.neighborLoan));
@@ -3730,7 +3801,7 @@ function newKtCall(){
 let notrufDetailsVisible=false;
 function toggleNotrufDetails(){notrufDetailsVisible=!notrufDetailsVisible;notruf();}
 function nearestAvailableUnits(limit=6){
- const avail=db.units.filter(u=>["1","2","8"].includes(String(u.status))&&!notAlarmable(u));
+ const avail=db.units.filter(u=>["1","2","8"].includes(String(u.status))&&!notAlarmable(u)&&inDispatchArea(u));
  return ktLast(nearestFirst(avail)).slice(0,limit);
 }
 function overrideJurisdiction(){
@@ -4320,7 +4391,9 @@ function isOutOfJurisdiction(r){
  const addr=r?.address;
  if(!addr)return false;
  const city=(addr.city||addr.town||addr.municipality||"").toLowerCase();
- if(city.includes("wilhelmshaven"))return false; // v5.47: Stadt Wilhelmshaven gehört zur LST Friesland-Wilhelmshaven
+ const area=dispatchArea(); // v5.75
+ if(city.includes("wilhelmshaven"))return area==="fri"; // v5.47: Stadt Wilhelmshaven gehört zur LST Friesland-Wilhelmshaven
+ if(area==="whv")return true;
  const county=(addr.county||"").toLowerCase();
  if(county && !county.includes("friesland"))return true;
  return false;
@@ -8934,6 +9007,7 @@ function mittel(){
    return `<div class="card" style="margin-top:16px">
      <h2>${ORG_ICON[org]||"🚗"} ${esc(org)}</h2>
      ${locBlocks}
+     ${org==="Rettungsdienst"?nbMittelHTML():""}
    </div>`;
  }).join("");
  document.getElementById("app").innerHTML=`${callerBlock()}
@@ -9039,6 +9113,28 @@ const FW_STATION_INFO=(()=>{const m={};let i=0;for(const [main,subs] of FW_STATI
 function fwStationSort(a,b){const x=FW_STATION_INFO[a],y=FW_STATION_INFO[b];if(x&&y)return x.i-y.i;if(x)return -1;if(y)return 1;return a.localeCompare(b,"de")}
 // Rettungsmittel-Übersicht: Wachen von Feuerwehr und Rettungsdienst einklappbar (Standard: zu)
 const MITTEL_FOLD_ORGS=["Feuerwehr","Rettungsdienst"];
+// v5.75: alle Rettungsmittel der Nachbar-LKs in der Fahrzeugliste (unter Rettungsdienst), je Kreis und Wache
+// einklappbar. Status von Hand änderbar wie auf der Seite „Nachbar-LKs“. Ausgeliehene stehen schon oben.
+function nbMittelHTML(){
+ const loaned=new Set((db.units||[]).filter(u=>u.neighborLoan).map(u=>String(u.neighborUnitId)));
+ const list=(db.neighborUnits||[]).filter(n=>!loaned.has(String(n.id)));
+ if(!list.length)return "";
+ const dists=[...new Set(list.map(n=>n.district||"?"))].sort((a,b)=>a.localeCompare(b,"de"));
+ return dists.map(d=>{
+   const us=list.filter(n=>(n.district||"?")===d), waches=[...new Set(us.map(nbWacheName))].sort((a,b)=>a.localeCompare(b,"de"));
+   const stadt=/^(Wilhelmshaven|Oldenburg \(Stadt\)|Emden|Delmenhorst|Bremen|Bremerhaven)$/.test(d);
+   return `<h3 style="margin:16px 0 4px">🗺️ ${stadt?"Stadt":"LK"} ${esc(d.replace(/ \((Stadt|Land)\)$/,""))}${/\(Land\)$/.test(d)?"":""} <small class="muted">(Nachbarkreis · ${esc(nbLstOf(d))})</small></h3>`+waches.map(w=>{
+     const rows=us.filter(n=>nbWacheName(n)===w), key=`NB__${d}__${w}`, open=mittelOpenLocs.has(key), nFree=rows.filter(n=>["1","2"].includes(String(n.status))).length;
+     return `<details class="mittel-loc" ${open?"open":""} ontoggle="mittelToggleLoc(${esc(JSON.stringify(key))},this.open)"><summary style="cursor:pointer;font-weight:800;padding:8px 10px;border:1px solid var(--line);border-radius:10px;background:#f8fafc;margin-top:6px">📍 ${esc(w)} <span style="font-weight:600;color:#64748b">· ${rows.length} Fahrzeug${rows.length===1?"":"e"}, ${nFree} frei</span></summary>
+      <div style="overflow:auto"><table><thead><tr><th>Fahrzeug</th><th>Status</th><th>Terminal</th><th>Status ändern</th></tr></thead><tbody>
+      ${rows.map(n=>`<tr><td><b>${esc(n.opta)}</b><br><small class="muted">${esc(n.type)}${n.skills?` · ${esc(n.skills)}`:""}${n.address?` · ${esc(n.address)}`:""}</small></td>
+        <td><span class="status ${statusClass(String(n.status))}">${statusName(String(n.status))}</span></td>
+        <td><button onclick="showNeighborQR('${esc(String(n.id))}')">📱 Link / QR</button></td>
+        <td>${["1","2","3","4","6"].map(st=>`<button class="radio-key-mini${String(n.status)===st?" current":""}" onclick="setNeighborUnitStatus('${esc(String(n.id))}','${st}')" title="${esc(statusName(st))}">${st}</button>`).join("")}</td></tr>`).join("")}
+      </tbody></table></div></details>`;
+   }).join("");
+ }).join("");
+}
 let mittelOpenLocs=(()=>{try{return new Set(JSON.parse(localStorage.getItem("lst-mittel-open")||"[]"))}catch(e){return new Set()}})();
 function mittelToggleLoc(key,open){
  if(open)mittelOpenLocs.add(key); else mittelOpenLocs.delete(key);
@@ -10502,7 +10598,7 @@ function setNeighborUnitStatus(id,status){
  if(!u)return;
  u.status=String(status); u.manualUntil=Date.now()+60*60000; delete u.ownJob;
  save();
- render("nachbarLks");
+ render(currentPage||"nachbarLks");
 }
 // Rein dekorative Funkrufgruppen-Felder wie auf echten Leitstellen-PCs. Keine Funktion außer
 // Optik und dem Sprechwunsch-Popup je Gruppe – die Kanalnummer selbst filtert nichts.
@@ -10690,6 +10786,11 @@ const rnd=(a,b)=>a+Math.random()*(b-a), rint=(a,b)=>Math.floor(rnd(a,b+1)), pick
 const SIM_TOWNS=[
  {t:"Wilhelmshaven",s:["Marktstraße","Gökerstraße","Bismarckstraße","Ebertstraße","Peterstraße","Rheinstraße","Weserstraße","Grenzstraße","Banter Weg"],c:[53.5259,8.1080]},
  {t:"Wilhelmshaven",s:["Bremer Straße","Freiligrathstraße"],c:[53.5420,8.1050]},
+ // v5.75: weitere Wilhelmshavener Ortsteile (Straßen der Wachen/Klinik laut BOS-Fahrzeuge; Mittelpunkte ungefähr)
+ {t:"Wilhelmshaven-Fedderwardergroden",s:["Inhauser Landstraße"],c:[53.5640,8.0980]},
+ {t:"Wilhelmshaven-Sengwarden",s:["Heddostraße"],c:[53.5980,8.0450]},
+ {t:"Wilhelmshaven-Fedderwarden",s:["Poststraße"],c:[53.5700,8.0360]},
+ {t:"Wilhelmshaven",s:["Mozartstraße","Friedrich-Paffrath-Straße"],c:[53.5300,8.1000]},
  {t:"Varel",s:["Pelzerstraße","Menckestraße","Bleichenpfad","Am Wasserturm","Obernstraße","Oldenburger Straße","Neumarktplatz"],c:[53.3969,8.1362]},
  {t:"Varel-Obenstrohe",s:["Wiefelsteder Straße"],c:[53.3789,8.1067]},
  {t:"Varel-Borgstede",s:["Ziegelstraße"],c:[53.3952,8.0917]},
@@ -10724,7 +10825,9 @@ const SIM_ROADS=[
  {n:"auf der Jeverschen Straße in Hohenkirchen",town:"Wangerland-Hohenkirchen",c:[53.6550,7.9100]},
  {n:"auf der Wangerländischen Straße in Jever",town:"Jever",c:[53.5800,7.9050]},
  {n:"auf der Neuenburger Straße in Zetel",town:"Zetel",c:[53.4050,7.9620]},
- {n:"auf der Grabsteder Straße in Bockhorn",town:"Bockhorn",c:[53.3870,8.0090]}
+ {n:"auf der Grabsteder Straße in Bockhorn",town:"Bockhorn",c:[53.3870,8.0090]},
+ {n:"auf der Friedrich-Paffrath-Straße in Wilhelmshaven",town:"Wilhelmshaven",c:[53.5458,8.0900]},
+ {n:"auf der Inhauser Landstraße in Wilhelmshaven",town:"Wilhelmshaven",c:[53.5640,8.0980]}
 ];
 const SIM_FIRST={m:["Klaus","Peter","Jürgen","Heinz","Thomas","Michael","Dieter","Uwe","Hinrich","Gerd","Lukas","Jan"],w:["Ingrid","Monika","Sabine","Petra","Anke","Heike","Gisela","Renate","Wiebke","Lena","Julia","Anna"]};
 const SIM_LAST=["Janssen","Gerdes","Hinrichs","Eilers","Ahlers","Meyer","Schmidt","Oltmanns","Harms","Cornelius","Peters","Tjaden"];
@@ -10742,9 +10845,10 @@ async function simReverse(sim){
    if(road){L0.text=L0.kind==="road"?`auf der ${road} in ${town}`:`${road} ${a.house_number||rint(1,40)} in ${town}`;L0.addr=`${road}${a.house_number?" "+a.house_number:""}, ${town}`;L0.town=town}
  }catch(e){}
 }
-function simHomeLoc(){if(CUSTOM_SC)return csSimLoc("home");const t=pick(SIM_TOWNS);const st=pick(t.s);const no=rint(1,48);const off=()=>rnd(-0.004,0.004);return {kind:"home",text:`${st} ${no} in ${t.t}`,addr:`${st} ${no}, ${t.t.split("-")[0]}`,town:t.t,lat:t.c[0]+off(),lng:t.c[1]+off(),geo:true}}
+function simAreaPool(list,key){const a=dispatchArea();if(a==="beide")return list;const f=list.filter(x=>areaOfText(x[key])===a);return f.length?f:list}
+function simHomeLoc(){if(CUSTOM_SC)return csSimLoc("home");const t=pick(simAreaPool(SIM_TOWNS,"t"));const st=pick(t.s);const no=rint(1,48);const off=()=>rnd(-0.004,0.004);return {kind:"home",text:`${st} ${no} in ${t.t}`,addr:`${st} ${no}, ${t.t.split("-")[0]}`,town:t.t,lat:t.c[0]+off(),lng:t.c[1]+off(),geo:true}}
 function simWaterLoc(){const w=pick(SIM_WATER);return {kind:"water",text:w.n,addr:`${w.n.replace(/^(am|auf) /,"")}`,town:w.town,lat:w.lat,lng:w.lng,water:true}}
-function simRoadLoc(){if(CUSTOM_SC)return csSimLoc("road");const r=pick(SIM_ROADS);return {kind:"road",text:r.n,addr:r.n.replace(/^auf der /,""),town:r.town,lat:r.c[0]+rnd(-0.003,0.003),lng:r.c[1]+rnd(-0.003,0.003)}}
+function simRoadLoc(){if(CUSTOM_SC)return csSimLoc("road");const r=pick(simAreaPool(SIM_ROADS,"town"));return {kind:"road",text:r.n,addr:r.n.replace(/^auf der /,""),town:r.town,lat:r.c[0]+rnd(-0.003,0.003),lng:r.c[1]+rnd(-0.003,0.003)}}
 
 // Fall-Bibliothek. f = Fakten (Antworten für den Anrufer), say = feste Sätze, extra = spontane Sätze.
 const SIM_CASES=[
@@ -11304,11 +11408,12 @@ function simMakeCall0(){
  // Mit KI: bevorzugt ein von der KI frisch erfundener Fall (im Hintergrund vorbereitet)
  if(simAiReady()&&simAiCases.length&&!simMakeCall.noAi){const s=simAiCases.shift();s.created=Date.now();if(s.loc.geo)simGeocode(s);setTimeout(simAiFill,500);return s}
  // Krankentransporte (19222) rufen nicht automatisch an – nur Notrufe 112
- const pool=SIM_CASES.filter(c=>!c.kt&&c.w>0&&!(CUSTOM_SC&&c.loc==="water")); // eigenes Szenario: keine Wasser-Fälle (keine Gewässerdaten)
+ const areaOk=c=>!c.fixedLoc||dispatchArea()==="beide"||c.fixedLoc.water||areaOfText(`${c.fixedLoc.town||""} ${c.fixedLoc.text||""}`)===dispatchArea(); // v5.75
+ const pool=SIM_CASES.filter(c=>!c.kt&&c.w>0&&!(CUSTOM_SC&&c.loc==="water")&&areaOk(c)); // eigenes Szenario: keine Wasser-Fälle (keine Gewässerdaten)
  const tot=pool.reduce((a,c)=>a+c.w,0); let r=Math.random()*tot, cs=pool[0];
  for(const c of pool){r-=c.w;if(r<=0){cs=c;break}}
  if(!simMakeCall0.noTier&&simTierDue()){cs=pick(SIM_CASES.filter(c=>c.tier&&!(CUSTOM_SC&&c.loc==="water")));simTierMark()}
- if(!simMakeCall0.noTier&&!CUSTOM_SC&&currentScenarioId==="fri-whv"){const rr=simRareDue();if(rr)cs=SIM_CASES.find(c=>c.id===rr)||cs}
+ if(!simMakeCall0.noTier&&!CUSTOM_SC&&currentScenarioId==="fri-whv"){const rr=simRareDue();if(rr){const rc=SIM_CASES.find(c=>c.id===rr);if(rc&&areaOk(rc))cs=rc}}
  if(simMakeCall0.forceCase){cs=SIM_CASES.find(c=>c.id===simMakeCall0.forceCase)||cs;simMakeCall0.forceCase=null}
  const d=cs.mk();
  if(SIM_SELF[cs.id]&&Math.random()<(SIM_SELF_RATE[cs.id]||0.4)){
@@ -12809,7 +12914,7 @@ function renameDesk(){
  renderSimCtl();
 }
 function renderSimCtl(){
- const dt=document.getElementById("deskTag"); if(dt)dt.textContent=(db.cloud?.enabled&&!isTerminalLink)?"🎧 "+deskName():"";
+ areaSelSync(); const dt=document.getElementById("deskTag"); if(dt)dt.textContent=(db.cloud?.enabled&&!isTerminalLink)?"🎧 "+deskName():"";
  const el=document.getElementById("simCtl");if(!el)return;
  if(isTerminalLink){el.innerHTML="";return}
  el.innerHTML=simCtlHTML();

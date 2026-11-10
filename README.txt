@@ -1607,6 +1607,16 @@ Version 5.05:
   („a, b“ = a ODER b). Mit „🚑 NA-Indikation“ markierte Knöpfe ziehen weiterhin einen Notarzt.
 - Nur „Unauffällig“ (ohne weitere Befunde) zählt weiter als unauffälliges E (R0 möglich).
 
+Version 5.75:
+- Neu oben in der Kopfzeile: Auswahl „Friesland + WHV“, „nur Friesland“ oder „nur Wilhelmshaven“ (nur im Szenario Friesland/WHV). Die Einstellung gilt pro Gerät.
+  - Übungsanrufe kommen nur aus dem gewählten Bereich. Wasser-Einsätze kommen immer.
+  - Einsatzorte im anderen Bereich gelten als „außerhalb der Zuständigkeit“ (Weiterverbinden).
+  - Automatische Vorschläge (AAO, nächstes Fahrzeug) nehmen nur Feuerwehr- und Rettungsdienst-Fahrzeuge des gewählten Bereichs. Von Hand bleiben alle alarmierbar.
+- Wilhelmshaven: 46 Feuerwehrfahrzeuge (BF FuRW 1 und 2, FF Bant-Heppens, Rüstringen, Sengwarden, Fedderwarden) und 3 weitere Rettungsmittel (BF 02/83-02, Johanniter RTW 50/83-01 und KTW 50/92-01) laut BOS-Fahrzeuge. Nicht übernommen: Reserve, a.D., Anhänger, Abrollbehälter ohne Funkrufnamen, Aus-/Fortbildungsfahrzeuge, Landesfahrzeuge.
+- Unsicher: Für FF Bant-Heppens ist keine Adresse angegeben, die Position ist ungefähr. Bei „Florian Wilhelmshaven 11/44-01“ (Fedderwarden) fehlt der Fahrzeugtyp. LF ist aus der Kennung angenommen.
+- Fahrzeugliste: Unter Rettungsdienst stehen jetzt alle Rettungsmittel der Nachbar-LKs, je Kreis und Wache einklappbar, mit Status-Knöpfen und Terminal-Link.
+- Nachbar-LKs geprüft und ergänzt: Ahlhorn (Akkon Oldenburg-Land 51/83-01 RTW, 51/92-01 KTW), Sandkrug (Johannes Oldenburg-Land 62/83-01, 62/83-02 RTW, 62/93-01 NKTW), Nordenham (NEF Rettung Wesermarsch 84/82-01), Weener (Rotkreuz Leer 45/83-01 und 45/83-02). Vorhandene Einträge (auch SRTW, NAW, Baby-NAW) bleiben unverändert. Insel-RTW (Langeoog, Spiekeroog) sind nicht übernommen.
+
 Version 5.74:
 - Fahrzeuge: Neuer Knopf „📤 Als Datei“. Er speichert die Fahrzeugliste als Datei oder öffnet auf iPhone/iPad das Teilen-Menü. Damit können eigene Änderungen fest in die Standarddaten übernommen werden.
 - Fehler behoben (seit 5.67): Wurde ein älterer gespeicherter Stand (Cloud oder Datei) geladen, konnten wieder „OrgL/LNA“-Einträge auftauchen und OrgL Varel/Sande doppelt erscheinen. Die Umstellung läuft jetzt auch nach jedem Laden. Eigene Angaben wie Standort oder Besatzung bleiben dabei erhalten.
