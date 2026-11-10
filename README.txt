@@ -1607,6 +1607,11 @@ Version 5.05:
   („a, b“ = a ODER b). Mit „🚑 NA-Indikation“ markierte Knöpfe ziehen weiterhin einen Notarzt.
 - Nur „Unauffällig“ (ohne weitere Befunde) zählt weiter als unauffälliges E (R0 möglich).
 
+Version 5.73:
+- LNA mit Handy: Hat das Handy GPS (höchstens 2 Minuten alt), rechnet die SDS die Ankunftszeit vom echten Standort aus. Der Ort in „komme aus …“ ist dann der echte nächstgelegene Ort.
+- Hat das Handy kein GPS, wartet die SDS bis zu 5 Minuten darauf. Danach kommt „Eintreffzeit noch unklar (kein GPS)“.
+- Auf der Leitstellenkarte bleibt der LNA weiterhin unsichtbar.
+
 Version 5.72:
 - LNA: 1–3 Minuten nach der Alarmierung schickt der LNA eine SDS, z. B. „Alarm erhalten, komme mit dem Privat-PKW aus Jever. Eintreffen in ca. 25 min (ca. 10:40 Uhr).“ Die genannte Zeit ist die, zu der er in der Simulation tatsächlich eintrifft.
 

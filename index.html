@@ -170,7 +170,7 @@ html[data-device="handy"] #floatDock{left:8px;right:8px;width:auto;top:auto;bott
 </head>
 <body>
 <div style="padding:6px 10px;font-size:11px;color:#94a3b8;font-weight:700;display:flex;flex-wrap:wrap;align-items:center;gap:10px;position:sticky;top:0;z-index:10;background:var(--bg)">
- <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v5.72</span>
+ <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v5.73</span>
  <span id="syncState"></span> <a id="deskTag" href="#" onclick="renameDesk();return false" title="Name dieses Platzes (für „offen an …“) – antippen zum Ändern" style="color:#64748b;font-weight:700;text-decoration:none"></a>
  <span id="simCtl" style="position:absolute;left:50%;transform:translateX(-50%);display:flex;gap:6px;align-items:center"></span>
  <a id="homeLink" href="#" onclick="render('leitstelle');return false" class="hidden" style="color:#64748b;text-decoration:underline;font-weight:600">🖥️ Leitstelle</a>
@@ -1776,6 +1776,7 @@ function autoAdvanceEnRoute(){
  const now=Date.now();
  let changed=false;
  db.units.forEach(u=>{
+   if(isLNA(u)&&String(u.status)==="3"&&u.status3Since&&lnaEtaSds(u,now))changed=true; // v5.72/v5.73
    if(unitPhoneLive(u))return;
    const status=String(u.status);
    if(isAB(u)&&u.wlfId){
@@ -1796,16 +1797,6 @@ function autoAdvanceEnRoute(){
      if(home&&dest){
        const km=haversine(home[0],home[1],dest[0],dest[1]);
        const etaMs=(etaMinutesForDistance(u,km)||10)*60000;
-       // v5.72: LNA meldet sich nach der Alarmierung per SDS mit voraussichtlicher Ankunftszeit
-       if(isLNA(u)&&u._lnaSdsFor!==u.status3Since){
-         if(!u._lnaSdsAt||u._lnaSdsBase!==u.status3Since){u._lnaSdsBase=u.status3Since;u._lnaSdsAt=u.status3Since+Math.min(etaMs*0.5,(1+Math.random()*2)*60000);changed=true}
-         if(now>=u._lnaSdsAt){
-           u._lnaSdsFor=u.status3Since; const arr=u.status3Since+etaMs, rest=Math.max(1,Math.round((arr-now)/60000));
-           const tw=LNA_TOWNS.filter(t=>AREA_CENTERS[t]).map(t=>[t,haversine(home[0],home[1],AREA_CENTERS[t][0],AREA_CENTERS[t][1])]).sort((x,y)=>x[1]-y[1])[0];
-           crewSds(u,call,`Alarm erhalten, komme mit dem Privat-PKW${tw&&tw[1]<8?` aus ${tw[0]}`:""}. Eintreffen in ca. ${rest} min (ca. ${hhmm(arr)} Uhr).`);
-           changed=true;
-         }
-       }
        if(now-u.status3Since>=etaMs){setUnitStatus(u,"4");changed=true;}
      }
    } else if(u.crew&&["4","7","8"].includes(status)){
@@ -2214,8 +2205,11 @@ function lnaPrivHome(u){
  u.privHome=[base[0]+km/111*Math.cos(ang), base[1]+km/(111*Math.cos(base[0]*Math.PI/180))*Math.sin(ang)];
  return u.privHome;
 }
+// v5.73: Hat der LNA ein Handy mit aktuellem GPS (höchstens 2 min alt), zählt sein echter Standort.
+// Auf der Karte der Leitstelle bleibt er trotzdem unsichtbar (Privat-PKW, nicht ortbar).
+function lnaLiveGps(u){return isLNA(u)&&numOk(u.lat)&&numOk(u.lng)&&u.gpsUpdatedAt&&Date.now()-new Date(u.gpsUpdatedAt).getTime()<120000}
 function unitPoint(u){
- if(isLNA(u)){const h=lnaPrivHome(u);if(h)return h}
+ if(isLNA(u)){if(lnaLiveGps(u))return [Number(u.lat),Number(u.lng)];const h=lnaPrivHome(u);if(h)return h}
  return unitPointBase(u);
 }
 function unitPointBase(u){
@@ -2308,6 +2302,24 @@ function travelMinutes(u,km,noSr=false){
  return (km*factor/speed)*60;
 }
 function unitCallIsR0(u){try{const c=findUnitCall(u);if(c)return !!c.rZero;return !!(db.currentCall?.rZero)}catch(e){return false}}
+// v5.72/v5.73: LNA meldet sich 1–3 min nach der Alarmierung per SDS mit voraussichtlicher Ankunftszeit.
+// Mit Handy und GPS: vom echten Standort. Mit Handy ohne GPS: bis 5 min auf GPS warten, sonst ohne Zeitangabe.
+function lnaEtaSds(u,now){
+ if(u._lnaSdsFor===u.status3Since)return false;
+ if(u._lnaSdsBase!==u.status3Since){u._lnaSdsBase=u.status3Since;u._lnaSdsAt=u.status3Since+(1+Math.random()*2)*60000;return true}
+ if(now<u._lnaSdsAt)return false;
+ const call=findUnitCall(u), live=unitPhoneLive(u), gps=lnaLiveGps(u);
+ if(live&&!gps&&now-u.status3Since<5*60000)return false;
+ const from=live&&!gps?null:unitPoint(u), dest=callDestinationPoint(call,u);
+ u._lnaSdsFor=u.status3Since;
+ if(!from||!dest){crewSds(u,call,"Alarm erhalten, komme mit dem Privat-PKW. Eintreffzeit noch unklar (kein GPS).");return true}
+ const etaMin=etaMinutesForDistance(u,haversine(from[0],from[1],dest[0],dest[1]))||10;
+ // ohne Handy: tatsächliche simulierte Ankunft (inkl. Vorlauf); mit Handy: ab jetzt vom echten Standort, ohne Vorlauf
+ const arr=live?now+Math.max(1,etaMin-unitTurnoutMin(u))*60000:u.status3Since+etaMin*60000, rest=Math.max(1,Math.round((arr-now)/60000));
+ const tw=LNA_TOWNS.filter(t=>AREA_CENTERS[t]).map(t=>[t,haversine(from[0],from[1],AREA_CENTERS[t][0],AREA_CENTERS[t][1])]).sort((x,y)=>x[1]-y[1])[0];
+ crewSds(u,call,`Alarm erhalten, komme mit dem Privat-PKW${tw&&tw[1]<8?` aus ${tw[0]}`:""}. Eintreffen in ca. ${rest} min (ca. ${hhmm(arr)} Uhr).`);
+ return true;
+}
 function etaMinutesForDistance(u,km){
  if(km==null||km>=999)return null;
  // Krankentransport: ohne Sonderrechte, mit Vorlauf – deutlich mehr Zeit
