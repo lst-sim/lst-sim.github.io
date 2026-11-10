@@ -165,19 +165,47 @@ html[data-device="handy"] #floatDock{left:8px;right:8px;width:auto;top:auto;bott
 .reaDot{display:inline-block;width:16px;height:16px;border-radius:50%;background:#dc2626;animation:reaPulse .5s infinite}
 .prevPick{outline:3px solid #f59e0b!important;outline-offset:1px}
 @media (max-width:700px){#simCtl{position:static!important;transform:none!important;order:-1;width:100%;justify-content:center}#simCtl .simLbl{display:none}}
+/* v5.79: Kopfzeile */
+#topbar{height:auto;min-height:0;justify-content:initial;position:sticky;top:0;z-index:10;display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:10px;padding:6px 12px;background:rgba(255,255,255,.92);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);border-bottom:1px solid var(--line);font-size:12px;color:#64748b;font-weight:700}
+#topbar .tb-left,#topbar .tb-right{display:flex;align-items:center;gap:8px;min-width:0;flex-wrap:wrap}
+#topbar .tb-right{justify-content:flex-end}
+#topbar .tb-brand{color:#0f172a;font-weight:900;font-size:14px;letter-spacing:-.2px;white-space:nowrap}
+#topbar .tb-brand span{color:var(--accent)}
+#topbar .tb-ver{background:#f1f5f9;border:1px solid var(--line);color:#475569;border-radius:999px;padding:1px 8px;font-size:11px}
+#topbar #deskTag{color:#475569;text-decoration:none;background:#f8fafc;border:1px dashed #cbd5e1;border-radius:999px;padding:1px 8px}
+#topbar #deskTag:empty{display:none}
+#topbar #simCtl{display:flex;gap:6px;align-items:center;justify-content:center}
+#topbar .tb-btn{display:inline-flex;align-items:center;gap:4px;padding:4px 10px;border:1px solid var(--line);border-radius:999px;background:#fff;color:#334155;text-decoration:none;font-weight:700;white-space:nowrap}
+#topbar .tb-btn:hover{background:#f1f5f9}
+#topbar .tb-btn.hidden{display:none}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:999px;background:#f1f5f9;padding:2px;gap:2px}
+.seg button{border:0;background:transparent;border-radius:999px;padding:4px 12px;font-size:12px;font-weight:700;color:#475569;cursor:pointer;min-height:0;box-shadow:none}
+.seg button.on{background:#fff;color:#0f172a;box-shadow:0 1px 3px #0f172a26}
+#topbar .tb-right{flex-wrap:nowrap}
+@media (max-width:1250px){#topbar .tb-btn span{display:none}#topbar .tb-btn{padding:4px 8px}.tb-area button{padding:4px 9px}}
+@media (max-width:860px){#topbar{display:flex;flex-wrap:wrap;justify-content:space-between;row-gap:6px;padding:6px 8px}#topbar #simCtl{order:3;flex:1 0 100%}#topbar #simCtl .simLbl{display:none}}
+@media (max-width:420px){#topbar .tb-right{gap:4px}#topbar .tb-btn{padding:3px 6px}.tb-area button{padding:3px 7px;font-size:11px}#topbar .tb-ver{display:none}}
+
 </style>
 <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
 </head>
 <body>
-<div style="padding:6px 10px;font-size:11px;color:#94a3b8;font-weight:700;display:flex;flex-wrap:wrap;align-items:center;gap:10px;position:sticky;top:0;z-index:10;background:var(--bg)">
- <span style="color:#334155;font-weight:800">Leitstelle.sim</span> <span id="versionTag">v5.78</span>
- <span id="syncState"></span> <select id="areaSel" onchange="setDispatchArea(this.value)" title="Welcher Bereich wird disponiert?" style="display:none;font-size:11px;font-weight:700;padding:1px 4px;border-radius:6px;border:1px solid #cbd5e1;background:#fff;color:#334155"><option value="beide">📍 Friesland + WHV</option><option value="fri">📍 nur Friesland</option><option value="whv">📍 nur Wilhelmshaven</option></select> <a id="deskTag" href="#" onclick="renameDesk();return false" title="Name dieses Platzes (für „offen an …“) – antippen zum Ändern" style="color:#64748b;font-weight:700;text-decoration:none"></a>
- <span id="simCtl" style="position:absolute;left:50%;transform:translateX(-50%);display:flex;gap:6px;align-items:center"></span>
- <a id="homeLink" href="#" onclick="render('leitstelle');return false" class="hidden" style="color:#64748b;text-decoration:underline;font-weight:600">🖥️ Leitstelle</a>
- <a id="monitorLink" href="#" onclick="showMonitorQR();return false" style="color:#64748b;text-decoration:underline;font-weight:600;margin-left:auto">🖥️ Monitor hinzufügen</a>
- <a id="deviceSwitchLink" href="#" onclick="switchViewLink();return false" style="color:#64748b;text-decoration:underline;font-weight:600">📱⇄📲 Ansicht wechseln</a>
- <a href="#" onclick="localStorage.removeItem('dlrg-jet-scenario');location.reload();return false" style="color:#64748b;text-decoration:underline;font-weight:600">🔀 Szenario wechseln</a>
-</div>
+<header id="topbar">
+ <div class="tb-left">
+  <span class="tb-brand">🚑 Leitstelle<span>.sim</span></span>
+  <span id="versionTag" class="tb-ver">v5.80</span>
+  <span id="syncState"></span>
+  <a id="deskTag" href="#" onclick="renameDesk();return false" title="Name dieses Platzes (für „offen an …“) – antippen zum Ändern"></a>
+ </div>
+ <span id="simCtl"></span>
+ <div class="tb-right">
+  <div id="areaSel" class="seg tb-area" title="Welcher Bereich wird disponiert?" style="display:none"><button data-v="fri" onclick="setDispatchArea('fri')">Friesland</button><button data-v="whv" onclick="setDispatchArea('whv')">Wilhelmshaven</button></div>
+  <a id="homeLink" href="#" onclick="render('leitstelle');return false" class="hidden tb-btn" title="Zur Leitstelle">🖥️ <span>Leitstelle</span></a>
+  <a id="monitorLink" href="#" onclick="showMonitorQR();return false" class="tb-btn" title="Monitor hinzufügen">📺 <span>Monitor</span></a>
+  <a id="deviceSwitchLink" href="#" onclick="switchViewLink();return false" class="tb-btn" title="Ansicht wechseln (Tablet/Handy)">📱 <span>Ansicht</span></a>
+  <a href="#" onclick="localStorage.removeItem('dlrg-jet-scenario');location.reload();return false" class="tb-btn" title="Szenario wechseln">🔀 <span>Szenario</span></a>
+ </div>
+</header>
 <div id="callTimerBar" style="position:fixed;top:0;left:0;right:0;z-index:1000"></div>
 <div id="callerRequestBanner"></div>
 <main id="app"></main><div id="toast" class="toast"></div>
@@ -1144,6 +1172,7 @@ if(!db.aaoSyncV394){
  });
 }
 lnaSplitMigrate(); // v5.74: nochmals nach dem AAO-Abgleich (gespeicherte AAOs werden erst hier vollständig geladen)
+setTimeout(()=>{try{if(ensureWhvAaos()){save();if(typeof currentPage!=="undefined"&&currentPage==="aao")render("aao")}}catch(e){console.warn(e)}},0); // v5.79
 if(!Array.isArray(db.activeCalls))db.activeCalls=[];
 // Einmalig (v4.45, auf Wunsch): Fahrzeuge stehen standardmäßig auf Status 2 statt 1. Freie
 // Fahrzeuge in Status 1, die keinem Einsatz zugeordnet sind und nicht gerade zur Wache
@@ -2443,31 +2472,31 @@ function notAlarmable(u){return !!u&&(!!u.noAlarm||u.type==="Wachturm")}
 // Wirkt auf Übungsanrufe (Einsatzorte), Zuständigkeit (Weiterverbinden) und automatische Vorschläge.
 // Feuerwehr- und Rettungsdienst-Fahrzeuge des anderen Bereichs bleiben von Hand alarmierbar.
 const AREA_KEY="lst-dispatch-area";
-function dispatchArea(){if(currentScenarioId!=="fri-whv"||CUSTOM_SC_EARLY())return "beide";try{const v=localStorage.getItem(AREA_KEY);return ["fri","whv"].includes(v)?v:"beide"}catch(e){return "beide"}}
+// v5.80: Ein Platz disponiert entweder Friesland oder WHV (kein „beide“ mehr). Die Wahl gilt je Fenster/Tab
+// (sessionStorage), damit ein zweiter Bildschirm bzw. ein zweites Fenster den anderen Bereich übernehmen kann.
+function dispatchArea(){if(currentScenarioId!=="fri-whv"||CUSTOM_SC_EARLY())return "beide";try{const v=sessionStorage.getItem(AREA_KEY)||localStorage.getItem(AREA_KEY);return v==="whv"?"whv":"fri"}catch(e){return "fri"}}
 function CUSTOM_SC_EARLY(){return !!((SCENARIOS[currentScenarioId]||{}).custom)}
-function setDispatchArea(v){try{localStorage.setItem(AREA_KEY,v)}catch(e){};toast(v==="fri"?"📍 Es wird nur Friesland disponiert":v==="whv"?"📍 Es wird nur Wilhelmshaven disponiert":"📍 Es werden Friesland und Wilhelmshaven disponiert");render(currentPage)}
+function setDispatchArea(v){v=v==="whv"?"whv":"fri";try{sessionStorage.setItem(AREA_KEY,v);localStorage.setItem(AREA_KEY,v)}catch(e){};areaSelSync();toast(v==="whv"?"📍 Dieser Platz disponiert Wilhelmshaven":"📍 Dieser Platz disponiert Friesland");render(currentPage)}
 function areaOfText(t){return /wilhelmshaven/i.test(String(t||""))?"whv":"fri"}
 function unitArea(u){if(!u||u.neighborLoan||!["Feuerwehr","Rettungsdienst"].includes(u.org))return null;return /wilhelmshaven/i.test(`${u.location||""} ${u.opta||""}`)?"whv":"fri"}
 function inDispatchArea(u){const a=dispatchArea();if(a==="beide")return true;const ua=unitArea(u);return !ua||ua===a}
-// v5.77: Friesland und Wilhelmshaven haben eine gemeinsame Leitstelle. Rettungsmittel des anderen Bereichs
-// werden deshalb ohne Telefonabsprache mit vorgeschlagen: wenn im eigenen Bereich keines dieses Typs frei ist
-// (bzw. für weitere benötigte Fahrzeuge hinten angehängt) oder wenn es mindestens 5 min schneller da ist.
-// Feuerwehr bleibt getrennt.
 function isWhvBF(u){return !!u&&u.org==="Feuerwehr"&&/^Florian Wilhelmshaven 0[12]\//.test(String(u.opta||""))}
-function crossAreaRd(u){return dispatchArea()!=="beide"&&u&&u.org==="Rettungsdienst"&&!inDispatchArea(u)}
+// v5.80: Alle Feuerwehr- und Rettungsdienst-Fahrzeuge des anderen Bereichs werden wie Nachbar-LK-Fahrzeuge
+// behandelt (nur wenn sie schneller da sind oder im eigenen Bereich keins frei ist) – aber ohne Telefonat.
+function crossAreaRd(u){return dispatchArea()!=="beide"&&!!u&&!!unitArea(u)&&!inDispatchArea(u)}
 function areaBlend(list){
  if(dispatchArea()==="beide")return list;
  const inA=list.filter(inDispatchArea), other=list.filter(crossAreaRd);
  if(!other.length)return inA;
  const out=[...inA];
- other.forEach(o=>{const same=out.findIndex(x=>x.type===o.type);
+ other.forEach(o=>{const same=out.findIndex(x=>x.type===o.type&&!crossAreaRd(x));
    if(same<0){out.push(o);return}
    const eo=estimatedEtaMinutes(o), ei=estimatedEtaMinutes(out[same]);
-   if(Number.isFinite(eo)&&Number.isFinite(ei)&&eo+5<=ei)out.splice(same,0,o);else out.push(o);});
+   if(Number.isFinite(eo)&&Number.isFinite(ei)&&eo<ei)out.splice(same,0,o);else out.push(o);});
  return out;
 }
 function crossAreaLabel(u){return crossAreaRd(u)?(unitArea(u)==="whv"?" (aus WHV)":" (aus Friesland)"):""}
-function areaSelSync(){const e=document.getElementById("areaSel");if(!e)return;const show=currentScenarioId==="fri-whv"&&!CUSTOM_SC_EARLY()&&!isTerminalLink&&!IS_MONITOR;e.style.display=show?"":"none";if(show&&e.value!==dispatchArea())e.value=dispatchArea()}
+function areaSelSync(){const e=document.getElementById("areaSel");if(!e)return;const show=currentScenarioId==="fri-whv"&&!CUSTOM_SC_EARLY()&&!isTerminalLink&&!IS_MONITOR;e.style.display=show?"":"none";const v=dispatchArea();e.querySelectorAll("button").forEach(b=>b.classList.toggle("on",b.dataset.v===v))}
 // Boote von DRK und DLRG auf Wangerooge bleiben an der Insel: nur Einsätze auf der Insel oder auf
 // dem Wasser rund um Wangerooge (bis 8 km von der Inselmitte). Der Seenotrettungskreuzer/-boot der
 // DGzRS fährt dagegen überall hin.
@@ -3056,7 +3085,10 @@ function resumeCall(id){
  save(); if(c.alarmTime)render("leitstelle"); else{evaluate();prepareAlarm()}
 }
 function waitTimerText(c){const ms=Date.now()-c.waitingSince,h=Math.floor(ms/3600000),m=Math.floor(ms%3600000/60000),sec=Math.floor(ms%60000/1000);return `${h}:${String(m).padStart(2,"0")}:${String(sec).padStart(2,"0")}`}
-function deskBadgeHTML(c){return c&&c.deskId&&c.deskId!==DEVICE_ID&&c!==db.currentCall?` <span style="display:inline-block;padding:2px 8px;border-radius:999px;background:#e0e7ff;color:#3730a3;font-size:12px;font-weight:800;vertical-align:middle">🎧 offen an ${esc(c.deskName||"anderem Platz")}</span>`:""}
+function deskBadgeHTML(c){return areaBadgeHTML(c)+deskBadgeHTML0(c)}
+// v5.80: Einsatz im anderen Bereich (wird vom anderen Platz disponiert)
+function areaBadgeHTML(c){if(!c||dispatchArea()==="beide"||!c.location)return "";const a=callAreaOf(c);return a===dispatchArea()?"":` <span style="display:inline-block;padding:2px 8px;border-radius:999px;background:#fef3c7;color:#92400e;font-size:12px;font-weight:800;vertical-align:middle">📍 ${a==="whv"?"Wilhelmshaven":"Friesland"} – anderer Platz</span>`}
+function deskBadgeHTML0(c){return c&&c.deskId&&c.deskId!==DEVICE_ID&&c!==db.currentCall?` <span style="display:inline-block;padding:2px 8px;border-radius:999px;background:#e0e7ff;color:#3730a3;font-size:12px;font-weight:800;vertical-align:middle">🎧 offen an ${esc(c.deskName||"anderem Platz")}</span>`:""}
 function waitBadgeHTML(c){
  if(!c||!c.waitingSince)return "";
  return ` <span class="waitTimer" data-call="${esc(String(c.id))}" style="color:#dc2626;font-weight:900;font-size:16px" title="Wartet seit ${new Date(c.waitingSince).toLocaleTimeString("de-DE",{hour:"2-digit",minute:"2-digit"})} Uhr">⏸ ${waitTimerText(c)}</span>${c.waitAlerted?` <span style="color:#dc2626;font-weight:900">⏰ erneut vorgelegt</span>`:""}`;
@@ -4616,7 +4648,8 @@ function goBackNotruf(){
 function evaluate(){
  applyDutySchedule();
  AVAIL_MANV=Number(db.currentCall&&db.currentCall.answers&&db.currentCall.answers.count)>3;
- try{return evaluate0()}finally{AVAIL_MANV=false}
+ AAO_AREA_CTX=callAreaOf(db.currentCall);
+ try{return evaluate0()}finally{AVAIL_MANV=false;AAO_AREA_CTX=null}
 }
 function evaluate0(){
  const c=db.currentCall, a=c.answers, e=a.event||"";
@@ -4651,17 +4684,17 @@ function evaluate0(){
  // Ende nur die "höchste" (meiste Fahrzeuge; bei Gleichstand die spezifischere, später geprüfte)
  // alarmiert.
  let src="base"; const kwMap={};
- const add=(type,n=1,org=null)=>{
+ const add=(type,n=1,org=null,extra={})=>{
    const va=vollalarmGroup(type);
    if(va){ // Vollalarm: alle verfügbaren Fahrzeuge der Orts-/Gliederung
      for(const u of va.units.filter(VA_FREE))req.push({type:u.type,org:u.org,src,exact:u.id});
      return;
    }
-   for(let i=0;i<n;i++)req.push({type,org,src});
+   for(let i=0;i<n;i++)req.push({type,org,src,...extra});
  };
  // Alarmierung aus der (bearbeitbaren) AAO-Tabelle; Fallback auf den Standard, falls ein
  // Eintrag fehlt.
- const addAao=(id,nOverride)=>{const prev=src;src=id;for(const x of aaoUnits(id))add(x.type,nOverride?nOverride(x):aaoN(x,a),x.org||null);src=prev};
+ const addAao=(id,nOverride)=>{const prev=src;src=id;for(const x of aaoUnits(id))add(x.type,nOverride?nOverride(x):aaoN(x,a),x.org||null,{...(x.bf?{bfOnly:true}:{}),...(x.opta?{opta:x.opta}:{})});src=prev};
  let firstKwId=null; // die AAO der eigentlichen Lage (vor XABCDE/MANV-Zusätzen)
  const kw=(id,fallback)=>{const k=aaoKeyword(id,fallback);kwMap[id]=k;if(firstKwId==null)firstKwId=String(id);return k};
 
@@ -4947,21 +4980,7 @@ function evaluate0(){
    });
    return best;
  };
- // v5.78: Wasser-Einsätze in Wilhelmshaven übernimmt die Berufsfeuerwehr – keine DLRG. DLRG-Boot → RTB der
- // BF, DLRG-GW Wasserrettung → GW-W der BF (01/58-01), übrige DLRG-Fahrzeuge entfallen; Feuerwehr nur BF.
- const whvWater=currentScenarioId==="fri-whv"&&!CUSTOM_SC_EARLY()&&/wilhelmshaven/i.test(`${c.location||""} ${c.geocodedAddress||""}`)&&(e==="Person im Wasser"||!!c.locationIsWater);
- if(whvWater){
-   const gww=db.units.find(u=>u.opta==="Florian Wilhelmshaven 01/58-01");
-   req=req.flatMap(r=>{
-     if(r.org==="DLRG"||(r.org==null&&/^(GW Wasserrettung|GW Taucher|GW Drohne|GW-Boot|MZB)/.test(String(r.type)))){
-       if(r.type==="RTB")return [{...r,org:"Feuerwehr",bfOnly:true}];
-       if(r.type==="GW Wasserrettung"&&gww)return [{...r,type:gww.type,org:"Feuerwehr",exact:["1","2"].includes(String(gww.status))?gww.id:undefined,bfOnly:true}];
-       return [];
-     }
-     if(r.org==="Feuerwehr"||r.org==null&&FW_TYPE_LONG[r.type])return [{...r,org:r.org||"Feuerwehr",bfOnly:true}];
-     return [r];
-   }).filter((r,i,arr)=>!(r.exact&&arr.findIndex(x=>x.exact===r.exact)!==i));
- }
+ // v5.79: Wasser-Einsätze in Wilhelmshaven laufen über die eigenen WHV-AAOs (BF statt DLRG), siehe whvAaoVariant()
  const abPlans=[];
  for(const r of req){
    // Abrollbehälter nur zusammen mit einem WLF (frei – sonst eines von einem anderen Einsatz)
@@ -4982,6 +5001,7 @@ function evaluate0(){
    else {
      let arr=availableUnits(r.type,r.org).filter(x=>!used.has(x.id));
      if(r.bfOnly)arr=arr.filter(isWhvBF); // v5.78
+     if(r.opta){const ex=arr.find(x=>x.opta===r.opta);arr=ex?[ex]:[]} // v5.79: bestimmtes Fahrzeug laut AAO
      u=arr[0]||null;
    }
    // Nachbar-LK nie bei R0 (ohne Sonderrechte) – dann fährt das eigene Fahrzeug, auch wenn weit weg.
@@ -9295,7 +9315,7 @@ function applySetupData(kind,d){
    db.aao=d.aao; db.deletedAaoIds=Array.isArray(d.deletedAaoIds)?d.deletedAaoIds:(db.deletedAaoIds||[]);
    if(d.qsConfig&&typeof d.qsConfig==="object"){db.qsConfig=d.qsConfig;try{qsSyncRuleFields()}catch(e){}}
    if(Array.isArray(d.aaoQty))db.aaoQty=d.aaoQty;
-   if(lnaSplitMigrate()){db.cfgDirty_aao=true;setTimeout(()=>{try{cfgPut("aao")}catch(e){}},1500)} // v5.74
+   if(lnaSplitMigrate()|ensureWhvAaos()){db.cfgDirty_aao=true;setTimeout(()=>{try{cfgPut("aao")}catch(e){}},1500)} // v5.74/v5.79
  }else{
    const old=new Map((db.units||[]).map(u=>[String(u.id),u]));
    const loans=(db.units||[]).filter(u=>u.neighborLoan);
@@ -9456,8 +9476,44 @@ async function loadSetupFromGitHub(kind,manual=false){
    return true;
  }catch(e){if(manual)toast("GitHub-Stand konnte nicht geladen werden");return false}
 }
-function isBuiltinAao(id){return LINKED_AAO_IDS.has(String(id))}
+function isBuiltinAao(id){const s=String(id);return LINKED_AAO_IDS.has(s)||(/^whv-/.test(s)&&LINKED_AAO_IDS.has(s.slice(4)))}
+// ─── v5.79: Eigene, unabhängige AAOs für Wilhelmshaven ──────────────────────────────────────────
+// Zu jeder Standard-AAO gibt es eine WHV-Fassung (ID „whv-<id>“), einzeln bearbeitbar. Bei einem Einsatz
+// in Wilhelmshaven gilt die WHV-Fassung, sonst die Friesland-Fassung. Wasser-AAOs: BF statt DLRG.
+let AAO_AREA_CTX=null;
+function callAreaOf(c){if(currentScenarioId!=="fri-whv"||CUSTOM_SC_EARLY()||!c)return "fri";return /wilhelmshaven/i.test(`${c.location||""} ${c.geocodedAddress||""}`)?"whv":"fri"}
+function whvAaoVariant(base){
+ const v=JSON.parse(JSON.stringify(base)), water=(base.rules&&base.rules.event==="Person im Wasser")||(base.units||[]).some(x=>x.org==="DLRG"&&/^(RTB|GW Wasserrettung)$/.test(x.type))||String(base.id)==="19";
+ v.id="whv-"+base.id; v.area="whv"; v.name="WHV – "+String(base.name||"").replace(/^DLRG /,"");
+ if(water){
+   v.units=(base.units||[]).flatMap(x=>{
+     if(x.org==="DLRG"){
+       if(x.type==="RTB")return [{...x,org:"Feuerwehr",bf:true}];
+       if(x.type==="GW Wasserrettung")return [{type:"GW",n:1,org:"Feuerwehr",opta:"Florian Wilhelmshaven 01/58-01",bf:true}];
+       return [];
+     }
+     if(x.org==="Feuerwehr"||(!x.org&&FW_TYPE_LONG[x.type]))return [{...x,org:"Feuerwehr",bf:true}];
+     return [x];
+   });
+   v.note="Wasserrettung in Wilhelmshaven durch die Berufsfeuerwehr";
+ }
+ ["combineWith","excludeWith"].forEach(k=>{if(Array.isArray(v[k]))v[k]=v[k].map(id=>LINKED_AAO_IDS.has(String(id))?"whv-"+id:String(id))});
+ return v;
+}
+function ensureWhvAaos(){
+ if(currentScenarioId!=="fri-whv"||CUSTOM_SC_EARLY()||!Array.isArray(db.aao))return false;
+ const del=(db.deletedAaoIds||[]).map(String); let ch=false;
+ for(const id of LINKED_AAO_IDS){
+   const wid="whv-"+id; if(del.includes(wid)||db.aao.some(a=>String(a.id)===wid))continue;
+   const base=db.aao.find(a=>String(a.id)===id)||(defaults.aao||[]).find(a=>String(a.id)===id); if(!base)continue;
+   db.aao.push(whvAaoVariant(base)); ch=true;
+ }
+ return ch;
+}
 function aaoEntry(id){
+ if(AAO_AREA_CTX==="whv"&&!/^whv-/.test(String(id))&&LINKED_AAO_IDS.has(String(id))&&!(db.deletedAaoIds||[]).map(String).includes("whv-"+id)){
+   const w=(db.aao||[]).find(a=>String(a.id)==="whv-"+id); if(w)return w;
+ }
  const own=(db.aao||[]).find(a=>String(a.id)===String(id)); if(own)return own;
  // Selbst gelöschte (auch Standard-)AAOs alarmieren nichts mehr.
  if((db.deletedAaoIds||[]).map(String).includes(String(id)))return null;
@@ -9536,6 +9592,7 @@ function customAaoMatches(c){
  const lb=c?.answerLabels||{}, m=(k,v)=>aaoRuleMatches(a[k],v,k)||(lb[k]!=null&&aaoRuleMatches(lb[k],v,k));
  return (db.aao||[]).filter(x=>{
    if((isBuiltinAao(x.id)&&!x.rulesEdited)||x.active===false)return false;
+   if(x.area&&x.area!==callAreaOf(c))return false; // v5.79: AAO nur für Friesland bzw. Wilhelmshaven
    const and=Object.entries(x.rules||{}), or=Array.isArray(x.orRules)?x.orRules.filter(r=>r&&r.k):[];
    if(!and.length&&!or.length)return false;
    return and.every(([k,v])=>m(k,v))&&(!or.length||or.some(r=>m(r.k,r.v)));
@@ -9570,11 +9627,15 @@ function aaoTopicsList(){const extra=[...new Set((db.aao||[]).map(aaoTopic))].fi
 function aaoSortKey(a){return `${a.active===false?"1":"0"}|${String(a.keyword||a.name||"").toLowerCase()}|${String(a.name||"").toLowerCase()}`}
 function aaoRowHTML(a){
    const builtin=isBuiltinAao(a.id);
-   return `<tr style="${a.active===false?"opacity:.5":""}"><td><b>${esc(a.name)}</b>${a.keyword?`<br><small class="muted">${esc(a.keyword)}</small>`:""}${a.lead?` <span class="pill" title="Liefert den Anfang des Stichworts">🎯 führt</span>`:""}${builtin&&!a.rulesEdited?"":`<br><span class="pill">${builtin?"Bedingungen geändert":"eigene"}${a.active===false?" · inaktiv":""}</span>`}</td><td>${aaoRulesText(a)}</td><td>${(a.units||[]).map(x=>`${x.n==="pat"?`${esc(x.type)} je Patient`:`${aaoNText(x)}× ${esc(x.type)}`}${x.org?` <small class="muted">(${esc(x.org)})</small>`:""}${x.opt?` <span class="pill">optional</span>`:""}`).join(", ")||`<span class="muted">keine</span>`}</td><td><small>${aaoCombineText(a)}</small></td><td style="white-space:nowrap"><button onclick="editAAO(${JSON.stringify(a.id)})">✏️ Bearbeiten</button><button onclick="deleteAAO(${JSON.stringify(a.id)})">Löschen</button></td></tr>`;
+   return `<tr style="${a.active===false?"opacity:.5":""}"><td><b>${esc(a.name)}</b>${a.keyword?`<br><small class="muted">${esc(a.keyword)}</small>`:""}${a.lead?` <span class="pill" title="Liefert den Anfang des Stichworts">🎯 führt</span>`:""}${builtin&&!a.rulesEdited?"":`<br><span class="pill">${builtin?"Bedingungen geändert":"eigene"}${a.active===false?" · inaktiv":""}</span>`}</td><td>${aaoRulesText(a)}</td><td>${(a.units||[]).map(x=>`${x.n==="pat"?`${esc(x.type)} je Patient`:`${aaoNText(x)}× ${esc(x.type)}`}${x.org?` <small class="muted">(${esc(x.org)}${x.bf?", nur BF WHV":""})</small>`:""}${x.opta?` <small class="muted">= ${esc(x.opta)}</small>`:""}${x.opt?` <span class="pill">optional</span>`:""}`).join(", ")||`<span class="muted">keine</span>`}</td><td><small>${aaoCombineText(a)}</small></td><td style="white-space:nowrap"><button onclick="editAAO(${JSON.stringify(a.id)})">✏️ Bearbeiten</button><button onclick="deleteAAO(${JSON.stringify(a.id)})">Löschen</button></td></tr>`;
 }
+function aaoAreaView(){try{return localStorage.getItem("lst-aao-area")==="whv"?"whv":"fri"}catch(e){return "fri"}}
+function setAaoAreaView(v){try{localStorage.setItem("lst-aao-area",v)}catch(e){};render("aao")}
+function aaoInView(a){if(currentScenarioId!=="fri-whv"||CUSTOM_SC_EARLY())return true;const v=aaoAreaView();return v==="whv"?(a.area==="whv"||(!a.area&&!isBuiltinAao(a.id))):a.area!=="whv"}
 function aaoGroupsHTML(){
- const by={}; (db.aao||[]).forEach(a=>{const t=aaoTopic(a);(by[t]=by[t]||[]).push(a)});
- return `<div class="row" style="gap:6px;margin:8px 0"><button onclick="aaoAllTopics(true)">▾ Alle aufklappen</button><button onclick="aaoAllTopics(false)">▸ Alle einklappen</button></div>`+
+ const by={}; (db.aao||[]).filter(aaoInView).forEach(a=>{const t=aaoTopic(a);(by[t]=by[t]||[]).push(a)});
+ const v=aaoAreaView(), areaBar=currentScenarioId==="fri-whv"&&!CUSTOM_SC_EARLY()?`<div class="seg" style="margin:8px 0">${[["fri","Friesland"],["whv","Wilhelmshaven"]].map(([k,t])=>`<button class="${v===k?"on":""}" onclick="setAaoAreaView('${k}')">${t}</button>`).join("")}</div><p class="muted" style="font-size:12px;margin:0 0 6px">${v==="whv"?"Diese AAOs gelten nur für Einsätze in Wilhelmshaven und lassen sich unabhängig von Friesland ändern. Eigene AAOs ohne Bereich gelten für beide.":"Diese AAOs gelten für Einsätze in Friesland. Eigene AAOs ohne Bereich gelten auch für Wilhelmshaven."}</p>`:"";
+ return areaBar+`<div class="row" style="gap:6px;margin:8px 0"><button onclick="aaoAllTopics(true)">▾ Alle aufklappen</button><button onclick="aaoAllTopics(false)">▸ Alle einklappen</button></div>`+
   aaoTopicsList().filter(t=>by[t]).map(t=>{const list=by[t].sort((x,y)=>aaoSortKey(x).localeCompare(aaoSortKey(y),"de",{numeric:true}));const open=!aaoOpen||aaoOpen[t]!==false;
    return `<details ${open?"open":""} ontoggle="aaoToggleTopic(${esc(JSON.stringify(t))},this.open)" style="border:1px solid #e2e8f0;border-radius:10px;margin:8px 0;padding:0 10px">
     <summary style="cursor:pointer;padding:10px 0;font-weight:800;font-size:16px">${esc(t)} <span class="pill">${list.length}</span></summary>
@@ -9588,7 +9649,8 @@ function aao(){
 function editAAO(id){
  const src=id==null?null:db.aao.find(x=>String(x.id)===String(id));
  aaoDraft=src?JSON.parse(JSON.stringify(src)):{id:null,name:"",keyword:"",rules:{event:"Medizinischer Notfall"},units:[{type:"RTW",n:1,org:"Rettungsdienst"}],active:true};
- aaoDraft.units=(aaoDraft.units||[]).map(x=>({type:x.type||"",n:x.n==="pat"?"pat":(Number(x.n)||1),org:x.org||"",opt:!!x.opt}));
+ aaoDraft.units=(aaoDraft.units||[]).map(x=>({type:x.type||"",n:x.n==="pat"?"pat":(Number(x.n)||1),org:x.org||"",opt:!!x.opt,bf:!!x.bf,opta:x.opta||""}));
+ if(!aaoDraft.id&&currentScenarioId==="fri-whv"&&aaoAreaView()==="whv")aaoDraft.area="whv";
  aaoDraft._rules=[...Object.entries(aaoDraft.rules||{}).map(([k,v])=>({k,v:String(v)})),...(Array.isArray(aaoDraft.orRules)?aaoDraft.orRules:[]).filter(r=>r&&r.k).map(r=>({k:r.k,v:String(r.v),or:true}))];
  aaoDraft.fr=aaoDraft.fr||"auto"; aaoDraft.frMin=aaoDraft.frMin??3;
  aaoDraft.combine=aaoDraft.combine||"nein"; aaoDraft.combineWith=(aaoDraft.combineWith||[]).map(String); aaoDraft.excludeWith=(aaoDraft.excludeWith||[]).map(String);
@@ -9610,10 +9672,14 @@ function aaoEditor(){
    <input style="flex:1" list="aaoTypeList" value="${esc(u.type)}" placeholder="Fahrzeugtyp" oninput="aaoDraft.units[${i}].type=this.value">
    <select style="flex:1" onchange="aaoDraft.units[${i}].org=this.value"><option value="">beliebige Organisation</option>${[...new Set([...orgs,u.org].filter(Boolean))].map(o=>`<option ${o===u.org?"selected":""}>${esc(o)}</option>`).join("")}</select>
    <label title="Optional: wird nicht automatisch alarmiert, sondern bei der Alarmierung zum Anhaken angeboten" style="display:flex;gap:4px;align-items:center;font-weight:500;white-space:nowrap;margin:0"><input type="checkbox" style="width:auto" ${u.opt?"checked":""} onchange="aaoDraft.units[${i}].opt=this.checked"> optional</label>
+   ${currentScenarioId==="fri-whv"?`<label title="Nur Fahrzeuge der Berufsfeuerwehr Wilhelmshaven" style="display:flex;gap:4px;align-items:center;font-weight:500;white-space:nowrap;margin:0"><input type="checkbox" style="width:auto" ${u.bf?"checked":""} onchange="aaoDraft.units[${i}].bf=this.checked"> nur BF WHV</label>`:""}
+   ${u.opta?`<span class="pill" title="Genau dieses Fahrzeug">🎯 ${esc(u.opta)} <a href="#" onclick="aaoDraft.units[${i}].opta='';render('aao');return false">✕</a></span>`:""}
    <button title="Fahrzeug entfernen" onclick="aaoDraft.units.splice(${i},1);render('aao')">✕</button></div>`;
  document.getElementById("app").innerHTML=`<div class="card">
   <h2>✏️ ${d.id==null?"AAO anlegen":"AAO bearbeiten"}</h2>
   <label>Name</label><input id="aaoName" value="${esc(d.name)}" oninput="aaoDraft.name=this.value">
+  ${currentScenarioId==="fri-whv"&&!(d.id!=null&&isBuiltinAao(d.id))?`<label>Gilt für</label><div class="seg">${[["","Friesland + WHV"],["fri","nur Friesland"],["whv","nur Wilhelmshaven"]].map(([k,t])=>`<button class="${(d.area||"")===k?"on":""}" onclick="aaoDraft.area='${k}';render('aao')">${t}</button>`).join("")}</div>`:""}
+  ${d.note?`<p class="muted" style="font-size:12px;margin:6px 0 0">ℹ️ ${esc(d.note)}</p>`:""}
   <label>Themenfeld</label><input list="aaoTopicList" value="${esc(d.topic||"")}" placeholder="leer = automatisch (${esc(aaoTopic({...d,topic:""}))})" oninput="aaoDraft.topic=this.value"><datalist id="aaoTopicList">${aaoTopicsList().map(t=>`<option value="${esc(t)}">`).join("")}</datalist>
   ${manv?`<p class="muted" style="margin-top:8px">Meldestichwort wird bei MANV automatisch gebildet („MANV – … – n Verletzte“). Die RTW-Anzahl steigt automatisch auf mindestens 1 RTW je 3 Verletzte.</p>`:`<label>Meldestichwort</label><input value="${esc(d.keyword||"")}" placeholder="${builtin?"leer = Standard":"leer = Name"}" oninput="aaoDraft.keyword=this.value">`}
   <label style="display:flex;gap:8px;align-items:flex-start;margin-top:10px;font-weight:600;cursor:pointer"><input type="checkbox" style="width:auto;margin-top:3px" ${d.lead?"checked":""} onchange="aaoDraft.lead=this.checked"> <span>🎯 Führt das Stichwort<br><small class="muted" style="font-weight:500">Passt diese AAO, liefert sie den Anfang des Alarmstichworts (Teil vor dem „_“, z. B. „R2“) – der Rest kommt von der eigentlichen Lage: R1_Atemnot leicht + führende „R2“ → R2_Atemnot leicht. Ihre Fahrzeuge werden aufgefüllt (nicht doppelt).</small></span></label>
@@ -9672,7 +9738,7 @@ function saveAAO(){
  const d=aaoDraft; if(!d)return;
  const name=String(d.name||"").trim();
  if(!name){toast("Bitte einen Namen eingeben");return}
- const units=d.units.map(u=>({type:String(u.type||"").trim(),n:u.n==="pat"?"pat":Math.max(1,Number(u.n)||1),...(u.org?{org:u.org}:{}),...(u.opt?{opt:true}:{})})).filter(u=>u.type);
+ const units=d.units.map(u=>({type:String(u.type||"").trim(),n:u.n==="pat"?"pat":Math.max(1,Number(u.n)||1),...(u.org?{org:u.org}:{}),...(u.opt?{opt:true}:{}),...(u.bf?{bf:true}:{}),...(String(u.opta||"").trim()?{opta:String(u.opta).trim()}:{})})).filter(u=>u.type);
  const builtin=d.id!=null&&isBuiltinAao(d.id)&&!d.rulesEdited;
  let rules=d.rules||{}, orRules=Array.isArray(d.orRules)?d.orRules:[];
  if(!builtin){
@@ -9686,6 +9752,8 @@ function saveAAO(){
  if(String(d.keyword||"").trim())entry.keyword=String(d.keyword).trim();
  if(String(d.topic||"").trim())entry.topic=String(d.topic).trim();
  if(d.lead)entry.lead=true;
+ if(d.area==="whv"||d.area==="fri")entry.area=d.area;
+ if(d.note)entry.note=d.note;
  if(!builtin)entry.active=d.active!==false;
  if(d.rulesEdited)entry.rulesEdited=true;
  entry.combine=d.combine||"nein";
@@ -9702,7 +9770,8 @@ function saveAAO(){
 }
 function resetAAO(){
  const d=aaoDraft; if(!d)return;
- const def=(defaults.aao||[]).find(x=>String(x.id)===String(d.id)); if(!def)return;
+ const wv=/^whv-/.test(String(d.id)), bdef=(defaults.aao||[]).find(x=>String(x.id)===String(wv?String(d.id).slice(4):d.id));
+ const def=wv&&bdef?whvAaoVariant(bdef):bdef; if(!def)return;
  if(!confirm("Diese AAO auf den Standard zurücksetzen?"))return;
  const idx=db.aao.findIndex(x=>String(x.id)===String(d.id));
  const copy=JSON.parse(JSON.stringify(def));

@@ -1607,6 +1607,19 @@ Version 5.05:
   („a, b“ = a ODER b). Mit „🚑 NA-Indikation“ markierte Knöpfe ziehen weiterhin einen Notarzt.
 - Nur „Unauffällig“ (ohne weitere Befunde) zählt weiter als unauffälliges E (R0 möglich).
 
+Version 5.80:
+- Ein Platz disponiert jetzt entweder Friesland oder Wilhelmshaven. „Beide“ gibt es nicht mehr, Standard ist Friesland.
+- Die Wahl gilt je Fenster. Ein zweiter Bildschirm, ein zweites Fenster oder ein zweites Gerät kann so den anderen Bereich disponieren.
+- Alle Feuerwehr- und Rettungsdienst-Fahrzeuge des anderen Bereichs werden wie Fahrzeuge aus Nachbar-LKs behandelt, nur ohne Anruf. Sie kommen in den Vorschlag, wenn sie schneller da sind als das eigene Fahrzeug oder wenn im eigenen Bereich keines frei ist. Im Vorschlag steht dann „(aus WHV)“ bzw. „(aus Friesland)“. Das ersetzt die 5-Minuten-Regel aus 5.77.
+- Einsätze im anderen Bereich bekommen in der Liste den Hinweis „📍 … – anderer Platz“.
+
+Version 5.79:
+- Eigene, unabhängige AAOs für Wilhelmshaven. Zu jeder Standard-AAO gibt es eine WHV-Fassung („WHV – …“), die sich einzeln ändern lässt. Bei Einsätzen in Wilhelmshaven gilt die WHV-Fassung.
+- Auf der AAO-Seite schaltet man oben zwischen Friesland und Wilhelmshaven um. Eigene AAOs lassen sich auf „nur Friesland“, „nur Wilhelmshaven“ oder beide stellen.
+- Die WHV-Wasser-AAOs haben statt der DLRG die BF: Rettungsboot, GW-W 01/58-01 als festes Fahrzeug, HLF und ELW mit „nur BF WHV“. Das war in 5.78 fest programmiert und steht jetzt in der AAO, also änderbar.
+- Neu im AAO-Editor: Häkchen „nur BF WHV“ je Fahrzeugzeile.
+- Neue Kopfzeile: Logo und Version links, Übungsnotruf-Steuerung in der Mitte, Bereichsumschalter und Knöpfe rechts. Auf schmalen Bildschirmen nur Symbole.
+
 Version 5.78:
 - Wasser-Einsätze in Wilhelmshaven (Person im Wasser oder Einsatzort auf dem Wasser) alarmieren nur noch die Berufsfeuerwehr, keine DLRG mehr:
   - statt DLRG-Boot das Rettungsboot der BF (01/78-01, sonst 02/78-01)
