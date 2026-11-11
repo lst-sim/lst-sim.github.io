@@ -1607,6 +1607,10 @@ Version 5.05:
   („a, b“ = a ODER b). Mit „🚑 NA-Indikation“ markierte Knöpfe ziehen weiterhin einen Notarzt.
 - Nur „Unauffällig“ (ohne weitere Befunde) zählt weiter als unauffälliges E (R0 möglich).
 
+Version 5.93:
+- Mehrere Landeplätze: Reicht keine einzelne Fläche für alle Hubschrauber, werden mehrere Flächen genutzt (je 625 m² pro Hubschrauber). Die Hubschrauber werden nach Platz auf die Landeplätze verteilt und fliegen ihren zugeteilten Platz an.
+- Landeplatz-Absicherung: je Landeplatz ab 2 Hubschraubern 1 LF, ab 5 2 LF, ab 8 3 LF usw. Fehlt ein LF, wird das rot angezeigt mit Knopf „🚒 LF alarmieren“ (nimmt das nächste freie LF/HLF, das zum Landeplatz fährt).
+
 Version 5.92:
 - Hubschrauber-Landeplatz: Die Fläche muss jetzt groß genug sein – 25 × 25 m (625 m²) je Hubschrauber, also z. B. 4 Hubschrauber ≥ 2500 m².
 - Die Größe wird aus dem Umriss der Fläche in OpenStreetMap berechnet. Flächen ohne Umriss werden nicht genommen.

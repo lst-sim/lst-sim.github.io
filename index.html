@@ -231,7 +231,7 @@ html[data-device="handy"] .fach-grid{grid-template-columns:1fr}
 <header id="topbar">
  <div class="tb-left">
   <span class="tb-brand">🚑 Leitstelle<span>.sim</span></span>
-  <span id="versionTag" class="tb-ver">v5.92</span>
+  <span id="versionTag" class="tb-ver">v5.93</span>
   <span id="syncState"></span>
   <a id="deskTag" href="#" onclick="renameDesk();return false" title="Name dieses Platzes (für „offen an …“) – antippen zum Ändern"></a>
  </div>
@@ -1578,7 +1578,7 @@ function waterCapable(u){
  return ["RTB","MZB","SRB","SRK","Boot"].includes(u.type)||/boot/i.test(String(u.type||""));
 }
 function stagingFor(call,u){
- if(call&&call.heliLanding&&u&&(["RTH","ITH","KTH"].includes(u.type)||u.org==="Luftrettung")&&!(call.locationIsWater&&waterCapable(u)))return [Number(call.heliLanding.lat),Number(call.heliLanding.lng)];
+ if(call&&call.heliLanding&&u&&!(isAirUnit(u)&&call.locationIsWater&&waterCapable(u))){const hp=heliPointFor(call,u);if(hp)return hp} // v5.93: Hubschrauber/LF → zugeteilter Landeplatz
  const st=call&&call.staging;
  if(!st||!Number.isFinite(Number(st.lat))||!Number.isFinite(Number(st.lng))||!u||waterCapable(u))return null;
  return [Number(st.lat),Number(st.lng)];
@@ -3559,7 +3559,7 @@ function incidentCard(c,isSelected){
     <span class="status ${stateClass}">${state}</span>
    </div>
    ${callPhaseHTML(c,false)}
-   ${c.alarmTime&&c.police?policeStripHTML(c):""}${c.alarmTime&&isManvCall(c)?manvStripHTML(c):""}${c.alarmTime&&c.evac?evacStripHTML(c):""}${c.heliLanding?`<div style="margin-top:6px;font-size:13px">🚁 Landeplatz: ${esc(c.heliLanding.name)}</div>`:""}
+   ${c.alarmTime&&c.police?policeStripHTML(c):""}${c.alarmTime&&isManvCall(c)?manvStripHTML(c):""}${c.alarmTime&&c.evac?evacStripHTML(c):""}${c.heliLanding?`<div style="margin-top:6px">${heliLzHTML(c)}</div>`:""}
    <hr>
    <div class="formgrid">
     <div><label>Einsatzstichwort</label><div class="big">${esc(c.keyword||"Noch keine Bewertung")}</div></div>
@@ -6783,25 +6783,93 @@ async function orglPickStaging(c,u){
 }
 // Hubschrauber landen nur auf freien Flächen
 function isAirUnit(u){return !!u&&(["RTH","ITH","KTH"].includes(u.type)||u.org==="Luftrettung")}
-// v5.92: Landefläche je Hubschrauber 25 × 25 m = 625 m² (4 Hubschrauber ≥ 2500 m²).
-const HELI_M2=625;
+// v5.93: Landeplätze für Hubschrauber.
+// Fläche je Hubschrauber 25 × 25 m = 625 m² (4 Hubschrauber ≥ 2500 m²). Reicht keine einzelne Fläche,
+// werden mehrere Landeplätze genutzt. Absicherung je Landeplatz: ab 2 Hubschraubern 1 LF, ab 5 2 LF, ab 8 3 LF …
+const HELI_M2=625, HELI_LZ_TYPES=["LF","HLF"];
 function heliCount(c){return Math.max(1,callUnits(c).filter(isAirUnit).length)}
 function heliNeedM2(c){return heliCount(c)*HELI_M2}
+function lfNeedFor(k){return k>=2?Math.floor((k+1)/3):0}
+function heliSites(c){return c.heliLandings&&c.heliLandings.length?c.heliLandings:(c.heliLanding?[{...c.heliLanding,cap:c.heliLanding.m2!=null?Math.floor(c.heliLanding.m2/HELI_M2):99}]:[])}
+// Hubschrauber der Reihe nach auf die Landeplätze verteilen (nach Kapazität)
+function heliAssign(c){
+ const sites=heliSites(c), air=callUnits(c).filter(isAirUnit), out=new Map(); let si=0,used=0;
+ for(const u of air){while(si<sites.length-1&&used>=Math.max(1,sites[si].cap||1)){si++;used=0}out.set(String(u.id),si);used++}
+ return out;
+}
+function heliSiteCounts(c){const a=heliAssign(c),n=heliSites(c).map(()=>0);for(const v of a.values())n[v]++;return n}
+function heliLzSiteOf(c,u){const m=c.heliLzSite||{};return m[String(u.id)]??0}
+function heliLzLfs(c,si){return (c.heliLzUnits||[]).filter(id=>(c.alarmedUnits||[]).some(x=>String(x)===String(id))).map(id=>db.units.find(u=>String(u.id)===String(id))).filter(u=>u&&(si==null||heliLzSiteOf(c,u)===si))}
+function heliPointFor(c,u){
+ const sites=heliSites(c); if(!sites.length)return null;
+ let si=0;
+ if(isAirUnit(u))si=heliAssign(c).get(String(u.id))??0;
+ else if((c.heliLzUnits||[]).some(id=>String(id)===String(u.id)))si=heliLzSiteOf(c,u);
+ else return null;
+ const s=sites[Math.min(si,sites.length-1)]; return [Number(s.lat),Number(s.lng)];
+}
+function heliLzHTML(c){
+ const sites=heliSites(c); if(!sites.length)return "";
+ const cnt=heliSiteCounts(c), multi=sites.length>1;
+ return sites.map((s,i)=>{
+   const k=cnt[i]||0, need=lfNeedFor(k), have=heliLzLfs(c,i), miss=Math.max(0,need-have.length);
+   const lf=need||have.length?` · 🚒 Absicherung ${have.length}/${need} LF${have.length?` (${have.map(u=>esc(u.opta||u.name)).join(", ")})`:""}${miss?` <button onclick="heliLzAlarm('${esc(String(c.id))}',${i})" style="padding:2px 8px;font-size:12px;margin-left:4px">🚒 ${miss} LF alarmieren</button>`:""}`:"";
+   return `<div style="margin-top:4px;font-size:13px;${miss?"color:#b91c1c;font-weight:700":""}">🚁 ${multi?`Landeplatz ${i+1}`:"Landeplatz"}: ${esc(s.name)} – ${k} Hubschrauber${lf}</div>`;
+ }).join("");
+}
+function heliLzAlarm(id,si=0){
+ const c=allOpenCalls().find(x=>String(x.id)===String(id)); if(!c)return;
+ const s=heliSites(c)[si]; if(!s)return;
+ const miss=Math.max(0,lfNeedFor(heliSiteCounts(c)[si]||0)-heliLzLfs(c,si).length); if(!miss)return;
+ const lp=[Number(s.lat),Number(s.lng)], used=new Set((c.alarmedUnits||[]).map(String));
+ const free=db.units.filter(u=>HELI_LZ_TYPES.includes(u.type)&&u.org==="Feuerwehr"&&["1","2"].includes(String(u.status))&&!used.has(String(u.id))&&!notAlarmable(u));
+ const dist=u=>{const p=unitPoint(u);return p?haversine(p[0],p[1],lp[0],lp[1]):9999};
+ const pick=free.sort((a,b)=>(inDispatchArea(b)-inDispatchArea(a))||(dist(a)-dist(b))).slice(0,miss);
+ const lbl=heliSites(c).length>1?`Landeplatz ${si+1}`:"Landeplatz";
+ if(!pick.length){toast("Kein LF/HLF frei");(c.history=c.history||[]).push({q:`🚒 Absicherung ${lbl}`,a:"kein LF/HLF frei"});save();return}
+ c.heliLzUnits=c.heliLzUnits||[]; c.heliLzSite=c.heliLzSite||{};
+ for(const u of pick){
+   setUnitStatus(u,"3"); appendUnitToCall(c,u,`Absicherung ${lbl}`);
+   c.alarmedUnits=c.alarmedUnits||[]; if(!c.alarmedUnits.some(x=>String(x)===String(u.id)))c.alarmedUnits.push(u.id);
+   c.heliLzUnits.push(u.id); c.heliLzSite[String(u.id)]=si;
+ }
+ (c.history=c.history||[]).push({q:`🚒 Absicherung ${lbl}`,a:`${pick.map(unitLabel).join(", ")} → ${s.name}`});
+ toast(pick.length<miss?`Nur ${pick.length} LF frei – es fehlen noch ${miss-pick.length}`:`🚒 ${pick.length} LF zum ${lbl} alarmiert`);
+ save(); if(db.cloud?.enabled)setTimeout(()=>pushCallCloud(c),0); render(currentPage);
+}
+async function findOpenAreas(lat,lng,kinds,radiusDeg,minKm=0.05){
+ const all=[];
+ for(const k of kinds){
+   try{const vb=[lng-radiusDeg,lat+radiusDeg,lng+radiusDeg,lat-radiusDeg].join(",");
+     const rows=await (await fetch(`https://nominatim.openstreetmap.org/search?format=jsonv2&limit=15&bounded=1&polygon_geojson=1&polygon_threshold=0.00001&viewbox=${vb}&q=${encodeURIComponent("["+k+"]")}`,{headers:{"Accept":"application/json"}})).json();
+     for(const r of rows||[]){const x={name:r.name||r.display_name.split(",")[0],lat:Number(r.lat),lng:Number(r.lon),km:haversine(lat,lng,Number(r.lat),Number(r.lon)),k,m2:geoAreaM2(r.geojson)};
+       if(x.km>minKm&&x.m2!=null&&x.m2>=HELI_M2&&!all.some(y=>haversine(y.lat,y.lng,x.lat,x.lng)<0.03))all.push(x)}
+   }catch(e){}
+ }
+ return all.sort((a,b)=>a.km-b.km);
+}
+function heliSiteName(pl){const cap=Math.floor(pl.m2/HELI_M2);return `${pl.name&&new RegExp(OPEN_KIND_DE[pl.k]||"§","i").test(pl.name)?"":(OPEN_KIND_DE[pl.k]||"freie Fläche")} ${pl.name&&!/^\d/.test(pl.name)?pl.name:""}`.trim().replace(/\s+/g," ")+` (ca. ${Math.round(pl.km*1000/50)*50} m, ca. ${Math.round(pl.m2/100)*100} m² – Platz für ${cap} Hubschrauber)`}
 async function heliPickLanding(c){
  if(c._heliBusy)return;
- const n=heliCount(c), need=n*HELI_M2;
- if(c.heliLanding&&(c.heliLanding.forN||1)>=n)return;
- if(c.heliLanding&&c.heliLanding.m2!=null&&c.heliLanding.m2>=need){c.heliLanding.forN=n;return}
+ const n=heliCount(c), need=n*HELI_M2, sites=heliSites(c);
+ if(sites.length&&(c.heliForN||(c.heliLanding&&c.heliLanding.forN)||1)>=n)return;
+ if(sites.length&&sites.every(s=>s.m2!=null)&&sites.reduce((t,s)=>t+(s.cap||0),0)>=n){c.heliForN=n;return}
+ const ip=[Number(c.lat),Number(c.lng)]; if(!Number.isFinite(ip[0]))return;
  c._heliBusy=true;
- const ip=[Number(c.lat),Number(c.lng)]; if(!Number.isFinite(ip[0])){c._heliBusy=false;return}
- let pl=await findNearbyOpenArea(ip[0],ip[1],["pitch","park","parking"],0.015,0.05,need);
- if(!pl)pl=await findNearbyOpenArea(ip[0],ip[1],["pitch","park","parking"],0.03,0.05,need);
- const old=c.heliLanding;
- c.heliLanding=pl?{name:`${pl.name&&new RegExp(OPEN_KIND_DE[pl.k]||"§","i").test(pl.name)?"":(OPEN_KIND_DE[pl.k]||"freie Fläche")} ${pl.name&&!/^\d/.test(pl.name)?pl.name:""}`.trim()+` (ca. ${Math.round(pl.km*1000/50)*50} m, ca. ${Math.round(pl.m2/100)*100} m² – reicht für ${Math.floor(pl.m2/HELI_M2)} Hubschrauber)`.replace(/\s+/g," "),lat:pl.lat,lng:pl.lng,m2:Math.round(pl.m2),forN:n}
-   :{name:`freie Fläche nahe der Einsatzstelle (geschätzt, ca. 150 m – Größe nicht geprüft, benötigt ≥ ${need} m² für ${n} Hubschrauber)`,lat:ip[0]+0.0013,lng:ip[1]+0.0005,m2:null,forN:n};
+ let cand=[];
+ for(const r of [0.015,0.03]){cand=await findOpenAreas(ip[0],ip[1],["pitch","park","parking"],r);if(cand.some(x=>x.m2>=need)||cand.reduce((t,x)=>t+Math.floor(x.m2/HELI_M2),0)>=n)break}
+ let chosen=[];
+ const one=cand.find(x=>x.m2>=need);
+ if(one)chosen=[one];
+ else{let cap=0;for(const x of cand){chosen.push(x);cap+=Math.floor(x.m2/HELI_M2);if(cap>=n)break}}
+ const capSum=chosen.reduce((t,x)=>t+Math.floor(x.m2/HELI_M2),0);
+ const oldNames=sites.map(s=>s.name).join("|");
+ let list=chosen.map(pl=>({name:heliSiteName(pl),lat:pl.lat,lng:pl.lng,m2:Math.round(pl.m2),cap:Math.floor(pl.m2/HELI_M2)}));
+ if(capSum<n)list.push({name:`freie Fläche nahe der Einsatzstelle (geschätzt, ca. 150 m – Größe nicht geprüft, für ${n-capSum} Hubschrauber)`,lat:ip[0]+0.0013,lng:ip[1]+0.0005,m2:null,cap:n-capSum});
+ c.heliLandings=list; c.heliLanding={...list[0],forN:n}; c.heliForN=n;
  c._heliBusy=false;
- if(old&&old.name===c.heliLanding.name)return;
- (c.history=c.history||[]).push({q:old?`🚁 Landeplatz geändert (${n} Hubschrauber, ≥ ${need} m²)`:"🚁 Landeplatz",a:c.heliLanding.name}); save();
+ if(list.map(s=>s.name).join("|")===oldNames)return;
+ (c.history=c.history||[]).push({q:`🚁 ${oldNames?"Landeplätze geändert":"Landeplatz"} (${n} Hubschrauber, ≥ ${need} m²)`,a:list.map((s,i)=>(list.length>1?`${i+1}) `:"")+s.name).join(" · ")}); save();
 }
 // alle 2 s: MANV-Rückmeldungen, BR durch OrgL, Landeplatz, Einsätze automatisch abschließen
 function callTick(){
@@ -6812,7 +6880,7 @@ function callTick(){
    if(c.kt||c.mergedInto||(c.deskId&&c.deskId!==DEVICE_ID))continue;
    const us=callUnits(c);
    try{if(policeTick(c,now))changed=true;if(c.manvComps&&manvCompTick(c,now))changed=true;if(bigEventManvTick(c,now))changed=true}catch(e){console.warn(e)} // v5.66
-   if(c.alarmTime&&us.some(isAirUnit)&&(!c.heliLanding||(c.heliLanding.forN||1)<us.filter(isAirUnit).length)&&Number.isFinite(Number(c.lat)))heliPickLanding(c);
+   if(c.alarmTime&&us.some(isAirUnit)&&(!c.heliLanding||(c.heliForN||c.heliLanding.forN||1)<us.filter(isAirUnit).length)&&Number.isFinite(Number(c.lat)))heliPickLanding(c);
    if(c.alarmTime&&isManvCall(c)&&!policeHold(c)){
      if(!c.brMode&&!c.staging)c.brMode=us.some(isOrgL)?"orgl":"lst";
      const first=us.filter(u=>RD_TYPES.has(u.type)&&!isLeadUnit(u)&&String(u.status)==="4"&&u.status4Since).sort((a,b)=>a.status4Since-b.status4Since)[0];
