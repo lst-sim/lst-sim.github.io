@@ -91,6 +91,8 @@ async function shard(listFile, i, n, outDir) {
       const js = await overpass(qKreis(k.id), k.n, i);
       const d = processOSM(js);
       if (!d.bnd.length) throw new Error("Grenze fehlt");
+      // Schutz: leere/abgebrochene Server-Antwort nie speichern (alte Daten bleiben)
+      if (d.lz.length + d.pts.length === 0) throw new Error("keine Objekte geliefert – alte Daten bleiben erhalten");
       // Grenze vereinfacht für die Übersicht (ca. 120 m Toleranz)
       const rings = d.bnd.map((r) => simplify(r, 120).map((p) => [+p[0].toFixed(4), +p[1].toFixed(4)])).filter((r) => r.length >= 2);
       let s = 90, w = 180, nn = -90, e = -180;
