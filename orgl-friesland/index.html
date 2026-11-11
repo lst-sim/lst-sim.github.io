@@ -49,7 +49,7 @@ button.pri{background:var(--acc);color:#111;border-color:var(--acc);font-weight:
 .sq{border-radius:3px}
 .near{display:flex;justify-content:space-between;gap:8px;padding:7px 0;border-bottom:1px solid var(--line);cursor:pointer}
 .near span:last-child{color:var(--mut);white-space:nowrap}
-.mk{display:flex;align-items:center;justify-content:center;border-radius:50%;border:3px solid #fff;color:#fff;font:800 14px/1 sans-serif;box-shadow:0 0 0 2px rgba(0,0,0,.6),0 2px 6px rgba(0,0,0,.6)}
+.mk{display:flex;align-items:center;justify-content:center;border-radius:50%;border:1.5px solid #fff;color:#fff;font:800 9px/1 sans-serif;box-shadow:0 0 0 1px rgba(0,0,0,.6),0 1px 3px rgba(0,0,0,.5)}
 .own{border-radius:8px;border:4px solid #000;color:#000;background:#ffea00;font:900 18px/1 sans-serif;display:flex;align-items:center;justify-content:center;box-shadow:0 0 0 4px #fff,0 0 14px 6px rgba(255,234,0,.85);animation:ownPulse 1.6s ease-in-out infinite}
 @keyframes ownPulse{50%{box-shadow:0 0 0 4px #fff,0 0 22px 12px rgba(255,234,0,.45)}}
 .leaflet-tooltip.ownLbl{background:#000;color:#ffea00;border:2px solid #ffea00;font:800 15px/1.2 sans-serif;padding:4px 8px;border-radius:6px;box-shadow:0 2px 8px rgba(0,0,0,.6)}
@@ -283,7 +283,7 @@ async function load(force){
 $("status").onclick=()=>{sheetOpen(`<h2>Datenstatus</h2><div class="kv"><b>Stand</b><span>${DATA?new Date(DATA.t).toLocaleString("de-DE"):"–"}</span><b>Landeplätze</b><span>${DATA?DATA.lz.length:0}</span><b>Objekte</b><span>${DATA?DATA.pts.length:0}</span><b>Leitungen</b><span>${DATA?DATA.pwr.length:0}</span><b>Gebiet</b><span>${DATA&&DATA.mode&&DATA.mode!=="(area.a)"?"Ersatz-Rechteck":"Kreisgrenze"}</span></div><h3>Protokoll</h3><div style="font-size:12px;white-space:pre-wrap">${LOG.join("\n")||"–"}</div><div class="row"><button class="pri" id="rl">⟳ Daten neu laden</button></div>`);$("rl").onclick=()=>{sheetClose();load(true);};};
 
 /* ================= Darstellung ================= */
-function icon(cat,size){const C=CAT[cat];size=size||30;return L.divIcon({className:"",iconSize:[size,size],iconAnchor:[size/2,size/2],html:`<div class="mk" style="width:${size}px;height:${size}px;background:${C.c};${C.sq?"border-radius:4px;":""}${cat==="lzD"?"color:#111;":""}">${C.l}</div>`});}
+function icon(cat,size){const C=CAT[cat];size=size||18;return L.divIcon({className:"",iconSize:[size,size],iconAnchor:[size/2,size/2],html:`<div class="mk" style="width:${size}px;height:${size}px;background:${C.c};${C.sq?"border-radius:4px;":""}${cat==="lzD"?"color:#111;":""}">${C.l}</div>`});}
 function render(){
  for(const k in groups)if(k!=="own")groups[k].clearLayers();
  if(boundaryLayer)map.removeLayer(boundaryLayer);
@@ -292,14 +292,14 @@ function render(){
   groups[z.cat].addLayer(L.polygon(z.g,{color:"#fff",weight:10,opacity:.9,fill:false,interactive:false}));
   const poly=L.polygon(z.g,{color:warn?"#ff1744":C.c,weight:5,opacity:1,fillColor:C.c,fillOpacity:.6,dashArray:warn?"10 6":null});
   poly.on("click",()=>showLZ(z));groups[z.cat].addLayer(poly);
-  const m=L.marker(z.c,{icon:L.divIcon({className:"",iconSize:[22,22],iconAnchor:[11,11],html:`<div class="mk" style="width:22px;height:22px;border-radius:4px;background:${C.c};color:#111;${warn?"border-color:#ff1744;":""}">${warn?"!":"L"}</div>`})});
+  const m=L.marker(z.c,{icon:L.divIcon({className:"",iconSize:[16,16],iconAnchor:[8,8],html:`<div class="mk" style="width:16px;height:16px;border-radius:4px;background:${C.c};color:#111;${warn?"border-color:#ff1744;":""}">${warn?"!":"L"}</div>`})});
   m.on("click",()=>showLZ(z));groups[z.cat].addLayer(m);}
  for(const p of DATA.pts){if(p.g&&p.cat!=="aed"){const mp=p.g.map(r=>[r]);const C=CAT[p.cat];
   groups[p.cat].addLayer(L.polygon(mp,{color:"#fff",weight:9,opacity:.9,fill:false,interactive:false}));
   groups[p.cat].addLayer(L.polygon(mp,{color:C.c,weight:4,opacity:1,fillColor:C.c,fillOpacity:.5}).on("click",()=>showPt(p)));}
- const m=L.marker(p.c,{icon:icon(p.cat,p.cat==="aed"?24:30)});m.on("click",()=>showPt(p));groups[p.cat].addLayer(m);}
+ const m=L.marker(p.c,{icon:icon(p.cat,p.cat==="aed"?14:18)});m.on("click",()=>showPt(p));groups[p.cat].addLayer(m);}
  for(const ln of DATA.pwr){const hv=parseInt(ln.v)>=60000;groups.pwr.addLayer(L.polyline(ln.g,{color:"#ff1744",weight:hv?3:2,opacity:.85,dashArray:ln.k==="minor_line"?"6 5":null}).bindTooltip(`Freileitung ${ln.v?Math.round(parseInt(ln.v)/1000)+" kV":"(Spannung unbek.)"}`));}
- for(const w of DATA.wka){groups.wka.addLayer(L.marker(w.c,{icon:icon("wka",20)}).on("click",()=>showWKA(w)));}
+ for(const w of DATA.wka){groups.wka.addLayer(L.marker(w.c,{icon:icon("wka",14)}).on("click",()=>showWKA(w)));}
  renderOwn();updLegendCounts();}
 
 /* ================= Info-Blätter ================= */
