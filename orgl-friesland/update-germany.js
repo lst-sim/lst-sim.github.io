@@ -21,6 +21,9 @@ const SERVERS = [
   "https://overpass.kumi.systems/api/interpreter",
 ];
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+// Vorrang: Friesland und Nachbarkreise (amtliche Kreisschlüssel) – werden zuerst separat verarbeitet
+const PRIO = ["03455", "03405", "03462", "03452", "03451", "03461", "03457", "03402", "03403", "03458"];
+const isPrio = (k) => PRIO.some((p) => (k.ags || "").startsWith(p));
 
 async function overpass(q, label, start = 0) {
   const errs = [];
@@ -76,7 +79,8 @@ out tags;`;
 
 async function shard(listFile, i, n, outDir) {
   const all = JSON.parse(fs.readFileSync(listFile, "utf8"));
-  const mine = all.filter((_, idx) => idx % n === i);
+  // n = 0 -> nur Vorrang-Kreise; sonst Vorrang-Kreise auslassen und Rest auf n Pakete verteilen
+  const mine = n === 0 ? all.filter(isPrio) : all.filter((k) => !isPrio(k)).filter((_, idx) => idx % n === i);
   fs.mkdirSync(path.join(outDir, "k"), { recursive: true });
   fs.mkdirSync(path.join(outDir, "b"), { recursive: true });
   let ok = 0;
@@ -98,9 +102,9 @@ async function shard(listFile, i, n, outDir) {
     } catch (e) {
       console.log(`✗ ${k.n} (${k.id}): ${e.message}`);
     }
-    await sleep(3000);
+    await sleep(1000);
   }
-  console.log(`Shard ${i}/${n}: ${ok} von ${mine.length} Kreisen erfolgreich`);
+  console.log(`Paket ${i}/${n}: ${ok} von ${mine.length} Kreisen erfolgreich`);
 }
 
 function index(inDir, dataDir) {
