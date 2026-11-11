@@ -231,7 +231,7 @@ html[data-device="handy"] .fach-grid{grid-template-columns:1fr}
 <header id="topbar">
  <div class="tb-left">
   <span class="tb-brand">🚑 Leitstelle<span>.sim</span></span>
-  <span id="versionTag" class="tb-ver">v5.88</span>
+  <span id="versionTag" class="tb-ver">v5.89</span>
   <span id="syncState"></span>
   <a id="deskTag" href="#" onclick="renameDesk();return false" title="Name dieses Platzes (für „offen an …“) – antippen zum Ändern"></a>
  </div>
@@ -5461,6 +5461,8 @@ function alarmProposal(){
 const CREW_TRANSPORT=new Set(["RTW","NKTW","KTW","RTH","ITH","KTH","SRTW","Baby-NAW","NAW","ITW"]);
 const CREW_RMI=[
  // v5.87: seltenere Fachrichtungen zuerst (spezifischer als die allgemeinen Muster unten)
+ [/offene .{0,20}(fraktur|bruch)|(fraktur|bruch).{0,10} offen/,"271"],
+ [/thoraxtrauma|brustkorb.{0,20}(verletz|prell)/,"232"],
  [/präklinische geburt|entbunden|baby ist da/,"526"],
  [/schwangerschaft.*(3[0-6])\. ssw|(3[0-6])\. ssw.*blutung/,"545"],
  [/wehen|blasensprung|39\. ssw/,"536"],
@@ -6669,6 +6671,21 @@ function manvApplyTriage(call,fb){
  call.manv=true; return true;
 }
 // v5.71: Rückmeldung vom Fahrzeug-Handy (Erste Lagemeldung / detaillierte Rückmeldung Betroffene)
+// v5.89: Fahrzeug-Handy übernimmt bzw. gibt einen MANV-Patienten frei
+function manvApplyPhoneTake(call,fb){
+ call.manvTakeFb=call.manvTakeFb||[]; if(call.manvTakeFb.includes(String(fb.id)))return false; call.manvTakeFb.push(String(fb.id));
+ const u=db.units.find(x=>String(x.id)===String(fb.unitId)), P=(call.manvPatients||[]).find(x=>x.n===Number(fb.n)); if(!u||!P)return true;
+ const lab=u.opta||u.name, card=P.pid!=null?` (Anhängekarte ${P.pid})`:"", skT=["","I","II","III","IV"][P.sk]||P.sk;
+ if(fb.kind==="manvRelease"){if(String(P.unit)===String(u.id)){delete P.unit;delete P.phoneBy;(call.history=call.history||[]).push({q:`🩹 MANV (${lab})`,a:`Patient${card} SK ${skT} wieder freigegeben`})}}
+ else{
+   if(P.unit&&String(P.unit)!==String(u.id)){sdsLog({dir:"in",fbId:fb.id,unitId:u.id,callId:String(call.id),opta:lab,text:`Patient${card} ist schon vergeben – bitte anderen Patienten wählen.`,read:false});}
+   else{(call.manvPatients||[]).forEach(x=>{if(x!==P&&String(x.unit)===String(u.id)&&x.phoneBy){delete x.unit;delete x.phoneBy}});
+     P.unit=u.id;P.phoneBy=true;(call.history=call.history||[]).push({q:`🩹 MANV (${lab})`,a:`übernimmt Patient${card} SK ${skT}`});
+     sdsLog({dir:"in",fbId:fb.id,unitId:u.id,callId:String(call.id),opta:lab,text:`Übernehme Patient${card} SK ${skT}.`,read:false});}
+ }
+ if(db.cloud?.enabled)setTimeout(()=>pushCallCloud(call),0);
+ return true;
+}
 function manvApplyPhoneReport(call,fb){
  call.manvPhoneFb=call.manvPhoneFb||[]; if(call.manvPhoneFb.includes(String(fb.id)))return false;
  call.manvPhoneFb.push(String(fb.id)); call.manv=true;
@@ -6766,6 +6783,7 @@ async function heliPickLanding(c){
 // alle 2 s: MANV-Rückmeldungen, BR durch OrgL, Landeplatz, Einsätze automatisch abschließen
 function callTick(){
  const now=Date.now(); let changed=false;
+ if(db.cloud?.enabled)for(const c of allOpenCalls()){if(!c.manvPatients)continue;const h=(c.manvPatients||[]).map(p=>`${p.n}:${p.sk}:${p.unit||""}:${p.care?1:0}`).join("|");if(h!==c._manvPushH){c._manvPushH=h;setTimeout(()=>pushCallCloud(c),0)}} // v5.89
  try{if(bigEventTick(now))changed=true}catch(e){console.warn(e)} // v5.66 Großveranstaltung
  for(const c of allOpenCalls()){
    if(c.kt||c.mergedInto||(c.deskId&&c.deskId!==DEVICE_ID))continue;
@@ -7535,6 +7553,11 @@ async function pushUnitCloud(u){
   updatedAt:new Date().toISOString()
  });
 }
+function manvPatsForCloud(c){
+ if(!c||!Array.isArray(c.manvPatients)||!c.manvPatients.length)return null;
+ const T=c.manvTruth&&c.manvTruth.pats||[];
+ return c.manvPatients.map(p=>{const k=p.pid!=null?T.find(q=>q.n===p.pid):null;return {n:p.n,sk:p.sk,pid:p.pid!=null?p.pid:null,unit:p.unit!=null?String(p.unit):null,care:!!p.care,inj:k&&k.inj||"",age:k&&k.age!=null?k.age:null,gender:k&&k.gender||""}});
+}
 async function pushCallCloud(c){
  if(!c || !db.cloud?.enabled)return;
  const unitIds=[...(c.alarmedUnits||[]),...(c.proposedUnitIds||[])].map(String);
@@ -7546,6 +7569,7 @@ async function pushCallCloud(c){
    suggestion:c.suggestion||"",alarmFreeText:c.alarmFreeText||"",
    alarmTime:c.alarmTime||null,endTime:c.endTime||null,alarmVersion:c.alarmVersion||0,realarmAt:c.realarmAt||null,
    unitIds,units,history:c.history||[],nafo:c.nafo||[],
+   manvPats:manvPatsForCloud(c), // v5.89: Patientenliste für die Fahrzeug-Handys
    updatedAt:new Date().toISOString()
  });
  for(const u of units){
@@ -7632,6 +7656,7 @@ async function pollCloudUnits(){
      if(!call)continue;
      if(fb.kind==="triage"){if(manvApplyTriage(call,fb))changed=true;continue}
      if(fb.kind==="manvLage"){if(manvApplyPhoneReport(call,fb))changed=true;continue} // v5.71
+     if(fb.kind==="manvTake"||fb.kind==="manvRelease"){if(manvApplyPhoneTake(call,fb))changed=true;continue} // v5.89
      call.orglFeedback=call.orglFeedback||[];
      if(!call.orglFeedback.some(x=>String(x.id)===String(fb.id))){
        call.orglFeedback.unshift(fb);
@@ -8646,6 +8671,7 @@ async function renderVehicleTerminal(unitId,dburl,sid){
        ${Array.isArray(c.nafo)&&c.nafo.length?`<div class="card" style="background:#fff7ed"><b>📟 Nachforderung / Lageänderung</b>${c.nafo.slice(-3).map(n=>`<div>${esc(n.reason||"")}</div>`).join("")}</div>`:""}
      </div>`).join(""):""}
     ${calls.filter(isManvLike).map(c=>vehicleManvReportHTML(unitId,dburl,sid,c,unit)).join("")}
+    ${calls.map(c=>vehicleManvPatientsHTML(unitId,dburl,sid,c,unit)).join("")}
     ${calls.filter(isManvLike).map(c=>["4","7"].includes(String(unit?.status))?vehicleTriageHTML(local,unit,unitId,dburl,sid,c,triageMine[String(c.id)]||{}):"").join("")}
     ${["1","2"].includes(String(unit?.status))?vehicleQualHTML(local,unit,unitId,dburl,sid):""}
     ${vehicleIvenaCache?renderIvenaMini(vehicleIvenaCache):""}`;
@@ -9040,6 +9066,27 @@ function vehicleStatusHook(st){
 }
 // v5.71: MANV/MANI/MANB – Rückmeldung aus dem Fahrzeug: erst Erste Lagemeldung, danach detaillierte Rückmeldung der Betroffenen
 let vehicleManvSent={};
+// v5.89: Patienten aus der MANV-Liste übernehmen (Fahrzeug-Handy, Status 4/7)
+function vehicleManvPatientsHTML(unitId,dburl,sid,c,unit){
+ const P=Array.isArray(c.manvPats)?c.manvPats:null; if(!P||!["4","7"].includes(String(unit?.status)))return "";
+ const q=x=>String(x).replace(/\\/g,"\\\\").replace(/'/g,"\\'"), a=`'${q(unitId)}','${q(dburl)}','${q(sid)}','${q(String(c.id))}'`;
+ const SKT=["","I","II","III","IV"], col=sk=>(MSTART_COL[sk]||["#999"])[0];
+ const line=p=>`${mstartDot(p.sk,14)} <b>${p.pid!=null?`Karte ${p.pid}`:`Pat. ${p.n+1}`}</b> · SK ${SKT[p.sk]||p.sk}${p.gender||p.age!=null?` · ${esc(p.gender||"")}${p.age!=null?` ${p.age} J.`:""}`:""}${p.inj?`<div style="font-size:12px;opacity:.8;margin-left:20px">${esc(p.inj)}</div>`:""}`;
+ const mine=P.find(p=>p.unit===String(unitId));
+ const free=P.filter(p=>!p.unit&&!p.care&&p.sk<=4).sort((x,y)=>x.sk-y.sk);
+ const taken=P.filter(p=>p.unit&&p.unit!==String(unitId)).length;
+ return `<div class="card" style="margin-top:12px;border-left:6px solid ${mine?col(mine.sk):"#64748b"}"><h2 style="margin:0 0 6px">🩹 Patient auswählen</h2>
+  ${mine?`<div style="padding:8px;border:2px solid ${col(mine.sk)};border-radius:10px;background:#f8fafc"><div style="font-size:12px;font-weight:800;color:#475569">EUER PATIENT</div>${line(mine)}
+     <div class="row" style="gap:6px;margin-top:8px"><button class="primary" onclick="openVehicleIvenaAssignment(${a},${mine.n})" style="flex:1">🏥 IVENA mit diesem Patienten</button><button onclick="vehicleManvTake(${a},${mine.n},true)">Freigeben</button></div></div>`:""}
+  <details ${mine?"":"open"} style="margin-top:8px"><summary style="cursor:pointer;font-weight:700">${free.length} freie Patienten${taken?` · ${taken} schon bei anderen Fahrzeugen`:""}</summary>
+   ${free.length?free.map(p=>`<div class="row" style="justify-content:space-between;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid #e2e8f0;flex-wrap:nowrap"><div style="min-width:0">${line(p)}</div><button onclick="vehicleManvTake(${a},${p.n})" style="flex:0 0 auto">Übernehmen</button></div>`).join(""):`<p class="muted" style="margin:6px 0">Kein freier Patient.</p>`}
+  </details></div>`;
+}
+async function vehicleManvTake(unitId,dburl,sid,callId,n,release){
+ const local=db.units.find(x=>String(x.id)===String(unitId));
+ try{await pushFeedbackEntry(dburl,sid,{kind:release?"manvRelease":"manvTake",callId,unitId,unitLabel:local?.opta||local?.name||unitId,n:Number(n)});toast(release?"Patient freigegeben":"📤 Patient übernommen – wird bestätigt");if(typeof terminalRefreshFn==="function")setTimeout(terminalRefreshFn,1500)}
+ catch(e){toast("Senden fehlgeschlagen – bitte nochmal")}
+}
 function vehicleManvReportHTML(unitId,dburl,sid,c,unit){
  const q=x=>String(x).replace(/\\/g,"\\\\").replace(/'/g,"\\'"), m=vehicleManvSent[c.id]||{};
  const kind=/MANI/.test(c.keyword||"")||c.answers?.event==="MANI"?"MANI":/MANB/.test(c.keyword||"")||c.answers?.event==="MANB"?"MANB":"MANV";
@@ -9088,7 +9135,7 @@ async function vehicleManvSend(unitId,dburl,sid,callId,stage){
  try{await pushFeedbackEntry(dburl,sid,fb);const m=vehicleManvSent[callId]=vehicleManvSent[callId]||{};m[stage]=Date.now();closeModal();toast("📤 Rückmeldung gesendet");if(typeof terminalRefreshFn==="function")terminalRefreshFn()}
  catch(e){toast("Senden fehlgeschlagen – bitte nochmal")}
 }
-async function openVehicleIvenaAssignment(unitId,dburl,sid,callId){
+async function openVehicleIvenaAssignment(unitId,dburl,sid,callId,patN){
  const local=db.units.find(x=>String(x.id)===String(unitId));
  const hospitals=(vehicleIvenaCache&&vehicleIvenaCache.length)?vehicleIvenaCache:(db.ivena||[]);
  if(!hospitals.length){toast("Keine Kliniken hinterlegt");return}
@@ -9125,6 +9172,15 @@ async function openVehicleIvenaAssignment(unitId,dburl,sid,callId){
    <button class="primary" onclick="saveVehicleIvenaAssignment('${unitId}','${dburl.replace(/'/g,"\\'")}','${sid.replace(/'/g,"\\'")}')">✅ ${isAnnounceType?"Anmelden":"Zuweisen"}</button>
   </div>
  </div>`;
+ // v5.89: MANV-Patient vom Handy gewählt → PZC, Alter, Geschlecht und Schockraum vorbelegen
+ if(patN!=null&&vCall&&Array.isArray(vCall.manvPats)){const P=vCall.manvPats.find(x=>x.n===Number(patN));if(P)setTimeout(()=>{try{
+   const txt=String(P.inj||"").toLowerCase(), rmi=(CREW_RMI.find(([re])=>re.test(txt))||[])[1]||(P.sk===1?"213":"214"), dr=String(Math.min(3,Math.max(1,P.sk>=4?1:P.sk)));
+   const age=P.age!=null?P.age:(P.sk===3?35:50), el=document.getElementById("vAsgPzcInput");
+   if(el){el.value=pzcBuild(rmi,age,dr)||`${rmi}`;pzcInput("vAsg")}
+   if(P.gender)ivenaSetGender("vAsg",P.gender);
+   const inf=document.getElementById("vAsgInfo"); if(inf)inf.value=`MANV ${P.pid!=null?`Anhängekarte ${P.pid}`:""} SK ${["","I","II","III","IV"][P.sk]||P.sk}`.replace(/\s+/g," ").trim();
+   ivenaFormRefresh("vAsg");
+ }catch(e){console.warn(e)}},50)}
 }
 async function saveVehicleIvenaAssignment(unitId,dburl,sid){
  const local=db.units.find(x=>String(x.id)===String(unitId));

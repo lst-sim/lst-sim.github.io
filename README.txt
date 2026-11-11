@@ -1607,6 +1607,14 @@ Version 5.05:
   („a, b“ = a ODER b). Mit „🚑 NA-Indikation“ markierte Knöpfe ziehen weiterhin einen Notarzt.
 - Nur „Unauffällig“ (ohne weitere Befunde) zählt weiter als unauffälliges E (R0 möglich).
 
+Version 5.89:
+- Fahrzeug-Handy beim MANV (Status 4 oder 7): neue Karte „🩹 Patient auswählen“.
+  - Sie listet die freien Patienten nach Sichtungskategorie mit Anhängekarte, Alter/Geschlecht und Befund. Mit „Übernehmen“ übernimmt das Fahrzeug den Patienten.
+  - Die Leitstelle trägt das Fahrzeug in der MANV-Patientenliste ein (mit SDS „Übernehme Patient …“). Ist der Patient schon vergeben, kommt eine SDS zurück.
+  - Der eigene Patient steht oben. „🏥 IVENA mit diesem Patienten“ füllt PZC, Alter, Geschlecht und den Hinweis „MANV Anhängekarte … SK …“ schon aus. „Freigeben“ gibt den Patienten wieder frei.
+  - Die Patientenliste wird bei jeder Änderung an die Handys übertragen.
+- Besatzungen erkennen „offene Fraktur“ jetzt als PZC 271 (Extremitäten offen) statt 272, ein Thoraxtrauma als 232.
+
 Version 5.88:
 - Fahrzeug-Handy: Die alarmierten Mittel stehen nicht mehr in der Alarmmeldung, weder in der Funkansicht noch im Navi-Meldungsfenster.
 - Fahrzeug-Handy: Die „IVENA – Kurzübersicht“ ist einklappbar und startet eingeklappt. In der Zeile steht die Zahl der Kliniken und wie viele davon eine Abmeldung haben. Der Zustand bleibt beim Aktualisieren erhalten.
