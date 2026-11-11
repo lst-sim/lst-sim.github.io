@@ -125,7 +125,7 @@ function index(inDir, dataDir) {
   const k = [...byId.values()].sort((a, b) => (a.ags || "").localeCompare(b.ags || ""));
   fs.writeFileSync(idxFile, JSON.stringify({ t: Date.now(), k }));
   console.log(`Index: ${k.length} Kreise, davon ${neu} in diesem Lauf aktualisiert`);
-  if (k.length < 40) console.log("WARNUNG: weniger als 40 Kreise im Index");
+  if (k.length < 10) console.log("WARNUNG: weniger als 10 Kreise im Index");
 }
 
 const [mode, ...a] = process.argv.slice(2);

@@ -263,7 +263,7 @@ const $=id=>document.getElementById(id);
 const status=t=>{$("status").textContent=t;};
 
 /* ================= Daten laden (ganz Deutschland, pro Kreis) ================= */
-const LOG=[];let KREISE=[],IDX_T=0,kreisLayer=null;const KD=new Map();const MAX_LOADED=10,MIN_ZOOM=9;
+const LOG=[];let KREISE=[],IDX_T=0,kreisLayer=null;const KD=new Map();const MAX_LOADED=6,MIN_ZOOM=9;
 const bbC=k=>[(k.bb[0]+k.bb[2])/2,(k.bb[1]+k.bb[3])/2];
 // OSM liefert die Grenze als Einzelstücke -> zu geschlossenen Ringen zusammensetzen
 function assemble(segs){const key=p=>p[0]+","+p[1];const left=segs.map(s=>s.slice());const rings=[];
@@ -294,7 +294,7 @@ async function ensureKreise(list){let ch=false;for(const k of list){if(!KD.has(k
 async function refreshView(){if(!KREISE.length)return;if(busy){again=true;return;}busy=true;
  try{const need=new Map();
   if(map.getZoom()>=MIN_ZOOM){const b=map.getBounds(),c=[map.getCenter().lat,map.getCenter().lng];
-   KREISE.filter(k=>k.bb[0]<=b.getNorth()&&k.bb[2]>=b.getSouth()&&k.bb[1]<=b.getEast()&&k.bb[3]>=b.getWest()).sort((x,y)=>dist(c,bbC(x))-dist(c,bbC(y))).slice(0,8).forEach(k=>need.set(k.id,k));}
+   KREISE.filter(k=>k.bb[0]<=b.getNorth()&&k.bb[2]>=b.getSouth()&&k.bb[1]<=b.getEast()&&k.bb[3]>=b.getWest()).sort((x,y)=>dist(c,bbC(x))-dist(c,bbC(y))).slice(0,4).forEach(k=>need.set(k.id,k));}
   if(me){const k=kreisAt(me);if(k)need.set(k.id,k);}
   if(est)kreiseNear(est,20000).forEach(k=>need.set(k.id,k));
   let ch=await ensureKreise([...need.values()]);
@@ -308,21 +308,23 @@ $("status").onclick=()=>{const ks=[...KD.values()].map(d=>d.kreis?d.kreis.n:"?")
 
 /* ================= Darstellung ================= */
 function icon(cat,size){const C=CAT[cat];size=size||18;return L.divIcon({className:"",iconSize:[size,size],iconAnchor:[size/2,size/2],html:`<div class="mk" style="width:${size}px;height:${size}px;background:${C.c};${C.sq?"border-radius:4px;":""}${cat==="lzD"?"color:#111;":""}">${C.l}</div>`});}
+// Schnell: Punkte als Canvas-Kreise (statt HTML), Umrisse erst ab Zoom 14
+const POLY_ZOOM=14;const polyGroups={};for(const k in CAT)polyGroups[k]=L.layerGroup();
+function syncPolys(){const z=map.getZoom();for(const k in polyGroups){const on=z>=POLY_ZOOM&&map.hasLayer(groups[k]);if(on&&!map.hasLayer(polyGroups[k]))polyGroups[k].addTo(map);else if(!on&&map.hasLayer(polyGroups[k]))map.removeLayer(polyGroups[k]);}}
+map.on("zoomend",syncPolys);
+function dot(c,col,r,stroke){return L.circleMarker(c,{radius:r,color:stroke||"#fff",weight:2,fillColor:col,fillOpacity:1,bubblingMouseEvents:false});}
 function render(){
- for(const k in groups)if(k!=="own")groups[k].clearLayers();
+ for(const k in groups)if(k!=="own"){groups[k].clearLayers();polyGroups[k].clearLayers();}
  for(const z of DATA.lz){const C=CAT[z.cat];const warn=z.dl<WARN_LINE_M||z.dw<WARN_WIND_M;
-  groups[z.cat].addLayer(L.polygon(z.g,{color:"#fff",weight:10,opacity:.9,fill:false,interactive:false}));
-  const poly=L.polygon(z.g,{color:warn?"#ff1744":C.c,weight:5,opacity:1,fillColor:C.c,fillOpacity:.6,dashArray:warn?"10 6":null});
-  poly.on("click",()=>showLZ(z));groups[z.cat].addLayer(poly);
-  const m=L.marker(z.c,{icon:L.divIcon({className:"",iconSize:[16,16],iconAnchor:[8,8],html:`<div class="mk" style="width:16px;height:16px;border-radius:4px;background:${C.c};color:#111;${warn?"border-color:#ff1744;":""}">${warn?"!":"L"}</div>`})});
-  m.on("click",()=>showLZ(z));groups[z.cat].addLayer(m);}
- for(const p of DATA.pts){if(p.g&&p.cat!=="aed"){const mp=p.g.map(r=>[r]);const C=CAT[p.cat];
-  groups[p.cat].addLayer(L.polygon(mp,{color:"#fff",weight:9,opacity:.9,fill:false,interactive:false}));
-  groups[p.cat].addLayer(L.polygon(mp,{color:C.c,weight:4,opacity:1,fillColor:C.c,fillOpacity:.5}).on("click",()=>showPt(p)));}
- const m=L.marker(p.c,{icon:icon(p.cat,p.cat==="aed"?14:18)});m.on("click",()=>showPt(p));groups[p.cat].addLayer(m);}
- for(const ln of DATA.pwr){const hv=parseInt(ln.v)>=60000;groups.pwr.addLayer(L.polyline(ln.g,{color:"#ff1744",weight:hv?3:2,opacity:.85,dashArray:ln.k==="minor_line"?"6 5":null}).bindTooltip(`Freileitung ${ln.v?Math.round(parseInt(ln.v)/1000)+" kV":"(Spannung unbek.)"}`));}
- for(const w of DATA.wka){groups.wka.addLayer(L.marker(w.c,{icon:icon("wka",14)}).on("click",()=>showWKA(w)));}
- renderOwn();updLegendCounts();}
+  polyGroups[z.cat].addLayer(L.polygon(z.g,{color:warn?"#ff1744":C.c,weight:4,opacity:1,fillColor:C.c,fillOpacity:.5,dashArray:warn?"10 6":null}).on("click",()=>showLZ(z)));
+  groups[z.cat].addLayer(dot(z.c,C.c,6,warn?"#ff1744":"#fff").on("click",()=>showLZ(z)));}
+ for(const p of DATA.pts){const C=CAT[p.cat];
+  if(p.g)polyGroups[p.cat].addLayer(L.polygon(p.g.map(r=>[r]),{color:C.c,weight:3,opacity:1,fillColor:C.c,fillOpacity:.45}).on("click",()=>showPt(p)));
+  if(p.cat==="heli"||p.cat==="kh")groups[p.cat].addLayer(L.marker(p.c,{icon:icon(p.cat,18)}).on("click",()=>showPt(p)));
+  else groups[p.cat].addLayer(dot(p.c,C.c,5).on("click",()=>showPt(p)));}
+ for(const ln of DATA.pwr){const hv=parseInt(ln.v)>=60000;groups.pwr.addLayer(L.polyline(ln.g,{color:"#ff1744",weight:hv?3:2,opacity:.85,dashArray:ln.k==="minor_line"?"6 5":null,interactive:false}));}
+ for(const w of DATA.wka){groups.wka.addLayer(dot(w.c,"#222",4).on("click",()=>showWKA(w)));}
+ syncPolys();renderOwn();updLegendCounts();}
 
 /* ================= Info-Blätter ================= */
 function sheetOpen(html){$("sc").innerHTML=html;$("sheet").classList.add("open");$("sheet").scrollTop=0;}
@@ -432,7 +434,7 @@ $("bLayers").onclick=()=>{sheetOpen(`<h2>Ebenen</h2><div class="bases">${[["OSM 
  <div class="row"><button id="bRe">Datenstatus</button><button id="bOwnDel">Eigene Markierungen löschen</button></div>
  <div class="note">${DATA?`Datenstand: ${new Date(DATA.t).toLocaleString("de-DE")} (OpenStreetMap)`:""}</div>`);
  document.querySelectorAll("[data-base]").forEach(b=>b.onclick=()=>setBase(b.dataset.base));
- document.querySelectorAll("[data-k]").forEach(cb=>cb.onchange=()=>{const g=groups[cb.dataset.k];cb.checked?g.addTo(map):map.removeLayer(g);});
+ document.querySelectorAll("[data-k]").forEach(cb=>cb.onchange=()=>{const g=groups[cb.dataset.k];cb.checked?g.addTo(map):map.removeLayer(g);syncPolys();});
  $("bRe").onclick=()=>{sheetClose();$("status").click();};
  $("bOwnDel").onclick=()=>{if($("bOwnDel").dataset.sure){OWN=[];saveOwn();renderOwn();sheetClose();}else{$("bOwnDel").dataset.sure=1;$("bOwnDel").textContent="Wirklich alle löschen?";}};};
 

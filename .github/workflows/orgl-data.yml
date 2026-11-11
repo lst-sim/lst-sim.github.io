@@ -1,14 +1,9 @@
-name: ORGL-Karte Daten Niedersachsen aktualisieren
+name: ORGL-Karte Daten aktualisieren (Friesland + Nachbarkreise)
 
 on:
   schedule:
     - cron: "17 1 1 * *"   # am 1. jedes Monats nachts
   workflow_dispatch:
-  push:
-    branches: [main]
-    paths:
-      - "orgl-friesland/update-germany.js"
-      - ".github/workflows/orgl-data.yml"
 
 permissions:
   contents: write
@@ -18,23 +13,7 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  list:
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: "20"
-      - run: node orgl-friesland/update-germany.js list kreisliste.json
-      - uses: actions/upload-artifact@v4
-        with:
-          name: kreisliste
-          path: kreisliste.json
-
-  # Friesland + Nachbarkreise vorab und sofort online stellen
-  vorrang:
-    needs: list
+  update:
     runs-on: ubuntu-latest
     timeout-minutes: 60
     steps:
@@ -44,9 +23,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "20"
-      - uses: actions/download-artifact@v4
-        with:
-          name: kreisliste
+      - run: node orgl-friesland/update-germany.js list kreisliste.json
       - run: node orgl-friesland/update-germany.js shard kreisliste.json 0 0 neu
       - run: node orgl-friesland/update-germany.js index neu orgl-friesland/data
       - name: Daten speichern
@@ -55,56 +32,5 @@ jobs:
           git config user.email "41898283+github-actions[bot]@users.noreply.github.com"
           git add orgl-friesland/data
           if git diff --cached --quiet; then exit 0; fi
-          git commit -q -m "ORGL-Karte: Daten Friesland + Nachbarkreise"
-          for n in 1 2 3 4 5; do git pull -q --rebase origin main && git push -q && break; sleep 10; done
-
-  shard:
-    needs: list
-    runs-on: ubuntu-latest
-    timeout-minutes: 300
-    strategy:
-      fail-fast: false
-      max-parallel: 12
-      matrix:
-        i: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: "20"
-      - uses: actions/download-artifact@v4
-        with:
-          name: kreisliste
-      - run: node orgl-friesland/update-germany.js shard kreisliste.json ${{ matrix.i }} 12 out
-      - uses: actions/upload-artifact@v4
-        with:
-          name: teil-${{ matrix.i }}
-          path: out
-          if-no-files-found: ignore
-
-  index:
-    needs: [shard, vorrang]
-    if: always() && needs.shard.result != 'cancelled'
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          ref: main
-      - uses: actions/setup-node@v4
-        with:
-          node-version: "20"
-      - uses: actions/download-artifact@v4
-        with:
-          pattern: teil-*
-          path: neu
-          merge-multiple: true
-      - run: node orgl-friesland/update-germany.js index neu orgl-friesland/data
-      - name: Daten speichern
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898283+github-actions[bot]@users.noreply.github.com"
-          git add orgl-friesland/data
-          if git diff --cached --quiet; then echo "Keine Änderungen"; exit 0; fi
-          git commit -q -m "ORGL-Karte: OSM-Daten Niedersachsen aktualisiert"
+          git commit -q -m "ORGL-Karte: OSM-Daten aktualisiert"
           for n in 1 2 3 4 5; do git pull -q --rebase origin main && git push -q && break; sleep 10; done
