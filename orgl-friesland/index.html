@@ -108,6 +108,19 @@ select,input[type=text],input[type=password]{font:inherit;color:var(--ink);backg
 .seg button{border:0;background:transparent;min-height:36px;padding:6px 12px;font-size:14px;border-radius:11px}
 .seg button.on{background:var(--ink);color:var(--paper);font-weight:700}
 .leaflet-control-scale{margin-left:12px!important}
+/* Admin-Bereich */
+.chip{border:0;background:var(--ink);color:var(--paper);border-radius:22px;min-height:40px;padding:8px 14px;font-weight:700;box-shadow:var(--shadow)}
+.bar h1{margin-right:0}.bar #bAdmChip{margin-right:auto}.bar #bAdmChip[hidden]+#bRefresh{margin-left:auto}
+.adm{position:absolute;inset:0;z-index:1150;background:var(--wash);overflow:auto;padding:calc(env(safe-area-inset-top) + 14px) 14px calc(env(safe-area-inset-bottom) + 24px)}
+.adm-in{max-width:640px;margin:0 auto}
+.adm-h{display:flex;align-items:center;gap:10px;margin-bottom:12px}.adm-h h2{margin:0 auto 0 0;font-size:22px}
+.adm-card{background:var(--paper);border-radius:16px;padding:14px;margin-bottom:12px;box-shadow:0 1px 4px rgba(21,36,58,.08)}
+.adm-card h3{margin:0 0 8px;font-size:16px}
+.ai{padding:10px 0;border-top:1px solid var(--line)}.ai:first-of-type{border-top:0}
+.ai-h{display:flex;align-items:center;gap:8px;font-weight:700}.ai-m{color:var(--mut);font-size:14px;margin:2px 0 6px}
+.ai .row{margin-top:4px;flex-wrap:nowrap;gap:5px}.ai .row button{flex:1 1 auto;min-height:38px;padding:6px 4px;font-size:13px;background:var(--wash);border:0;white-space:nowrap}
+.tg{display:inline-flex;align-items:center;justify-content:center;min-width:38px;height:24px;padding:0 6px;border-radius:6px;color:#fff;background:#15243a;font-size:12px;font-weight:700}
+.grp{font-size:14px;color:var(--mut);margin:14px 0 2px;font-weight:700}
 #modal{position:absolute;inset:0;z-index:2000;background:rgba(21,36,58,.45);display:none;align-items:center;justify-content:center;padding:16px}
 #modal .box{background:var(--paper);border-radius:20px;padding:20px;max-width:520px;max-height:85%;overflow:auto;box-shadow:var(--shadow)}
 #modal p{max-width:65ch}
@@ -134,6 +147,7 @@ select,input[type=text],input[type=password]{font:inherit;color:var(--ink);backg
 </div>
 <div class="bar">
   <h1>ORGL-Karte<small id="sub"></small></h1>
+  <button id="bAdmChip" class="chip" hidden>Admin</button>
   <button id="bRefresh" class="round" title="Aktualisieren" aria-label="Aktualisieren"><svg class="i" viewBox="0 0 24 24"><path d="M20 11a8 8 0 1 0-2.3 5.7"/><path d="M20 4v7h-7"/></svg></button>
   <button id="bLayers" class="round" title="Ebenen" aria-label="Ebenen"><svg class="i" viewBox="0 0 24 24"><path d="M12 3l9 5-9 5-9-5 9-5z"/><path d="M3 13l9 5 9-5"/></svg></button>
   <button id="bInfo" class="round" title="Hinweise" aria-label="Hinweise"><svg class="i" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7.5v.5"/></svg></button>
@@ -147,6 +161,7 @@ select,input[type=text],input[type=password]{font:inherit;color:var(--ink);backg
   <button id="bDraw" title="Auf der Karte malen"><svg class="i" viewBox="0 0 24 24"><path d="M4 20l4.5-1 10-10a2.1 2.1 0 0 0-3-3l-10 10L4 20z"/><path d="M14 7l3 3"/></svg><span>Malen</span></button>
   <button id="bLoc" title="Live-Standort"><svg class="i" viewBox="0 0 24 24"><circle cx="12" cy="12" r="7"/><circle cx="12" cy="12" r="2.5"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg><span>Standort</span></button>
 </nav>
+<section id="admin" class="adm" aria-label="Admin-Bereich" hidden></section>
 <div class="sheet" id="sheet"><button class="x" id="sx" aria-label="Schließen"><svg class="i" viewBox="0 0 24 24" style="width:18px;height:18px"><path d="M6 6l12 12M18 6L6 18"/></svg></button><div id="sc"></div></div>
 <div id="modal"><div class="box" id="mbox"></div></div>
 
@@ -413,10 +428,10 @@ map.on("dragstart",()=>{if(follow){follow=false;$("bLoc").classList.remove("on")
 
 /* ================= Einsatzstelle & Nächstgelegene ================= */
 function startCross(mode){crossMode=mode;$("cross").style.display="block";sheetClose();
- sheetOpen(`<h2>${mode==="est"?"Einsatzstelle setzen":mode==="fixmove"?"Festen Punkt verschieben":"Markierung setzen"}</h2><div>Karte verschieben, bis das Fadenkreuz auf der Stelle liegt – oder lange auf die Karte tippen.</div><div class="row"><button class="pri" id="cOk">Hier setzen</button>${mode==="est"&&me?'<button id="cMe">Mein Standort</button>':""}<button id="cNo">Abbrechen</button></div>`);
+ sheetOpen(`<h2>${mode==="est"?"Einsatzstelle setzen":mode==="fixmove"?"Festen Punkt verschieben":mode==="fixnew"?"Festen Punkt setzen":"Markierung setzen"}</h2><div>Karte verschieben, bis das Fadenkreuz auf der Stelle liegt – oder lange auf die Karte tippen.</div><div class="row"><button class="pri" id="cOk">Hier setzen</button>${mode==="est"&&me?'<button id="cMe">Mein Standort</button>':""}<button id="cNo">Abbrechen</button></div>`);
  $("cOk").onclick=()=>{const c=map.getCenter();finishCross([c.lat,c.lng]);};$("cNo").onclick=()=>{crossMode=null;$("cross").style.display="none";sheetClose();};
  if($("cMe"))$("cMe").onclick=()=>finishCross(me.slice());}
-function finishCross(c){const m=crossMode;crossMode=null;$("cross").style.display="none";if(m==="est")setEst(c);else if(m==="fixmove"){const p=fixMove;fixMove=null;sheetClose();dbReq("/"+p.id,"PATCH",{c:[+c[0].toFixed(6),+c[1].toFixed(6)],ts:Date.now()}).then(()=>status("Verschoben.")).catch(fbErr);}else markHere(c[0],c[1]);}
+function finishCross(c){const m=crossMode;crossMode=null;$("cross").style.display="none";if(m==="est")setEst(c);else if(m==="fixmove"){const p=fixMove;fixMove=null;sheetClose();dbReq("/"+p.id,"PATCH",{c:[+c[0].toFixed(6),+c[1].toFixed(6)],ts:Date.now()}).then(()=>status("Verschoben.")).catch(fbErr);}else if(m==="fixnew"){fixForm(null,c,startCross.t||"BR","");}else markHere(c[0],c[1]);}
 map.on("contextmenu",e=>{const c=[e.latlng.lat,e.latlng.lng];if(crossMode)finishCross(c);else{sheetOpen(`<h2>Punkt auf der Karte</h2><div class="row"><button class="pri" id="pE">Als Einsatzstelle</button><button id="pM">Hier markieren</button></div>${posBlock(c)}`);$("pE").onclick=()=>setEst(c);$("pM").onclick=()=>markHere(c[0],c[1]);}});
 $("bEst").onclick=()=>{if(est)showNear();else startCross("est");};
 $("bMark").onclick=()=>startCross("own");
@@ -507,7 +522,7 @@ renderDraw();
 const dl=$("drawLayer");
 function setDrawUI(){dl.style.display=(!dErase&&!dPan)?"block":"none";$("dErase").classList.toggle("on",dErase);$("dPan").classList.toggle("on",dPan);$("dMode").textContent=dArea?"Fläche":"Linie";}
 $("bDraw").onclick=()=>{sheetClose();dErase=false;dPan=false;$("drawBar").style.display="flex";$("dock").style.display="none";$("bDraw").classList.add("on");if(follow){follow=false;$("bLoc").classList.remove("on");}setDrawUI();status("Malmodus: mit dem Finger zeichnen. ✋ zum Verschieben der Karte.");};
-$("dDone").onclick=()=>{$("drawBar").style.display="none";$("dock").style.display="";dl.style.display="none";dErase=false;$("bDraw").classList.remove("on");status("Malmodus beendet.");};
+$("dDone").onclick=()=>{adminDraw=null;$("drawBar").style.display="none";$("dock").style.display="";dl.style.display="none";dErase=false;$("bDraw").classList.remove("on");status("Malmodus beendet.");};
 document.querySelectorAll("#drawBar .c").forEach(b=>b.onclick=()=>{document.querySelectorAll("#drawBar .c").forEach(x=>x.classList.remove("sel"));b.classList.add("sel");dColor=b.dataset.c;dErase=false;dPan=false;setDrawUI();});
 $("dMode").onclick=()=>{dArea=!dArea;dErase=false;dPan=false;setDrawUI();};
 $("dPan").onclick=()=>{dPan=!dPan;dErase=false;setDrawUI();};
@@ -518,7 +533,7 @@ let lastPx=null;
 dl.addEventListener("pointerdown",e=>{if(!e.isPrimary)return;e.preventDefault();dl.setPointerCapture(e.pointerId);const ll=map.mouseEventToLatLng(e);curPts=[[ll.lat,ll.lng]];lastPx=[e.clientX,e.clientY];
  cur=L.polyline(curPts,{color:dColor,weight:8,opacity:1,lineCap:"round",lineJoin:"round",interactive:false}).addTo(map);});
 dl.addEventListener("pointermove",e=>{if(!cur||!e.isPrimary)return;e.preventDefault();if(Math.hypot(e.clientX-lastPx[0],e.clientY-lastPx[1])<3)return;lastPx=[e.clientX,e.clientY];const ll=map.mouseEventToLatLng(e);curPts.push([ll.lat,ll.lng]);cur.setLatLngs(curPts);});
-function endStroke(){if(!cur)return;map.removeLayer(cur);cur=null;if(curPts.length>=2){DRAW.push({c:dColor,a:dArea&&curPts.length>=3,p:curPts.map(p=>[+p[0].toFixed(6),+p[1].toFixed(6)])});saveDraw();renderDraw();}curPts=null;}
+function endStroke(){if(!cur)return;map.removeLayer(cur);cur=null;if(adminDraw&&curPts.length>=3){const pts=curPts.map(p=>[+p[0].toFixed(6),+p[1].toFixed(6)]),t=adminDraw.t;adminDraw=null;curPts=null;$("dDone").click();fixForm(null,centroid(pts),t,"",pts);return;}if(curPts.length>=2){DRAW.push({c:dColor,a:dArea&&curPts.length>=3,p:curPts.map(p=>[+p[0].toFixed(6),+p[1].toFixed(6)])});saveDraw();renderDraw();}curPts=null;}
 dl.addEventListener("pointerup",endStroke);dl.addEventListener("pointercancel",endStroke);
 
 /* ================= Hinweise ================= */
@@ -535,6 +550,7 @@ function info(){$("mbox").innerHTML=`<h2 style="margin-top:0">Hinweise zur Nutzu
 <p class="note">Daten: © OpenStreetMap-Mitwirkende (ODbL) · Wind: Open-Meteo · Luftbild: Esri · TopPlus: © BKG</p>
 <div class="row"><button class="pri" onclick="document.getElementById('modal').style.display='none';try{localStorage.setItem('orgl-fri-ok','1')}catch(e){}">Verstanden</button></div>`;$("modal").style.display="flex";}
 $("bInfo").onclick=info;
+$("bAdmChip").onclick=openAdmin;
 document.querySelectorAll("#baseSw [data-base]").forEach(b=>b.onclick=()=>setBase(b.dataset.base));
 $("bRefresh").onclick=()=>{status("Aktualisiere …");location.reload();};
 try{if(!localStorage.getItem("orgl-fri-ok"))info();}catch(e){info();}
@@ -557,7 +573,7 @@ function initFix(){renderFix();try{const es=new EventSource(FIX_URL+".json");
 function renderFix(){groups.fix.clearLayers();for(const p of FIX){if(!p.c)continue;const T=OWN_TYPES.find(x=>x[0]===p.t)||["?","Punkt"];
  if(p.g)groups.fix.addLayer(L.polygon(p.g,{color:TYPE_COL[p.t]||"#15243a",weight:3,dashArray:"8 5",fillColor:TYPE_COL[p.t]||"#15243a",fillOpacity:.12}).on("click",()=>showFix(p)));
  const m=L.marker(p.c,{zIndexOffset:700,icon:L.divIcon({className:"",iconSize:[44,30],iconAnchor:[22,15],html:`<div class="fix" style="width:44px;height:30px">${esc(p.t)}</div>`})});
- m.bindTooltip(esc(p.n||T[1]),{permanent:true,direction:"right",offset:[24,0],className:"fixLbl"});m.on("click",()=>showFix(p));groups.fix.addLayer(m);}updLegendCounts();}
+ m.bindTooltip(esc(p.n||T[1]),{permanent:true,direction:"right",offset:[24,0],className:"fixLbl"});m.on("click",()=>showFix(p));groups.fix.addLayer(m);}updLegendCounts();renderAdmin();}
 function fbErr(e){status("Nicht gespeichert: "+e.message+". Internet prüfen.");}
 function showFix(p){const T=OWN_TYPES.find(x=>x[0]===p.t)||["?","Punkt"];
  sheetOpen(`<h2>${esc(p.n||T[1])}</h2><div>${esc(T[1])}, fest hinterlegt</div>${p.txt?`<div style="margin-top:6px">${esc(p.txt)}</div>`:""}${p.g?"<h3>Bereich</h3>"+measBlock(p.g,true):""}${posBlock(p.c)}
@@ -572,10 +588,42 @@ function fixForm(p,c,t0,n0,g){const isNew=!p;p=p||{t:t0||"BR",n:n0||"",txt:"",c,
  $("xS").onclick=()=>{const d={t:$("xT").value,n:$("xN").value.trim(),txt:$("xX").value.trim(),c:[+p.c[0].toFixed(6),+p.c[1].toFixed(6)],ts:Date.now()};
   if(p.g)d.g=simplify(p.g,1.5).map(q=>[+q[0].toFixed(6),+q[1].toFixed(6)]);
   (isNew?dbReq("","POST",d):dbReq("/"+p.id,"PATCH",d)).then(()=>{sheetClose();status(isNew?"Für alle gespeichert.":"Änderungen gespeichert.");if(!map.hasLayer(groups.fix))groups.fix.addTo(map);}).catch(fbErr);};}
+/* ---- Admin-Bereich (eigener Bildschirm) ---- */
+let adminDraw=null,admQ="";
+const TYPE_NAME=t=>(OWN_TYPES.find(x=>x[0]===t)||[t,"Sonstiges"])[1];
+function closeAdmin(){$("admin").hidden=true;}
+function openAdmin(){if(!admin){adminSheet();return;}sheetClose();$("admin").hidden=false;renderAdmin();}
+function renderAdmin(){const el=$("admin");if(el.hidden)return;
+ const q=admQ.toLowerCase();const list=FIX.filter(p=>!q||(p.n+" "+(p.txt||"")+" "+TYPE_NAME(p.t)).toLowerCase().includes(q));
+ const byType=OWN_TYPES.map(([t,name])=>[t,name,list.filter(p=>p.t===t)]).filter(x=>x[2].length);
+ const item=p=>{const col=TYPE_COL[p.t]||"#15243a";const meta=[TYPE_NAME(p.t),p.g?fmtA(measure(p.g,true).a):"Punkt",p.ts?new Date(p.ts).toLocaleDateString("de-DE"):""].filter(Boolean).join(", ");
+  return `<div class="ai"><div class="ai-h"><span class="tg" style="background:${col}">${esc(p.t)}</span>${esc(p.n||TYPE_NAME(p.t))}</div><div class="ai-m">${esc(meta)}${p.txt?"<br>"+esc(p.txt):""}</div>
+  <div class="row"><button data-a="show" data-id="${p.id}">Auf Karte</button><button data-a="edit" data-id="${p.id}">Ändern</button><button data-a="move" data-id="${p.id}">Verschieben</button><button data-a="del" data-id="${p.id}">Löschen</button></div></div>`;};
+ el.innerHTML=`<div class="adm-in"><div class="adm-h"><h2>Admin-Bereich</h2><button id="admX" class="round" aria-label="Zur Karte">${'<svg class="i" viewBox="0 0 24 24" style="width:18px;height:18px"><path d="M6 6l12 12M18 6L6 18"/></svg>'}</button></div>
+ <div class="adm-card"><h3>Neu anlegen</h3><select id="admT">${OWN_TYPES.map(([t,n])=>`<option value="${t}" ${t==="BR"?"selected":""}>${n}</option>`).join("")}</select>
+  <div class="row"><button class="pri" id="admArea">Bereich zeichnen</button><button id="admPt">Punkt setzen</button></div>
+  <div class="note">Bereich: Fläche mit dem Finger umfahren, danach Namen eingeben. Punkt: Karte unter das Fadenkreuz schieben.</div></div>
+ <div class="adm-card"><h3>Feste Punkte und Bereiche (${FIX.length})</h3><input type="text" id="admQ" placeholder="Suchen" value="${esc(admQ)}">
+  ${byType.length?byType.map(([t,name,ps])=>`<div class="grp">${esc(name)} (${ps.length})</div>${ps.sort((a,b)=>(a.n||"").localeCompare(b.n||"","de")).map(item).join("")}`).join(""):`<div class="note">${FIX.length?"Keine Treffer.":"Noch nichts angelegt. Oben „Bereich zeichnen“ oder „Punkt setzen“ wählen."}</div>`}
+  ${FIX.length?'<div class="row"><button id="admCopy">Liste kopieren</button></div>':""}</div>
+ <div class="adm-card"><div class="note" style="margin-top:0">Änderungen sind sofort für alle sichtbar und bleiben bei Updates erhalten. Der Code schützt nur die Oberfläche.</div><div class="row"><button id="admOut">Admin beenden</button></div></div></div>`;
+ $("admX").onclick=closeAdmin;
+ $("admQ").oninput=e=>{admQ=e.target.value;const pos=e.target.selectionStart;renderAdmin();const i=$("admQ");i.focus();i.setSelectionRange(pos,pos);};
+ $("admPt").onclick=()=>{const t=$("admT").value;closeAdmin();adminDraw=null;startCross("fixnew");startCross.t=t;};
+ $("admArea").onclick=()=>{const t=$("admT").value;closeAdmin();adminDraw={t};$("bDraw").click();dArea=true;dColor=TYPE_COL[t]||"#15243a";
+  document.querySelectorAll("#drawBar .c").forEach(x=>x.classList.toggle("sel",x.dataset.c===dColor));setDrawUI();status(`${TYPE_NAME(t)}: Fläche mit dem Finger umfahren.`,true);};
+ $("admOut").onclick=()=>{admin=false;$("bAdmChip").hidden=true;closeAdmin();status("Admin beendet.");};
+ if($("admCopy"))$("admCopy").onclick=()=>copyTxt(FIX.map(p=>`${p.t} ${p.n||TYPE_NAME(p.t)}: ${mgrs(p.c[0],p.c[1])}${p.g?", "+fmtA(measure(p.g,true).a):""}${p.txt?" ("+p.txt+")":""}`).join("\n"));
+ el.querySelectorAll("[data-a]").forEach(b=>b.onclick=()=>{const p=FIX.find(x=>x.id===b.dataset.id);if(!p)return;const a=b.dataset.a;
+  if(a==="show"){closeAdmin();map.setView(p.c,17);showFix(p);}
+  else if(a==="edit"){closeAdmin();fixForm(p);}
+  else if(a==="move"){closeAdmin();fixMove=p;startCross("fixmove");}
+  else if(a==="del"){if(!b.dataset.sure){b.dataset.sure=1;b.textContent="Wirklich?";return;}dbReq("/"+p.id,"DELETE").then(()=>status("Gelöscht.")).catch(fbErr);}});}
 function adminSheet(){
- if(admin){sheetOpen(`<h2>Admin aktiv</h2><div class="note">Neuen festen Punkt: unten „Markieren“, dann „Für alle speichern“. Fester Bereich: mit „Malen“ eine Fläche zeichnen, antippen, „Als festen Bereich für alle speichern“. Bestehende Punkte antippen zum Ändern.</div><div class="row"><button id="aOut">Admin beenden</button></div>`);$("aOut").onclick=()=>{admin=false;sheetClose();status("Admin beendet.");};return;}
+ if(admin){openAdmin();return;}
+ if(false){sheetOpen(`<h2>Admin aktiv</h2><div class="note">Neuen festen Punkt: unten „Markieren“, dann „Für alle speichern“. Fester Bereich: mit „Malen“ eine Fläche zeichnen, antippen, „Als festen Bereich für alle speichern“. Bestehende Punkte antippen zum Ändern.</div><div class="row"><button id="aOut">Admin beenden</button></div>`);$("aOut").onclick=()=>{admin=false;sheetClose();status("Admin beendet.");};return;}
  sheetOpen(`<h2>Admin</h2><input type="password" id="aP" placeholder="Code" inputmode="numeric" autocomplete="off"><div class="row"><button class="pri" id="aIn">Freischalten</button></div><div class="note" id="aMsg"></div>`);
- const go=()=>{if($("aP").value.trim()===ADMIN_CODE){admin=true;sheetClose();status("Admin freigeschaltet.");}else $("aMsg").textContent="Code falsch.";};
+ const go=()=>{if($("aP").value.trim()===ADMIN_CODE){admin=true;$("bAdmChip").hidden=false;openAdmin();}else $("aMsg").textContent="Code falsch.";};
  $("aIn").onclick=go;$("aP").onkeydown=e=>{if(e.key==="Enter")go();};}
 
 loadIndex();
