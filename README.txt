@@ -1607,6 +1607,10 @@ Version 5.05:
   („a, b“ = a ODER b). Mit „🚑 NA-Indikation“ markierte Knöpfe ziehen weiterhin einen Notarzt.
 - Nur „Unauffällig“ (ohne weitere Befunde) zählt weiter als unauffälliges E (R0 möglich).
 
+Version 5.88:
+- Fahrzeug-Handy: Die alarmierten Mittel stehen nicht mehr in der Alarmmeldung, weder in der Funkansicht noch im Navi-Meldungsfenster.
+- Fahrzeug-Handy: Die „IVENA – Kurzübersicht“ ist einklappbar und startet eingeklappt. In der Zeile steht die Zahl der Kliniken und wie viele davon eine Abmeldung haben. Der Zustand bleibt beim Aktualisieren erhalten.
+
 Version 5.87:
 - Neue, seltenere Übungsnotrufe für die übrigen Fachrichtungen. Zusammen sind das ca. 6 % aller Anrufe, ein einzelner Fall ist also deutlich seltener als ein Herz- oder Sturzfall:
   - Geburtshilfe: einsetzende Geburt (39. SSW, Blasensprung, Pressdrang), Geburt zu Hause schon erfolgt, Blutung in der 30.–35. SSW

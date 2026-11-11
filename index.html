@@ -231,7 +231,7 @@ html[data-device="handy"] .fach-grid{grid-template-columns:1fr}
 <header id="topbar">
  <div class="tb-left">
   <span class="tb-brand">🚑 Leitstelle<span>.sim</span></span>
-  <span id="versionTag" class="tb-ver">v5.87</span>
+  <span id="versionTag" class="tb-ver">v5.88</span>
   <span id="syncState"></span>
   <a id="deskTag" href="#" onclick="renameDesk();return false" title="Name dieses Platzes (für „offen an …“) – antippen zum Ändern"></a>
  </div>
@@ -8643,7 +8643,6 @@ async function renderVehicleTerminal(unitId,dburl,sid){
        <div class="big">📍 ${esc(c.location||"Ort unbekannt")}</div>
        ${c.staging&&c.staging.name&&!waterCapable(local)?`<div class="suggest" style="background:#e0f2fe;border-color:#7dd3fc"><b>🅿️ Bereitstellungsraum anfahren:</b><div style="font-size:18px;font-weight:800">${esc(c.staging.name)}</div><small>Einsatzstelle liegt auf dem Wasser – nur Boote/Hubschrauber direkt zur Einsatzstelle.</small></div>`:""}
        ${c.alarmFreeText?`<div class="suggest"><b>Meldetext / Zusatz:</b><div>${esc(c.alarmFreeText)}</div></div>`:""}
-       <div class="suggest"><b>Alarmierte Mittel</b><div>${esc(c.suggestion||"—")}</div></div>
        ${Array.isArray(c.nafo)&&c.nafo.length?`<div class="card" style="background:#fff7ed"><b>📟 Nachforderung / Lageänderung</b>${c.nafo.slice(-3).map(n=>`<div>${esc(n.reason||"")}</div>`).join("")}</div>`:""}
      </div>`).join(""):""}
     ${calls.filter(isManvLike).map(c=>vehicleManvReportHTML(unitId,dburl,sid,c,unit)).join("")}
@@ -8685,7 +8684,7 @@ function naviMsgHTML(){
    ${c.staging&&c.staging.name&&!waterCapable(D.unit)?`<div style="color:#7dd3fc;font-weight:700">🅿️ BR: ${esc(c.staging.name)}</div>`:""}
    ${c.alarmFreeText?`<div style="margin-top:3px">📝 ${esc(c.alarmFreeText)}</div>`:""}
    ${Array.isArray(c.nafo)&&c.nafo.length?`<div style="margin-top:3px;color:#fdba74">📟 ${esc(c.nafo[c.nafo.length-1].reason||"")}</div>`:""}
-   ${c.suggestion?`<div style="margin-top:3px;font-size:12px;opacity:.75">Alarmiert: ${esc(c.suggestion)}</div>`:""}</div>`).join("");
+</div>`).join(""); // v5.88: alarmierte Mittel nicht mehr anzeigen
  const sd=sds.map(x=>`<div style="margin-top:4px;color:#fde68a">✉️ ${new Date(x.time).toLocaleTimeString("de-DE",{hour:"2-digit",minute:"2-digit"})} ${esc(x.text||"")}</div>`).join("");
  return (parts||`<div style="opacity:.7">Kein aktueller Einsatz</div>`)+sd;
 }
@@ -8963,10 +8962,12 @@ async function vehicleQualSend(unitId,dburl,sid,announce){
  toast(announce?`🩺 Status 1 · Besatzung ${val} gemeldet`:"🩺 Grundbesetzung gemeldet");
  if(typeof terminalRefreshFn==="function")terminalRefreshFn();
 }
+let vehicleIvenaOpen=false; // v5.88: Kurzübersicht einklappbar (Stand bleibt beim Aktualisieren erhalten)
 function renderIvenaMini(hospitals){
  if(!hospitals.length)return"";
- return `<div class="card" style="color:#111827"><h2 style="font-size:16px;margin-bottom:6px;color:#111827">🏥 IVENA – Kurzübersicht</h2>
-  <div style="overflow:auto"><table style="font-size:13px">
+ const nClosed=hospitals.filter(h=>ivenaActiveClosures(h).length||shockFull(h)||String(h.status).toLowerCase()==="rot").length;
+ return `<details class="card" style="color:#111827" ${vehicleIvenaOpen?"open":""} ontoggle="vehicleIvenaOpen=this.open"><summary style="cursor:pointer;font-size:16px;font-weight:800;color:#111827;list-style:revert">🏥 IVENA – Kurzübersicht <span style="font-size:12px;font-weight:600;color:#64748b">${hospitals.length} Kliniken${nClosed?` · ${nClosed} mit Abmeldung`:""}</span></summary>
+  <div style="overflow:auto;margin-top:8px"><table style="font-size:13px">
    <thead><tr><th>Klinik</th><th>Status</th><th>Abmeldungen</th></tr></thead>
    <tbody>${hospitals.map(h=>{
      const closures=ivenaActiveClosures(h);
@@ -8974,7 +8975,7 @@ function renderIvenaMini(hospitals){
       <td>${closures.length||shockFull(h)?[...closures.map(cl=>`🚫 ${esc(cl.fach)} bis ${new Date(cl.until).toLocaleTimeString("de-DE",{hour:"2-digit",minute:"2-digit"})}`),...(shockFull(h)?[`🚫 Schockraum (S+) ${shockBusy(h).length}/${shockCap(h)} belegt – automatisch bis ca. ${new Date(shockFreeAt(h)).toLocaleTimeString("de-DE",{hour:"2-digit",minute:"2-digit"})}`]:[])].join("<br>"):`<span class="muted">keine</span>`}</td></tr>`;
    }).join("")}</tbody>
   </table></div>
- </div>`;
+ </details>`;
 }
 async function vehicleSdsReply(unitId,dburl,sid){
  const local=db.units.find(x=>String(x.id)===String(unitId));
