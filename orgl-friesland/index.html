@@ -106,7 +106,7 @@ const LZ_DAY = [30,30], LZ_NIGHT = [35,70];
 const WARN_LINE_M = 100;     // Freileitung näher als ... m -> Warnung
 const WARN_WIND_M = 300;     // Windenergieanlage näher als ... m -> Warnung
 const PARK_MIN_M2 = 1500;    // Parkplatz ab ... m² als möglicher Bereitstellungsraum
-const CACHE_KEY = "orgl-fri-v1";
+const CACHE_KEY = "orgl-fri-v2";
 const OVERPASS = ["https://overpass-api.de/api/interpreter","https://overpass.kumi.systems/api/interpreter","https://overpass.private.coffee/api/interpreter"];
 const AREA = 'area["boundary"="administrative"]["admin_level"="6"]["name"~"^(Landkreis )?Friesland$"]->.a;';
 const QUERY = `[out:json][timeout:180];
@@ -238,7 +238,7 @@ function process(js){
    if(s>=LZ_DAY[0]&&l>=LZ_DAY[1]){const night=s>=LZ_NIGHT[0]&&l>=LZ_NIGHT[1];
     out.lz.push({id,cat:night?"lzN":"lzD",c,s:Math.round(s),l:Math.round(l),a:Math.round(area),fill:+(area/(s*l)).toFixed(2),g:ring.map(p=>[+p[0].toFixed(6),+p[1].toFixed(6)]),n:nm(t),sport:t.sport||t.leisure||t.landuse,surf:t.surface||"",lit:t.lit||"",acc:t.access||""});}
    continue;}
-  if(cat){let typ=t.amenity||t.emergency||t.aeroway||t.leisure||t.building||"";out.pts.push(Object.assign({id,cat,c,n:nm(t),typ,addr:[t["addr:street"]&&(t["addr:street"]+" "+(t["addr:housenumber"]||"")),t["addr:city"]].filter(Boolean).join(", "),acc:t.access||"",tel:t.phone||t["contact:phone"]||"",ind:t.indoor||"",lvl:t.level||"",op:t.operator||""},extra));}
+  if(cat){let typ=t.amenity||t.emergency||t.aeroway||t.leisure||t.building||"";out.pts.push(Object.assign({id,cat,c,n:nm(t),typ,addr:[t["addr:street"]&&(t["addr:street"]+" "+(t["addr:housenumber"]||"")),t["addr:city"]].filter(Boolean).join(", "),acc:t.access||"",tel:t.phone||t["contact:phone"]||"",ind:t.indoor||"",lvl:t.level||"",op:t.operator||""},extra,ring&&ring.length>=4?{g:(g.rings||[ring]).map(r=>r.map(q=>[+q[0].toFixed(6),+q[1].toFixed(6)]))}:{}));}
  }
  // Gefahrenprüfung je Landeplatz-Kandidat
  for(const z of out.lz){const P=proj(z.c);const zxy=z.g.map(P);let dl=1e9,lv="";
@@ -263,11 +263,15 @@ function render(){
  if(boundaryLayer)map.removeLayer(boundaryLayer);
  if(DATA.bnd.length){boundaryLayer=L.polyline(DATA.bnd,{color:"#ffb300",weight:3,dashArray:"8 6",interactive:false}).addTo(map);if(!render.done){map.fitBounds(boundaryLayer.getBounds(),{padding:[10,10]});render.done=1;}}
  for(const z of DATA.lz){const C=CAT[z.cat];const warn=z.dl<WARN_LINE_M||z.dw<WARN_WIND_M;
-  const poly=L.polygon(z.g,{color:warn?"#ff1744":C.c,weight:warn?4:3,fillColor:C.c,fillOpacity:.45,dashArray:warn?"4 4":null});
+  groups[z.cat].addLayer(L.polygon(z.g,{color:"#fff",weight:10,opacity:.9,fill:false,interactive:false}));
+  const poly=L.polygon(z.g,{color:warn?"#ff1744":C.c,weight:5,opacity:1,fillColor:C.c,fillOpacity:.6,dashArray:warn?"10 6":null});
   poly.on("click",()=>showLZ(z));groups[z.cat].addLayer(poly);
   const m=L.marker(z.c,{icon:L.divIcon({className:"",iconSize:[22,22],iconAnchor:[11,11],html:`<div class="mk" style="width:22px;height:22px;border-radius:4px;background:${C.c};color:#111;${warn?"border-color:#ff1744;":""}">${warn?"!":"L"}</div>`})});
   m.on("click",()=>showLZ(z));groups[z.cat].addLayer(m);}
- for(const p of DATA.pts){const m=L.marker(p.c,{icon:icon(p.cat,p.cat==="aed"?24:30)});m.on("click",()=>showPt(p));groups[p.cat].addLayer(m);}
+ for(const p of DATA.pts){if(p.g&&p.cat!=="aed"){const mp=p.g.map(r=>[r]);const C=CAT[p.cat];
+  groups[p.cat].addLayer(L.polygon(mp,{color:"#fff",weight:9,opacity:.9,fill:false,interactive:false}));
+  groups[p.cat].addLayer(L.polygon(mp,{color:C.c,weight:4,opacity:1,fillColor:C.c,fillOpacity:.5}).on("click",()=>showPt(p)));}
+ const m=L.marker(p.c,{icon:icon(p.cat,p.cat==="aed"?24:30)});m.on("click",()=>showPt(p));groups[p.cat].addLayer(m);}
  for(const ln of DATA.pwr){const hv=parseInt(ln.v)>=60000;groups.pwr.addLayer(L.polyline(ln.g,{color:"#ff1744",weight:hv?3:2,opacity:.85,dashArray:ln.k==="minor_line"?"6 5":null}).bindTooltip(`Freileitung ${ln.v?Math.round(parseInt(ln.v)/1000)+" kV":"(Spannung unbek.)"}`));}
  for(const w of DATA.wka){groups.wka.addLayer(L.marker(w.c,{icon:icon("wka",20)}).on("click",()=>showWKA(w)));}
  renderOwn();updLegendCounts();}
