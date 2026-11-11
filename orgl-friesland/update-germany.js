@@ -1,4 +1,4 @@
-// ORGL-Lagekarte: OSM-Daten für ganz Deutschland, aufgeteilt pro Kreis/kreisfreier Stadt.
+// ORGL-Lagekarte: OSM-Daten für Niedersachsen, aufgeteilt pro Kreis/kreisfreier Stadt.
 // Läuft per GitHub Actions (.github/workflows/orgl-data.yml) in drei Schritten:
 //   node update-germany.js list <out.json>            -> Liste aller Kreise (OSM-Relationen)
 //   node update-germany.js shard <list.json> <i> <n> <outDir>  -> Daten für jeden n-ten Kreis
@@ -67,8 +67,8 @@ out tags;`;
     lvl: e.tags.admin_level,
     iso: e.tags["ISO3166-2"] || "",
   }));
-  // Nur deutsche Kreise (AGS beginnt mit 01..16)
-  k = k.filter((x) => x.lvl === "4" || /^(0[1-9]|1[0-6])/.test(x.ags));
+  // Nur Niedersachsen (amtlicher Gemeindeschlüssel beginnt mit 03)
+  k = k.filter((x) => x.lvl === "6" && x.ags.startsWith("03"));
   // Stadtstaaten nur, wenn es dort keine Kreis-Ebene (admin_level 6) gibt
   const pre = { "DE-HH": "02", "DE-HB": "04", "DE-BE": "11" };
   k = k.filter((x) => x.lvl !== "4" || !k.some((y) => y.lvl === "6" && y.ags.startsWith(pre[x.iso])));
@@ -125,7 +125,7 @@ function index(inDir, dataDir) {
   const k = [...byId.values()].sort((a, b) => (a.ags || "").localeCompare(b.ags || ""));
   fs.writeFileSync(idxFile, JSON.stringify({ t: Date.now(), k }));
   console.log(`Index: ${k.length} Kreise, davon ${neu} in diesem Lauf aktualisiert`);
-  if (k.length < 350) console.log("WARNUNG: weniger als 350 Kreise im Index");
+  if (k.length < 40) console.log("WARNUNG: weniger als 40 Kreise im Index");
 }
 
 const [mode, ...a] = process.argv.slice(2);

@@ -1,4 +1,4 @@
-name: ORGL-Karte Daten Deutschland aktualisieren
+name: ORGL-Karte Daten Niedersachsen aktualisieren
 
 on:
   schedule:
@@ -64,9 +64,9 @@ jobs:
     timeout-minutes: 300
     strategy:
       fail-fast: false
-      max-parallel: 20
+      max-parallel: 12
       matrix:
-        i: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19]
+        i: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -75,7 +75,7 @@ jobs:
       - uses: actions/download-artifact@v4
         with:
           name: kreisliste
-      - run: node orgl-friesland/update-germany.js shard kreisliste.json ${{ matrix.i }} 20 out
+      - run: node orgl-friesland/update-germany.js shard kreisliste.json ${{ matrix.i }} 12 out
       - uses: actions/upload-artifact@v4
         with:
           name: teil-${{ matrix.i }}
@@ -106,5 +106,5 @@ jobs:
           git config user.email "41898283+github-actions[bot]@users.noreply.github.com"
           git add orgl-friesland/data
           if git diff --cached --quiet; then echo "Keine Änderungen"; exit 0; fi
-          git commit -q -m "ORGL-Karte: OSM-Daten Deutschland aktualisiert"
+          git commit -q -m "ORGL-Karte: OSM-Daten Niedersachsen aktualisiert"
           for n in 1 2 3 4 5; do git pull -q --rebase origin main && git push -q && break; sleep 10; done

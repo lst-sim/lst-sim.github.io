@@ -247,7 +247,7 @@ if(typeof module!=="undefined")module.exports={mgrs,utm,mbr,processOSM,qKreis,si
 "use strict";
 if(typeof L==="undefined"){document.getElementById("status").textContent="Kartenbibliothek konnte nicht geladen werden – Internetverbindung prüfen.";throw new Error("no leaflet");}
 /* ================= Karte ================= */
-const map=L.map("map",{zoomControl:true,preferCanvas:true,tap:true}).setView([51.16,10.45],6);
+const map=L.map("map",{zoomControl:true,preferCanvas:true,tap:true}).setView([52.75,9.1],7);
 const base={
  "OSM Standard":L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:19,attribution:"© OpenStreetMap-Mitwirkende"}),
  "Luftbild (Esri)":L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",{maxZoom:19,attribution:"Luftbild © Esri, Maxar, Earthstar Geographics"}),
@@ -474,7 +474,7 @@ function info(){$("mbox").innerHTML=`<h2 style="margin-top:0">Hinweise zur Nutzu
 <p><b>Navigation</b>: Bei jedem Objekt startet „🧭 Apple Karten / Google Maps / Waze“ die Route von deinem aktuellen Standort zum Ziel direkt in der App.</p>
 <p>Markierungen und Zeichnungen werden <b>nur auf diesem Gerät</b> gespeichert und nicht geteilt.</p>
 <p><b>Live-Standort</b> funktioniert nur, wenn die Seite über <b>https</b> geöffnet wird (z. B. GitHub Pages) und der Browser die Standortfreigabe erhält.</p>
-<p><b>Ganz Deutschland</b>: Alle Kreisgrenzen sind immer eingezeichnet (gelb gestrichelt). Die Plätze werden pro Kreis aus fertig ausgewerteten Dateien geladen – für deinen Standort-Kreis, den sichtbaren Bereich ab Kreis-Zoom und den Umkreis der Einsatzstelle. Datenstand: monatlich automatisch aktualisiert. Warnungen zu Leitungen/WEA berücksichtigen nur Objekte im selben Kreis.</p>
+<p><b>Niedersachsen</b>: Alle Kreisgrenzen Niedersachsens sind immer eingezeichnet (gelb gestrichelt). Die Plätze werden pro Kreis aus fertig ausgewerteten Dateien geladen – für deinen Standort-Kreis, den sichtbaren Bereich ab Kreis-Zoom und den Umkreis der Einsatzstelle. Datenstand: monatlich automatisch aktualisiert. Warnungen zu Leitungen/WEA berücksichtigen nur Objekte im selben Kreis.</p>
 <p><b>Offline</b>: Zuletzt genutzte Kreise bleiben im Browser gespeichert, Kartenkacheln nicht. Ohne Netz kann der Kartenhintergrund fehlen.</p>
 <p class="note">Daten: © OpenStreetMap-Mitwirkende (ODbL) · Wind: Open-Meteo · Luftbild: Esri · TopPlus: © BKG</p>
 <div class="row"><button class="pri" onclick="document.getElementById('modal').style.display='none';try{localStorage.setItem('orgl-fri-ok','1')}catch(e){}">Verstanden</button></div>`;$("modal").style.display="flex";}
