@@ -53,11 +53,10 @@ button.pri{background:var(--acc);color:#111;border-color:var(--acc);font-weight:
 .near{display:flex;justify-content:space-between;gap:8px;padding:7px 0;border-bottom:1px solid var(--line);cursor:pointer}
 .near span:last-child{color:var(--mut);white-space:nowrap}
 .mk{display:flex;align-items:center;justify-content:center;border-radius:50%;border:1.5px solid #fff;color:#fff;font:800 9px/1 sans-serif;box-shadow:0 0 0 1px rgba(0,0,0,.6),0 1px 3px rgba(0,0,0,.5)}
-.own{border-radius:8px;border:4px solid #000;color:#000;background:#ffea00;font:900 18px/1 sans-serif;display:flex;align-items:center;justify-content:center;box-shadow:0 0 0 4px #fff,0 0 14px 6px rgba(255,234,0,.85);animation:ownPulse 1.6s ease-in-out infinite}
-@keyframes ownPulse{50%{box-shadow:0 0 0 4px #fff,0 0 22px 12px rgba(255,234,0,.45)}}
+.own{border-radius:8px;border:4px solid #000;color:#000;background:#ffea00;font:900 18px/1 sans-serif;display:flex;align-items:center;justify-content:center;box-shadow:0 0 0 4px #fff,0 0 14px 6px rgba(255,234,0,.85)}
 .leaflet-tooltip.ownLbl{background:#000;color:#ffea00;border:2px solid #ffea00;font:800 15px/1.2 sans-serif;padding:4px 8px;border-radius:6px;box-shadow:0 2px 8px rgba(0,0,0,.6)}
 .leaflet-tooltip.ownLbl:before{display:none}
-#status{cursor:pointer;position:absolute;left:8px;z-index:1000;top:calc(env(safe-area-inset-top) + 62px);background:rgba(27,31,36,.9);border:1px solid var(--line);border-radius:8px;padding:5px 8px;font-size:12px;max-width:calc(100% - 80px)}
+#status{transition:opacity .4s;cursor:pointer;position:absolute;left:8px;z-index:1000;top:calc(env(safe-area-inset-top) + 62px);background:rgba(27,31,36,.9);border:1px solid var(--line);border-radius:8px;padding:5px 8px;font-size:12px;max-width:calc(100% - 80px)}
 #wind{position:absolute;right:10px;z-index:1000;top:calc(env(safe-area-inset-top) + 62px);background:rgba(27,31,36,.9);border:1px solid var(--line);border-radius:8px;padding:5px 8px;font-size:12px;text-align:center;min-width:70px;cursor:pointer}
 #wind .arr{font-size:22px;display:inline-block;line-height:1}
 select,input[type=text]{font:inherit;color:var(--fg);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:8px;width:100%}
@@ -247,7 +246,7 @@ if(typeof module!=="undefined")module.exports={mgrs,utm,mbr,processOSM,qKreis,si
 "use strict";
 if(typeof L==="undefined"){document.getElementById("status").textContent="Kartenbibliothek konnte nicht geladen werden – Internetverbindung prüfen.";throw new Error("no leaflet");}
 /* ================= Karte ================= */
-const map=L.map("map",{zoomControl:true,preferCanvas:true,tap:true}).setView([52.75,9.1],7);
+const map=L.map("map",{zoomControl:true,preferCanvas:true,renderer:L.canvas({padding:0.5,tolerance:10})}).setView([53.4,7.9],9);
 const base={
  "OSM Standard":L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:19,attribution:"© OpenStreetMap-Mitwirkende"}),
  "Luftbild (Esri)":L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",{maxZoom:19,attribution:"Luftbild © Esri, Maxar, Earthstar Geographics"}),
@@ -260,7 +259,7 @@ L.control.scale({imperial:false}).addTo(map);
 const groups={};for(const k in CAT){groups[k]=L.layerGroup();if(CAT[k].on)groups[k].addTo(map);}
 let DATA=null,boundaryLayer=null,me=null,meMk=null,meAcc=null,follow=false,watchId=null,estMk=null,est=null,crossMode=null;
 const $=id=>document.getElementById(id);
-const status=t=>{$("status").textContent=t;};
+let stT=null;const status=(t,keep)=>{const e=$("status");e.textContent=t;e.style.opacity=1;e.style.display="block";clearTimeout(stT);if(!keep)stT=setTimeout(()=>{e.style.opacity=0;setTimeout(()=>{e.style.display="none";},400);},4000);};
 
 /* ================= Daten laden (ganz Deutschland, pro Kreis) ================= */
 const LOG=[];let KREISE=[],IDX_T=0,kreisLayer=null;const KD=new Map();const MAX_LOADED=6,MIN_ZOOM=9;
@@ -291,17 +290,10 @@ function summary(){const c=map.getCenter(),k=kreisAt([c.lat,c.lng]);
  status(`${k?k.n+" · ":""}${DATA?DATA.lz.length:0} LP-Kandidaten · ${DATA?DATA.pts.length:0} Objekte${map.getZoom()<MIN_ZOOM?" · zum Nachladen reinzoomen":""}`);}
 let busy=false,again=false;
 async function ensureKreise(list){let ch=false;for(const k of list){if(!KD.has(k.id)){status(`Lade ${k.n} …`);if(await loadKreis(k))ch=true;}else KD.get(k.id)._last=Date.now();}return ch;}
-async function refreshView(){if(!KREISE.length)return;if(busy){again=true;return;}busy=true;
- try{const need=new Map();
-  if(map.getZoom()>=MIN_ZOOM){const b=map.getBounds(),c=[map.getCenter().lat,map.getCenter().lng];
-   KREISE.filter(k=>k.bb[0]<=b.getNorth()&&k.bb[2]>=b.getSouth()&&k.bb[1]<=b.getEast()&&k.bb[3]>=b.getWest()).sort((x,y)=>dist(c,bbC(x))-dist(c,bbC(y))).slice(0,4).forEach(k=>need.set(k.id,k));}
-  if(me){const k=kreisAt(me);if(k)need.set(k.id,k);}
-  if(est)kreiseNear(est,20000).forEach(k=>need.set(k.id,k));
-  let ch=await ensureKreise([...need.values()]);
-  if(KD.size>MAX_LOADED){[...KD.entries()].filter(([id])=>!need.has(id)).sort((x,y)=>x[1]._last-y[1]._last).slice(0,KD.size-MAX_LOADED).forEach(([id])=>KD.delete(id));ch=true;}
-  if(ch)rebuild();summary();
- }finally{busy=false;if(again){again=false;refreshView();}}}
-map.on("moveend",()=>refreshView());
+async function refreshView(){if(!KREISE.length||busy||KD.size>=KREISE.length)return;busy=true;
+ try{status("Lade Daten …",true);const res=await Promise.all(KREISE.map(k=>loadKreis(k)));rebuild();
+  const ok=res.filter(Boolean).length;status(`Bereit · ${ok} Kreise · ${DATA.lz.length} Landeplätze · ${DATA.pts.length} Objekte`);
+ }finally{busy=false;}}
 $("status").onclick=()=>{const ks=[...KD.values()].map(d=>d.kreis?d.kreis.n:"?").sort().join(", ");
  sheetOpen(`<h2>Datenstatus</h2><div class="kv"><b>Kreise gesamt</b><span>${KREISE.length}</span><b>Datenstand</b><span>${IDX_T?new Date(IDX_T).toLocaleDateString("de-DE"):"–"} (monatlich automatisch)</span><b>Geladen</b><span>${ks||"–"}</span><b>Landeplätze</b><span>${DATA?DATA.lz.length:0}</span><b>Objekte</b><span>${DATA?DATA.pts.length:0}</span></div><h3>Protokoll</h3><div style="font-size:12px;white-space:pre-wrap">${LOG.slice(-20).join("\n")||"–"}</div><div class="row"><button class="pri" id="rl">⟳ Neu laden</button></div><div class="note">Geladen werden die Kreise im sichtbaren Bereich (ab Zoomstufe ${MIN_ZOOM}), dein Standort-Kreis und die Kreise um die Einsatzstelle. Zuletzt genutzte Kreise bleiben offline gespeichert.</div>`);
  $("rl").onclick=()=>{sheetClose();KD.clear();DATA=null;for(const k in groups)if(k!=="own")groups[k].clearLayers();if(kreisLayer)map.removeLayer(kreisLayer);KREISE=[];loadIndex();};};
