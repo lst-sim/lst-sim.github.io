@@ -97,6 +97,7 @@ select,input[type=text],input[type=password]{font:inherit;color:var(--ink);backg
 #drawBar{position:absolute;left:10px;right:10px;z-index:1050;bottom:calc(env(safe-area-inset-bottom) + 12px);background:var(--paper);border-radius:20px;padding:10px;display:none;flex-wrap:wrap;gap:6px;align-items:center;box-shadow:var(--shadow);max-width:520px;margin:0 auto}
 #drawBar .c{width:36px;height:36px;min-height:36px;border-radius:50%;padding:0;border:3px solid var(--paper);box-shadow:0 0 0 1px var(--line)}
 #drawBar .c.sel{box-shadow:0 0 0 3px var(--ink)}
+#drawBar .c.tag{width:auto;min-width:44px;border-radius:18px;padding:0 9px;color:#fff;font-weight:700;font-size:13px}
 #drawBar button:not(.c){min-height:40px;padding:6px 11px;font-size:14px;background:var(--wash);border:0}
 #drawBar button.on{background:var(--ink);color:var(--paper)}
 #drawBar #dDone{background:var(--sig);color:var(--sig-ink);font-weight:700;margin-left:auto}
@@ -118,8 +119,9 @@ select,input[type=text],input[type=password]{font:inherit;color:var(--ink);backg
 <div id="cross"></div>
 <div id="drawLayer"></div>
 <div id="drawBar">
-  <button class="c sel" data-c="#ff6d00" style="background:#ff6d00" aria-label="Orange"></button>
-  <button class="c" data-c="#2979ff" style="background:#2979ff" aria-label="Blau"></button>
+  <button class="c sel tag" data-c="#ff7a00" style="background:#ff7a00" aria-label="Landeplatz">LP</button>
+  <button class="c tag" data-c="#1e88e5" style="background:#1e88e5" aria-label="Behandlungsplatz">BHP</button>
+  <button class="c tag" data-c="#6d4c41" style="background:#6d4c41" aria-label="Bereitstellungsraum">BR</button>
   <button class="c" data-c="#ffd600" style="background:#ffd600" aria-label="Gelb"></button>
   <button class="c" data-c="#00c853" style="background:#00c853" aria-label="Grün"></button>
   <button class="c" data-c="#111111" style="background:#111" aria-label="Schwarz"></button>
@@ -477,13 +479,15 @@ $("bLayers").onclick=()=>{sheetOpen(`<h2>Ebenen</h2><div class="lgrid">${Object.
 /* ================= Malen (lokal gespeichert) ================= */
 const DRAW_KEY="orgl-fri-draw";let DRAW=[];try{DRAW=JSON.parse(localStorage.getItem(DRAW_KEY)||"[]");}catch(e){}
 const drawGroup=L.layerGroup().addTo(map);
-let dColor="#ff6d00",dArea=false,dErase=false,dPan=false,cur=null,curPts=null;
+let dColor="#ff7a00",dArea=false,dErase=false,dPan=false,cur=null,curPts=null;
 const saveDraw=()=>{try{localStorage.setItem(DRAW_KEY,JSON.stringify(DRAW));}catch(e){status("Zeichnung konnte im Browser nicht gespeichert werden.");}};
 /* Messen: Fläche, Umfang, Länge, Abmessung */
 const fmtA=a=>a>=10000?`${(a/10000).toFixed(2).replace(".",",")} ha`:`${Math.round(a).toLocaleString("de-DE")} m²`;
 function measure(pts,area){const P=proj(pts[0]);const xy=pts.map(P);let len=0;for(let i=1;i<xy.length;i++)len+=Math.hypot(xy[i][0]-xy[i-1][0],xy[i][1]-xy[i-1][1]);
  if(!area)return{len};const close=Math.hypot(xy[0][0]-xy[xy.length-1][0],xy[0][1]-xy[xy.length-1][1]);const [s,l]=mbr(xy);return{a:polyArea(xy),u:len+close,s,l};}
-function measShort(d){const m=measure(d.p,d.a);return d.a?fmtA(m.a):fmtD(m.len);}
+// Malfarben mit Bedeutung (gleiche Farben wie die Kartenebenen)
+const COL_TYPE={"#ff7a00":"LP","#1e88e5":"BHP","#6d4c41":"BR"};const TYPE_COL={LP:"#ff7a00",BHP:"#1e88e5",BR:"#6d4c41"};
+function measShort(d){const m=measure(d.p,d.a);const t=COL_TYPE[d.c];return (t?t+" ":"")+(d.a?fmtA(m.a):fmtD(m.len));}
 function fitTxt(s,l){return s>=LZ_NIGHT[0]&&l>=LZ_NIGHT[1]?"groß genug für Landung bei Tag und Nacht (≥35 × 70 m)":s>=LZ_DAY[0]&&l>=LZ_DAY[1]?"groß genug für Landung nur bei Tag (≥30 × 30 m)":"zu klein für eine RTH-Landung (Tag mind. 30 × 30 m)";}
 function measBlock(pts,area){const m=measure(pts,area);
  return area?`<div class="kv"><b>Fläche</b><span>${fmtA(m.a)}${m.a>=10000?` (${Math.round(m.a).toLocaleString("de-DE")} m²)`:""}</span><b>Umfang</b><span>${fmtD(m.u)}</span><b>Abmessung</b><span>ca. ${Math.round(m.s)} × ${Math.round(m.l)} m</span><b>Landeplatz</b><span>${fitTxt(m.s,m.l)}</span></div><div class="note">Abmessung = umschließendes Rechteck. Hindernisse sind nicht geprüft.</div>`
@@ -491,7 +495,7 @@ function measBlock(pts,area){const m=measure(pts,area);
 function showShape(d){const c=d.a?centroid(d.p):d.p[Math.floor(d.p.length/2)];
  sheetOpen(`<h2>${d.a?"Gezeichnete Fläche":"Gezeichnete Linie"}</h2>${measBlock(d.p,d.a)}${posBlock(c)}<div class="row">${isAdmin()&&d.a?'<button class="pri" id="sFix">Als festen Bereich für alle speichern</button>':""}<button id="sDel">Zeichnung löschen</button></div>`);
  $("sDel").onclick=()=>{DRAW=DRAW.filter(x=>x!==d);saveDraw();renderDraw();sheetClose();};
- if($("sFix"))$("sFix").onclick=()=>fixForm(null,c,"BR","",d.p);}
+ if($("sFix"))$("sFix").onclick=()=>fixForm(null,c,COL_TYPE[d.c]||"BR","",d.p);}
 function drawShape(d){const opt={color:d.c,weight:8,opacity:1,lineCap:"round",lineJoin:"round"};
  const l=d.a?L.polygon(d.p,Object.assign(opt,{fillColor:d.c,fillOpacity:.35})):L.polyline(d.p,opt);
  l.on("click",ev=>{L.DomEvent.stop(ev);if(dErase){DRAW=DRAW.filter(x=>x!==d);saveDraw();renderDraw();}else showShape(d);});
@@ -551,7 +555,7 @@ function initFix(){renderFix();try{const es=new EventSource(FIX_URL+".json");
  es.addEventListener("patch",e=>{const m=JSON.parse(e.data);setPath(m.path,m.data,true);fixFromMirror();});
  es.onerror=()=>LOG.push("Feste Punkte: Verbindung unterbrochen, versuche erneut …");}catch(e){LOG.push("Feste Punkte: "+e.message);}}
 function renderFix(){groups.fix.clearLayers();for(const p of FIX){if(!p.c)continue;const T=OWN_TYPES.find(x=>x[0]===p.t)||["?","Punkt"];
- if(p.g)groups.fix.addLayer(L.polygon(p.g,{color:"#15243a",weight:3,dashArray:"8 5",fillColor:"#15243a",fillOpacity:.12}).on("click",()=>showFix(p)));
+ if(p.g)groups.fix.addLayer(L.polygon(p.g,{color:TYPE_COL[p.t]||"#15243a",weight:3,dashArray:"8 5",fillColor:TYPE_COL[p.t]||"#15243a",fillOpacity:.12}).on("click",()=>showFix(p)));
  const m=L.marker(p.c,{zIndexOffset:700,icon:L.divIcon({className:"",iconSize:[44,30],iconAnchor:[22,15],html:`<div class="fix" style="width:44px;height:30px">${esc(p.t)}</div>`})});
  m.bindTooltip(esc(p.n||T[1]),{permanent:true,direction:"right",offset:[24,0],className:"fixLbl"});m.on("click",()=>showFix(p));groups.fix.addLayer(m);}updLegendCounts();}
 function fbErr(e){status("Nicht gespeichert: "+e.message+". Internet prüfen.");}
