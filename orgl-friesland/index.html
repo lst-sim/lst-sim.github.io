@@ -14,62 +14,95 @@
 <title>ORGL-Lagekarte</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet">
 <style>
-:root{--bg:#1b1f24;--panel:#242a31;--line:#3a424c;--fg:#eef1f4;--mut:#9aa5b1;--acc:#ffb300;
---heli:#e53935;--lzN:#ff7a00;--lzD:#f2c200;--pat:#1e88e5;--br:#8e44ad;--kh:#2e7d32;--fw:#b71c1c;--rw:#ffffff;--pol:#0d47a1;--wr:#00acc1;--aed:#43a047;--haz:#111;}
-*{box-sizing:border-box}
-html,body{margin:0;height:100%;background:var(--bg);color:var(--fg);font:15px/1.35 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif}
-#map{position:absolute;inset:0}
-.bar{position:absolute;left:0;right:0;top:0;z-index:1000;display:flex;gap:6px;align-items:center;padding:calc(env(safe-area-inset-top) + 6px) 8px 6px;background:rgba(27,31,36,.92);border-bottom:1px solid var(--line)}
-.bar h1{font-size:15px;margin:0 auto 0 4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.bar small{display:block;color:var(--mut);font-weight:400;font-size:11px}
-button{font:inherit;color:var(--fg);background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:8px 10px;min-height:40px;cursor:pointer}
-button.on{background:var(--acc);color:#111;border-color:var(--acc)}
-button.pri{background:var(--acc);color:#111;border-color:var(--acc);font-weight:600}
-.fab{position:absolute;right:10px;z-index:1000;display:flex;flex-direction:column;gap:8px;bottom:calc(env(safe-area-inset-bottom) + 24px)}
-.fab button{width:62px;height:56px;border-radius:14px;font-size:20px;padding:2px 0 0;box-shadow:0 2px 8px rgba(0,0,0,.4);display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1.1}
-.fab button small{font-size:10px;font-weight:600;margin-top:2px}
-#cross{position:absolute;left:50%;top:50%;width:36px;height:36px;margin:-18px 0 0 -18px;z-index:900;pointer-events:none;display:none}
-#cross:before,#cross:after{content:"";position:absolute;background:var(--acc)}
-#cross:before{left:17px;top:0;width:2px;height:36px}#cross:after{top:17px;left:0;height:2px;width:36px}
-.sheet{position:absolute;left:0;right:0;bottom:0;z-index:1100;background:var(--panel);border-top:1px solid var(--line);border-radius:14px 14px 0 0;max-height:62%;overflow:auto;padding:12px 14px calc(env(safe-area-inset-bottom) + 14px);display:none;box-shadow:0 -4px 16px rgba(0,0,0,.4)}
+/* Hell für Tageslicht; dunkel automatisch, wenn das Handy im Dunkelmodus ist */
+:root{--paper:#ffffff;--wash:#eef2f6;--ink:#15243a;--mut:#5b6b7f;--line:#d5dce5;--sig:#ff5f00;--sig-ink:#15243a;--warnbg:#fff1e0;--warnln:#f0a04b;--okbg:#e9f6ec;--okln:#7cc28e;--shadow:0 6px 24px rgba(21,36,58,.18);--acc:#ff5f00}
+@media (prefers-color-scheme:dark){:root{--paper:#18212c;--wash:#101820;--ink:#eaf0f6;--mut:#9aa8b8;--line:#2c3a4a;--warnbg:#3a2510;--warnln:#a8661f;--okbg:#14301d;--okln:#2e7d47;--shadow:0 6px 24px rgba(0,0,0,.5)}}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;height:100%;background:var(--wash);color:var(--ink);font:16px/1.4 "Atkinson Hyperlegible",system-ui,-apple-system,sans-serif}
+#map{position:absolute;inset:0;background:var(--wash)}
+svg.i{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex:none}
+button{font:inherit;color:var(--ink);background:var(--paper);border:1px solid var(--line);border-radius:12px;padding:9px 12px;min-height:44px;cursor:pointer}
+button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid var(--sig);outline-offset:2px}
+button.on{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+button.pri{background:var(--sig);color:var(--sig-ink);border-color:var(--sig);font-weight:700}
+
+/* Kopf: schmaler Titel links, runde Knöpfe rechts – schwebt über der Karte */
+.bar{position:absolute;left:10px;right:10px;top:calc(env(safe-area-inset-top) + 10px);z-index:1000;display:flex;align-items:center;gap:8px;pointer-events:none}
+.bar>*{pointer-events:auto}
+.bar h1{margin:0 auto 0 0;background:var(--paper);border-radius:22px;padding:10px 16px;font-size:17px;font-weight:700;box-shadow:var(--shadow);white-space:nowrap}
+.bar h1 small{display:none}
+.round{width:46px;height:46px;min-height:46px;padding:0;border-radius:50%;border:0;box-shadow:var(--shadow);display:flex;align-items:center;justify-content:center}
+
+/* Daumenleiste unten */
+#dock{position:absolute;left:10px;right:10px;bottom:calc(env(safe-area-inset-bottom) + 12px);z-index:1000;display:grid;grid-template-columns:1.35fr 1fr 1fr 1fr;gap:6px;background:var(--paper);border-radius:20px;padding:6px;box-shadow:var(--shadow);max-width:520px;margin:0 auto}
+#dock button{border:0;background:transparent;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;min-height:58px;border-radius:15px;font-size:13px;padding:6px 2px}
+#dock button.on{background:var(--ink);color:var(--paper)}
+#dock #bEst{background:var(--sig);color:var(--sig-ink);font-weight:700}
+#dock #bEst.on{outline:3px solid var(--ink);outline-offset:-3px}
+
+/* Status als kurze Meldung über der Leiste */
+#status{position:absolute;left:50%;transform:translateX(-50%);bottom:calc(env(safe-area-inset-bottom) + 96px);z-index:1000;background:var(--ink);color:var(--paper);border-radius:14px;padding:8px 14px;font-size:14px;max-width:calc(100% - 40px);text-align:center;box-shadow:var(--shadow);transition:opacity .4s;cursor:pointer}
+#wind{position:absolute;right:10px;top:calc(env(safe-area-inset-top) + 66px);z-index:1000;background:var(--paper);border-radius:16px;padding:6px 10px;font-size:13px;text-align:center;min-width:64px;box-shadow:var(--shadow);cursor:pointer;line-height:1.2}
+#wind .arr{font-size:20px;display:inline-block;line-height:1;font-weight:700}
+
+#cross{position:absolute;left:50%;top:50%;width:40px;height:40px;margin:-20px 0 0 -20px;z-index:900;pointer-events:none;display:none}
+#cross:before,#cross:after{content:"";position:absolute;background:var(--sig)}
+#cross:before{left:19px;top:0;width:3px;height:40px}#cross:after{top:19px;left:0;height:3px;width:40px}
+
+/* Blatt von unten */
+.sheet{position:absolute;left:0;right:0;bottom:0;z-index:1100;background:var(--paper);border-radius:22px 22px 0 0;max-height:66%;overflow:auto;padding:22px 18px calc(env(safe-area-inset-bottom) + 18px);display:none;box-shadow:0 -8px 30px rgba(21,36,58,.22);max-width:640px;margin:0 auto}
+.sheet:before{content:"";position:absolute;top:8px;left:50%;width:40px;height:5px;margin-left:-20px;border-radius:3px;background:var(--line)}
 .sheet.open{display:block}
-.sheet h2{font-size:17px;margin:0 30px 4px 0}
-.sheet h3{font-size:13px;color:var(--mut);margin:12px 0 4px;text-transform:uppercase;letter-spacing:.04em}
-.x{position:absolute;right:8px;top:8px;min-height:32px;padding:4px 10px}
-.row{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
-.kv{display:grid;grid-template-columns:auto 1fr;gap:3px 10px;font-size:14px}
-.kv b{color:var(--mut);font-weight:500}
-.warn{background:#4a2a00;border:1px solid #a86500;border-radius:8px;padding:6px 8px;margin:6px 0;font-size:14px}
-.ok{background:#173a1d;border:1px solid #2e7d32;border-radius:8px;padding:6px 8px;margin:6px 0;font-size:14px}
-.note{color:var(--mut);font-size:12px;margin-top:10px}
-.lgrid{display:grid;grid-template-columns:1fr 1fr;gap:6px}
-.lg{display:flex;align-items:center;gap:6px;padding:6px 7px;border:1px solid var(--line);border-radius:8px;font-size:12.5px;line-height:1.15;background:var(--bg)}
-.bases{display:flex;gap:6px;margin:4px 0 10px}.bases button{flex:1;min-height:34px;padding:4px;font-size:13px}
-.lg input{width:16px;height:16px;margin:0;flex:none}
-.lg .cnt{margin-left:auto;color:var(--mut);font-size:11px}
-.sw{width:13px;height:13px;border-radius:50%;border:1.5px solid #fff;flex:none}
+.sheet h2{font-size:20px;margin:0 44px 6px 0;line-height:1.2}
+.sheet h3{font-size:15px;color:var(--mut);margin:16px 0 4px;font-weight:700}
+.x{position:absolute;right:12px;top:12px;width:36px;height:36px;min-height:36px;padding:0;border-radius:50%;border:0;background:var(--wash)}
+.row{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+.row.nav{flex-wrap:nowrap}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:4px 12px;font-size:15px}
+.kv b{color:var(--mut);font-weight:400}
+.warn{background:var(--warnbg);border-left:4px solid var(--warnln);border-radius:8px;padding:8px 10px;margin:8px 0;font-size:15px}
+.ok{background:var(--okbg);border-left:4px solid var(--okln);border-radius:8px;padding:8px 10px;margin:8px 0;font-size:15px}
+.note{color:var(--mut);font-size:13px;margin-top:12px}
+.lgrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}
+.lg>span:not(.cnt):not(.sw){min-width:0;hyphens:manual}
+.lg{display:flex;align-items:center;gap:7px;padding:8px 9px;border-radius:10px;font-size:13.5px;line-height:1.15;background:var(--wash);cursor:pointer}
+.lg input{width:17px;height:17px;margin:0;flex:none;accent-color:var(--ink)}
+.lg .cnt{margin-left:auto;color:var(--mut);font-size:12px}
+.sw{width:13px;height:13px;border-radius:50%;border:1.5px solid #fff;box-shadow:0 0 0 1px rgba(0,0,0,.25);flex:none}
 .sq{border-radius:3px}
-.near{display:flex;justify-content:space-between;gap:8px;padding:7px 0;border-bottom:1px solid var(--line);cursor:pointer}
+.bases{display:flex;gap:4px;margin:4px 0 12px;background:var(--wash);padding:4px;border-radius:12px}
+.bases button{flex:1;min-height:38px;padding:4px;font-size:14px;border:0;background:transparent}
+.bases button.on{background:var(--paper);color:var(--ink);box-shadow:0 1px 4px rgba(21,36,58,.15);font-weight:700}
+.near{display:flex;justify-content:space-between;gap:10px;padding:10px 0;border-bottom:1px solid var(--line);cursor:pointer}
 .near span:last-child{color:var(--mut);white-space:nowrap}
-.mk{display:flex;align-items:center;justify-content:center;border-radius:50%;border:1.5px solid #fff;color:#fff;font:800 9px/1 sans-serif;box-shadow:0 0 0 1px rgba(0,0,0,.6),0 1px 3px rgba(0,0,0,.5)}
-.own{border-radius:8px;border:4px solid #000;color:#000;background:#ffea00;font:900 18px/1 sans-serif;display:flex;align-items:center;justify-content:center;box-shadow:0 0 0 4px #fff,0 0 14px 6px rgba(255,234,0,.85)}
-.leaflet-tooltip.ownLbl{background:#000;color:#ffea00;border:2px solid #ffea00;font:800 15px/1.2 sans-serif;padding:4px 8px;border-radius:6px;box-shadow:0 2px 8px rgba(0,0,0,.6)}
+.navb{flex:1 1 30%;text-align:center;text-decoration:none;color:var(--paper);background:var(--ink);border-radius:12px;padding:12px 4px;font-weight:700;min-height:46px;font-size:14px;white-space:nowrap}
+select,input[type=text]{font:inherit;color:var(--ink);background:var(--wash);border:1px solid var(--line);border-radius:10px;padding:10px;width:100%}
+
+/* Kartensymbole */
+.mk{display:flex;align-items:center;justify-content:center;border-radius:50%;border:1.5px solid #fff;color:#fff;font:700 9px/1 "Atkinson Hyperlegible",sans-serif;box-shadow:0 0 0 1px rgba(0,0,0,.5),0 1px 3px rgba(0,0,0,.4)}
+.own{border-radius:8px;border:3px solid #15243a;color:#15243a;background:#ffe600;font:700 16px/1 "Atkinson Hyperlegible",sans-serif;display:flex;align-items:center;justify-content:center;box-shadow:0 0 0 3px #fff,0 3px 10px rgba(0,0,0,.4)}
+.leaflet-tooltip.ownLbl{background:#15243a;color:#fff;border:0;font:700 14px/1.2 "Atkinson Hyperlegible",sans-serif;padding:5px 9px;border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,.4)}
 .leaflet-tooltip.ownLbl:before{display:none}
-#status{transition:opacity .4s;cursor:pointer;position:absolute;left:8px;z-index:1000;top:calc(env(safe-area-inset-top) + 62px);background:rgba(27,31,36,.9);border:1px solid var(--line);border-radius:8px;padding:5px 8px;font-size:12px;max-width:calc(100% - 80px)}
-#wind{position:absolute;right:10px;z-index:1000;top:calc(env(safe-area-inset-top) + 62px);background:rgba(27,31,36,.9);border:1px solid var(--line);border-radius:8px;padding:5px 8px;font-size:12px;text-align:center;min-width:70px;cursor:pointer}
-#wind .arr{font-size:22px;display:inline-block;line-height:1}
-select,input[type=text]{font:inherit;color:var(--fg);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:8px;width:100%}
-.navb{flex:1 1 30%;text-align:center;text-decoration:none;color:#111;background:var(--acc);border-radius:10px;padding:11px 6px;font-weight:700;min-height:44px}
+
+/* Malen */
 #drawLayer{position:absolute;inset:0;z-index:950;display:none;touch-action:none;cursor:crosshair}
-#drawBar{position:absolute;left:8px;right:72px;z-index:1050;bottom:calc(env(safe-area-inset-bottom) + 24px);background:rgba(36,42,49,.96);border:1px solid var(--line);border-radius:12px;padding:8px;display:none;flex-wrap:wrap;gap:6px;align-items:center}
-#drawBar .c{width:34px;height:34px;min-height:34px;border-radius:50%;padding:0;border:3px solid transparent}
-#drawBar .c.sel{border-color:#fff}
-#drawBar button{min-height:36px;padding:6px 9px}
+#drawBar{position:absolute;left:10px;right:10px;z-index:1050;bottom:calc(env(safe-area-inset-bottom) + 12px);background:var(--paper);border-radius:20px;padding:10px;display:none;flex-wrap:wrap;gap:6px;align-items:center;box-shadow:var(--shadow);max-width:520px;margin:0 auto}
+#drawBar .c{width:36px;height:36px;min-height:36px;border-radius:50%;padding:0;border:3px solid var(--paper);box-shadow:0 0 0 1px var(--line)}
+#drawBar .c.sel{box-shadow:0 0 0 3px var(--ink)}
+#drawBar button:not(.c){min-height:40px;padding:6px 11px;font-size:14px;background:var(--wash);border:0}
+#drawBar button.on{background:var(--ink);color:var(--paper)}
+#drawBar #dDone{background:var(--sig);color:var(--sig-ink);font-weight:700;margin-left:auto}
+
 .leaflet-control-attribution{font-size:10px}
-.leaflet-top{top:calc(env(safe-area-inset-top) + 100px)}
-#modal{position:absolute;inset:0;z-index:2000;background:rgba(0,0,0,.6);display:none;align-items:center;justify-content:center;padding:16px}
-#modal .box{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px;max-width:520px;max-height:85%;overflow:auto}
+.leaflet-top{top:calc(env(safe-area-inset-top) + 62px)}
+.leaflet-control-scale{margin-left:12px!important}
+#modal{position:absolute;inset:0;z-index:2000;background:rgba(21,36,58,.45);display:none;align-items:center;justify-content:center;padding:16px}
+#modal .box{background:var(--paper);border-radius:20px;padding:20px;max-width:520px;max-height:85%;overflow:auto;box-shadow:var(--shadow)}
+#modal p{max-width:65ch}
+@media (prefers-reduced-motion:reduce){#status{transition:none}}
 </style>
 </head>
 <body>
@@ -77,33 +110,33 @@ select,input[type=text]{font:inherit;color:var(--fg);background:var(--bg);border
 <div id="cross"></div>
 <div id="drawLayer"></div>
 <div id="drawBar">
-  <button class="c sel" data-c="#ff1744" style="background:#ff1744"></button>
-  <button class="c" data-c="#2979ff" style="background:#2979ff"></button>
-  <button class="c" data-c="#ffd600" style="background:#ffd600"></button>
-  <button class="c" data-c="#00c853" style="background:#00c853"></button>
-  <button class="c" data-c="#111111" style="background:#111"></button>
-  <button id="dMode">〰 Linie</button>
-  <button id="dPan">✋ Karte bewegen</button>
-  <button id="dUndo">↶</button>
-  <button id="dErase">🧽 Löschen</button>
-  <button id="dClear">🗑 Alles</button>
-  <button id="dDone" class="pri">✓ Fertig</button>
+  <button class="c sel" data-c="#ff1744" style="background:#ff1744" aria-label="Rot"></button>
+  <button class="c" data-c="#2979ff" style="background:#2979ff" aria-label="Blau"></button>
+  <button class="c" data-c="#ffd600" style="background:#ffd600" aria-label="Gelb"></button>
+  <button class="c" data-c="#00c853" style="background:#00c853" aria-label="Grün"></button>
+  <button class="c" data-c="#111111" style="background:#111" aria-label="Schwarz"></button>
+  <button id="dMode">Linie</button>
+  <button id="dPan">Karte bewegen</button>
+  <button id="dUndo">Rückgängig</button>
+  <button id="dErase">Radieren</button>
+  <button id="dClear">Alles löschen</button>
+  <button id="dDone">Fertig</button>
 </div>
 <div class="bar">
-  <h1>ORGL-Lagekarte<small id="sub">OSM-Daten · Planungshilfe</small></h1>
-  <button id="bRefresh" title="Aktualisieren">⟳</button>
-  <button id="bLayers" title="Ebenen">☰ Ebenen</button>
-  <button id="bInfo" title="Hinweise">ⓘ</button>
+  <h1>ORGL-Karte<small id="sub"></small></h1>
+  <button id="bRefresh" class="round" title="Aktualisieren" aria-label="Aktualisieren"><svg class="i" viewBox="0 0 24 24"><path d="M20 11a8 8 0 1 0-2.3 5.7"/><path d="M20 4v7h-7"/></svg></button>
+  <button id="bLayers" class="round" title="Ebenen" aria-label="Ebenen"><svg class="i" viewBox="0 0 24 24"><path d="M12 3l9 5-9 5-9-5 9-5z"/><path d="M3 13l9 5 9-5"/></svg></button>
+  <button id="bInfo" class="round" title="Hinweise" aria-label="Hinweise"><svg class="i" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7.5v.5"/></svg></button>
 </div>
 <div id="status">Lade …</div>
-<div id="wind" title="Wind (Open-Meteo)"><span class="arr" id="wArr">·</span><div id="wTxt">Wind</div></div>
-<div class="fab">
-  <button id="bEst" title="Einsatzstelle setzen"><span>✚</span><small>Einsatz</small></button>
-  <button id="bDraw" title="Auf der Karte malen"><span>🖌</span><small>Malen</small></button>
-  <button id="bMark" title="Eigene Markierung setzen"><span>📍</span><small>Markieren</small></button>
-  <button id="bLoc" title="Live-Standort"><span>◎</span><small>Standort</small></button>
-</div>
-<div class="sheet" id="sheet"><button class="x" id="sx">✕</button><div id="sc"></div></div>
+<div id="wind" title="Wind"><span class="arr" id="wArr">·</span><div id="wTxt">Wind</div></div>
+<nav id="dock">
+  <button id="bEst" title="Einsatzstelle setzen"><svg class="i" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/></svg><span>Einsatz</span></button>
+  <button id="bMark" title="Eigene Markierung setzen"><svg class="i" viewBox="0 0 24 24"><path d="M12 21s-7-6.2-7-11.5a7 7 0 0 1 14 0C19 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/></svg><span>Markieren</span></button>
+  <button id="bDraw" title="Auf der Karte malen"><svg class="i" viewBox="0 0 24 24"><path d="M4 20l4.5-1 10-10a2.1 2.1 0 0 0-3-3l-10 10L4 20z"/><path d="M14 7l3 3"/></svg><span>Malen</span></button>
+  <button id="bLoc" title="Live-Standort"><svg class="i" viewBox="0 0 24 24"><circle cx="12" cy="12" r="7"/><circle cx="12" cy="12" r="2.5"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg><span>Standort</span></button>
+</nav>
+<div class="sheet" id="sheet"><button class="x" id="sx" aria-label="Schließen"><svg class="i" viewBox="0 0 24 24" style="width:18px;height:18px"><path d="M6 6l12 12M18 6L6 18"/></svg></button><div id="sc"></div></div>
 <div id="modal"><div class="box" id="mbox"></div></div>
 
 <script id="core">
@@ -143,11 +176,11 @@ const r5=p=>[+p[0].toFixed(5),+p[1].toFixed(5)];
 
 /* Kategorien: key -> {name, color, letter, shape, on} */
 const CAT = {
- heli:{n:"Hubschrauberlandeplatz",c:"#e53935",l:"H",on:true},
+ heli:{n:"H-Landeplatz",c:"#e53935",l:"H",on:true},
  lzN:{n:"Landeplatz Tag + Nacht",c:"#ff7a00",l:"",sq:true,on:true},
  lzD:{n:"Landeplatz nur Tag",c:"#f2c200",l:"",sq:true,on:true},
  pat:{n:"Sammelstelle / BHP",c:"#1e88e5",l:"P",on:true},
- br:{n:"Bereitstellungsraum",c:"#8e44ad",l:"B",sq:true,on:false},
+ br:{n:"Bereit\u00ADstellungs\u00ADraum",c:"#8e44ad",l:"B",sq:true,on:false},
  kh:{n:"Krankenhaus",c:"#2e7d32",l:"K",on:true},
  wka:{n:"Windrad",c:"#222",l:"✳",on:true},
  pwr:{n:"Freileitung",c:"#ff1744",l:"",line:true,on:true},
@@ -246,7 +279,7 @@ if(typeof module!=="undefined")module.exports={mgrs,utm,mbr,processOSM,qKreis,si
 "use strict";
 if(typeof L==="undefined"){document.getElementById("status").textContent="Kartenbibliothek konnte nicht geladen werden – Internetverbindung prüfen.";throw new Error("no leaflet");}
 /* ================= Karte ================= */
-const map=L.map("map",{zoomControl:true,preferCanvas:true,renderer:L.canvas({padding:0.5,tolerance:10})}).setView([53.4,7.9],9);
+const map=L.map("map",{zoomControl:false,preferCanvas:true,renderer:L.canvas({padding:0.5,tolerance:10})}).setView([53.4,7.9],9);
 const base={
  "OSM Standard":L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:19,attribution:"© OpenStreetMap-Mitwirkende"}),
  "Luftbild (Esri)":L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",{maxZoom:19,attribution:"Luftbild © Esri, Maxar, Earthstar Geographics"}),
@@ -255,7 +288,7 @@ const base={
 base["OSM Standard"].addTo(map);
 let curBase="OSM Standard";
 function setBase(n){map.removeLayer(base[curBase]);curBase=n;base[n].addTo(map);document.querySelectorAll("[data-base]").forEach(b=>b.classList.toggle("on",b.dataset.base===n));}
-L.control.scale({imperial:false}).addTo(map);
+L.control.scale({imperial:false,position:"topleft"}).addTo(map);
 const groups={};for(const k in CAT){groups[k]=L.layerGroup();if(CAT[k].on)groups[k].addTo(map);}
 let DATA=null,boundaryLayer=null,me=null,meMk=null,meAcc=null,follow=false,watchId=null,estMk=null,est=null,crossMode=null;
 const $=id=>document.getElementById(id);
@@ -292,7 +325,7 @@ let busy=false,again=false;
 async function ensureKreise(list){let ch=false;for(const k of list){if(!KD.has(k.id)){status(`Lade ${k.n} …`);if(await loadKreis(k))ch=true;}else KD.get(k.id)._last=Date.now();}return ch;}
 async function refreshView(){if(!KREISE.length||busy||KD.size>=KREISE.length)return;busy=true;
  try{status("Lade Daten …",true);const res=await Promise.all(KREISE.map(k=>loadKreis(k)));rebuild();
-  const ok=res.filter(Boolean).length;status(`Bereit · ${ok} Kreise · ${DATA.lz.length} Landeplätze · ${DATA.pts.length} Objekte`);
+  const ok=res.filter(Boolean).length;status(`${ok} Kreise geladen: ${DATA.lz.length} Landeplätze, ${DATA.pts.length} Objekte`);
  }finally{busy=false;}}
 $("status").onclick=()=>{const ks=[...KD.values()].map(d=>d.kreis?d.kreis.n:"?").sort().join(", ");
  sheetOpen(`<h2>Datenstatus</h2><div class="kv"><b>Kreise gesamt</b><span>${KREISE.length}</span><b>Datenstand</b><span>${IDX_T?new Date(IDX_T).toLocaleDateString("de-DE"):"–"} (monatlich automatisch)</span><b>Geladen</b><span>${ks||"–"}</span><b>Landeplätze</b><span>${DATA?DATA.lz.length:0}</span><b>Objekte</b><span>${DATA?DATA.pts.length:0}</span></div><h3>Protokoll</h3><div style="font-size:12px;white-space:pre-wrap">${LOG.slice(-20).join("\n")||"–"}</div><div class="row"><button class="pri" id="rl">⟳ Neu laden</button></div><div class="note">Geladen werden die Kreise im sichtbaren Bereich (ab Zoomstufe ${MIN_ZOOM}), dein Standort-Kreis und die Kreise um die Einsatzstelle. Zuletzt genutzte Kreise bleiben offline gespeichert.</div>`);
@@ -327,9 +360,9 @@ function posBlock(c){const ref=me||est;let s=`<h3>Lage</h3><div class="kv"><b>UT
  if(est){s+=`<b>Von E-Stelle</b><span>${fmtD(dist(est,c))} Richtung ${dirTxt(bearing(est,c))}</span>`;}
  s+=`</div><div class="row"><button onclick="copyTxt('${mgrs(c[0],c[1])}')">UTMREF kopieren</button><button onclick="copyTxt('${c[0].toFixed(6)}, ${c[1].toFixed(6)}')">Koordinaten kopieren</button></div>
  <h3>Hinfahren (Route ab deinem Standort)</h3>${navBtns(c)}
- <div class="row"><button onclick="markHere(${c[0]},${c[1]})">📍 Als eigene Markierung</button></div>`;return s;}
+ <div class="row"><button onclick="markHere(${c[0]},${c[1]})">Hier markieren</button></div>`;return s;}
 function navBtns(c){const ll=c[0].toFixed(6)+","+c[1].toFixed(6);
- return `<div class="row nav"><a class="navb" href="https://maps.apple.com/?daddr=${ll}&dirflg=d" target="_blank" rel="noopener">🧭 Apple Karten</a><a class="navb" href="https://www.google.com/maps/dir/?api=1&destination=${ll}&travelmode=driving&dir_action=navigate" target="_blank" rel="noopener">🧭 Google Maps</a><a class="navb" href="https://waze.com/ul?ll=${ll}&navigate=yes" target="_blank" rel="noopener">🧭 Waze</a></div>`;}
+ return `<div class="row nav"><a class="navb" href="https://maps.apple.com/?daddr=${ll}&dirflg=d" target="_blank" rel="noopener">Apple Karten</a><a class="navb" href="https://www.google.com/maps/dir/?api=1&destination=${ll}&travelmode=driving&dir_action=navigate" target="_blank" rel="noopener">Google Maps</a><a class="navb" href="https://waze.com/ul?ll=${ll}&navigate=yes" target="_blank" rel="noopener">Waze</a></div>`;}
 function showLZ(z){
  let w="";
  if(z.dl===0)w+=`<div class="warn">⚠ Freileitung kreuzt die Fläche${z.lv?" ("+Math.round(parseInt(z.lv)/1000)+" kV)":""} – ungeeignet ohne Prüfung!</div>`;
@@ -338,7 +371,7 @@ function showLZ(z){
  if(z.fill<0.75)w+=`<div class="warn">Unregelmäßige Form (Füllgrad ${Math.round(z.fill*100)} %) – nutzbare Fläche kann kleiner sein als das Rechteck.</div>`;
  if(!w)w=`<div class="ok">Keine Freileitung im Umkreis ${WARN_LINE_M} m und keine WEA im Umkreis ${WARN_WIND_M} m in den OSM-Daten.</div>`;
  const sp={soccer:"Fußball",multi:"Mehrzweck",tennis:"Tennis",athletics:"Leichtathletik",equestrian:"Reitplatz",baseball:"Baseball",stadium:"Stadion",recreation_ground:"Freizeitgelände",pitch:"Sportfläche"};
- sheetOpen(`<h2>${z.cat==="lzN"?"🟧 Landeplatz-Kandidat Tag + Nacht":"🟨 Landeplatz-Kandidat (nur Tag)"}</h2>
+ sheetOpen(`<h2>${z.cat==="lzN"?"Landeplatz Tag + Nacht":"Landeplatz nur Tag"}</h2>
  <div>${z.n||"Sportfläche ohne Namen"}</div>${w}
  <div class="kv"><b>Abmessung</b><span>ca. ${z.s} × ${z.l} m (umschließendes Rechteck)</span><b>Fläche</b><span>ca. ${z.a.toLocaleString("de-DE")} m²</span><b>Art</b><span>${(z.sport||"").split(";").map(s=>sp[s]||s).join(", ")}</span>${z.surf?`<b>Belag</b><span>${z.surf}</span>`:""}<b>Flutlicht</b><span>${z.lit==="yes"?"ja (laut OSM)":z.lit==="no"?"nein (laut OSM)":"unbekannt"}</span>${z.acc?`<b>Zugang</b><span>${z.acc}</span>`:""}</div>
  ${posBlock(z.c)}
@@ -349,7 +382,7 @@ function showPt(p){const C=CAT[p.cat];
  sheetOpen(`<h2>${C.n.split(" (")[0]}</h2><div><b>${p.n||"(ohne Namen)"}</b> · ${typ}</div>
  <div class="kv" style="margin-top:6px">${p.addr?`<b>Adresse</b><span>${p.addr}</span>`:""}${p.op?`<b>Betreiber</b><span>${p.op}</span>`:""}${p.tel?`<b>Telefon</b><span>${p.tel}</span>`:""}${p.acc?`<b>Zugang</b><span>${p.acc}</span>`:""}${p.ind?`<b>Innen</b><span>${p.ind}</span>`:""}</div>
  ${hint?`<div class="note" style="color:var(--fg)">${hint}</div>`:""}${posBlock(p.c)}<div class="note">Quelle: OpenStreetMap – nicht amtlich, kann veraltet oder unvollständig sein.</div>`);}
-function showWKA(w){sheetOpen(`<h2>✳ Windenergieanlage</h2>${w.h?`<div>Höhe laut OSM: ${w.h} m</div>`:""}<div class="note">Luftfahrthindernis. Bei Anflug und Landeplatzwahl berücksichtigen.</div>${posBlock(w.c)}`);}
+function showWKA(w){sheetOpen(`<h2>Windenergieanlage</h2>${w.h?`<div>Höhe laut OSM: ${w.h} m</div>`:""}<div class="note">Luftfahrthindernis. Bei Anflug und Landeplatzwahl berücksichtigen.</div>${posBlock(w.c)}`);}
 window.copyTxt=async t=>{try{await navigator.clipboard.writeText(t);status("Kopiert: "+t);}catch(e){status(t);}};
 
 /* ================= Live-Standort ================= */
@@ -372,7 +405,7 @@ function startCross(mode){crossMode=mode;$("cross").style.display="block";sheetC
  $("cOk").onclick=()=>{const c=map.getCenter();finishCross([c.lat,c.lng]);};$("cNo").onclick=()=>{crossMode=null;$("cross").style.display="none";sheetClose();};
  if($("cMe"))$("cMe").onclick=()=>finishCross(me.slice());}
 function finishCross(c){const m=crossMode;crossMode=null;$("cross").style.display="none";if(m==="est")setEst(c);else markHere(c[0],c[1]);}
-map.on("contextmenu",e=>{const c=[e.latlng.lat,e.latlng.lng];if(crossMode)finishCross(c);else{sheetOpen(`<h2>Punkt auf der Karte</h2><div class="row"><button class="pri" id="pE">Als Einsatzstelle</button><button id="pM">✎ Eigene Markierung</button></div>${posBlock(c)}`);$("pE").onclick=()=>setEst(c);$("pM").onclick=()=>markHere(c[0],c[1]);}});
+map.on("contextmenu",e=>{const c=[e.latlng.lat,e.latlng.lng];if(crossMode)finishCross(c);else{sheetOpen(`<h2>Punkt auf der Karte</h2><div class="row"><button class="pri" id="pE">Als Einsatzstelle</button><button id="pM">Hier markieren</button></div>${posBlock(c)}`);$("pE").onclick=()=>setEst(c);$("pM").onclick=()=>markHere(c[0],c[1]);}});
 $("bEst").onclick=()=>{if(est)showNear();else startCross("est");};
 $("bMark").onclick=()=>startCross("own");
 function setEst(c){est=c;if(estMk)map.removeLayer(estMk);
@@ -386,7 +419,7 @@ function showNear(){if(!DATA){sheetOpen("<h2>Einsatzstelle</h2><div>Daten noch n
  const lzN=nearest(DATA.lz.filter(z=>z.cat==="lzN"),4),lzD=nearest(DATA.lz,4),heli=nearest(DATA.pts.filter(p=>p.cat==="heli"),2);
  const pat=nearest(DATA.pts.filter(p=>p.cat==="pat"),4),kh=nearest(DATA.pts.filter(p=>p.cat==="kh"),3);
  window._near={};let i=0;const reg=(arr,f)=>arr.map(([x,d])=>{const k="n"+(i++);window._near[k]=()=>{map.setView(x.c,17);f(x);};return row(x,d,`_near.${k}()`);}).join("");
- sheetOpen(`<h2>🔴 Einsatzstelle</h2><div class="kv"><b>UTMREF</b><span>${mgrs(est[0],est[1])}</span>${me?`<b>Von mir</b><span>${fmtD(dist(me,est))} ${dirTxt(bearing(me,est))}</span>`:""}</div>
+ sheetOpen(`<h2>Einsatzstelle</h2><div class="kv"><b>UTMREF</b><span>${mgrs(est[0],est[1])}</span>${me?`<b>Von mir</b><span>${fmtD(dist(me,est))} ${dirTxt(bearing(me,est))}</span>`:""}</div>
  <div class="row"><button onclick="copyTxt('${mgrs(est[0],est[1])}')">UTMREF kopieren</button><button id="eMove">Neu setzen</button><button id="eDel">Entfernen</button></div>
  <h3>Zur Einsatzstelle fahren</h3>${navBtns(est)}
  <h3>Landeplatz Tag + Nacht (≥35×70 m)</h3>${reg(lzN,showLZ)||"<div class='note'>keine</div>"}
@@ -403,10 +436,10 @@ const saveOwn=()=>{try{localStorage.setItem(OWN_KEY,JSON.stringify(OWN));}catch(
 function renderOwn(){groups.own.clearLayers();for(const o of OWN){const m=L.marker(o.c,{draggable:true,zIndexOffset:800,icon:L.divIcon({className:"",iconSize:[56,40],iconAnchor:[28,20],html:`<div class="own" style="width:56px;height:40px">${o.t}</div>`})});
  m.bindTooltip(o.txt||OWN_TYPES.find(x=>x[0]===o.t)[1],{permanent:true,direction:"right",offset:[32,0],className:"ownLbl"});
  m.on("dragend",()=>{const l=m.getLatLng();o.c=[l.lat,l.lng];saveOwn();});m.on("click",()=>showOwn(o));groups.own.addLayer(m);}updLegendCounts();}
-window.markHere=(lat,lon)=>{sheetOpen(`<h2>✎ Eigene Markierung</h2><select id="oT">${OWN_TYPES.map(t=>`<option value="${t[0]}">${t[0]} – ${t[1]}</option>`).join("")}</select><div style="height:8px"></div><input type="text" id="oX" placeholder="Bezeichnung / Notiz (optional)"><div class="row"><button class="pri" id="oS">Speichern</button><button onclick="sheetClose()">Abbrechen</button></div><div class="note">${mgrs(lat,lon)} · Wird nur auf diesem Gerät gespeichert.</div>`);
+window.markHere=(lat,lon)=>{sheetOpen(`<h2>Markierung setzen</h2><select id="oT">${OWN_TYPES.map(t=>`<option value="${t[0]}">${t[0]} – ${t[1]}</option>`).join("")}</select><div style="height:8px"></div><input type="text" id="oX" placeholder="Bezeichnung / Notiz (optional)"><div class="row"><button class="pri" id="oS">Speichern</button><button onclick="sheetClose()">Abbrechen</button></div><div class="note">${mgrs(lat,lon)} · Wird nur auf diesem Gerät gespeichert.</div>`);
  $("oS").onclick=()=>{OWN.push({id:Date.now(),c:[lat,lon],t:$("oT").value,txt:$("oX").value.trim()});saveOwn();renderOwn();if(!map.hasLayer(groups.own))groups.own.addTo(map);sheetClose();};};
 window.sheetClose=sheetClose;
-function showOwn(o){const T=OWN_TYPES.find(x=>x[0]===o.t);sheetOpen(`<h2>✎ ${T[1]}</h2>${o.txt?`<div>${o.txt.replace(/</g,"&lt;")}</div>`:""}${posBlock(o.c)}<div class="row"><button id="oD">Markierung löschen</button></div><div class="note">Zum Verschieben Marker gedrückt halten und ziehen.</div>`);
+function showOwn(o){const T=OWN_TYPES.find(x=>x[0]===o.t);sheetOpen(`<h2>${T[1]}</h2>${o.txt?`<div>${o.txt.replace(/</g,"&lt;")}</div>`:""}${posBlock(o.c)}<div class="row"><button id="oD">Markierung löschen</button></div><div class="note">Zum Verschieben Marker gedrückt halten und ziehen.</div>`);
  $("oD").onclick=()=>{OWN=OWN.filter(x=>x!==o);saveOwn();renderOwn();sheetClose();};}
 
 /* ================= Wind (Open-Meteo) ================= */
@@ -443,15 +476,15 @@ function drawShape(d){const opt={color:d.c,weight:8,opacity:1,lineCap:"round",li
 function renderDraw(){drawGroup.clearLayers();for(const d of DRAW)drawGroup.addLayer(drawShape(d));}
 renderDraw();
 const dl=$("drawLayer");
-function setDrawUI(){dl.style.display=(!dErase&&!dPan)?"block":"none";$("dErase").classList.toggle("on",dErase);$("dPan").classList.toggle("on",dPan);$("dMode").textContent=dArea?"⬠ Fläche":"〰 Linie";}
-$("bDraw").onclick=()=>{sheetClose();dErase=false;dPan=false;$("drawBar").style.display="flex";$("bDraw").classList.add("on");if(follow){follow=false;$("bLoc").classList.remove("on");}setDrawUI();status("Malmodus: mit dem Finger zeichnen. ✋ zum Verschieben der Karte.");};
-$("dDone").onclick=()=>{$("drawBar").style.display="none";dl.style.display="none";dErase=false;$("bDraw").classList.remove("on");status("Malmodus beendet.");};
+function setDrawUI(){dl.style.display=(!dErase&&!dPan)?"block":"none";$("dErase").classList.toggle("on",dErase);$("dPan").classList.toggle("on",dPan);$("dMode").textContent=dArea?"Fläche":"Linie";}
+$("bDraw").onclick=()=>{sheetClose();dErase=false;dPan=false;$("drawBar").style.display="flex";$("dock").style.display="none";$("bDraw").classList.add("on");if(follow){follow=false;$("bLoc").classList.remove("on");}setDrawUI();status("Malmodus: mit dem Finger zeichnen. ✋ zum Verschieben der Karte.");};
+$("dDone").onclick=()=>{$("drawBar").style.display="none";$("dock").style.display="";dl.style.display="none";dErase=false;$("bDraw").classList.remove("on");status("Malmodus beendet.");};
 document.querySelectorAll("#drawBar .c").forEach(b=>b.onclick=()=>{document.querySelectorAll("#drawBar .c").forEach(x=>x.classList.remove("sel"));b.classList.add("sel");dColor=b.dataset.c;dErase=false;dPan=false;setDrawUI();});
 $("dMode").onclick=()=>{dArea=!dArea;dErase=false;dPan=false;setDrawUI();};
 $("dPan").onclick=()=>{dPan=!dPan;dErase=false;setDrawUI();};
 $("dErase").onclick=()=>{dErase=!dErase;dPan=false;setDrawUI();if(dErase)status("Löschen: gezeichnete Linie/Fläche antippen.");};
 $("dUndo").onclick=()=>{DRAW.pop();saveDraw();renderDraw();};
-$("dClear").onclick=()=>{const b=$("dClear");if(b.dataset.sure){DRAW=[];saveDraw();renderDraw();delete b.dataset.sure;b.textContent="🗑 Alles";}else{b.dataset.sure=1;b.textContent="Wirklich?";setTimeout(()=>{delete b.dataset.sure;b.textContent="🗑 Alles";},3000);}};
+$("dClear").onclick=()=>{const b=$("dClear");if(b.dataset.sure){DRAW=[];saveDraw();renderDraw();delete b.dataset.sure;b.textContent="Alles löschen";}else{b.dataset.sure=1;b.textContent="Wirklich?";setTimeout(()=>{delete b.dataset.sure;b.textContent="Alles löschen";},3000);}};
 let lastPx=null;
 dl.addEventListener("pointerdown",e=>{if(!e.isPrimary)return;e.preventDefault();dl.setPointerCapture(e.pointerId);const ll=map.mouseEventToLatLng(e);curPts=[[ll.lat,ll.lng]];lastPx=[e.clientX,e.clientY];
  cur=L.polyline(curPts,{color:dColor,weight:8,opacity:1,lineCap:"round",lineJoin:"round",interactive:false}).addTo(map);});
@@ -465,7 +498,7 @@ function info(){$("mbox").innerHTML=`<h2 style="margin-top:0">Hinweise zur Nutzu
 <p><b>Landeplatz-Kandidaten</b> sind Sportplätze, Stadien und Freizeitflächen, deren umschließendes Rechteck die Mindestmaße erreicht: <b>Tag ≥ 30 × 30 m</b>, <b>Nacht ≥ 35 × 70 m</b> (DRF Luftrettung, Checklisten für Feuerwehren). Geprüft werden nur Freileitungen (Warnung &lt; ${WARN_LINE_M} m) und Windenergieanlagen (&lt; ${WARN_WIND_M} m), soweit in OSM erfasst. <b>Nicht geprüft</b>: Bäume, Masten, Flutlicht, Zäune, Gebäude, Neigung, Untergrund, Tiere in der Nähe. <b>Den Landeplatz bestimmt immer der Pilot.</b></p>
 <p><b>Patientensammelstellen / BHP</b>: Sporthallen, Schulen, Dorfgemeinschaftshäuser. <b>Bereitstellungsräume</b>: Parkplätze ab ${PARK_MIN_M2.toLocaleString("de-DE")} m² (Ebene standardmäßig aus).</p>
 <p><b>Bedienung</b>: ◎ Live-Standort (nochmal tippen = Mitführen an/aus) · ✚ Einsatzstelle setzen → nächstgelegene Landeplätze, Sammelstellen, Kliniken · 📍 eigene Markierungen (PA, BHP, BR, LP …) · 🖌 Malen: Linien oder Flächen in 5 Farben, ✋ zum Verschieben der Karte, 🧽 zum Löschen einzelner Striche · Lange auf die Karte tippen = Punktmenü · Windanzeige antippen für Details.</p>
-<p><b>Navigation</b>: Bei jedem Objekt startet „🧭 Apple Karten / Google Maps / Waze“ die Route von deinem aktuellen Standort zum Ziel direkt in der App.</p>
+<p><b>Navigation</b>: Bei jedem Objekt startet „Apple Karten / Google Maps / Waze“ die Route von deinem aktuellen Standort zum Ziel direkt in der App.</p>
 <p>Markierungen und Zeichnungen werden <b>nur auf diesem Gerät</b> gespeichert und nicht geteilt.</p>
 <p><b>Live-Standort</b> funktioniert nur, wenn die Seite über <b>https</b> geöffnet wird (z. B. GitHub Pages) und der Browser die Standortfreigabe erhält.</p>
 <p><b>Niedersachsen</b>: Alle Kreisgrenzen Niedersachsens sind immer eingezeichnet (gelb gestrichelt). Die Plätze werden pro Kreis aus fertig ausgewerteten Dateien geladen – für deinen Standort-Kreis, den sichtbaren Bereich ab Kreis-Zoom und den Umkreis der Einsatzstelle. Datenstand: monatlich automatisch aktualisiert. Warnungen zu Leitungen/WEA berücksichtigen nur Objekte im selben Kreis.</p>
