@@ -1607,6 +1607,13 @@ Version 5.05:
   („a, b“ = a ODER b). Mit „🚑 NA-Indikation“ markierte Knöpfe ziehen weiterhin einen Notarzt.
 - Nur „Unauffällig“ (ohne weitere Befunde) zählt weiter als unauffälliges E (R0 möglich).
 
+Version 5.91:
+- Giftnotruf-Fenster: neuer Knopf „🗣️ GIZ fragen“. Der simulierte Giftnotruf fragt fehlende Angaben nach (Was, Alter/Gewicht, Menge, Zeitpunkt) und gibt dann eine Auskunft.
+- Paracetamol und Ibuprofen: Dosis wird in mg/kg berechnet (Grenzen ca. 150 mg/kg bzw. 100/400 mg/kg). Bei Kindern von 1–10 Jahren ohne Gewicht wird das Gewicht geschätzt: (Alter + 4) × 2.
+- Weitere Gruppen: Laugen/Säuren, Spülmaschinen- und Waschmittel, Tenside, Lampenöl/Benzin, Knopfbatterie, Magnete, Pilze, CO, Reizgase, Nikotin, Alkohol, Rattengift, Frostschutz/Methanol, Pflanzenschutz, Giftpflanzen, Herz-/Zucker-/Psychopharmaka, Opioide, Drogen, Ungiftiges. Zusätzlich Hinweise bei Augen- und Hautkontakt sowie bei schweren Symptomen.
+- Die Auskunft wird als Empfehlung übernommen und landet beim Auflegen im Einsatz.
+- Hinweis: Die Auskünfte sind vereinfacht und allgemein gehalten, nur für die Übung – keine echte Giftberatung.
+
 Version 5.90:
 - Neuer Knopf „☠️ Giftnotruf“ im Notruf: öffnet ein verschiebbares Notizfenster (GIZ-Nord, 0551 19240) mit Gesprächsdauer.
 - Felder für die W-Fragen (Wer, Was, Wie viel, Wann, Wie, Symptome, Bisher unternommen), Empfehlung des GIZ und freie Notizen.

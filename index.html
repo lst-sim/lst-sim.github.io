@@ -231,7 +231,7 @@ html[data-device="handy"] .fach-grid{grid-template-columns:1fr}
 <header id="topbar">
  <div class="tb-left">
   <span class="tb-brand">🚑 Leitstelle<span>.sim</span></span>
-  <span id="versionTag" class="tb-ver">v5.90</span>
+  <span id="versionTag" class="tb-ver">v5.91</span>
   <span id="syncState"></span>
   <a id="deskTag" href="#" onclick="renameDesk();return false" title="Name dieses Platzes (für „offen an …“) – antippen zum Ändern"></a>
  </div>
@@ -11823,6 +11823,8 @@ function gizRender(id){
   <div id="gizBody" style="padding:8px 10px">
    <div class="muted" style="font-size:12px">Einsatz ${esc(c.id)} · ${esc(c.keyword||c.location||"")} · Tel. 0551 19240</div>
    <div style="display:grid;grid-template-columns:1fr 1fr;gap:0 8px">${GIZ_FIELDS.map(f=>inp(...f)).join("")}</div>
+   <div style="margin:8px 0 2px;display:flex;gap:6px;align-items:center"><button onclick="gizAsk()" style="padding:5px 10px;background:#7c3aed;color:#fff;border-color:#7c3aed">🗣️ GIZ fragen</button><span class="muted" style="font-size:11px">Simulierte, vereinfachte Auskunft für die Übung</span></div>
+   <div id="gizLog" style="font-size:13px;max-height:170px;overflow:auto">${gizLogHTML(g)}</div>
    <label style="${ls}">Empfehlung GIZ</label><textarea data-k="rec" rows="2" oninput="gizSet(this)" placeholder="Was rät der Giftnotruf?" style="${fs}">${esc(g.rec||"")}</textarea>
    <label style="${ls}">📝 Notizen</label><textarea data-k="notes" rows="3" oninput="gizSet(this)" placeholder="Freie Notizen während des Telefonats" style="${fs}">${esc(g.notes||"")}</textarea>
    <div class="row" style="margin-top:8px;gap:6px;flex-wrap:wrap"><button class="primary" style="padding:6px 10px" onclick="gizHangUp()">📵 Auflegen & in Einsatz übernehmen</button><button style="padding:6px 10px" onclick="gizHangUp(true)" title="Fenster schließen, nichts übernehmen">Verwerfen</button></div>
@@ -11835,6 +11837,88 @@ function gizRender(id){
    const up=()=>{removeEventListener("pointermove",mv);removeEventListener("pointerup",up)};addEventListener("pointermove",mv);addEventListener("pointerup",up)};
  clearInterval(gizTimer); const tick=()=>{const t=document.getElementById("gizTime");if(!t){clearInterval(gizTimer);return}const s=Math.max(0,Math.round((Date.now()-new Date(g.start))/1000));t.textContent=Math.floor(s/60)+":"+String(s%60).padStart(2,"0")};tick();gizTimer=setInterval(tick,1000);
  el.querySelector("input")?.focus();
+}
+// v5.91: Simulierte Auskunft des Giftnotrufs. Bewusst vereinfacht und allgemein gehalten –
+// nur gängige, gut belegte Grundregeln. Keine echte Giftberatung.
+function gizNum(x){return parseFloat(String(x).replace(",","."))}
+function gizCtx(g){
+ const who=String(g.who||"").toLowerCase(), am=String(g.amount||"").toLowerCase(), su=String(g.subst||"").toLowerCase();
+ let age=null,kg=null,kgEst=false,mg=null,mgNote="";
+ const mA=who.match(/(\d+[.,]?\d*)\s*(j\b|jahr|jähr|j\.)/), mM=who.match(/(\d+)\s*mon/);
+ if(mA)age=gizNum(mA[1]); else if(mM)age=gizNum(mM[1])/12; else{const n=who.match(/^\s*(\d{1,2})\s*$/);if(n)age=gizNum(n[1])}
+ const mK=who.match(/(\d+[.,]?\d*)\s*kg/); if(mK)kg=gizNum(mK[1]);
+ else if(age!=null&&age>=1&&age<=10){kg=Math.round((age+4)*2);kgEst=true}
+ const cnt=am.match(/(\d+[.,]?\d*)\s*(tabl|tbl|tab|stück|stk|kaps|zäpf|supp)/), str=(su.match(/(\d+[.,]?\d*)\s*mg/)||am.match(/(?:à|a|je|zu)\s*(\d+[.,]?\d*)\s*mg/)||[])[1];
+ if(cnt&&str){mg=gizNum(cnt[1])*gizNum(str);mgNote=`${cnt[1]} × ${str} mg`}
+ else{const g1=am.match(/(\d+[.,]?\d*)\s*g\b/),m1=am.match(/(\d+[.,]?\d*)\s*mg/);if(g1)mg=gizNum(g1[1])*1000;else if(m1&&!cnt)mg=gizNum(m1[1])}
+ return {age,kg,kgEst,mg,mgNote,cnt:!!cnt,str:!!str,child:age!=null&&age<14};
+}
+const GIZ_SEVERE=/bewusstlos|nicht ansprechbar|krampf|atemnot|atmet (kaum|schlecht|nicht)|blau|zyan|reanim|kollabiert|somnolent/;
+const GIZ_KB=[
+ {k:"Paracetamol",re:/paracetamol|ben-u-ron|benuron|\bpcm\b/,dose:true,fn:(c,g)=>{
+   const d=c.mg/c.kg;
+   return d>=150?`Das sind etwa ${Math.round(d)} mg/kg – das liegt im lebertoxischen Bereich (ab ca. 150 mg/kg). Bitte Transport in die Klinik. Dort Paracetamol-Spiegel frühestens 4 Stunden nach Einnahme und Gabe von Acetylcystein als Antidot. Erste Symptome können anfangs fehlen – das ist kein Entwarnungszeichen.`
+     :`Das sind etwa ${Math.round(d)} mg/kg. Unterhalb von ca. 150 mg/kg ist keine schwere Vergiftung zu erwarten. Beobachten; bei Übelkeit, Erbrechen oder Bauchschmerzen bitte erneut melden bzw. ärztlich abklären.`}},
+ {k:"Ibuprofen",re:/ibuprofen|nurofen|dolormin|ibu\b/,dose:true,fn:(c,g)=>{
+   const d=c.mg/c.kg;
+   return d>400?`Das sind etwa ${Math.round(d)} mg/kg – über 400 mg/kg sind schwere Verläufe möglich (Bewusstseinsstörung, Krampfanfälle, Azidose, Nierenversagen). Bitte Transport in die Klinik mit Monitoring.`
+     :d>=100?`Das sind etwa ${Math.round(d)} mg/kg. Zwischen 100 und 400 mg/kg sind Magen-Darm-Beschwerden möglich. Bitte ärztlich abklären lassen, Beobachtung für einige Stunden.`
+     :`Das sind etwa ${Math.round(d)} mg/kg. Unter 100 mg/kg sind in der Regel keine Symptome zu erwarten. Etwas trinken, beobachten.`}},
+ {k:"Rohrreiniger / Lauge / Säure",re:/rohrrein|rohrfrei|abflussrein|backofenrein|grillrein|natronlauge|lauge|säure|salzsäure|schwefelsäure|entkalker|wc-rein|kloreiniger|ätz/,fn:()=>`Das ist ätzend. Kein Erbrechen auslösen, nicht neutralisieren. Mund ausspülen und ein paar Schlucke Wasser trinken lassen – nicht viel. Bei Rohrreiniger, Schmerzen, Speichelfluss, Schluckbeschwerden oder Erbrechen bitte Transport in die Klinik (ggf. Spiegelung der Speiseröhre). Verpackung mitnehmen.`},
+ {k:"Spülmaschinentab",re:/spülmaschinen|geschirrspül|klarspül/,fn:()=>`Spülmaschinenmittel sind reizend bis ätzend. Mund ausspülen, ein paar Schlucke Wasser trinken lassen, kein Erbrechen auslösen. Bei Schmerzen, Speichelfluss, Schluckbeschwerden oder Atemproblemen bitte in die Klinik.`},
+ {k:"Waschmittelkapsel",re:/waschmittelkaps|pods|caps|liquid.?caps/,fn:()=>`Flüssigwaschmittel-Kapseln sind konzentrierter als normales Spülmittel. Mund ausspülen, etwas trinken, kein Erbrechen auslösen. Bei Erbrechen, Husten, Atemproblemen, Benommenheit oder Kontakt mit den Augen bitte ärztlich abklären lassen.`},
+ {k:"Spülmittel / Seife (Tenside)",re:/spülmittel|shampoo|duschgel|seife|waschmittel|weichspül|schaumbad|handseife/,fn:()=>`Das sind schaumbildende Tenside, meist wenig giftig. Kein Erbrechen auslösen – Gefahr, dass Schaum in die Lunge kommt. Mund ausspülen, etwas trinken. Ein Entschäumer (z. B. Simeticon) kann helfen. Zu Hause beobachten; bei Husten oder Atemproblemen bitte in die Klinik.`},
+ {k:"Lampenöl / Petroleum / Benzin",re:/lampenöl|petroleum|paraffin|benzin|diesel|grillanzünder|anzündflüssig|terpentin|verdünnung|feuerzeugbenzin|lösungsmittel|nitro/,fn:()=>`Hier ist die Gefahr das Einatmen in die Lunge (chemische Lungenentzündung). Auf keinen Fall Erbrechen auslösen, nichts zu essen und nur wenig zu trinken geben. Bei Husten, Würgen, Atemnot oder Benommenheit bitte Transport in die Klinik – auch wenn der Husten wieder nachlässt, da sich die Lunge verzögert verschlechtern kann.`},
+ {k:"Knopfbatterie",re:/knopfzell|knopfbatter|batterie|akku/,fn:()=>`Bitte sofort in die Klinik zum Röntgen. Steckt eine Knopfbatterie in der Speiseröhre, kann sie innerhalb weniger Stunden schwere Verätzungen machen und muss notfallmäßig entfernt werden. Nichts essen lassen, Verpackung bzw. Gerät mitnehmen.`},
+ {k:"Magnete",re:/magnet/,fn:()=>`Wurden mehrere Magnete (oder Magnet und Metall) verschluckt, können sie sich durch die Darmwand anziehen. Bitte in die Klinik zum Röntgen.`},
+ {k:"Pilze",re:/pilz/,fn:(c,g)=>{const late=/[6-9]\s*(std|h)|1\d\s*(std|h)|(?:nach|seit).*(stunden|std)/.test(String(g.when||"")+" "+String(g.sympt||""));
+   return `Bitte Pilzreste, Putzreste und ggf. Erbrochenes mitnehmen – ein Pilzsachverständiger kann bestimmen. ${late?"Treten die Beschwerden erst 6 Stunden oder später nach der Mahlzeit auf, besteht Verdacht auf eine Knollenblätterpilz-Vergiftung: sofort in die Klinik, auch wenn es zwischendurch besser wird.":"Bei Übelkeit, Erbrechen oder Durchfall bitte ärztlich abklären; alle Mitesser ebenfalls."}`}},
+ {k:"Kohlenmonoxid",re:/kohlenmonox|\bco\b|gastherme|abgas|holzkohle|shisha|rauchgas/,fn:()=>`Eigenschutz! Raum verlassen, Frischluft, Feuerwehr zur Messung. Hochdosiert Sauerstoff. Bei Bewusstseinsstörung, neurologischen Ausfällen, Herzbeteiligung oder Schwangerschaft: Druckkammer (HBO) prüfen.`},
+ {k:"Reizgas (Chlorgas usw.)",re:/chlor|reiniger gemischt|gemischt|reizgas|ammoniak|pfefferspray/,fn:()=>`Frischluft, Raum lüften, Eigenschutz. Bei Husten, Atemnot oder Brennen in der Brust bitte in die Klinik – ein Lungenödem kann sich auch verzögert über Stunden entwickeln.`},
+ {k:"Nikotin",re:/zigarett|kippe|tabak|nikotin|liquid|e-zig|snus|vape/,fn:(c,g)=>/liquid|e-zig|vape/.test(String(g.subst).toLowerCase())?`Nikotin-Liquid ist deutlich gefährlicher als Tabak. Bitte in die Klinik, auch ohne Symptome; Fläschchen mitnehmen.`:`Bei kleinen Mengen Tabak meist nur Übelkeit und Erbrechen. Mund ausspülen, einige Stunden beobachten. Bei Blässe, wiederholtem Erbrechen, Unruhe, Herzrasen oder Benommenheit bitte ärztlich abklären.`},
+ {k:"Alkohol bei Kindern",re:/alkohol|wodka|schnaps|bier|wein|likör|sekt/,fn:c=>c.child?`Bei Kindern kann schon wenig Alkohol eine gefährliche Unterzuckerung machen. Bitte in die Klinik mit Blutzuckerkontrolle, warm halten.`:`Überwachen (Bewusstsein, Atmung, Unterkühlung, Blutzucker). Bei Bewusstseinsstörung oder Mischintoxikation in die Klinik.`},
+ {k:"Rattengift (Cumarine)",re:/rattengift|mäusegift|rodentiz|cumarin|brodifacoum|köder/,fn:c=>`Rattengift wirkt über eine Gerinnungshemmung, verzögert über Tage. Bei versehentlich kleiner Menge eines Fertigköders durch ein Kind meist keine Gerinnungsstörung. Bei größerer Menge oder absichtlicher Einnahme: Gerinnungskontrolle (INR) nach ca. 24–48 Stunden, Antidot ist Vitamin K. Packung aufheben.`},
+ {k:"Frostschutz / Methanol",re:/frostschutz|glykol|methanol|kühlerflüssig|scheibenklar|brennspiritus|spiritus/,fn:()=>`Bitte in die Klinik, auch ohne Symptome – die Giftwirkung kommt verzögert (Azidose, Nieren bzw. Sehnerv). Antidot (Fomepizol oder Ethanol) und ggf. Dialyse in der Klinik.`},
+ {k:"Pflanzenschutz / Insektizid",re:/pflanzenschutz|insektizid|pestizid|e ?605|organophos|unkrautvernichter|schneckenkorn/,fn:()=>`Eigenschutz! Verschmutzte Kleidung entfernen, Haut gründlich mit Wasser und Seife waschen. Bitte in die Klinik, Produkt bzw. Etikett mitnehmen. Bei Organophosphaten: auf Speichelfluss, enge Pupillen, langsamen Puls achten – Antidot Atropin.`},
+ {k:"Giftpflanze",re:/eibe|engelstromp|herbstzeitlos|fingerhut|oleander|goldregen|tollkirsch|eisenhut|stechapfel|maiglöckchen|rizinus|wasserschierling/,fn:()=>`Das ist eine giftige Pflanze. Bitte in die Klinik, Pflanzenteile mitnehmen. Bei Fingerhut, Oleander und Maiglöckchen sind Herzrhythmusstörungen möglich – Monitoring.`},
+ {k:"Pflanze / Beeren",re:/pflanze|beere|blatt|blätter|blume|blüte|kastanie|eichel/,fn:()=>`Die meisten Zimmer- und Gartenpflanzen sind in kleinen Mengen wenig giftig. Bitte den genauen Pflanzennamen nennen. Bis dahin: Mund ausspülen, etwas trinken, beobachten. Bei Erbrechen, Durchfall, Benommenheit oder Herzrasen bitte ärztlich abklären.`},
+ {k:"Herz- / Blutdruck- / Zuckermedikamente",re:/betablock|metoprolol|bisoprolol|amlodipin|verapamil|digitoxin|digoxin|herztabl|blutdruck|clonidin|glibenclamid|sulfonylharn|glimepirid|insulin|antidiabet/,fn:()=>`Diese Medikamente können schon in kleinen Mengen gefährlich sein, besonders für Kinder (langsamer Puls, Blutdruckabfall, Unterzuckerung – teils verzögert). Bitte in die Klinik mit Monitoring, Packungen mitnehmen.`},
+ {k:"Psychopharmaka / Schlafmittel",re:/amitriptylin|antidepress|trizykl|doxepin|opipramol|neurolept|quetiapin|benzo|diazepam|tavor|lorazepam|zopiclon|zolpidem|schlaftabl|schlafmittel|beruhigung|lithium/,fn:()=>`Bitte in die Klinik mit Monitoring (Bewusstsein, Atmung, EKG). Bei trizyklischen Antidepressiva auf Herzrhythmusstörungen und Krampfanfälle achten. Packungen mitnehmen, auf Mischintoxikation achten.`},
+ {k:"Opioide",re:/opioid|opiat|heroin|morphin|fentanyl|tilidin|tramadol|oxycodon|methadon|pflaster/,fn:()=>`Atemdepression ist die Hauptgefahr. Atmung überwachen, ggf. beatmen; Antidot Naloxon. Bitte in die Klinik – Naloxon wirkt oft kürzer als das Opioid. Bei Pflastern: Pflaster entfernen.`},
+ {k:"Drogen",re:/kokain|amphetamin|speed|ecstasy|mdma|ghb|liquid ecstasy|crystal|cannabis|thc|gras|ketamin/,fn:()=>`Bitte in die Klinik mit Monitoring. Bei Stimulanzien auf Überhitzung, Herzrasen, Bluthochdruck und Krampfanfälle achten; bei GHB auf Bewusstsein und Atemwege. Bei Kindern, die Cannabis-Produkte gegessen haben, immer ärztlich abklären.`},
+ {k:"Eisen- / Vitaminpräparate",re:/eisen|ferro|vitamin/,fn:()=>`Bei Eisenpräparaten können größere Mengen gefährlich sein. Bitte Packung nennen; bei Kindern und unklarer Menge ärztlich abklären lassen.`},
+ {k:"Ungiftiges",re:/silica|kieselgel|trockenmittel|wachsmal|knete|kreide|bleistift|thermometer|quecksilber|blumenwasser|zahnpasta|creme|sonnencreme|lippenstift|streichholz/,fn:(c,g)=>/thermometer|quecksilber/.test(String(g.subst).toLowerCase())?`Verschlucktes Quecksilber aus einem Fieberthermometer wird kaum aufgenommen. Problematisch sind eher die Dämpfe: Raum lüften, Kügelchen nicht aufsaugen, sondern mit Klebeband aufnehmen. Glassplitter im Mund kontrollieren.`:`Das gilt in üblichen Mengen als nicht oder kaum giftig. Mund ausspülen, etwas trinken. Keine weiteren Maßnahmen nötig, bei Beschwerden erneut melden.`}
+];
+function gizLogHTML(g){return (g.log||[]).map(x=>`<div style="margin:4px 0;padding:6px 8px;border-radius:8px;background:#ede9fe;color:#3b0764"><b>GIZ:</b> ${esc(x.a)}</div>`).join("")}
+function gizAsk(){
+ const p=document.getElementById("gizPanel"),c=p&&gizCall(p.dataset.id); if(!c||!c.giz)return;
+ const g=c.giz, ctx=gizCtx(g), txt=[g.subst,g.notes].join(" ").toLowerCase(), sym=String(g.sympt||"").toLowerCase(), route=String(g.route||"").toLowerCase();
+ let a;
+ if(!String(g.subst||"").trim()) a="Giftnotruf Göttingen, guten Tag. Was genau wurde eingenommen? Am besten lesen Sie mir die Packung oder das Etikett vor.";
+ else{
+   const e=GIZ_KB.find(x=>x.re.test(txt)), ask=[];
+   if(e&&e.dose){
+     if(ctx.kg==null)ask.push("Wie schwer ist der Patient ungefähr?");
+     if(ctx.mg==null)ask.push(ctx.cnt&&!ctx.str?"Welche Stärke haben die Tabletten (mg)?":"Wie viel wurde maximal eingenommen – Anzahl Tabletten und Stärke?");
+   }else if(!String(g.amount||"").trim())ask.push("Wie viel wurde höchstens aufgenommen? Bitte vom ungünstigsten Fall ausgehen.");
+   if(!String(g.who||"").trim())ask.push("Wie alt ist der Patient?");
+   if(!String(g.when||"").trim())ask.push("Wann war das ungefähr?");
+   if(ask.length&&(!g._asked||g._asked!==ask.join("|"))){g._asked=ask.join("|");a=ask.join(" ")}
+   else{
+     const parts=[];
+     if(GIZ_SEVERE.test(sym))parts.push("Bei diesen Symptomen hat die Versorgung Vorrang: sofort Rettungsdienst mit Notarzt, Vitalfunktionen sichern.");
+     if(e&&e.dose&&(ctx.kg==null||ctx.mg==null))parts.push("Ohne Gewicht und Menge kann ich die Dosis nicht berechnen – bitte vorsorglich in die Klinik.");
+     else if(e)parts.push((e.dose&&ctx.kgEst?`Ich rechne mit geschätzt ${ctx.kg} kg. `:"")+(e.dose&&ctx.mgNote?`(${ctx.mgNote} = ${ctx.mg} mg) `:"")+e.fn(ctx,g));
+     else parts.push("Zu diesem Produkt kann ich in der Übung keine genaue Auskunft geben. Bitte Packung bzw. Inhaltsstoffe mitnehmen; im Zweifel ärztlich abklären lassen.");
+     if(/auge/.test(route))parts.push("Augen sofort 10–15 Minuten mit fließendem Wasser spülen, Kontaktlinsen raus; bei ätzenden Stoffen danach zum Augenarzt bzw. in die Klinik.");
+     if(/haut/.test(route))parts.push("Benetzte Kleidung ausziehen, Haut gründlich mit Wasser abspülen.");
+     if(!(e&&/Kohlenmonoxid|Reizgas/.test(e.k))&&!/eingeatmet|inhal/.test(route)&&!parts.join(" ").includes("Erbrechen auslösen"))parts.push("Kein Erbrechen auslösen, keine Milch geben.");
+     a=parts.join(" ");
+     if(!String(g.rec||"").trim()||g.rec===g._recAuto){g.rec=a;g._recAuto=a;const r=p.querySelector('textarea[data-k=rec]');if(r)r.value=a}
+   }
+ }
+ (g.log=g.log||[]).push({a,at:new Date().toISOString()}); save();
+ const L=document.getElementById("gizLog"); if(L){L.innerHTML=gizLogHTML(g);L.scrollTop=L.scrollHeight}
 }
 function gizMin(){const b=document.getElementById("gizBody");if(b)b.style.display=b.style.display==="none"?"":"none"}
 let gizSaveT=null;
@@ -11849,6 +11933,7 @@ function gizHangUp(discard){
  const parts=GIZ_FIELDS.filter(f=>String(g[f[0]]||"").trim()).map(f=>`${f[1].replace(/\s*\(.*\)/,"").replace(/\?$/,"")}: ${String(g[f[0]]).trim()}`);
  if(String(g.rec||"").trim())parts.push(`Empfehlung GIZ: ${g.rec.trim()}`);
  if(String(g.notes||"").trim())parts.push(`Notizen: ${g.notes.trim()}`);
+ {const lg=(g.log||[]).map(x=>x.a).filter(x=>x!==String(g.rec||"").trim());if(lg.length)parts.push(`Gesprächsverlauf GIZ: ${lg.join(" | ")}`)}
  (c.history=c.history||[]).push({q:`☠️ Telefonat Giftnotruf (GIZ-Nord, ${dur} min)`,a:parts.join(" · ")||"ohne Notizen"});
  save(); toast("Giftnotruf-Telefonat im Einsatz dokumentiert");
  try{if(db.currentCall&&String(db.currentCall.id)===String(c.id))render("notruf")}catch(e){}
