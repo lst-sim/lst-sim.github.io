@@ -150,7 +150,6 @@ const CAT = {
  pat:{n:"Sammelstelle / BHP",c:"#1e88e5",l:"P",on:true},
  br:{n:"Bereitstellungsraum",c:"#8e44ad",l:"B",sq:true,on:false},
  kh:{n:"Krankenhaus",c:"#2e7d32",l:"K",on:true},
- wr:{n:"Wasserrettung",c:"#00acc1",l:"W",on:true},
  aed:{n:"AED",c:"#43a047",l:"♥",on:false},
  wka:{n:"Windrad",c:"#222",l:"✳",on:true},
  pwr:{n:"Freileitung",c:"#ff1744",l:"",line:true,on:true},
@@ -386,7 +385,7 @@ function nearest(list,n){return list.map(x=>[x,dist(est,x.c)]).sort((a,b)=>a[1]-
 function showNear(){if(!DATA){sheetOpen("<h2>Einsatzstelle</h2><div>Daten noch nicht geladen.</div>");return;}
  const row=(x,d,fn)=>`<div class="near" onclick="${fn}"><span>${x.n||"(ohne Namen)"}${x.s?` · ${x.s}×${x.l} m`:""}${(x.dl!==undefined&&(x.dl<WARN_LINE_M||x.dw<WARN_WIND_M))?" ⚠":""}</span><span>${fmtD(d)} ${dirTxt(bearing(est,x.c))}</span></div>`;
  const lzN=nearest(DATA.lz.filter(z=>z.cat==="lzN"),4),lzD=nearest(DATA.lz,4),heli=nearest(DATA.pts.filter(p=>p.cat==="heli"),2);
- const pat=nearest(DATA.pts.filter(p=>p.cat==="pat"),4),kh=nearest(DATA.pts.filter(p=>p.cat==="kh"),3),rw=nearest(DATA.pts.filter(p=>p.cat==="wr"),3);
+ const pat=nearest(DATA.pts.filter(p=>p.cat==="pat"),4),kh=nearest(DATA.pts.filter(p=>p.cat==="kh"),3);
  window._near={};let i=0;const reg=(arr,f)=>arr.map(([x,d])=>{const k="n"+(i++);window._near[k]=()=>{map.setView(x.c,17);f(x);};return row(x,d,`_near.${k}()`);}).join("");
  sheetOpen(`<h2>🔴 Einsatzstelle</h2><div class="kv"><b>UTMREF</b><span>${mgrs(est[0],est[1])}</span>${me?`<b>Von mir</b><span>${fmtD(dist(me,est))} ${dirTxt(bearing(me,est))}</span>`:""}</div>
  <div class="row"><button onclick="copyTxt('${mgrs(est[0],est[1])}')">UTMREF kopieren</button><button id="eMove">Neu setzen</button><button id="eDel">Entfernen</button></div>
@@ -396,7 +395,6 @@ function showNear(){if(!DATA){sheetOpen("<h2>Einsatzstelle</h2><div>Daten noch n
  <h3>Offizielle H-Plätze / Flugplätze</h3>${reg(heli,showPt)||"<div class='note'>keine in OSM</div>"}
  <h3>Patientensammelstelle / BHP</h3>${reg(pat,showPt)}
  <h3>Krankenhaus (Luftlinie)</h3>${reg(kh,showPt)||"<div class='note'>keine im Kreis</div>"}
- <h3>Wasserrettung</h3>${reg(rw,showPt)||"<div class='note'>keine in OSM</div>"}
  <div class="note">Entfernungen Luftlinie. Marker „ES“ ist verschiebbar. ⚠ = Freileitung oder WEA in der Nähe.</div>`);
  $("eMove").onclick=()=>startCross("est");$("eDel").onclick=()=>{map.removeLayer(estMk);estMk=null;est=null;$("bEst").classList.remove("on");sheetClose();};}
 
