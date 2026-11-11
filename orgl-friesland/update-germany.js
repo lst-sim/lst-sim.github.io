@@ -22,7 +22,7 @@ const SERVERS = [
 ];
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 // Vorrang: Friesland und Nachbarkreise (amtliche Kreisschlüssel) – werden zuerst separat verarbeitet
-const PRIO = ["03455", "03405", "03462", "03452", "03451", "03461", "03457", "03402", "03403", "03458"];
+const PRIO = ["03455", "03405", "03462", "03452", "03451", "03461", "03457", "03402", "03403", "03458", "04011", "04012"];
 const isPrio = (k) => PRIO.some((p) => (k.ags || "").startsWith(p));
 
 async function overpass(q, label, start = 0) {
@@ -67,8 +67,8 @@ out tags;`;
     lvl: e.tags.admin_level,
     iso: e.tags["ISO3166-2"] || "",
   }));
-  // Nur Niedersachsen (amtlicher Gemeindeschlüssel beginnt mit 03)
-  k = k.filter((x) => x.lvl === "6" && x.ags.startsWith("03"));
+  // Nur Niedersachsen (03) und Bremen/Bremerhaven (04)
+  k = k.filter((x) => x.lvl === "6" && (x.ags.startsWith("03") || x.ags.startsWith("04")));
   // Stadtstaaten nur, wenn es dort keine Kreis-Ebene (admin_level 6) gibt
   const pre = { "DE-HH": "02", "DE-HB": "04", "DE-BE": "11" };
   k = k.filter((x) => x.lvl !== "4" || !k.some((y) => y.lvl === "6" && y.ags.startsWith(pre[x.iso])));
