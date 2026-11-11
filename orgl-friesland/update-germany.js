@@ -23,7 +23,9 @@ const SERVERS = [
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 // Vorrang: Friesland und Nachbarkreise (amtliche Kreisschlüssel) – werden zuerst separat verarbeitet
 const PRIO = ["03455", "03405", "03462", "03452", "03451", "03461", "03457", "03402", "03403", "03458", "04011", "04012"];
-const isPrio = (k) => PRIO.some((p) => (k.ags || "").startsWith(p));
+// Optional nur bestimmte Kreise holen (Umgebungsvariable NUR="04011,04012")
+const NUR = (process.env.NUR || "").split(",").map((x) => x.trim()).filter(Boolean);
+const isPrio = (k) => (NUR.length ? NUR : PRIO).some((p) => (k.ags || "").startsWith(p));
 
 async function overpass(q, label, start = 0) {
   const errs = [];
