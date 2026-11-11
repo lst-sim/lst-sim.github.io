@@ -374,7 +374,7 @@ function render(){
   if(p.g)polyGroups[p.cat].addLayer(L.polygon(p.g.map(r=>[r]),{color:C.c,weight:3,opacity:1,fillColor:C.c,fillOpacity:.45}).on("click",()=>showPt(p)));
   if(p.cat==="heli"||p.cat==="kh")groups[p.cat].addLayer(L.marker(p.c,{icon:icon(p.cat,18)}).on("click",()=>showPt(p)));
   else groups[p.cat].addLayer(dot(p.c,C.c,5).on("click",()=>showPt(p)));}
- for(const ln of DATA.pwr){const hv=parseInt(ln.v)>=60000;groups.pwr.addLayer(L.polyline(ln.g,{color:"#7b1fa2",weight:hv?3:2,opacity:.85,dashArray:ln.k==="minor_line"?"6 5":null,interactive:false}));}
+ for(const ln of DATA.pwr){const hv=parseInt(ln.v)>=60000;groups.pwr.addLayer(L.polyline(ln.g,{color:"#7b1fa2",weight:hv?2:1.5,opacity:.6,dashArray:ln.k==="minor_line"?"6 5":null,interactive:false}));}
  for(const w of DATA.wka){groups.wka.addLayer(dot(w.c,"#222",4).on("click",()=>showWKA(w)));}
  syncPolys();renderOwn();renderFix();updLegendCounts();}
 
@@ -418,12 +418,19 @@ function setMe(pos){me=[pos.coords.latitude,pos.coords.longitude];const acc=pos.
   meMk=L.marker(me,{icon:L.divIcon({className:"",iconSize:[20,20],iconAnchor:[10,10],html:'<div style="width:20px;height:20px;border-radius:50%;background:#2979ff;border:3px solid #fff;box-shadow:0 0 0 3px rgba(41,121,255,.35)"></div>'}),zIndexOffset:1000}).addTo(map).on("click",()=>sheetOpen(`<h2>Mein Standort</h2><div>Genauigkeit ± ${Math.round(acc)} m</div>${posBlock(me)}`));map.setView(me,14);refreshView();}
  else{meMk.setLatLng(me);meAcc.setLatLng(me).setRadius(acc);if(follow)map.panTo(me);}
  if(!setMe.w){setMe.w=1;getWind(me);}}
+let locDenied=false,locAuto=true;
+function locHelp(){sheetOpen(`<h2>Standort freigeben</h2><div>Safari hat dieser Seite den Standort nicht erlaubt. So schaltest du ihn frei (je nach iOS-Version leicht anders benannt):</div>
+ <h3>1. Für diese Seite</h3><div>In Safari in der Adressleiste auf das Symbol links neben „lst-sim.github.io“ oder auf „aA“ tippen → <b>Website-Einstellungen</b> → <b>Standort</b> → <b>Erlauben</b>.</div>
+ <h3>2. Falls das nicht hilft</h3><div><b>Einstellungen</b> → <b>Datenschutz &amp; Sicherheit</b> → <b>Ortungsdienste</b> einschalten → darin <b>Safari-Websites</b> → <b>Beim Verwenden der App</b> und <b>Genauer Standort</b> an.</div>
+ <div class="row"><button class="pri" id="locRe">Erneut versuchen</button></div><div class="note">Das gilt auch, wenn die Karte als Symbol auf dem Home-Bildschirm liegt.</div>`);
+ $("locRe").onclick=()=>{sheetClose();locDenied=false;locAuto=false;startLoc();};}
 function startLoc(){
- if(!("geolocation" in navigator)){status("Dieses Gerät/dieser Browser bietet keine Standortabfrage.");return;}
- if(watchId===null){watchId=navigator.geolocation.watchPosition(setMe,e=>{status("Standort nicht verfügbar: "+(e.code===1?"Berechtigung verweigert (Browser-Einstellungen prüfen; Seite muss über https laufen)":e.message));$("bLoc").classList.remove("on");navigator.geolocation.clearWatch(watchId);watchId=null;follow=false;},{enableHighAccuracy:true,maximumAge:5000,timeout:20000});follow=true;$("bLoc").classList.add("on");status("Standort wird gesucht … (Mitführen aktiv)");}
+ if(!("geolocation" in navigator)){status("Dieses Gerät bietet keine Standortabfrage.");return;}
+ if(locDenied&&!locAuto){locHelp();return;}
+ if(watchId===null){watchId=navigator.geolocation.watchPosition(setMe,e=>{if(e.code===1){locDenied=true;status(locAuto?"Standort nicht freigegeben. Zum Freigeben unten auf „Standort“ tippen.":"Standort nicht freigegeben.");if(!locAuto)locHelp();}else status(e.code===3?"Standort gerade nicht ermittelbar. Später erneut versuchen.":"Standort nicht verfügbar: "+e.message);locAuto=false;$("bLoc").classList.remove("on");navigator.geolocation.clearWatch(watchId);watchId=null;follow=false;},{enableHighAccuracy:true,maximumAge:5000,timeout:20000});follow=true;$("bLoc").classList.add("on");status("Standort wird gesucht … (Mitführen aktiv)");}
  else if(follow){follow=false;$("bLoc").classList.remove("on");status("Mitführen aus – Standort wird weiter angezeigt. Erneut tippen zum Zentrieren.");}
  else{follow=true;$("bLoc").classList.add("on");if(me)map.setView(me,Math.max(map.getZoom(),15));}};
-$("bLoc").onclick=startLoc;
+$("bLoc").onclick=()=>{locAuto=false;startLoc();};
 map.on("dragstart",()=>{if(follow){follow=false;$("bLoc").classList.remove("on");}});
 
 /* ================= Einsatzstelle & Nächstgelegene ================= */
@@ -630,6 +637,7 @@ function adminSheet(){
 
 loadIndex();
 initFix();
+getWind([53.45,7.95]); // Wind sofort für Friesland, mit Standort dann für den eigenen Ort
 startLoc();
 </script>
 </body>
