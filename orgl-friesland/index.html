@@ -6,12 +6,12 @@
 <meta name="theme-color" content="#1b1f24">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-title" content="ORGL Friesland">
+<meta name="apple-mobile-web-app-title" content="ORGL-Karte">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
 <link rel="manifest" href="manifest.json">
-<title>ORGL-Lagekarte Friesland</title>
+<title>ORGL-Lagekarte</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <style>
@@ -88,7 +88,7 @@ select,input[type=text]{font:inherit;color:var(--fg);background:var(--bg);border
   <button id="dDone" class="pri">✓ Fertig</button>
 </div>
 <div class="bar">
-  <h1>ORGL-Lagekarte Friesland<small id="sub">OSM-Daten · Planungshilfe</small></h1>
+  <h1>ORGL-Lagekarte<small id="sub">OSM-Daten · Planungshilfe</small></h1>
   <button id="bLayers" title="Ebenen">☰ Ebenen</button>
   <button id="bInfo" title="Hinweise">ⓘ</button>
 </div>
@@ -114,13 +114,11 @@ const WARN_WIND_M = 300;     // Windenergieanlage näher als ... m -> Warnung
 const PARK_MIN_M2 = 1500;    // Parkplatz ab ... m² als möglicher Bereitstellungsraum
 const CACHE_KEY = "orgl-fri-v3";
 const OVERPASS = ["https://overpass-api.de/api/interpreter","https://overpass.kumi.systems/api/interpreter","https://overpass.private.coffee/api/interpreter"];
-// Gebiet: Kreisgrenze per Name ODER amtlichem Kreisschlüssel 03455; falls nicht gefunden -> Rechteck um den Kreis
-const AREA = '(area["boundary"="administrative"]["admin_level"="6"]["name"~"^(Landkreis )?Friesland$"];area["boundary"="administrative"]["de:amtlicher_gemeindeschluessel"="03455"];)->.a;';
-const BBOX = "53.24,7.68,53.82,8.30"; // Notfall-Rechteck inkl. Wangerooge (enthält auch Teile von WHV/Nachbarkreisen)
-function qMain(sel){return `[out:json][timeout:90];
-${sel==="(area.a)"?AREA:""}
-rel["boundary"="administrative"]["admin_level"="6"]["name"~"^(Landkreis )?Friesland$"];
+// Abfrage pro Kreis (OSM-Relation): Kreisgrenze + alle relevanten Objekte im Kreisgebiet
+function qKreis(id){const sel="(area.a)";return `[out:json][timeout:240];
+rel(${id});
 out geom;
+area(${3600000000+id})->.a;
 (
  nwr${sel}["aeroway"~"^(helipad|heliport|aerodrome)$"];
  way${sel}["leisure"~"^(pitch|stadium)$"];
@@ -129,16 +127,16 @@ out geom;
  nwr${sel}["emergency"~"^(ambulance_station|water_rescue|lifeguard_base|lifeguard_station|defibrillator)$"];
  nwr${sel}["leisure"="sports_hall"];
  way${sel}["building"="sports_hall"];
-);
-out tags geom;`;}
-function qExtra(sel){return `[out:json][timeout:90];
-${sel==="(area.a)"?AREA:""}
-(
  way${sel}["amenity"="parking"]["parking"!~"underground|multi-storey|rooftop"];
  node${sel}["power"="generator"]["generator:source"="wind"];
  way${sel}["power"~"^(line|minor_line)$"];
 );
 out tags geom;`;}
+// Linie vereinfachen (Douglas-Peucker, Toleranz in Metern)
+function simplify(pts,tol){if(pts.length<3)return pts;const P=proj(pts[0]);const xy=pts.map(P);const keep=new Uint8Array(pts.length);keep[0]=keep[pts.length-1]=1;
+ const st=[[0,pts.length-1]];while(st.length){const [i,j]=st.pop();let md=0,mi=-1;for(let k=i+1;k<j;k++){const d=segDist(xy[k],xy[i],xy[j]);if(d>md){md=d;mi=k;}}if(md>tol){keep[mi]=1;st.push([i,mi],[mi,j]);}}
+ return pts.filter((_,k)=>keep[k]);}
+const r5=p=>[+p[0].toFixed(5),+p[1].toFixed(5)];
 
 /* Kategorien: key -> {name, color, letter, shape, on} */
 const CAT = {
@@ -230,7 +228,7 @@ function processOSM(js){
    if(s>=LZ_DAY[0]&&l>=LZ_DAY[1]){const night=s>=LZ_NIGHT[0]&&l>=LZ_NIGHT[1];
     out.lz.push({id,cat:night?"lzN":"lzD",c,s:Math.round(s),l:Math.round(l),a:Math.round(area),fill:+(area/(s*l)).toFixed(2),g:ring.map(p=>[+p[0].toFixed(6),+p[1].toFixed(6)]),n:nm(t),sport:t.sport||t.leisure||t.landuse,surf:t.surface||"",lit:t.lit||"",acc:t.access||""});}
    continue;}
-  if(cat){let typ=t.amenity||t.emergency||t.aeroway||t.leisure||t.building||"";out.pts.push(Object.assign({id,cat,c,n:nm(t),typ,addr:[t["addr:street"]&&(t["addr:street"]+" "+(t["addr:housenumber"]||"")),t["addr:city"]].filter(Boolean).join(", "),acc:t.access||"",tel:t.phone||t["contact:phone"]||"",ind:t.indoor||"",lvl:t.level||"",op:t.operator||""},extra,ring&&ring.length>=4?{g:(g.rings||[ring]).map(r=>r.map(q=>[+q[0].toFixed(6),+q[1].toFixed(6)]))}:{}));}
+  if(cat){let typ=t.amenity||t.emergency||t.aeroway||t.leisure||t.building||"";out.pts.push(Object.assign({id,cat,c,n:nm(t),typ,addr:[t["addr:street"]&&(t["addr:street"]+" "+(t["addr:housenumber"]||"")),t["addr:city"]].filter(Boolean).join(", "),acc:t.access||"",tel:t.phone||t["contact:phone"]||"",ind:t.indoor||"",lvl:t.level||"",op:t.operator||""},extra,ring&&ring.length>=4&&cat!=="br"?{g:(g.rings||[ring]).map(r=>r.map(r5))}:{}));}
  }
  // Gefahrenprüfung je Landeplatz-Kandidat
  for(const z of out.lz){const P=proj(z.c);const zxy=z.g.map(P);let dl=1e9,lv="";
@@ -238,14 +236,19 @@ function processOSM(js){
    for(let i=0;i<lxy.length-1;i++)for(let j=0;j<zxy.length-1;j++){const d=segSeg(lxy[i],lxy[i+1],zxy[j],zxy[j+1]);if(d<dl){dl=d;lv=ln.v;}}
    for(const p of lxy)if(pip(p,zxy)){dl=0;lv=ln.v;}}
   z.dl=Math.round(dl);z.lv=lv;let dw=1e9;for(const w of out.wka)dw=Math.min(dw,dist(z.c,w.c));z.dw=Math.round(dw);}
+ // kompakter speichern
+ for(const z of out.lz){z.g=z.g.map(r5);z.c=r5(z.c);}
+ for(const p of out.pts)p.c=r5(p.c);
+ for(const w of out.wka)w.c=r5(w.c);
+ for(const ln of out.pwr)ln.g=simplify(ln.g,8).map(r5);
  return out;}
-if(typeof module!=="undefined")module.exports={mgrs,utm,mbr,processOSM,qMain,qExtra,BBOX};
+if(typeof module!=="undefined")module.exports={mgrs,utm,mbr,processOSM,qKreis,simplify,pip,dist};
 </script>
 <script>
 "use strict";
 if(typeof L==="undefined"){document.getElementById("status").textContent="Kartenbibliothek konnte nicht geladen werden – Internetverbindung prüfen.";throw new Error("no leaflet");}
 /* ================= Karte ================= */
-const map=L.map("map",{zoomControl:true,preferCanvas:true,tap:true}).setView([53.52,7.98],10);
+const map=L.map("map",{zoomControl:true,preferCanvas:true,tap:true}).setView([51.16,10.45],6);
 const base={
  "OSM Standard":L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:19,attribution:"© OpenStreetMap-Mitwirkende"}),
  "Luftbild (Esri)":L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",{maxZoom:19,attribution:"Luftbild © Esri, Maxar, Earthstar Geographics"}),
@@ -259,42 +262,48 @@ let DATA=null,boundaryLayer=null,me=null,meMk=null,meAcc=null,follow=false,watch
 const $=id=>document.getElementById(id);
 const status=t=>{$("status").textContent=t;};
 
-/* ================= Daten laden ================= */
-const LOG=[];
-async function overpass(q,label){let errs=[];for(const url of OVERPASS){const host=new URL(url).host;const ctl=new AbortController();const to=setTimeout(()=>ctl.abort(),100000);
- try{status(`${label}: frage ${host} …`);const r=await fetch(url,{method:"POST",body:"data="+encodeURIComponent(q),headers:{"Content-Type":"application/x-www-form-urlencoded"},signal:ctl.signal});
-  const txt=await r.text();if(!r.ok)throw new Error("HTTP "+r.status);let js;try{js=JSON.parse(txt);}catch(e){throw new Error("keine gültige Antwort");}
-  if(js.remark&&/error|timed out|runtime/i.test(js.remark))throw new Error(js.remark.slice(0,120));
-  LOG.push(`${label} ✓ ${host}: ${js.elements.length} Elemente`);return js;}
- catch(e){const m=e.name==="AbortError"?"Zeitüberschreitung":e.message;errs.push(host+": "+m);LOG.push(`${label} ✗ ${host}: ${m}`);}
- finally{clearTimeout(to);}}
- throw new Error(errs.join(" | "));}
-async function load(force){
- if(!force){
-  // 1) Fest hinterlegte Daten (data.json, wöchentlich automatisch aktualisiert)
-  try{const r=await fetch("data.json?"+Math.floor(Date.now()/3600000),{cache:"no-cache"});if(r.ok){const d=await r.json();if(d.lz&&d.lz.length){DATA=d;render();try{localStorage.setItem(CACHE_KEY,JSON.stringify(d));}catch(e){}
-   LOG.push("Fest hinterlegte Daten geladen ("+d.lz.length+" Landeplätze, "+d.pts.length+" Objekte)");status(`Datenstand ${new Date(d.t).toLocaleDateString("de-DE")} · ${d.lz.length} LP-Kandidaten · ${d.pts.length} Objekte`);return;}}}catch(e){LOG.push("data.json nicht erreichbar: "+e.message);}
-  // 2) Offline: zuletzt gespeicherte Daten im Browser
-  try{const c=localStorage.getItem(CACHE_KEY);if(c){DATA=JSON.parse(c);if(DATA.lz.length||DATA.pts.length){render();status(`Datenstand ${new Date(DATA.t).toLocaleDateString("de-DE")} (offline gespeichert)`);return;}}}catch(e){}}
- // 3) Notfall: live bei OpenStreetMap abfragen
- LOG.length=0;let sel="(area.a)",main;
- try{main=await overpass(qMain(sel),"Teil 1/2 Landeplätze & Gebäude");
-  if(main.elements.length<=1){LOG.push("Kreisgrenze-Gebiet lieferte nichts → Ersatz-Rechteck");sel="("+BBOX+")";main=await overpass(qMain(sel),"Teil 1/2 (Rechteck)");}
- }catch(e){status("⚠ Laden fehlgeschlagen – antippen für Details / neu laden");LOG.push("Fehler: "+e.message);return;}
- DATA=processOSM(main);DATA.mode=sel;render();
- status(`Teil 1/2 fertig: ${DATA.lz.length} Landeplatz-Kandidaten, ${DATA.pts.length} Objekte · lade Gefahren …`);
- let extra=null;try{extra=await overpass(qExtra(sel),"Teil 2/2 Leitungen, WEA, Parkplätze");}catch(e){LOG.push("Teil 2 fehlgeschlagen: "+e.message);}
- if(extra){DATA=processOSM({elements:main.elements.concat(extra.elements)});DATA.mode=sel;render();}
- try{if(extra)localStorage.setItem(CACHE_KEY,JSON.stringify(DATA));}catch(e){LOG.push("Zwischenspeichern nicht möglich (Speicher voll?)");}
- status(`Stand ${new Date(DATA.t).toLocaleString("de-DE")} · ${DATA.lz.length} LP-Kandidaten · ${DATA.pts.length} Objekte${extra?"":" · ⚠ Leitungen/WEA fehlen"}${sel==="(area.a)"?"":" · Rechteck-Modus"} · antippen = Details`);}
-$("status").onclick=()=>{sheetOpen(`<h2>Datenstatus</h2><div class="kv"><b>Stand</b><span>${DATA?new Date(DATA.t).toLocaleString("de-DE"):"–"}</span><b>Landeplätze</b><span>${DATA?DATA.lz.length:0}</span><b>Objekte</b><span>${DATA?DATA.pts.length:0}</span><b>Leitungen</b><span>${DATA?DATA.pwr.length:0}</span><b>Gebiet</b><span>${DATA&&DATA.mode&&DATA.mode!=="(area.a)"?"Ersatz-Rechteck":"Kreisgrenze"}</span></div><h3>Protokoll</h3><div style="font-size:12px;white-space:pre-wrap">${LOG.join("\n")||"–"}</div><div class="row"><button class="pri" id="rl">⟳ Live bei OSM neu laden</button></div><div class="note">Normalerweise nicht nötig: Die Daten werden jeden Montag automatisch aktualisiert und sind fest hinterlegt.</div>`);$("rl").onclick=()=>{sheetClose();load(true);};};
+/* ================= Daten laden (ganz Deutschland, pro Kreis) ================= */
+const LOG=[];let KREISE=[],IDX_T=0,kreisLayer=null;const KD=new Map();const MAX_LOADED=10,MIN_ZOOM=9;
+const bbC=k=>[(k.bb[0]+k.bb[2])/2,(k.bb[1]+k.bb[3])/2];
+function kreisAt(c){for(const k of KREISE){if(c[0]<k.bb[0]||c[0]>k.bb[2]||c[1]<k.bb[1]||c[1]>k.bb[3])continue;let ins=false;for(const r of k.r)if(pip(c,r))ins=!ins;if(ins)return k;}return null;}
+function kreiseNear(c,m){const dla=m/111320,dlo=m/(111320*Math.cos(rad(c[0])));return KREISE.filter(k=>k.bb[0]<=c[0]+dla&&k.bb[2]>=c[0]-dla&&k.bb[1]<=c[1]+dlo&&k.bb[3]>=c[1]-dlo);}
+async function loadIndex(){
+ try{const r=await fetch("data/kreise.json?"+Math.floor(Date.now()/3600000));if(!r.ok)throw new Error("HTTP "+r.status);const j=await r.json();KREISE=j.k;IDX_T=j.t;try{localStorage.setItem("orgl-idx",JSON.stringify(j));}catch(e){LOG.push("Kreisliste nicht offline speicherbar");}}
+ catch(e){LOG.push("Kreisliste online nicht erreichbar: "+e.message);try{const j=JSON.parse(localStorage.getItem("orgl-idx"));if(j){KREISE=j.k;IDX_T=j.t;LOG.push("Kreisliste aus Offline-Speicher");}}catch(e2){}}
+ if(!KREISE.length){status("⚠ Kreisdaten nicht verfügbar – Internet prüfen (antippen für Details)");return;}
+ kreisLayer=L.layerGroup(KREISE.map(k=>L.polygon(k.r,{color:"#ffb300",weight:1.8,opacity:.95,fill:false,dashArray:"7 5",interactive:false}))).addTo(map);
+ refreshView();}
+function cacheKreis(id,d){let lst=[];try{lst=JSON.parse(localStorage.getItem("orgl-klist")||"[]");}catch(e){}
+ lst=lst.filter(x=>x!==id);for(let n=0;n<8;n++){try{localStorage.setItem("orgl-k-"+id,JSON.stringify(d));lst.push(id);localStorage.setItem("orgl-klist",JSON.stringify(lst));return;}catch(e){const old=lst.shift();if(old===undefined)return;try{localStorage.removeItem("orgl-k-"+old);}catch(e2){}}}}
+async function loadKreis(k){if(KD.has(k.id)){KD.get(k.id)._last=Date.now();return KD.get(k.id);}
+ let d=null;try{const r=await fetch(`data/k/${k.id}.json?${k.t||""}`);if(r.ok)d=await r.json();else LOG.push(`${k.n}: HTTP ${r.status}`);}catch(e){LOG.push(`${k.n}: online nicht erreichbar`);}
+ if(d)cacheKreis(k.id,d);else{try{d=JSON.parse(localStorage.getItem("orgl-k-"+k.id));if(d)LOG.push(`${k.n}: aus Offline-Speicher`);}catch(e){}}
+ if(!d)return null;d._last=Date.now();KD.set(k.id,d);return d;}
+function rebuild(){const all=[...KD.values()];DATA={t:all.length?Math.min(...all.map(d=>d.t)):0,lz:[].concat(...all.map(d=>d.lz)),pts:[].concat(...all.map(d=>d.pts)),pwr:[].concat(...all.map(d=>d.pwr)),wka:[].concat(...all.map(d=>d.wka))};render();}
+function summary(){const c=map.getCenter(),k=kreisAt([c.lat,c.lng]);
+ if(map.getZoom()<MIN_ZOOM&&!KD.size){status(`${KREISE.length} Kreise · reinzoomen oder Standort (◎), um Plätze zu laden`);return;}
+ status(`${k?k.n+" · ":""}${DATA?DATA.lz.length:0} LP-Kandidaten · ${DATA?DATA.pts.length:0} Objekte${map.getZoom()<MIN_ZOOM?" · zum Nachladen reinzoomen":""}`);}
+let busy=false,again=false;
+async function ensureKreise(list){let ch=false;for(const k of list){if(!KD.has(k.id)){status(`Lade ${k.n} …`);if(await loadKreis(k))ch=true;}else KD.get(k.id)._last=Date.now();}return ch;}
+async function refreshView(){if(!KREISE.length)return;if(busy){again=true;return;}busy=true;
+ try{const need=new Map();
+  if(map.getZoom()>=MIN_ZOOM){const b=map.getBounds(),c=[map.getCenter().lat,map.getCenter().lng];
+   KREISE.filter(k=>k.bb[0]<=b.getNorth()&&k.bb[2]>=b.getSouth()&&k.bb[1]<=b.getEast()&&k.bb[3]>=b.getWest()).sort((x,y)=>dist(c,bbC(x))-dist(c,bbC(y))).slice(0,8).forEach(k=>need.set(k.id,k));}
+  if(me){const k=kreisAt(me);if(k)need.set(k.id,k);}
+  if(est)kreiseNear(est,20000).forEach(k=>need.set(k.id,k));
+  let ch=await ensureKreise([...need.values()]);
+  if(KD.size>MAX_LOADED){[...KD.entries()].filter(([id])=>!need.has(id)).sort((x,y)=>x[1]._last-y[1]._last).slice(0,KD.size-MAX_LOADED).forEach(([id])=>KD.delete(id));ch=true;}
+  if(ch)rebuild();summary();
+ }finally{busy=false;if(again){again=false;refreshView();}}}
+map.on("moveend",()=>refreshView());
+$("status").onclick=()=>{const ks=[...KD.values()].map(d=>d.kreis?d.kreis.n:"?").sort().join(", ");
+ sheetOpen(`<h2>Datenstatus</h2><div class="kv"><b>Kreise gesamt</b><span>${KREISE.length}</span><b>Datenstand</b><span>${IDX_T?new Date(IDX_T).toLocaleDateString("de-DE"):"–"} (monatlich automatisch)</span><b>Geladen</b><span>${ks||"–"}</span><b>Landeplätze</b><span>${DATA?DATA.lz.length:0}</span><b>Objekte</b><span>${DATA?DATA.pts.length:0}</span></div><h3>Protokoll</h3><div style="font-size:12px;white-space:pre-wrap">${LOG.slice(-20).join("\n")||"–"}</div><div class="row"><button class="pri" id="rl">⟳ Neu laden</button></div><div class="note">Geladen werden die Kreise im sichtbaren Bereich (ab Zoomstufe ${MIN_ZOOM}), dein Standort-Kreis und die Kreise um die Einsatzstelle. Zuletzt genutzte Kreise bleiben offline gespeichert.</div>`);
+ $("rl").onclick=()=>{sheetClose();KD.clear();DATA=null;for(const k in groups)if(k!=="own")groups[k].clearLayers();if(kreisLayer)map.removeLayer(kreisLayer);KREISE=[];loadIndex();};};
 
 /* ================= Darstellung ================= */
 function icon(cat,size){const C=CAT[cat];size=size||18;return L.divIcon({className:"",iconSize:[size,size],iconAnchor:[size/2,size/2],html:`<div class="mk" style="width:${size}px;height:${size}px;background:${C.c};${C.sq?"border-radius:4px;":""}${cat==="lzD"?"color:#111;":""}">${C.l}</div>`});}
 function render(){
  for(const k in groups)if(k!=="own")groups[k].clearLayers();
- if(boundaryLayer)map.removeLayer(boundaryLayer);
- if(DATA.bnd.length){boundaryLayer=L.polyline(DATA.bnd,{color:"#ffb300",weight:3,dashArray:"8 6",interactive:false}).addTo(map);if(!render.done){map.fitBounds(boundaryLayer.getBounds(),{padding:[10,10]});render.done=1;}}
  for(const z of DATA.lz){const C=CAT[z.cat];const warn=z.dl<WARN_LINE_M||z.dw<WARN_WIND_M;
   groups[z.cat].addLayer(L.polygon(z.g,{color:"#fff",weight:10,opacity:.9,fill:false,interactive:false}));
   const poly=L.polygon(z.g,{color:warn?"#ff1744":C.c,weight:5,opacity:1,fillColor:C.c,fillOpacity:.6,dashArray:warn?"10 6":null});
@@ -346,14 +355,15 @@ window.copyTxt=async t=>{try{await navigator.clipboard.writeText(t);status("Kopi
 /* ================= Live-Standort ================= */
 function setMe(pos){me=[pos.coords.latitude,pos.coords.longitude];const acc=pos.coords.accuracy;
  if(!meMk){meAcc=L.circle(me,{radius:acc,color:"#2979ff",weight:1,fillOpacity:.12,interactive:false}).addTo(map);
-  meMk=L.marker(me,{icon:L.divIcon({className:"",iconSize:[20,20],iconAnchor:[10,10],html:'<div style="width:20px;height:20px;border-radius:50%;background:#2979ff;border:3px solid #fff;box-shadow:0 0 0 3px rgba(41,121,255,.35)"></div>'}),zIndexOffset:1000}).addTo(map).on("click",()=>sheetOpen(`<h2>Mein Standort</h2><div>Genauigkeit ± ${Math.round(acc)} m</div>${posBlock(me)}`));map.setView(me,15);}
+  meMk=L.marker(me,{icon:L.divIcon({className:"",iconSize:[20,20],iconAnchor:[10,10],html:'<div style="width:20px;height:20px;border-radius:50%;background:#2979ff;border:3px solid #fff;box-shadow:0 0 0 3px rgba(41,121,255,.35)"></div>'}),zIndexOffset:1000}).addTo(map).on("click",()=>sheetOpen(`<h2>Mein Standort</h2><div>Genauigkeit ± ${Math.round(acc)} m</div>${posBlock(me)}`));map.setView(me,14);refreshView();}
  else{meMk.setLatLng(me);meAcc.setLatLng(me).setRadius(acc);if(follow)map.panTo(me);}
  if(!setMe.w){setMe.w=1;getWind(me);}}
-$("bLoc").onclick=()=>{
+function startLoc(){
  if(!("geolocation" in navigator)){status("Dieses Gerät/dieser Browser bietet keine Standortabfrage.");return;}
  if(watchId===null){watchId=navigator.geolocation.watchPosition(setMe,e=>{status("Standort nicht verfügbar: "+(e.code===1?"Berechtigung verweigert (Browser-Einstellungen prüfen; Seite muss über https laufen)":e.message));$("bLoc").classList.remove("on");navigator.geolocation.clearWatch(watchId);watchId=null;follow=false;},{enableHighAccuracy:true,maximumAge:5000,timeout:20000});follow=true;$("bLoc").classList.add("on");status("Standort wird gesucht … (Mitführen aktiv)");}
  else if(follow){follow=false;$("bLoc").classList.remove("on");status("Mitführen aus – Standort wird weiter angezeigt. Erneut tippen zum Zentrieren.");}
  else{follow=true;$("bLoc").classList.add("on");if(me)map.setView(me,Math.max(map.getZoom(),15));}};
+$("bLoc").onclick=startLoc;
 map.on("dragstart",()=>{if(follow){follow=false;$("bLoc").classList.remove("on");}});
 
 /* ================= Einsatzstelle & Nächstgelegene ================= */
@@ -367,8 +377,9 @@ $("bEst").onclick=()=>{if(est)showNear();else startCross("est");};
 $("bMark").onclick=()=>startCross("own");
 function setEst(c){est=c;if(estMk)map.removeLayer(estMk);
  estMk=L.marker(c,{draggable:true,zIndexOffset:900,icon:L.divIcon({className:"",iconSize:[34,34],iconAnchor:[17,17],html:'<div style="width:34px;height:34px;border-radius:50%;background:#ff1744;border:3px solid #fff;color:#fff;font:800 13px/28px sans-serif;text-align:center;box-shadow:0 0 0 4px rgba(255,23,68,.35)">ES</div>'})}).addTo(map);
- estMk.on("click",showNear);estMk.on("dragend",()=>{const l=estMk.getLatLng();est=[l.lat,l.lng];showNear();});
- $("bEst").classList.add("on");getWind(c);showNear();}
+ estMk.on("click",showNear);estMk.on("dragend",()=>{const l=estMk.getLatLng();est=[l.lat,l.lng];ensureKreise(kreiseNear(est,20000)).then(ch=>{if(ch)rebuild();showNear();});});
+ $("bEst").classList.add("on");getWind(c);
+ sheetOpen("<h2>Einsatzstelle</h2><div>Lade Daten im Umkreis …</div>");ensureKreise(kreiseNear(c,20000)).then(ch=>{if(ch)rebuild();showNear();});}
 function nearest(list,n){return list.map(x=>[x,dist(est,x.c)]).sort((a,b)=>a[1]-b[1]).slice(0,n);}
 function showNear(){if(!DATA){sheetOpen("<h2>Einsatzstelle</h2><div>Daten noch nicht geladen.</div>");return;}
  const row=(x,d,fn)=>`<div class="near" onclick="${fn}"><span>${x.n||"(ohne Namen)"}${x.s?` · ${x.s}×${x.l} m`:""}${(x.dl!==undefined&&(x.dl<WARN_LINE_M||x.dw<WARN_WIND_M))?" ⚠":""}</span><span>${fmtD(d)} ${dirTxt(bearing(est,x.c))}</span></div>`;
@@ -413,10 +424,10 @@ $("wind").onclick=()=>{const w=getWind.last;if(!w){getWind(me||est||[map.getCent
 function counts(k){if(!DATA)return"";if(k==="lzN"||k==="lzD")return DATA.lz.filter(z=>z.cat===k).length;if(k==="pwr")return DATA.pwr.length;if(k==="wka")return DATA.wka.length;if(k==="own")return OWN.length;return DATA.pts.filter(p=>p.cat===k).length;}
 function updLegendCounts(){document.querySelectorAll("[data-cnt]").forEach(e=>e.textContent=counts(e.dataset.cnt));}
 $("bLayers").onclick=()=>{sheetOpen(`<h2>Ebenen</h2>${Object.keys(CAT).map(k=>{const C=CAT[k];return`<label class="lg"><input type="checkbox" data-k="${k}" ${map.hasLayer(groups[k])?"checked":""}>${C.line?`<span style="width:18px;height:0;border-top:3px solid ${C.c}"></span>`:`<span class="sw ${C.sq?"sq":""}" style="background:${C.c}"></span>`}<span>${C.n}</span><span class="cnt" data-cnt="${k}">${counts(k)}</span></label>`}).join("")}
- <div class="row"><button id="bRe">⟳ Daten neu laden</button><button id="bOwnDel">Eigene Markierungen löschen</button></div>
+ <div class="row"><button id="bRe">Datenstatus</button><button id="bOwnDel">Eigene Markierungen löschen</button></div>
  <div class="note">${DATA?`Datenstand: ${new Date(DATA.t).toLocaleString("de-DE")} (OpenStreetMap)`:""}</div>`);
  document.querySelectorAll("[data-k]").forEach(cb=>cb.onchange=()=>{const g=groups[cb.dataset.k];cb.checked?g.addTo(map):map.removeLayer(g);});
- $("bRe").onclick=()=>{sheetClose();load(true);};
+ $("bRe").onclick=()=>{sheetClose();$("status").click();};
  $("bOwnDel").onclick=()=>{if($("bOwnDel").dataset.sure){OWN=[];saveOwn();renderOwn();sheetClose();}else{$("bOwnDel").dataset.sure=1;$("bOwnDel").textContent="Wirklich alle löschen?";}};};
 
 /* ================= Malen (lokal gespeichert) ================= */
@@ -457,12 +468,14 @@ function info(){$("mbox").innerHTML=`<h2 style="margin-top:0">Hinweise zur Nutzu
 <p><b>Navigation</b>: Bei jedem Objekt startet „🧭 Apple Karten / Google Maps / Waze“ die Route von deinem aktuellen Standort zum Ziel direkt in der App.</p>
 <p>Markierungen und Zeichnungen werden <b>nur auf diesem Gerät</b> gespeichert und nicht geteilt.</p>
 <p><b>Live-Standort</b> funktioniert nur, wenn die Seite über <b>https</b> geöffnet wird (z. B. GitHub Pages) und der Browser die Standortfreigabe erhält.</p>
-<p><b>Offline</b>: Die OSM-Auswertung wird im Browser zwischengespeichert, Kartenkacheln nicht. Ohne Netz bleiben Markierungen sichtbar, der Kartenhintergrund kann fehlen.</p>
+<p><b>Ganz Deutschland</b>: Alle Kreisgrenzen sind immer eingezeichnet (gelb gestrichelt). Die Plätze werden pro Kreis aus fertig ausgewerteten Dateien geladen – für deinen Standort-Kreis, den sichtbaren Bereich ab Kreis-Zoom und den Umkreis der Einsatzstelle. Datenstand: monatlich automatisch aktualisiert. Warnungen zu Leitungen/WEA berücksichtigen nur Objekte im selben Kreis.</p>
+<p><b>Offline</b>: Zuletzt genutzte Kreise bleiben im Browser gespeichert, Kartenkacheln nicht. Ohne Netz kann der Kartenhintergrund fehlen.</p>
 <p class="note">Daten: © OpenStreetMap-Mitwirkende (ODbL) · Wind: Open-Meteo · Luftbild: Esri · TopPlus: © BKG</p>
 <div class="row"><button class="pri" onclick="document.getElementById('modal').style.display='none';try{localStorage.setItem('orgl-fri-ok','1')}catch(e){}">Verstanden</button></div>`;$("modal").style.display="flex";}
 $("bInfo").onclick=info;
 try{if(!localStorage.getItem("orgl-fri-ok"))info();}catch(e){info();}
-load(false);
+loadIndex();
+startLoc();
 </script>
 </body>
 </html>

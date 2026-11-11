@@ -1,14 +1,13 @@
-name: ORGL-Karte Daten aktualisieren
+name: ORGL-Karte Daten Deutschland aktualisieren
 
 on:
   schedule:
-    - cron: "17 2 * * 1"   # jeden Montag ca. 03:17 Uhr (MEZ)
+    - cron: "17 1 1 * *"   # am 1. jedes Monats nachts
   workflow_dispatch:
   push:
     branches: [main]
     paths:
-      - "orgl-friesland/update-data.js"
-      - "orgl-friesland/index.html"
+      - "orgl-friesland/update-germany.js"
       - ".github/workflows/orgl-data.yml"
 
 permissions:
@@ -19,7 +18,7 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  update:
+  list:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -27,14 +26,58 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "20"
-      - name: OSM-Daten holen und auswerten
-        run: node orgl-friesland/update-data.js
-      - name: data.json speichern
+      - run: node orgl-friesland/update-germany.js list kreisliste.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: kreisliste
+          path: kreisliste.json
+
+  shard:
+    needs: list
+    runs-on: ubuntu-latest
+    timeout-minutes: 300
+    strategy:
+      fail-fast: false
+      max-parallel: 5
+      matrix:
+        i: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - uses: actions/download-artifact@v4
+        with:
+          name: kreisliste
+      - run: node orgl-friesland/update-germany.js shard kreisliste.json ${{ matrix.i }} 10 out
+      - uses: actions/upload-artifact@v4
+        with:
+          name: teil-${{ matrix.i }}
+          path: out
+          if-no-files-found: ignore
+
+  index:
+    needs: shard
+    if: always() && needs.shard.result != 'cancelled'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: teil-*
+          path: neu
+          merge-multiple: true
+      - run: node orgl-friesland/update-germany.js index neu orgl-friesland/data
+      - name: Daten speichern
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898283+github-actions[bot]@users.noreply.github.com"
-          git add orgl-friesland/data.json
+          git add orgl-friesland/data
           if git diff --cached --quiet; then echo "Keine Änderungen"; exit 0; fi
-          git commit -m "ORGL-Karte: OSM-Daten aktualisiert"
+          git commit -q -m "ORGL-Karte: OSM-Daten Deutschland aktualisiert"
           git pull --rebase origin main
           git push
