@@ -1607,6 +1607,12 @@ Version 5.05:
   („a, b“ = a ODER b). Mit „🚑 NA-Indikation“ markierte Knöpfe ziehen weiterhin einen Notarzt.
 - Nur „Unauffällig“ (ohne weitere Befunde) zählt weiter als unauffälliges E (R0 möglich).
 
+Version 5.92:
+- Hubschrauber-Landeplatz: Die Fläche muss jetzt groß genug sein – 25 × 25 m (625 m²) je Hubschrauber, also z. B. 4 Hubschrauber ≥ 2500 m².
+- Die Größe wird aus dem Umriss der Fläche in OpenStreetMap berechnet. Flächen ohne Umriss werden nicht genommen.
+- Werden später weitere Hubschrauber alarmiert und der Platz reicht nicht mehr, sucht die Leitstelle einen größeren und vermerkt das im Einsatz.
+- Findet sich keine passende Fläche, steht beim geschätzten Landeplatz dabei, dass die Größe nicht geprüft ist.
+
 Version 5.91:
 - Giftnotruf-Fenster: neuer Knopf „🗣️ GIZ fragen“. Der simulierte Giftnotruf fragt fehlende Angaben nach (Was, Alter/Gewicht, Menge, Zeitpunkt) und gibt dann eine Auskunft.
 - Paracetamol und Ibuprofen: Dosis wird in mg/kg berechnet (Grenzen ca. 150 mg/kg bzw. 100/400 mg/kg). Bei Kindern von 1–10 Jahren ohne Gewicht wird das Gewicht geschätzt: (Alter + 4) × 2.

@@ -231,7 +231,7 @@ html[data-device="handy"] .fach-grid{grid-template-columns:1fr}
 <header id="topbar">
  <div class="tb-left">
   <span class="tb-brand">🚑 Leitstelle<span>.sim</span></span>
-  <span id="versionTag" class="tb-ver">v5.91</span>
+  <span id="versionTag" class="tb-ver">v5.92</span>
   <span id="syncState"></span>
   <a id="deskTag" href="#" onclick="renameDesk();return false" title="Name dieses Platzes (für „offen an …“) – antippen zum Ändern"></a>
  </div>
@@ -6752,11 +6752,20 @@ async function lstSetStaging(id){
  }catch(e){toast("Adresssuche nicht erreichbar")}
 }
 // Freie Fläche in der Nähe suchen (echte OSM-Daten über Nominatim): Sportplatz, Park, Parkplatz
-async function findNearbyOpenArea(lat,lng,kinds,radiusDeg=0.012,minKm=0.05){
+// v5.92: Flächengröße aus dem OSM-Umriss (m²). Ohne Umriss (nur Punkt) unbekannt = null.
+function geoAreaM2(gj){
+ if(!gj)return null;
+ const ring=r=>{if(!r||r.length<3)return 0;const la0=r[0][1]*Math.PI/180,kx=111320*Math.cos(la0),ky=110574;let s=0;for(let i=0;i<r.length;i++){const[a1,b1]=r[i],[a2,b2]=r[(i+1)%r.length];s+=(a1*kx)*(b2*ky)-(a2*kx)*(b1*ky)}return Math.abs(s)/2};
+ const poly=p=>Math.max(0,ring(p[0])-p.slice(1).reduce((t,h)=>t+ring(h),0));
+ if(gj.type==="Polygon")return poly(gj.coordinates);
+ if(gj.type==="MultiPolygon")return gj.coordinates.reduce((t,p)=>t+poly(p),0);
+ return null;
+}
+async function findNearbyOpenArea(lat,lng,kinds,radiusDeg=0.012,minKm=0.05,minM2=0){
  for(const k of kinds){
    try{const vb=[lng-radiusDeg,lat+radiusDeg,lng+radiusDeg,lat-radiusDeg].join(",");
-     const rows=await (await fetch(`https://nominatim.openstreetmap.org/search?format=jsonv2&limit=8&bounded=1&viewbox=${vb}&q=${encodeURIComponent("["+k+"]")}`,{headers:{"Accept":"application/json"}})).json();
-     const best=(rows||[]).map(r=>({name:r.name||r.display_name.split(",")[0],lat:Number(r.lat),lng:Number(r.lon),km:haversine(lat,lng,Number(r.lat),Number(r.lon)),k})).filter(x=>x.km>minKm).sort((a,b)=>a.km-b.km)[0];
+     const rows=await (await fetch(`https://nominatim.openstreetmap.org/search?format=jsonv2&limit=${minM2?15:8}&bounded=1${minM2?"&polygon_geojson=1&polygon_threshold=0.00001":""}&viewbox=${vb}&q=${encodeURIComponent("["+k+"]")}`,{headers:{"Accept":"application/json"}})).json();
+     const best=(rows||[]).map(r=>({name:r.name||r.display_name.split(",")[0],lat:Number(r.lat),lng:Number(r.lon),km:haversine(lat,lng,Number(r.lat),Number(r.lon)),k,m2:minM2?geoAreaM2(r.geojson):null})).filter(x=>x.km>minKm&&(!minM2||(x.m2!=null&&x.m2>=minM2))).sort((a,b)=>a.km-b.km)[0];
      if(best)return best;
    }catch(e){}
  }
@@ -6774,13 +6783,25 @@ async function orglPickStaging(c,u){
 }
 // Hubschrauber landen nur auf freien Flächen
 function isAirUnit(u){return !!u&&(["RTH","ITH","KTH"].includes(u.type)||u.org==="Luftrettung")}
+// v5.92: Landefläche je Hubschrauber 25 × 25 m = 625 m² (4 Hubschrauber ≥ 2500 m²).
+const HELI_M2=625;
+function heliCount(c){return Math.max(1,callUnits(c).filter(isAirUnit).length)}
+function heliNeedM2(c){return heliCount(c)*HELI_M2}
 async function heliPickLanding(c){
- if(c._heliBusy||c.heliLanding)return; c._heliBusy=true;
+ if(c._heliBusy)return;
+ const n=heliCount(c), need=n*HELI_M2;
+ if(c.heliLanding&&(c.heliLanding.forN||1)>=n)return;
+ if(c.heliLanding&&c.heliLanding.m2!=null&&c.heliLanding.m2>=need){c.heliLanding.forN=n;return}
+ c._heliBusy=true;
  const ip=[Number(c.lat),Number(c.lng)]; if(!Number.isFinite(ip[0])){c._heliBusy=false;return}
- let pl=await findNearbyOpenArea(ip[0],ip[1],["pitch","park","parking"],0.015);
- c.heliLanding=pl?{name:`${OPEN_KIND_DE[pl.k]||"freie Fläche"} ${pl.name&&!/^\d/.test(pl.name)?pl.name:""}`.trim()+` (ca. ${Math.round(pl.km*1000/50)*50} m)`,lat:pl.lat,lng:pl.lng}
-   :{name:"freie Fläche nahe der Einsatzstelle (geschätzt, ca. 150 m)",lat:ip[0]+0.0013,lng:ip[1]+0.0005};
- c._heliBusy=false; (c.history=c.history||[]).push({q:"🚁 Landeplatz",a:c.heliLanding.name}); save();
+ let pl=await findNearbyOpenArea(ip[0],ip[1],["pitch","park","parking"],0.015,0.05,need);
+ if(!pl)pl=await findNearbyOpenArea(ip[0],ip[1],["pitch","park","parking"],0.03,0.05,need);
+ const old=c.heliLanding;
+ c.heliLanding=pl?{name:`${pl.name&&new RegExp(OPEN_KIND_DE[pl.k]||"§","i").test(pl.name)?"":(OPEN_KIND_DE[pl.k]||"freie Fläche")} ${pl.name&&!/^\d/.test(pl.name)?pl.name:""}`.trim()+` (ca. ${Math.round(pl.km*1000/50)*50} m, ca. ${Math.round(pl.m2/100)*100} m² – reicht für ${Math.floor(pl.m2/HELI_M2)} Hubschrauber)`.replace(/\s+/g," "),lat:pl.lat,lng:pl.lng,m2:Math.round(pl.m2),forN:n}
+   :{name:`freie Fläche nahe der Einsatzstelle (geschätzt, ca. 150 m – Größe nicht geprüft, benötigt ≥ ${need} m² für ${n} Hubschrauber)`,lat:ip[0]+0.0013,lng:ip[1]+0.0005,m2:null,forN:n};
+ c._heliBusy=false;
+ if(old&&old.name===c.heliLanding.name)return;
+ (c.history=c.history||[]).push({q:old?`🚁 Landeplatz geändert (${n} Hubschrauber, ≥ ${need} m²)`:"🚁 Landeplatz",a:c.heliLanding.name}); save();
 }
 // alle 2 s: MANV-Rückmeldungen, BR durch OrgL, Landeplatz, Einsätze automatisch abschließen
 function callTick(){
@@ -6791,7 +6812,7 @@ function callTick(){
    if(c.kt||c.mergedInto||(c.deskId&&c.deskId!==DEVICE_ID))continue;
    const us=callUnits(c);
    try{if(policeTick(c,now))changed=true;if(c.manvComps&&manvCompTick(c,now))changed=true;if(bigEventManvTick(c,now))changed=true}catch(e){console.warn(e)} // v5.66
-   if(c.alarmTime&&us.some(isAirUnit)&&!c.heliLanding&&Number.isFinite(Number(c.lat)))heliPickLanding(c);
+   if(c.alarmTime&&us.some(isAirUnit)&&(!c.heliLanding||(c.heliLanding.forN||1)<us.filter(isAirUnit).length)&&Number.isFinite(Number(c.lat)))heliPickLanding(c);
    if(c.alarmTime&&isManvCall(c)&&!policeHold(c)){
      if(!c.brMode&&!c.staging)c.brMode=us.some(isOrgL)?"orgl":"lst";
      const first=us.filter(u=>RD_TYPES.has(u.type)&&!isLeadUnit(u)&&String(u.status)==="4"&&u.status4Since).sort((a,b)=>a.status4Since-b.status4Since)[0];
