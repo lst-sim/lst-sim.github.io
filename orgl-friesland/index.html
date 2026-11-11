@@ -79,13 +79,16 @@ button.pri{background:var(--sig);color:var(--sig-ink);border-color:var(--sig);fo
 .near{display:flex;justify-content:space-between;gap:10px;padding:10px 0;border-bottom:1px solid var(--line);cursor:pointer}
 .near span:last-child{color:var(--mut);white-space:nowrap}
 .navb{flex:1 1 30%;text-align:center;text-decoration:none;color:var(--paper);background:var(--ink);border-radius:12px;padding:12px 4px;font-weight:700;min-height:46px;font-size:14px;white-space:nowrap}
-select,input[type=text]{font:inherit;color:var(--ink);background:var(--wash);border:1px solid var(--line);border-radius:10px;padding:10px;width:100%}
+select,input[type=text],input[type=password]{font:inherit;color:var(--ink);background:var(--wash);border:1px solid var(--line);border-radius:10px;padding:10px;width:100%}
 
 /* Kartensymbole */
 .mk{display:flex;align-items:center;justify-content:center;border-radius:50%;border:1.5px solid #fff;color:#fff;font:700 9px/1 "Atkinson Hyperlegible",sans-serif;box-shadow:0 0 0 1px rgba(0,0,0,.5),0 1px 3px rgba(0,0,0,.4)}
 .own{border-radius:8px;border:3px solid #15243a;color:#15243a;background:#ffe600;font:700 16px/1 "Atkinson Hyperlegible",sans-serif;display:flex;align-items:center;justify-content:center;box-shadow:0 0 0 3px #fff,0 3px 10px rgba(0,0,0,.4)}
 .leaflet-tooltip.ownLbl{background:#15243a;color:#fff;border:0;font:700 14px/1.2 "Atkinson Hyperlegible",sans-serif;padding:5px 9px;border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,.4)}
 .leaflet-tooltip.ownLbl:before{display:none}
+.fix{border-radius:8px;border:2px solid #fff;color:#fff;background:#15243a;font:700 14px/1 "Atkinson Hyperlegible",sans-serif;display:flex;align-items:center;justify-content:center;box-shadow:0 0 0 2px #15243a,0 3px 10px rgba(0,0,0,.35)}
+.leaflet-tooltip.fixLbl{background:#fff;color:#15243a;border:2px solid #15243a;font:700 13px/1.2 "Atkinson Hyperlegible",sans-serif;padding:4px 8px;border-radius:8px;box-shadow:0 2px 6px rgba(0,0,0,.25)}
+.leaflet-tooltip.fixLbl:before{display:none}
 
 /* Malen */
 #drawLayer{position:absolute;inset:0;z-index:950;display:none;touch-action:none;cursor:crosshair}
@@ -97,7 +100,10 @@ select,input[type=text]{font:inherit;color:var(--ink);background:var(--wash);bor
 #drawBar #dDone{background:var(--sig);color:var(--sig-ink);font-weight:700;margin-left:auto}
 
 .leaflet-control-attribution{font-size:10px}
-.leaflet-top{top:calc(env(safe-area-inset-top) + 62px)}
+.leaflet-bottom{bottom:calc(env(safe-area-inset-bottom) + 86px)}
+.seg{position:absolute;left:10px;top:calc(env(safe-area-inset-top) + 66px);z-index:1000;display:flex;gap:2px;background:var(--paper);border-radius:14px;padding:3px;box-shadow:var(--shadow)}
+.seg button{border:0;background:transparent;min-height:36px;padding:6px 12px;font-size:14px;border-radius:11px}
+.seg button.on{background:var(--ink);color:var(--paper);font-weight:700}
 .leaflet-control-scale{margin-left:12px!important}
 #modal{position:absolute;inset:0;z-index:2000;background:rgba(21,36,58,.45);display:none;align-items:center;justify-content:center;padding:16px}
 #modal .box{background:var(--paper);border-radius:20px;padding:20px;max-width:520px;max-height:85%;overflow:auto;box-shadow:var(--shadow)}
@@ -110,7 +116,7 @@ select,input[type=text]{font:inherit;color:var(--ink);background:var(--wash);bor
 <div id="cross"></div>
 <div id="drawLayer"></div>
 <div id="drawBar">
-  <button class="c sel" data-c="#ff1744" style="background:#ff1744" aria-label="Rot"></button>
+  <button class="c sel" data-c="#ff6d00" style="background:#ff6d00" aria-label="Orange"></button>
   <button class="c" data-c="#2979ff" style="background:#2979ff" aria-label="Blau"></button>
   <button class="c" data-c="#ffd600" style="background:#ffd600" aria-label="Gelb"></button>
   <button class="c" data-c="#00c853" style="background:#00c853" aria-label="Grün"></button>
@@ -128,6 +134,7 @@ select,input[type=text]{font:inherit;color:var(--ink);background:var(--wash);bor
   <button id="bLayers" class="round" title="Ebenen" aria-label="Ebenen"><svg class="i" viewBox="0 0 24 24"><path d="M12 3l9 5-9 5-9-5 9-5z"/><path d="M3 13l9 5 9-5"/></svg></button>
   <button id="bInfo" class="round" title="Hinweise" aria-label="Hinweise"><svg class="i" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7.5v.5"/></svg></button>
 </div>
+<div id="baseSw" class="seg" role="group" aria-label="Kartenansicht"><button data-base="OSM Standard" class="on">Karte</button><button data-base="Luftbild (Esri)">Luftbild</button><button data-base="TopPlus (BKG)">Topo</button></div>
 <div id="status">Lade …</div>
 <div id="wind" title="Wind"><span class="arr" id="wArr">·</span><div id="wTxt">Wind</div></div>
 <nav id="dock">
@@ -176,15 +183,16 @@ const r5=p=>[+p[0].toFixed(5),+p[1].toFixed(5)];
 
 /* Kategorien: key -> {name, color, letter, shape, on} */
 const CAT = {
- heli:{n:"H-Landeplatz",c:"#e53935",l:"H",on:true},
+ heli:{n:"H-Landeplatz",c:"#00838f",l:"H",on:true},
  lzN:{n:"Landeplatz Tag + Nacht",c:"#ff7a00",l:"",sq:true,on:true},
  lzD:{n:"Landeplatz nur Tag",c:"#f2c200",l:"",sq:true,on:true},
  pat:{n:"Sammelstelle / BHP",c:"#1e88e5",l:"P",on:true},
- br:{n:"Bereit\u00ADstellungs\u00ADraum",c:"#8e44ad",l:"B",sq:true,on:false},
+ br:{n:"Bereit\u00ADstellungs\u00ADraum",c:"#6d4c41",l:"B",sq:true,on:false},
  kh:{n:"Krankenhaus",c:"#2e7d32",l:"K",on:true},
  wka:{n:"Windrad",c:"#222",l:"✳",on:true},
- pwr:{n:"Freileitung",c:"#ff1744",l:"",line:true,on:true},
- own:{n:"Eigene Markierungen",c:"#ffb300",l:"✎",sq:true,on:true}
+ pwr:{n:"Freileitung",c:"#7b1fa2",l:"",line:true,on:true},
+ own:{n:"Eigene Markierungen",c:"#ffb300",l:"✎",sq:true,on:true},
+ fix:{n:"Feste Punkte",c:"#15243a",l:"",sq:true,on:true}
 };
 const OWN_TYPES = [["LP","Landeplatz (festgelegt)"],["PA","Patientenablage"],["BHP","Behandlungsplatz"],["BR","Bereitstellungsraum"],["SST","Sammelstelle Unverletzte"],["EL","Einsatzleitung / ELW"],["!","Gefahrenstelle"],["T","Text / Sonstiges"]];
 
@@ -288,7 +296,7 @@ const base={
 base["OSM Standard"].addTo(map);
 let curBase="OSM Standard";
 function setBase(n){map.removeLayer(base[curBase]);curBase=n;base[n].addTo(map);document.querySelectorAll("[data-base]").forEach(b=>b.classList.toggle("on",b.dataset.base===n));}
-L.control.scale({imperial:false,position:"topleft"}).addTo(map);
+L.control.scale({imperial:false,position:"bottomleft"}).addTo(map);
 const groups={};for(const k in CAT){groups[k]=L.layerGroup();if(CAT[k].on)groups[k].addTo(map);}
 let DATA=null,boundaryLayer=null,me=null,meMk=null,meAcc=null,follow=false,watchId=null,estMk=null,est=null,crossMode=null;
 const $=id=>document.getElementById(id);
@@ -341,15 +349,15 @@ function dot(c,col,r,stroke){return L.circleMarker(c,{radius:r,color:stroke||"#f
 function render(){
  for(const k in groups)if(k!=="own"){groups[k].clearLayers();polyGroups[k].clearLayers();}
  for(const z of DATA.lz){const C=CAT[z.cat];const warn=z.dl<WARN_LINE_M||z.dw<WARN_WIND_M;
-  polyGroups[z.cat].addLayer(L.polygon(z.g,{color:warn?"#ff1744":C.c,weight:4,opacity:1,fillColor:C.c,fillOpacity:.5,dashArray:warn?"10 6":null}).on("click",()=>showLZ(z)));
-  groups[z.cat].addLayer(dot(z.c,C.c,6,warn?"#ff1744":"#fff").on("click",()=>showLZ(z)));}
+  polyGroups[z.cat].addLayer(L.polygon(z.g,{color:warn?"#15243a":C.c,weight:4,opacity:1,fillColor:C.c,fillOpacity:.5,dashArray:warn?"10 6":null}).on("click",()=>showLZ(z)));
+  groups[z.cat].addLayer(dot(z.c,C.c,6,warn?"#15243a":"#fff").on("click",()=>showLZ(z)));}
  for(const p of DATA.pts){const C=CAT[p.cat];
   if(p.g)polyGroups[p.cat].addLayer(L.polygon(p.g.map(r=>[r]),{color:C.c,weight:3,opacity:1,fillColor:C.c,fillOpacity:.45}).on("click",()=>showPt(p)));
   if(p.cat==="heli"||p.cat==="kh")groups[p.cat].addLayer(L.marker(p.c,{icon:icon(p.cat,18)}).on("click",()=>showPt(p)));
   else groups[p.cat].addLayer(dot(p.c,C.c,5).on("click",()=>showPt(p)));}
- for(const ln of DATA.pwr){const hv=parseInt(ln.v)>=60000;groups.pwr.addLayer(L.polyline(ln.g,{color:"#ff1744",weight:hv?3:2,opacity:.85,dashArray:ln.k==="minor_line"?"6 5":null,interactive:false}));}
+ for(const ln of DATA.pwr){const hv=parseInt(ln.v)>=60000;groups.pwr.addLayer(L.polyline(ln.g,{color:"#7b1fa2",weight:hv?3:2,opacity:.85,dashArray:ln.k==="minor_line"?"6 5":null,interactive:false}));}
  for(const w of DATA.wka){groups.wka.addLayer(dot(w.c,"#222",4).on("click",()=>showWKA(w)));}
- syncPolys();renderOwn();updLegendCounts();}
+ syncPolys();renderOwn();renderFix();updLegendCounts();}
 
 /* ================= Info-Blätter ================= */
 function sheetOpen(html){$("sc").innerHTML=html;$("sheet").classList.add("open");$("sheet").scrollTop=0;}
@@ -401,10 +409,10 @@ map.on("dragstart",()=>{if(follow){follow=false;$("bLoc").classList.remove("on")
 
 /* ================= Einsatzstelle & Nächstgelegene ================= */
 function startCross(mode){crossMode=mode;$("cross").style.display="block";sheetClose();
- sheetOpen(`<h2>${mode==="est"?"Einsatzstelle setzen":"Eigene Markierung setzen"}</h2><div>Karte verschieben, bis das Fadenkreuz auf der Stelle liegt – oder lange auf die Karte tippen.</div><div class="row"><button class="pri" id="cOk">Hier setzen</button>${mode==="est"&&me?'<button id="cMe">Mein Standort</button>':""}<button id="cNo">Abbrechen</button></div>`);
+ sheetOpen(`<h2>${mode==="est"?"Einsatzstelle setzen":mode==="fixmove"?"Festen Punkt verschieben":"Markierung setzen"}</h2><div>Karte verschieben, bis das Fadenkreuz auf der Stelle liegt – oder lange auf die Karte tippen.</div><div class="row"><button class="pri" id="cOk">Hier setzen</button>${mode==="est"&&me?'<button id="cMe">Mein Standort</button>':""}<button id="cNo">Abbrechen</button></div>`);
  $("cOk").onclick=()=>{const c=map.getCenter();finishCross([c.lat,c.lng]);};$("cNo").onclick=()=>{crossMode=null;$("cross").style.display="none";sheetClose();};
  if($("cMe"))$("cMe").onclick=()=>finishCross(me.slice());}
-function finishCross(c){const m=crossMode;crossMode=null;$("cross").style.display="none";if(m==="est")setEst(c);else markHere(c[0],c[1]);}
+function finishCross(c){const m=crossMode;crossMode=null;$("cross").style.display="none";if(m==="est")setEst(c);else if(m==="fixmove"){const p=fixMove;fixMove=null;sheetClose();fbDb.ref("orgl/points/"+p.id).update({c:[+c[0].toFixed(6),+c[1].toFixed(6)],by:fbUser.email,ts:Date.now()}).then(()=>status("Verschoben.")).catch(fbErr);}else markHere(c[0],c[1]);}
 map.on("contextmenu",e=>{const c=[e.latlng.lat,e.latlng.lng];if(crossMode)finishCross(c);else{sheetOpen(`<h2>Punkt auf der Karte</h2><div class="row"><button class="pri" id="pE">Als Einsatzstelle</button><button id="pM">Hier markieren</button></div>${posBlock(c)}`);$("pE").onclick=()=>setEst(c);$("pM").onclick=()=>markHere(c[0],c[1]);}});
 $("bEst").onclick=()=>{if(est)showNear();else startCross("est");};
 $("bMark").onclick=()=>startCross("own");
@@ -417,7 +425,7 @@ function nearest(list,n){return list.map(x=>[x,dist(est,x.c)]).sort((a,b)=>a[1]-
 function showNear(){if(!DATA){sheetOpen("<h2>Einsatzstelle</h2><div>Daten noch nicht geladen.</div>");return;}
  const row=(x,d,fn)=>`<div class="near" onclick="${fn}"><span>${x.n||"(ohne Namen)"}${x.s?` · ${x.s}×${x.l} m`:""}${(x.dl!==undefined&&(x.dl<WARN_LINE_M||x.dw<WARN_WIND_M))?" ⚠":""}</span><span>${fmtD(d)} ${dirTxt(bearing(est,x.c))}</span></div>`;
  const lzN=nearest(DATA.lz.filter(z=>z.cat==="lzN"),4),lzD=nearest(DATA.lz,4),heli=nearest(DATA.pts.filter(p=>p.cat==="heli"),2);
- const pat=nearest(DATA.pts.filter(p=>p.cat==="pat"),4),kh=nearest(DATA.pts.filter(p=>p.cat==="kh"),3);
+ const fx=nearest(FIX.filter(p=>p.c),5),pat=nearest(DATA.pts.filter(p=>p.cat==="pat"),4),kh=nearest(DATA.pts.filter(p=>p.cat==="kh"),3);
  window._near={};let i=0;const reg=(arr,f)=>arr.map(([x,d])=>{const k="n"+(i++);window._near[k]=()=>{map.setView(x.c,17);f(x);};return row(x,d,`_near.${k}()`);}).join("");
  sheetOpen(`<h2>Einsatzstelle</h2><div class="kv"><b>UTMREF</b><span>${mgrs(est[0],est[1])}</span>${me?`<b>Von mir</b><span>${fmtD(dist(me,est))} ${dirTxt(bearing(me,est))}</span>`:""}</div>
  <div class="row"><button onclick="copyTxt('${mgrs(est[0],est[1])}')">UTMREF kopieren</button><button id="eMove">Neu setzen</button><button id="eDel">Entfernen</button></div>
@@ -426,6 +434,7 @@ function showNear(){if(!DATA){sheetOpen("<h2>Einsatzstelle</h2><div>Daten noch n
  <h3>Landeplatz alle (≥30×30 m)</h3>${reg(lzD,showLZ)}
  <h3>Offizielle H-Plätze / Flugplätze</h3>${reg(heli,showPt)||"<div class='note'>keine in OSM</div>"}
  <h3>Patientensammelstelle / BHP</h3>${reg(pat,showPt)}
+ ${fx.length?`<h3>Feste Punkte</h3>${reg(fx,showFix)}`:""}
  <h3>Krankenhaus (Luftlinie)</h3>${reg(kh,showPt)||"<div class='note'>keine im Kreis</div>"}
  <div class="note">Entfernungen Luftlinie. Marker „ES“ ist verschiebbar. ⚠ = Freileitung oder WEA in der Nähe.</div>`);
  $("eMove").onclick=()=>startCross("est");$("eDel").onclick=()=>{map.removeLayer(estMk);estMk=null;est=null;$("bEst").classList.remove("on");sheetClose();};}
@@ -436,7 +445,8 @@ const saveOwn=()=>{try{localStorage.setItem(OWN_KEY,JSON.stringify(OWN));}catch(
 function renderOwn(){groups.own.clearLayers();for(const o of OWN){const m=L.marker(o.c,{draggable:true,zIndexOffset:800,icon:L.divIcon({className:"",iconSize:[56,40],iconAnchor:[28,20],html:`<div class="own" style="width:56px;height:40px">${o.t}</div>`})});
  m.bindTooltip(o.txt||OWN_TYPES.find(x=>x[0]===o.t)[1],{permanent:true,direction:"right",offset:[32,0],className:"ownLbl"});
  m.on("dragend",()=>{const l=m.getLatLng();o.c=[l.lat,l.lng];saveOwn();});m.on("click",()=>showOwn(o));groups.own.addLayer(m);}updLegendCounts();}
-window.markHere=(lat,lon)=>{sheetOpen(`<h2>Markierung setzen</h2><select id="oT">${OWN_TYPES.map(t=>`<option value="${t[0]}">${t[0]} – ${t[1]}</option>`).join("")}</select><div style="height:8px"></div><input type="text" id="oX" placeholder="Bezeichnung / Notiz (optional)"><div class="row"><button class="pri" id="oS">Speichern</button><button onclick="sheetClose()">Abbrechen</button></div><div class="note">${mgrs(lat,lon)} · Wird nur auf diesem Gerät gespeichert.</div>`);
+window.markHere=(lat,lon)=>{sheetOpen(`<h2>Markierung setzen</h2><select id="oT">${OWN_TYPES.map(t=>`<option value="${t[0]}">${t[0]} – ${t[1]}</option>`).join("")}</select><div style="height:8px"></div><input type="text" id="oX" placeholder="Bezeichnung / Notiz (optional)"><div class="row">${isAdmin()?'<button class="pri" id="oA">Für alle speichern</button><button id="oS">Nur auf diesem Gerät</button>':'<button class="pri" id="oS">Speichern</button>'}<button onclick="sheetClose()">Abbrechen</button></div><div class="note">${mgrs(lat,lon)} · ${isAdmin()?"„Für alle speichern“ legt einen festen Punkt an, den alle sehen.":"Wird nur auf diesem Gerät gespeichert."}</div>`);
+ if($("oA"))$("oA").onclick=()=>{const t=$("oT").value,n=$("oX").value.trim();fixForm(null,[lat,lon],t,n);};
  $("oS").onclick=()=>{OWN.push({id:Date.now(),c:[lat,lon],t:$("oT").value,txt:$("oX").value.trim()});saveOwn();renderOwn();if(!map.hasLayer(groups.own))groups.own.addTo(map);sheetClose();};};
 window.sheetClose=sheetClose;
 function showOwn(o){const T=OWN_TYPES.find(x=>x[0]===o.t);sheetOpen(`<h2>${T[1]}</h2>${o.txt?`<div>${o.txt.replace(/</g,"&lt;")}</div>`:""}${posBlock(o.c)}<div class="row"><button id="oD">Markierung löschen</button></div><div class="note">Zum Verschieben Marker gedrückt halten und ziehen.</div>`);
@@ -453,20 +463,19 @@ $("wind").onclick=()=>{const w=getWind.last;if(!w){getWind(me||est||[map.getCent
  <div class="row"><button onclick="getWind([map.getCenter().lat,map.getCenter().lng]);sheetClose()">Für Kartenmitte aktualisieren</button></div><div class="note">Modelldaten Open-Meteo (10 m Höhe), kein Messwert vor Ort.</div>`);};
 
 /* ================= Ebenen / Legende ================= */
-function counts(k){if(!DATA)return"";if(k==="lzN"||k==="lzD")return DATA.lz.filter(z=>z.cat===k).length;if(k==="pwr")return DATA.pwr.length;if(k==="wka")return DATA.wka.length;if(k==="own")return OWN.length;return DATA.pts.filter(p=>p.cat===k).length;}
+function counts(k){if(k==="fix")return FIX.length;if(!DATA)return"";if(k==="lzN"||k==="lzD")return DATA.lz.filter(z=>z.cat===k).length;if(k==="pwr")return DATA.pwr.length;if(k==="wka")return DATA.wka.length;if(k==="own")return OWN.length;return DATA.pts.filter(p=>p.cat===k).length;}
 function updLegendCounts(){document.querySelectorAll("[data-cnt]").forEach(e=>e.textContent=counts(e.dataset.cnt));}
-$("bLayers").onclick=()=>{sheetOpen(`<h2>Ebenen</h2><div class="bases">${[["OSM Standard","Karte"],["Luftbild (Esri)","Luftbild"],["TopPlus (BKG)","Topo"]].map(([k,l])=>`<button data-base="${k}" class="${k===curBase?"on":""}">${l}</button>`).join("")}</div><div class="lgrid">${Object.keys(CAT).map(k=>{const C=CAT[k];return`<label class="lg"><input type="checkbox" data-k="${k}" ${map.hasLayer(groups[k])?"checked":""}>${C.line?`<span style="width:13px;height:0;border-top:3px solid ${C.c};flex:none"></span>`:`<span class="sw ${C.sq?"sq":""}" style="background:${C.c}"></span>`}<span>${C.n}</span><span class="cnt" data-cnt="${k}">${counts(k)}</span></label>`}).join("")}</div>
- <div class="row"><button id="bRe">Datenstatus</button><button id="bOwnDel">Eigene Markierungen löschen</button></div>
+$("bLayers").onclick=()=>{sheetOpen(`<h2>Ebenen</h2><div class="lgrid">${Object.keys(CAT).map(k=>{const C=CAT[k];return`<label class="lg"><input type="checkbox" data-k="${k}" ${map.hasLayer(groups[k])?"checked":""}>${C.line?`<span style="width:13px;height:0;border-top:3px solid ${C.c};flex:none"></span>`:`<span class="sw ${C.sq?"sq":""}" style="background:${C.c}"></span>`}<span>${C.n}</span><span class="cnt" data-cnt="${k}">${counts(k)}</span></label>`}).join("")}</div>
+ <div class="row"><button id="bRe">Datenstatus</button><button id="bAdm">${fbUser?"Admin (angemeldet)":"Admin-Anmeldung"}</button><button id="bOwnDel">Eigene Markierungen löschen</button></div>
  <div class="note">${DATA?`Datenstand: ${new Date(DATA.t).toLocaleString("de-DE")} (OpenStreetMap)`:""}</div>`);
- document.querySelectorAll("[data-base]").forEach(b=>b.onclick=()=>setBase(b.dataset.base));
  document.querySelectorAll("[data-k]").forEach(cb=>cb.onchange=()=>{const g=groups[cb.dataset.k];cb.checked?g.addTo(map):map.removeLayer(g);syncPolys();});
- $("bRe").onclick=()=>{sheetClose();$("status").click();};
+ $("bRe").onclick=()=>{sheetClose();$("status").click();};$("bAdm").onclick=adminSheet;
  $("bOwnDel").onclick=()=>{if($("bOwnDel").dataset.sure){OWN=[];saveOwn();renderOwn();sheetClose();}else{$("bOwnDel").dataset.sure=1;$("bOwnDel").textContent="Wirklich alle löschen?";}};};
 
 /* ================= Malen (lokal gespeichert) ================= */
 const DRAW_KEY="orgl-fri-draw";let DRAW=[];try{DRAW=JSON.parse(localStorage.getItem(DRAW_KEY)||"[]");}catch(e){}
 const drawGroup=L.layerGroup().addTo(map);
-let dColor="#ff1744",dArea=false,dErase=false,dPan=false,cur=null,curPts=null;
+let dColor="#ff6d00",dArea=false,dErase=false,dPan=false,cur=null,curPts=null;
 const saveDraw=()=>{try{localStorage.setItem(DRAW_KEY,JSON.stringify(DRAW));}catch(e){status("Zeichnung konnte im Browser nicht gespeichert werden.");}};
 function drawShape(d){const opt={color:d.c,weight:8,opacity:1,lineCap:"round",lineJoin:"round"};
  const l=d.a?L.polygon(d.p,Object.assign(opt,{fillColor:d.c,fillOpacity:.35})):L.polyline(d.p,opt);
@@ -506,9 +515,47 @@ function info(){$("mbox").innerHTML=`<h2 style="margin-top:0">Hinweise zur Nutzu
 <p class="note">Daten: © OpenStreetMap-Mitwirkende (ODbL) · Wind: Open-Meteo · Luftbild: Esri · TopPlus: © BKG</p>
 <div class="row"><button class="pri" onclick="document.getElementById('modal').style.display='none';try{localStorage.setItem('orgl-fri-ok','1')}catch(e){}">Verstanden</button></div>`;$("modal").style.display="flex";}
 $("bInfo").onclick=info;
+document.querySelectorAll("#baseSw [data-base]").forEach(b=>b.onclick=()=>setBase(b.dataset.base));
 $("bRefresh").onclick=()=>{status("Aktualisiere …");location.reload();};
 try{if(!localStorage.getItem("orgl-fri-ok"))info();}catch(e){info();}
+/* ================= Feste Punkte (Admin, Firebase-Projekt "ORGL") ================= */
+// Zugangsdaten aus Firebase → Projekteinstellungen → Meine Apps. null = Admin-Bereich noch nicht eingerichtet.
+const FB_CONFIG=null;
+const FIX_KEY="orgl-fix";let FIX=[];try{FIX=JSON.parse(localStorage.getItem(FIX_KEY)||"[]");}catch(e){}
+let fbDb=null,fbAuth=null,fbUser=null,fixMove=null;
+const isAdmin=()=>!!fbUser;
+const esc=t=>String(t==null?"":t).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+function loadScript(src){return new Promise((ok,no)=>{const s=document.createElement("script");s.src=src;s.onload=ok;s.onerror=()=>no(new Error("nicht ladbar: "+src));document.head.appendChild(s);});}
+async function initFB(){if(!FB_CONFIG)return;try{const b="https://www.gstatic.com/firebasejs/10.12.2/";
+ await loadScript(b+"firebase-app-compat.js");await Promise.all([loadScript(b+"firebase-auth-compat.js"),loadScript(b+"firebase-database-compat.js")]);
+ firebase.initializeApp(FB_CONFIG);fbDb=firebase.database();fbAuth=firebase.auth();
+ fbDb.ref("orgl/points").on("value",snap=>{const v=snap.val()||{};FIX=Object.entries(v).map(([id,p])=>Object.assign({id},p));try{localStorage.setItem(FIX_KEY,JSON.stringify(FIX));}catch(e){}renderFix();},e=>LOG.push("Feste Punkte: "+e.message));
+ fbAuth.onAuthStateChanged(u=>{fbUser=u;});
+ }catch(e){LOG.push("Datenbank: "+e.message);}}
+function renderFix(){groups.fix.clearLayers();for(const p of FIX){if(!p.c)continue;const T=OWN_TYPES.find(x=>x[0]===p.t)||["?","Punkt"];
+ const m=L.marker(p.c,{zIndexOffset:700,icon:L.divIcon({className:"",iconSize:[44,30],iconAnchor:[22,15],html:`<div class="fix" style="width:44px;height:30px">${esc(p.t)}</div>`})});
+ m.bindTooltip(esc(p.n||T[1]),{permanent:true,direction:"right",offset:[24,0],className:"fixLbl"});m.on("click",()=>showFix(p));groups.fix.addLayer(m);}updLegendCounts();}
+function fbErr(e){status("Nicht gespeichert: "+(/permission/i.test(e.message||"")?"keine Admin-Berechtigung.":e.message));}
+function showFix(p){const T=OWN_TYPES.find(x=>x[0]===p.t)||["?","Punkt"];
+ sheetOpen(`<h2>${esc(p.n||T[1])}</h2><div>${esc(T[1])}, fest hinterlegt</div>${p.txt?`<div style="margin-top:6px">${esc(p.txt)}</div>`:""}${posBlock(p.c)}
+ ${isAdmin()?`<h3>Bearbeiten</h3><div class="row"><button id="fRen">Ändern</button><button id="fMov">Verschieben</button><button id="fDel">Löschen</button></div>`:""}
+ <div class="note">Festgelegt${p.by?" von "+esc(p.by):""}${p.ts?" am "+new Date(p.ts).toLocaleDateString("de-DE"):""}.</div>`);
+ if(isAdmin()){$("fRen").onclick=()=>fixForm(p);$("fMov").onclick=()=>{fixMove=p;startCross("fixmove");};
+  $("fDel").onclick=()=>{const b=$("fDel");if(!b.dataset.sure){b.dataset.sure=1;b.textContent="Wirklich löschen?";return;}fbDb.ref("orgl/points/"+p.id).remove().then(()=>{sheetClose();status("Gelöscht.");}).catch(fbErr);};}}
+function fixForm(p,c,t0,n0){const isNew=!p;p=p||{t:t0||"BR",n:n0||"",txt:"",c};
+ sheetOpen(`<h2>${isNew?"Festen Punkt anlegen":"Festen Punkt ändern"}</h2><select id="xT">${OWN_TYPES.map(t=>`<option value="${t[0]}" ${t[0]===p.t?"selected":""}>${t[1]}</option>`).join("")}</select>
+ <div style="height:8px"></div><input type="text" id="xN" placeholder="Name, z. B. BR Sportplatz Schortens" value="${esc(p.n)}"><div style="height:8px"></div><input type="text" id="xX" placeholder="Hinweis, z. B. Zufahrt über Nordstraße (optional)" value="${esc(p.txt)}">
+ <div class="row"><button class="pri" id="xS">${isNew?"Für alle speichern":"Änderungen speichern"}</button><button onclick="sheetClose()">Abbrechen</button></div><div class="note">${mgrs(p.c[0],p.c[1])}. Sofort für alle sichtbar.</div>`);
+ $("xS").onclick=()=>{const d={t:$("xT").value,n:$("xN").value.trim(),txt:$("xX").value.trim(),c:[+p.c[0].toFixed(6),+p.c[1].toFixed(6)],by:fbUser.email,ts:Date.now()};
+  (isNew?fbDb.ref("orgl/points").push(d):fbDb.ref("orgl/points/"+p.id).update(d)).then(()=>{sheetClose();status(isNew?"Für alle gespeichert.":"Änderungen gespeichert.");if(!map.hasLayer(groups.fix))groups.fix.addTo(map);}).catch(fbErr);};}
+function adminSheet(){if(!FB_CONFIG){sheetOpen(`<h2>Admin</h2><div>Der Admin-Bereich ist noch nicht eingerichtet. Es fehlen die Zugangsdaten des Firebase-Projekts.</div>`);return;}
+ if(!fbAuth){sheetOpen(`<h2>Admin</h2><div>Keine Verbindung zur Datenbank. Internet prüfen und Seite aktualisieren.</div>`);return;}
+ if(fbUser){sheetOpen(`<h2>Admin</h2><div>Angemeldet als ${esc(fbUser.email)}.</div><div class="note">Neuen festen Punkt anlegen: unten „Markieren“, dann „Für alle speichern“. Bestehende Punkte antippen, um sie zu ändern.</div><div class="row"><button id="aOut">Abmelden</button></div>`);$("aOut").onclick=()=>fbAuth.signOut().then(()=>{sheetClose();status("Abgemeldet.");});return;}
+ sheetOpen(`<h2>Admin-Anmeldung</h2><input type="text" id="aE" placeholder="E-Mail" autocomplete="username" inputmode="email" autocapitalize="off"><div style="height:8px"></div><input type="password" id="aP" placeholder="Passwort" autocomplete="current-password"><div class="row"><button class="pri" id="aIn">Anmelden</button></div><div class="note" id="aMsg"></div>`);
+ $("aIn").onclick=()=>{$("aMsg").textContent="Anmelden …";fbAuth.signInWithEmailAndPassword($("aE").value.trim(),$("aP").value).then(()=>{sheetClose();status("Als Admin angemeldet.");}).catch(e=>{$("aMsg").textContent=/password|credential|user|email/i.test(e.code||"")?"E-Mail oder Passwort falsch.":"Anmeldung fehlgeschlagen: "+e.message;});};}
+
 loadIndex();
+initFB();
 startLoc();
 </script>
 </body>
