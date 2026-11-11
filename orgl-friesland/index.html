@@ -150,10 +150,7 @@ const CAT = {
  pat:{n:"Sammelstelle / BHP",c:"#1e88e5",l:"P",on:true},
  br:{n:"Bereitstellungsraum",c:"#8e44ad",l:"B",sq:true,on:false},
  kh:{n:"Krankenhaus",c:"#2e7d32",l:"K",on:true},
- rw:{n:"Rettungswache",c:"#c62828",l:"R",on:true},
- fw:{n:"Feuerwehr",c:"#b71c1c",l:"F",on:true},
  wr:{n:"Wasserrettung",c:"#00acc1",l:"W",on:true},
- pol:{n:"Polizei",c:"#0d47a1",l:"Po",on:false},
  aed:{n:"AED",c:"#43a047",l:"♥",on:false},
  wka:{n:"Windrad",c:"#222",l:"✳",on:true},
  pwr:{n:"Freileitung",c:"#ff1744",l:"",line:true,on:true},
@@ -284,7 +281,7 @@ async function loadKreis(k){if(KD.has(k.id)){KD.get(k.id)._last=Date.now();retur
  let d=null;try{const r=await fetch(`data/k/${k.id}.json?${k.t||""}`);if(r.ok)d=await r.json();else LOG.push(`${k.n}: HTTP ${r.status}`);}catch(e){LOG.push(`${k.n}: online nicht erreichbar`);}
  if(d)cacheKreis(k.id,d);else{try{d=JSON.parse(localStorage.getItem("orgl-k-"+k.id));if(d)LOG.push(`${k.n}: aus Offline-Speicher`);}catch(e){}}
  if(!d)return null;d._last=Date.now();KD.set(k.id,d);return d;}
-function rebuild(){const all=[...KD.values()];DATA={t:all.length?Math.min(...all.map(d=>d.t)):0,lz:[].concat(...all.map(d=>d.lz)),pts:[].concat(...all.map(d=>d.pts)),pwr:[].concat(...all.map(d=>d.pwr)),wka:[].concat(...all.map(d=>d.wka))};render();}
+function rebuild(){const all=[...KD.values()];DATA={t:all.length?Math.min(...all.map(d=>d.t)):0,lz:[].concat(...all.map(d=>d.lz)),pts:[].concat(...all.map(d=>d.pts)).filter(p=>CAT[p.cat]),pwr:[].concat(...all.map(d=>d.pwr)),wka:[].concat(...all.map(d=>d.wka))};render();}
 function summary(){const c=map.getCenter(),k=kreisAt([c.lat,c.lng]);
  if(map.getZoom()<MIN_ZOOM&&!KD.size){status(`${KREISE.length} Kreise · reinzoomen oder Standort (◎), um Plätze zu laden`);return;}
  status(`${k?k.n+" · ":""}${DATA?DATA.lz.length:0} LP-Kandidaten · ${DATA?DATA.pts.length:0} Objekte${map.getZoom()<MIN_ZOOM?" · zum Nachladen reinzoomen":""}`);}
@@ -389,7 +386,7 @@ function nearest(list,n){return list.map(x=>[x,dist(est,x.c)]).sort((a,b)=>a[1]-
 function showNear(){if(!DATA){sheetOpen("<h2>Einsatzstelle</h2><div>Daten noch nicht geladen.</div>");return;}
  const row=(x,d,fn)=>`<div class="near" onclick="${fn}"><span>${x.n||"(ohne Namen)"}${x.s?` · ${x.s}×${x.l} m`:""}${(x.dl!==undefined&&(x.dl<WARN_LINE_M||x.dw<WARN_WIND_M))?" ⚠":""}</span><span>${fmtD(d)} ${dirTxt(bearing(est,x.c))}</span></div>`;
  const lzN=nearest(DATA.lz.filter(z=>z.cat==="lzN"),4),lzD=nearest(DATA.lz,4),heli=nearest(DATA.pts.filter(p=>p.cat==="heli"),2);
- const pat=nearest(DATA.pts.filter(p=>p.cat==="pat"),4),kh=nearest(DATA.pts.filter(p=>p.cat==="kh"),3),rw=nearest(DATA.pts.filter(p=>p.cat==="rw"||p.cat==="fw"||p.cat==="wr"),4);
+ const pat=nearest(DATA.pts.filter(p=>p.cat==="pat"),4),kh=nearest(DATA.pts.filter(p=>p.cat==="kh"),3),rw=nearest(DATA.pts.filter(p=>p.cat==="wr"),3);
  window._near={};let i=0;const reg=(arr,f)=>arr.map(([x,d])=>{const k="n"+(i++);window._near[k]=()=>{map.setView(x.c,17);f(x);};return row(x,d,`_near.${k}()`);}).join("");
  sheetOpen(`<h2>🔴 Einsatzstelle</h2><div class="kv"><b>UTMREF</b><span>${mgrs(est[0],est[1])}</span>${me?`<b>Von mir</b><span>${fmtD(dist(me,est))} ${dirTxt(bearing(me,est))}</span>`:""}</div>
  <div class="row"><button onclick="copyTxt('${mgrs(est[0],est[1])}')">UTMREF kopieren</button><button id="eMove">Neu setzen</button><button id="eDel">Entfernen</button></div>
@@ -399,7 +396,7 @@ function showNear(){if(!DATA){sheetOpen("<h2>Einsatzstelle</h2><div>Daten noch n
  <h3>Offizielle H-Plätze / Flugplätze</h3>${reg(heli,showPt)||"<div class='note'>keine in OSM</div>"}
  <h3>Patientensammelstelle / BHP</h3>${reg(pat,showPt)}
  <h3>Krankenhaus (Luftlinie)</h3>${reg(kh,showPt)||"<div class='note'>keine im Kreis</div>"}
- <h3>Wachen (RW / FW / Wasserrettung)</h3>${reg(rw,showPt)}
+ <h3>Wasserrettung</h3>${reg(rw,showPt)||"<div class='note'>keine in OSM</div>"}
  <div class="note">Entfernungen Luftlinie. Marker „ES“ ist verschiebbar. ⚠ = Freileitung oder WEA in der Nähe.</div>`);
  $("eMove").onclick=()=>startCross("est");$("eDel").onclick=()=>{map.removeLayer(estMk);estMk=null;est=null;$("bEst").classList.remove("on");sheetClose();};}
 
