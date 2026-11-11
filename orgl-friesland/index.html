@@ -54,7 +54,7 @@ button.pri{background:var(--acc);color:#111;border-color:var(--acc);font-weight:
 @keyframes ownPulse{50%{box-shadow:0 0 0 4px #fff,0 0 22px 12px rgba(255,234,0,.45)}}
 .leaflet-tooltip.ownLbl{background:#000;color:#ffea00;border:2px solid #ffea00;font:800 15px/1.2 sans-serif;padding:4px 8px;border-radius:6px;box-shadow:0 2px 8px rgba(0,0,0,.6)}
 .leaflet-tooltip.ownLbl:before{display:none}
-#status{position:absolute;left:8px;z-index:1000;top:calc(env(safe-area-inset-top) + 62px);background:rgba(27,31,36,.9);border:1px solid var(--line);border-radius:8px;padding:5px 8px;font-size:12px;max-width:calc(100% - 80px)}
+#status{cursor:pointer;position:absolute;left:8px;z-index:1000;top:calc(env(safe-area-inset-top) + 62px);background:rgba(27,31,36,.9);border:1px solid var(--line);border-radius:8px;padding:5px 8px;font-size:12px;max-width:calc(100% - 80px)}
 #wind{position:absolute;right:10px;z-index:1000;top:calc(env(safe-area-inset-top) + 62px);background:rgba(27,31,36,.9);border:1px solid var(--line);border-radius:8px;padding:5px 8px;font-size:12px;text-align:center;min-width:70px;cursor:pointer}
 #wind .arr{font-size:22px;display:inline-block;line-height:1}
 select,input[type=text]{font:inherit;color:var(--fg);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:8px;width:100%}
@@ -112,26 +112,33 @@ const LZ_DAY = [30,30], LZ_NIGHT = [35,70];
 const WARN_LINE_M = 100;     // Freileitung näher als ... m -> Warnung
 const WARN_WIND_M = 300;     // Windenergieanlage näher als ... m -> Warnung
 const PARK_MIN_M2 = 1500;    // Parkplatz ab ... m² als möglicher Bereitstellungsraum
-const CACHE_KEY = "orgl-fri-v2";
+const CACHE_KEY = "orgl-fri-v3";
 const OVERPASS = ["https://overpass-api.de/api/interpreter","https://overpass.kumi.systems/api/interpreter","https://overpass.private.coffee/api/interpreter"];
-const AREA = 'area["boundary"="administrative"]["admin_level"="6"]["name"~"^(Landkreis )?Friesland$"]->.a;';
-const QUERY = `[out:json][timeout:180];
-${AREA}
+// Gebiet: Kreisgrenze per Name ODER amtlichem Kreisschlüssel 03455; falls nicht gefunden -> Rechteck um den Kreis
+const AREA = '(area["boundary"="administrative"]["admin_level"="6"]["name"~"^(Landkreis )?Friesland$"];area["boundary"="administrative"]["de:amtlicher_gemeindeschluessel"="03455"];)->.a;';
+const BBOX = "53.24,7.68,53.82,8.30"; // Notfall-Rechteck inkl. Wangerooge (enthält auch Teile von WHV/Nachbarkreisen)
+function qMain(sel){return `[out:json][timeout:90];
+${sel==="(area.a)"?AREA:""}
 rel["boundary"="administrative"]["admin_level"="6"]["name"~"^(Landkreis )?Friesland$"];
 out geom;
 (
- nwr(area.a)["aeroway"~"^(helipad|heliport|aerodrome)$"];
- way(area.a)["leisure"~"^(pitch|stadium)$"];
- way(area.a)["landuse"="recreation_ground"];
- nwr(area.a)["amenity"~"^(hospital|fire_station|police|school|community_centre)$"];
- nwr(area.a)["emergency"~"^(ambulance_station|water_rescue|lifeguard_base|lifeguard_station|defibrillator)$"];
- nwr(area.a)["leisure"="sports_hall"];
- way(area.a)["building"="sports_hall"];
- way(area.a)["amenity"="parking"]["parking"!~"underground|multi-storey|rooftop"];
- node(area.a)["power"="generator"]["generator:source"="wind"];
- way(area.a)["power"~"^(line|minor_line)$"];
+ nwr${sel}["aeroway"~"^(helipad|heliport|aerodrome)$"];
+ way${sel}["leisure"~"^(pitch|stadium)$"];
+ way${sel}["landuse"="recreation_ground"];
+ nwr${sel}["amenity"~"^(hospital|fire_station|police|school|community_centre)$"];
+ nwr${sel}["emergency"~"^(ambulance_station|water_rescue|lifeguard_base|lifeguard_station|defibrillator)$"];
+ nwr${sel}["leisure"="sports_hall"];
+ way${sel}["building"="sports_hall"];
 );
-out tags geom;`;
+out tags geom;`;}
+function qExtra(sel){return `[out:json][timeout:90];
+${sel==="(area.a)"?AREA:""}
+(
+ way${sel}["amenity"="parking"]["parking"!~"underground|multi-storey|rooftop"];
+ node${sel}["power"="generator"]["generator:source"="wind"];
+ way${sel}["power"~"^(line|minor_line)$"];
+);
+out tags geom;`;}
 
 /* Kategorien: key -> {name, color, letter, shape, on} */
 const CAT = {
@@ -212,7 +219,15 @@ const $=id=>document.getElementById(id);
 const status=t=>{$("status").textContent=t;};
 
 /* ================= Daten laden ================= */
-async function overpass(q){let lastErr;for(const url of OVERPASS){try{const r=await fetch(url,{method:"POST",body:"data="+encodeURIComponent(q),headers:{"Content-Type":"application/x-www-form-urlencoded"}});if(!r.ok)throw new Error(url+" HTTP "+r.status);return await r.json();}catch(e){lastErr=e;}}throw lastErr;}
+const LOG=[];
+async function overpass(q,label){let errs=[];for(const url of OVERPASS){const host=new URL(url).host;const ctl=new AbortController();const to=setTimeout(()=>ctl.abort(),100000);
+ try{status(`${label}: frage ${host} …`);const r=await fetch(url,{method:"POST",body:"data="+encodeURIComponent(q),headers:{"Content-Type":"application/x-www-form-urlencoded"},signal:ctl.signal});
+  const txt=await r.text();if(!r.ok)throw new Error("HTTP "+r.status);let js;try{js=JSON.parse(txt);}catch(e){throw new Error("keine gültige Antwort");}
+  if(js.remark&&/error|timed out|runtime/i.test(js.remark))throw new Error(js.remark.slice(0,120));
+  LOG.push(`${label} ✓ ${host}: ${js.elements.length} Elemente`);return js;}
+ catch(e){const m=e.name==="AbortError"?"Zeitüberschreitung":e.message;errs.push(host+": "+m);LOG.push(`${label} ✗ ${host}: ${m}`);}
+ finally{clearTimeout(to);}}
+ throw new Error(errs.join(" | "));}
 function geomOf(el){
  if(el.type==="node")return{pt:[el.lat,el.lon]};
  if(el.type==="way"&&el.geometry)return{line:el.geometry.map(g=>[g.lat,g.lon])};
@@ -254,13 +269,18 @@ function process(js){
   z.dl=Math.round(dl);z.lv=lv;let dw=1e9;for(const w of out.wka)dw=Math.min(dw,dist(z.c,w.c));z.dw=Math.round(dw);}
  return out;}
 async function load(force){
- if(!force){try{const c=localStorage.getItem(CACHE_KEY);if(c){DATA=JSON.parse(c);render();status(`Daten vom ${new Date(DATA.t).toLocaleString("de-DE")} (Zwischenspeicher) · ⟳ unter Ebenen`);return;}}catch(e){}}
- status("Lade OpenStreetMap-Daten für Landkreis Friesland … (bis zu 1–2 Min.)");
- try{const js=await overpass(QUERY);DATA=process(js);
-  if(!DATA.bnd.length&&!DATA.pts.length)throw new Error("Keine Daten – Kreisgrenze nicht gefunden");
-  try{localStorage.setItem(CACHE_KEY,JSON.stringify(DATA));}catch(e){}
-  render();status(`Stand ${new Date(DATA.t).toLocaleString("de-DE")} · ${DATA.lz.length} LP-Kandidaten · ${DATA.pts.length} Objekte`);
- }catch(e){status("Laden fehlgeschlagen: "+e.message+" – später erneut versuchen (☰ Ebenen → Daten neu laden).");}}
+ if(!force){try{const c=localStorage.getItem(CACHE_KEY);if(c){DATA=JSON.parse(c);if(DATA.lz.length||DATA.pts.length){render();status(`Daten vom ${new Date(DATA.t).toLocaleString("de-DE")} (gespeichert) · antippen = neu laden`);return;}}}catch(e){}}
+ LOG.length=0;let sel="(area.a)",main;
+ try{main=await overpass(qMain(sel),"Teil 1/2 Landeplätze & Gebäude");
+  if(main.elements.length<=1){LOG.push("Kreisgrenze-Gebiet lieferte nichts → Ersatz-Rechteck");sel="("+BBOX+")";main=await overpass(qMain(sel),"Teil 1/2 (Rechteck)");}
+ }catch(e){status("⚠ Laden fehlgeschlagen – antippen für Details / neu laden");LOG.push("Fehler: "+e.message);return;}
+ DATA=process(main);DATA.mode=sel;render();
+ status(`Teil 1/2 fertig: ${DATA.lz.length} Landeplatz-Kandidaten, ${DATA.pts.length} Objekte · lade Gefahren …`);
+ let extra=null;try{extra=await overpass(qExtra(sel),"Teil 2/2 Leitungen, WEA, Parkplätze");}catch(e){LOG.push("Teil 2 fehlgeschlagen: "+e.message);}
+ if(extra){DATA=process({elements:main.elements.concat(extra.elements)});DATA.mode=sel;render();}
+ try{if(extra)localStorage.setItem(CACHE_KEY,JSON.stringify(DATA));}catch(e){LOG.push("Zwischenspeichern nicht möglich (Speicher voll?)");}
+ status(`Stand ${new Date(DATA.t).toLocaleString("de-DE")} · ${DATA.lz.length} LP-Kandidaten · ${DATA.pts.length} Objekte${extra?"":" · ⚠ Leitungen/WEA fehlen"}${sel==="(area.a)"?"":" · Rechteck-Modus"} · antippen = Details`);}
+$("status").onclick=()=>{sheetOpen(`<h2>Datenstatus</h2><div class="kv"><b>Stand</b><span>${DATA?new Date(DATA.t).toLocaleString("de-DE"):"–"}</span><b>Landeplätze</b><span>${DATA?DATA.lz.length:0}</span><b>Objekte</b><span>${DATA?DATA.pts.length:0}</span><b>Leitungen</b><span>${DATA?DATA.pwr.length:0}</span><b>Gebiet</b><span>${DATA&&DATA.mode&&DATA.mode!=="(area.a)"?"Ersatz-Rechteck":"Kreisgrenze"}</span></div><h3>Protokoll</h3><div style="font-size:12px;white-space:pre-wrap">${LOG.join("\n")||"–"}</div><div class="row"><button class="pri" id="rl">⟳ Daten neu laden</button></div>`);$("rl").onclick=()=>{sheetClose();load(true);};};
 
 /* ================= Darstellung ================= */
 function icon(cat,size){const C=CAT[cat];size=size||30;return L.divIcon({className:"",iconSize:[size,size],iconAnchor:[size/2,size/2],html:`<div class="mk" style="width:${size}px;height:${size}px;background:${C.c};${C.sq?"border-radius:4px;":""}${cat==="lzD"?"color:#111;":""}">${C.l}</div>`});}
