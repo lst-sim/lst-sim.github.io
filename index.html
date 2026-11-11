@@ -231,7 +231,7 @@ html[data-device="handy"] .fach-grid{grid-template-columns:1fr}
 <header id="topbar">
  <div class="tb-left">
   <span class="tb-brand">🚑 Leitstelle<span>.sim</span></span>
-  <span id="versionTag" class="tb-ver">v5.89</span>
+  <span id="versionTag" class="tb-ver">v5.90</span>
   <span id="syncState"></span>
   <a id="deskTag" href="#" onclick="renameDesk();return false" title="Name dieses Platzes (für „offen an …“) – antippen zum Ändern"></a>
  </div>
@@ -4035,6 +4035,7 @@ function notruf(){
     <div class="row">
      ${(c.history.some(h=>!h.auto) && !c.alarmTime)?`<button onclick="goBackNotruf()" title="Letzte Antwort zurücknehmen">⬅️ Zurück</button>`:""}
      ${Object.keys(c.answers||{}).length?`<button onclick="openCallEdit('${esc(c.id)}')" title="Jeden Abfragepunkt nachträglich ändern">📝 Notruf ändern</button>`:""}
+     <button onclick="gizOpen('${esc(c.id)}')" title="Giftnotruf (GIZ-Nord, 0551 19240) anrufen – Notizfenster bleibt während des Telefonats offen">☠️ Giftnotruf</button>
      ${!c.alarmTime?`<button onclick="closeByPhoneDialog('${esc(c.id)}')" title="Ohne Rettungsmittel abschließen: Beratung, Weiterleitung, Fehlanruf">📞 Telefonisch erledigt</button>`:""}
      ${!c.kt&&!(c.rea&&c.rea.open)?`<button onclick="reaOpen('${esc(c.id)}')" title="Telefonreanimation: Anleitung und Metronom" style="color:#b91c1c;border-color:#fca5a5">🫀 Reanimation</button>`:""}
      <button onclick="render('leitstelle')">Zur Übersicht</button>
@@ -5270,6 +5271,7 @@ function buildMeldertext(c, nafoReason=""){
   if(c.answers?.fireKind&&c.answers.fireKind!=="nicht zutreffend")txt+=`\nFeuer: ${c.answers.fireKind} · Objekt: ${c.answers.fireObject||"k.A."}`;
   if(String(c.answers?.freeText||"").trim())txt+=`\nNotruf-Freitext: ${c.answers.freeText}`;
   if(c.alarmFreeText)txt+=`\nAlarmierungs-Freitext: ${c.alarmFreeText}`;
+  if(c.giz&&c.giz.done&&String(c.giz.rec||"").trim())txt+=`\nGiftnotruf (GIZ): ${c.giz.subst?c.giz.subst+" – ":""}${c.giz.rec}`;
   if(mittel) txt+=`\nWeitere Rettungsmittel: ${mittel}`;
   txt+=`\nAnfahrt: entsprechend AAO`;
   if(nafoReason) txt+=`\nNAFO-Grund: ${nafoReason}`;
@@ -11795,6 +11797,61 @@ function simAaoCheck(c){
  if(s.d.inkubator)a+=" · ℹ️ Inkubatortransport: Baby-NAW „Felix“ (Florian Oldenburg 02/86-01) über die GOL anfragen.";
  c.history=c.history||[]; c.history.push({q:"🎓 Übungs-Check AAO",a});
  toast(miss.length?`AAO-Check: es fehlt ${miss.join(", ")}`:"AAO-Check: passt ✅");
+}
+// v5.90: Telefonat mit dem Giftnotruf (GIZ-Nord, Göttingen – zuständig für Niedersachsen).
+// Schwebendes Fenster außerhalb von #app: bleibt beim Neuzeichnen stehen, man kann
+// währenddessen mitschreiben und nebenbei weiter disponieren. Gespeichert wird in c.giz.
+const GIZ_FIELDS=[["who","Wer? (Alter / Gewicht)","z. B. Kind 3 J., ca. 15 kg"],["subst","Was? (Substanz / Produkt)","Name, Wirkstoff, Packung"],["amount","Wie viel?","Menge, Anzahl Tabletten, Schlucke"],["when","Wann?","Uhrzeit / wie lange her"],["route","Wie aufgenommen?","geschluckt, eingeatmet, Haut, Auge"],["sympt","Symptome","jetzt / bisher"],["measures","Bisher unternommen","z. B. Mund ausgespült, Erbrechen"]];
+let gizTimer=null;
+function gizCall(id){return [db.currentCall,...(db.activeCalls||[])].find(x=>x&&String(x.id)===String(id))}
+function gizOpen(id){
+ const c=gizCall(id); if(!c)return;
+ c.giz=c.giz||{}; if(!c.giz.start||c.giz.done){c.giz={...c.giz,start:new Date().toISOString(),done:false,end:null}}
+ if(!c.giz.who){const a=c.answers||{}, age=a.age||(c.sim&&c.sim.d&&c.sim.d.age!=null?c.sim.d.age+" J.":"");if(age!==""&&age!=null)c.giz.who=String(age)}
+ save(); gizRender(id);
+}
+function gizRender(id){
+ const c=gizCall(id); if(!c||!c.giz)return;
+ document.getElementById("gizPanel")?.remove();
+ const g=c.giz, el=document.createElement("div"); el.id="gizPanel"; el.dataset.id=String(c.id);
+ el.style.cssText="position:fixed;right:16px;bottom:16px;width:min(420px,calc(100vw - 32px));max-height:calc(100vh - 110px);overflow:auto;z-index:1900;background:var(--panel,#fff);color:var(--ink,inherit);border:2px solid #7c3aed;border-radius:12px;box-shadow:0 10px 30px rgba(0,0,0,.3)";
+ const fs="width:100%;box-sizing:border-box;padding:5px 7px;font-size:13px;min-height:0;margin:0", ls="display:block;font-size:11px;margin:4px 0 1px;font-weight:600";
+ const inp=(k,l,ph)=>`<div><label style="${ls}">${l}</label><input data-k="${k}" value="${esc(g[k]||"")}" placeholder="${esc(ph)}" oninput="gizSet(this)" style="${fs}"></div>`;
+ el.innerHTML=`<div id="gizHead" style="display:flex;align-items:center;gap:8px;padding:8px 10px;background:#7c3aed;color:#fff;cursor:move;border-radius:9px 9px 0 0">
+   <b style="flex:1">☠️ Giftnotruf GIZ-Nord · <span id="gizTime">0:00</span></b>
+   <button onclick="gizMin()" title="Ein-/Ausklappen" style="padding:0 8px;min-height:0;background:#fff3;color:#fff;border:0">▁</button></div>
+  <div id="gizBody" style="padding:8px 10px">
+   <div class="muted" style="font-size:12px">Einsatz ${esc(c.id)} · ${esc(c.keyword||c.location||"")} · Tel. 0551 19240</div>
+   <div style="display:grid;grid-template-columns:1fr 1fr;gap:0 8px">${GIZ_FIELDS.map(f=>inp(...f)).join("")}</div>
+   <label style="${ls}">Empfehlung GIZ</label><textarea data-k="rec" rows="2" oninput="gizSet(this)" placeholder="Was rät der Giftnotruf?" style="${fs}">${esc(g.rec||"")}</textarea>
+   <label style="${ls}">📝 Notizen</label><textarea data-k="notes" rows="3" oninput="gizSet(this)" placeholder="Freie Notizen während des Telefonats" style="${fs}">${esc(g.notes||"")}</textarea>
+   <div class="row" style="margin-top:8px;gap:6px;flex-wrap:wrap"><button class="primary" style="padding:6px 10px" onclick="gizHangUp()">📵 Auflegen & in Einsatz übernehmen</button><button style="padding:6px 10px" onclick="gizHangUp(true)" title="Fenster schließen, nichts übernehmen">Verwerfen</button></div>
+  </div>`;
+ document.body.appendChild(el);
+ // verschiebbar
+ const h=el.querySelector("#gizHead");
+ h.onpointerdown=e=>{if(e.target.tagName==="BUTTON")return;const r=el.getBoundingClientRect(),dx=e.clientX-r.left,dy=e.clientY-r.top;
+   const mv=ev=>{el.style.left=Math.max(0,Math.min(innerWidth-60,ev.clientX-dx))+"px";el.style.top=Math.max(0,Math.min(innerHeight-40,ev.clientY-dy))+"px";el.style.right="auto";el.style.bottom="auto"};
+   const up=()=>{removeEventListener("pointermove",mv);removeEventListener("pointerup",up)};addEventListener("pointermove",mv);addEventListener("pointerup",up)};
+ clearInterval(gizTimer); const tick=()=>{const t=document.getElementById("gizTime");if(!t){clearInterval(gizTimer);return}const s=Math.max(0,Math.round((Date.now()-new Date(g.start))/1000));t.textContent=Math.floor(s/60)+":"+String(s%60).padStart(2,"0")};tick();gizTimer=setInterval(tick,1000);
+ el.querySelector("input")?.focus();
+}
+function gizMin(){const b=document.getElementById("gizBody");if(b)b.style.display=b.style.display==="none"?"":"none"}
+let gizSaveT=null;
+function gizSet(inpEl){const p=document.getElementById("gizPanel"),c=p&&gizCall(p.dataset.id);if(!c||!c.giz)return;c.giz[inpEl.dataset.k]=inpEl.value;clearTimeout(gizSaveT);gizSaveT=setTimeout(()=>save(),600)}
+function gizHangUp(discard){
+ const p=document.getElementById("gizPanel"),c=p&&gizCall(p.dataset.id);
+ p?.remove(); clearInterval(gizTimer);
+ if(!c||!c.giz)return;
+ if(discard){delete c.giz;save();return}
+ const g=c.giz; g.done=true; g.end=new Date().toISOString();
+ const s=Math.max(0,Math.round((new Date(g.end)-new Date(g.start))/1000)), dur=Math.floor(s/60)+":"+String(s%60).padStart(2,"0");
+ const parts=GIZ_FIELDS.filter(f=>String(g[f[0]]||"").trim()).map(f=>`${f[1].replace(/\s*\(.*\)/,"").replace(/\?$/,"")}: ${String(g[f[0]]).trim()}`);
+ if(String(g.rec||"").trim())parts.push(`Empfehlung GIZ: ${g.rec.trim()}`);
+ if(String(g.notes||"").trim())parts.push(`Notizen: ${g.notes.trim()}`);
+ (c.history=c.history||[]).push({q:`☠️ Telefonat Giftnotruf (GIZ-Nord, ${dur} min)`,a:parts.join(" · ")||"ohne Notizen"});
+ save(); toast("Giftnotruf-Telefonat im Einsatz dokumentiert");
+ try{if(db.currentCall&&String(db.currentCall.id)===String(c.id))render("notruf")}catch(e){}
 }
 // „📞 Telefonisch erledigt“ – Notruf ohne Rettungsmittel abschließen
 const PHONE_DONE=[["advice","Beratung am Telefon"],["kvd","An 116 117 verwiesen"],["police","An 110 verwiesen"],["pharmacy","Apotheken-Notdienst genannt"],["poison","Giftnotruf genannt"],["misdial","Fehlanruf / Versehen"]];

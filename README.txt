@@ -1607,6 +1607,13 @@ Version 5.05:
   („a, b“ = a ODER b). Mit „🚑 NA-Indikation“ markierte Knöpfe ziehen weiterhin einen Notarzt.
 - Nur „Unauffällig“ (ohne weitere Befunde) zählt weiter als unauffälliges E (R0 möglich).
 
+Version 5.90:
+- Neuer Knopf „☠️ Giftnotruf“ im Notruf: öffnet ein verschiebbares Notizfenster (GIZ-Nord, 0551 19240) mit Gesprächsdauer.
+- Felder für die W-Fragen (Wer, Was, Wie viel, Wann, Wie, Symptome, Bisher unternommen), Empfehlung des GIZ und freie Notizen.
+- Das Fenster bleibt beim Weiterarbeiten offen; Eingaben werden laufend gespeichert.
+- „Auflegen & in Einsatz übernehmen“ schreibt alles in den Abfrageverlauf; die GIZ-Empfehlung steht danach auch im Alarmtext.
+- Der Giftnotruf selbst wird nicht simuliert – die Antworten trägst du selbst ein.
+
 Version 5.89:
 - Fahrzeug-Handy beim MANV (Status 4 oder 7): neue Karte „🩹 Patient auswählen“.
   - Sie listet die freien Patienten nach Sichtungskategorie mit Anhängekarte, Alter/Geschlecht und Befund. Mit „Übernehmen“ übernimmt das Fahrzeug den Patienten.
