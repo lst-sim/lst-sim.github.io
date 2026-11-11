@@ -27,7 +27,8 @@ button{font:inherit;color:var(--fg);background:var(--panel);border:1px solid var
 button.on{background:var(--acc);color:#111;border-color:var(--acc)}
 button.pri{background:var(--acc);color:#111;border-color:var(--acc);font-weight:600}
 .fab{position:absolute;right:10px;z-index:1000;display:flex;flex-direction:column;gap:8px;bottom:calc(env(safe-area-inset-bottom) + 24px)}
-.fab button{width:52px;height:52px;border-radius:50%;font-size:20px;padding:0;box-shadow:0 2px 8px rgba(0,0,0,.4)}
+.fab button{width:62px;height:56px;border-radius:14px;font-size:20px;padding:2px 0 0;box-shadow:0 2px 8px rgba(0,0,0,.4);display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1.1}
+.fab button small{font-size:10px;font-weight:600;margin-top:2px}
 #cross{position:absolute;left:50%;top:50%;width:36px;height:36px;margin:-18px 0 0 -18px;z-index:900;pointer-events:none;display:none}
 #cross:before,#cross:after{content:"";position:absolute;background:var(--acc)}
 #cross:before{left:17px;top:0;width:2px;height:36px}#cross:after{top:17px;left:0;height:2px;width:36px}
@@ -42,10 +43,12 @@ button.pri{background:var(--acc);color:#111;border-color:var(--acc);font-weight:
 .warn{background:#4a2a00;border:1px solid #a86500;border-radius:8px;padding:6px 8px;margin:6px 0;font-size:14px}
 .ok{background:#173a1d;border:1px solid #2e7d32;border-radius:8px;padding:6px 8px;margin:6px 0;font-size:14px}
 .note{color:var(--mut);font-size:12px;margin-top:10px}
-.lg{display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid var(--line)}
-.lg input{width:22px;height:22px}
-.lg .cnt{margin-left:auto;color:var(--mut);font-size:13px}
-.sw{width:18px;height:18px;border-radius:50%;border:2px solid #fff;flex:none}
+.lgrid{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.lg{display:flex;align-items:center;gap:6px;padding:6px 7px;border:1px solid var(--line);border-radius:8px;font-size:12.5px;line-height:1.15;background:var(--bg)}
+.bases{display:flex;gap:6px;margin:4px 0 10px}.bases button{flex:1;min-height:34px;padding:4px;font-size:13px}
+.lg input{width:16px;height:16px;margin:0;flex:none}
+.lg .cnt{margin-left:auto;color:var(--mut);font-size:11px}
+.sw{width:13px;height:13px;border-radius:50%;border:1.5px solid #fff;flex:none}
 .sq{border-radius:3px}
 .near{display:flex;justify-content:space-between;gap:8px;padding:7px 0;border-bottom:1px solid var(--line);cursor:pointer}
 .near span:last-child{color:var(--mut);white-space:nowrap}
@@ -89,16 +92,17 @@ select,input[type=text]{font:inherit;color:var(--fg);background:var(--bg);border
 </div>
 <div class="bar">
   <h1>ORGL-Lagekarte<small id="sub">OSM-Daten · Planungshilfe</small></h1>
+  <button id="bRefresh" title="Aktualisieren">⟳</button>
   <button id="bLayers" title="Ebenen">☰ Ebenen</button>
   <button id="bInfo" title="Hinweise">ⓘ</button>
 </div>
 <div id="status">Lade …</div>
 <div id="wind" title="Wind (Open-Meteo)"><span class="arr" id="wArr">·</span><div id="wTxt">Wind</div></div>
 <div class="fab">
-  <button id="bEst" title="Einsatzstelle setzen">✚</button>
-  <button id="bDraw" title="Auf der Karte malen">🖌</button>
-  <button id="bMark" title="Eigene Markierung setzen">📍</button>
-  <button id="bLoc" title="Live-Standort">◎</button>
+  <button id="bEst" title="Einsatzstelle setzen"><span>✚</span><small>Einsatz</small></button>
+  <button id="bDraw" title="Auf der Karte malen"><span>🖌</span><small>Malen</small></button>
+  <button id="bMark" title="Eigene Markierung setzen"><span>📍</span><small>Markieren</small></button>
+  <button id="bLoc" title="Live-Standort"><span>◎</span><small>Standort</small></button>
 </div>
 <div class="sheet" id="sheet"><button class="x" id="sx">✕</button><div id="sc"></div></div>
 <div id="modal"><div class="box" id="mbox"></div></div>
@@ -140,19 +144,19 @@ const r5=p=>[+p[0].toFixed(5),+p[1].toFixed(5)];
 
 /* Kategorien: key -> {name, color, letter, shape, on} */
 const CAT = {
- heli:{n:"Hubschrauberlandeplatz (offiziell, OSM)",c:"#e53935",l:"H",on:true},
- lzN:{n:"Landeplatz-Kandidat Tag + Nacht (≥35×70 m)",c:"#ff7a00",l:"",sq:true,on:true},
- lzD:{n:"Landeplatz-Kandidat nur Tag (≥30×30 m)",c:"#f2c200",l:"",sq:true,on:true},
- pat:{n:"Patientensammelstelle / BHP (Halle, Schule, Gemeindehaus)",c:"#1e88e5",l:"P",on:true},
- br:{n:"Bereitstellungsraum (Parkplatz ≥1.500 m²)",c:"#8e44ad",l:"B",sq:true,on:false},
+ heli:{n:"Hubschrauberlandeplatz",c:"#e53935",l:"H",on:true},
+ lzN:{n:"Landeplatz Tag + Nacht",c:"#ff7a00",l:"",sq:true,on:true},
+ lzD:{n:"Landeplatz nur Tag",c:"#f2c200",l:"",sq:true,on:true},
+ pat:{n:"Sammelstelle / BHP",c:"#1e88e5",l:"P",on:true},
+ br:{n:"Bereitstellungsraum",c:"#8e44ad",l:"B",sq:true,on:false},
  kh:{n:"Krankenhaus",c:"#2e7d32",l:"K",on:true},
  rw:{n:"Rettungswache",c:"#c62828",l:"R",on:true},
  fw:{n:"Feuerwehr",c:"#b71c1c",l:"F",on:true},
- wr:{n:"Wasserrettung / DLRG",c:"#00acc1",l:"W",on:true},
+ wr:{n:"Wasserrettung",c:"#00acc1",l:"W",on:true},
  pol:{n:"Polizei",c:"#0d47a1",l:"Po",on:false},
- aed:{n:"AED / Defibrillator",c:"#43a047",l:"♥",on:false},
- wka:{n:"Gefahr: Windenergieanlage",c:"#222",l:"✳",on:true},
- pwr:{n:"Gefahr: Freileitung",c:"#ff1744",l:"",line:true,on:true},
+ aed:{n:"AED",c:"#43a047",l:"♥",on:false},
+ wka:{n:"Windrad",c:"#222",l:"✳",on:true},
+ pwr:{n:"Freileitung",c:"#ff1744",l:"",line:true,on:true},
  own:{n:"Eigene Markierungen",c:"#ffb300",l:"✎",sq:true,on:true}
 };
 const OWN_TYPES = [["LP","Landeplatz (festgelegt)"],["PA","Patientenablage"],["BHP","Behandlungsplatz"],["BR","Bereitstellungsraum"],["SST","Sammelstelle Unverletzte"],["EL","Einsatzleitung / ELW"],["!","Gefahrenstelle"],["T","Text / Sonstiges"]];
@@ -255,7 +259,8 @@ const base={
  "TopPlus (BKG)":L.tileLayer("https://sgx.geodatenzentrum.de/wmts_topplus_open/tile/1.0.0/web/default/WEBMERCATOR/{z}/{y}/{x}.png",{maxZoom:18,attribution:"© BKG (2026) dl-de/by-2-0"})
 };
 base["OSM Standard"].addTo(map);
-L.control.layers(base,null,{position:"topleft"}).addTo(map);
+let curBase="OSM Standard";
+function setBase(n){map.removeLayer(base[curBase]);curBase=n;base[n].addTo(map);document.querySelectorAll("[data-base]").forEach(b=>b.classList.toggle("on",b.dataset.base===n));}
 L.control.scale({imperial:false}).addTo(map);
 const groups={};for(const k in CAT){groups[k]=L.layerGroup();if(CAT[k].on)groups[k].addTo(map);}
 let DATA=null,boundaryLayer=null,me=null,meMk=null,meAcc=null,follow=false,watchId=null,estMk=null,est=null,crossMode=null;
@@ -423,9 +428,10 @@ $("wind").onclick=()=>{const w=getWind.last;if(!w){getWind(me||est||[map.getCent
 /* ================= Ebenen / Legende ================= */
 function counts(k){if(!DATA)return"";if(k==="lzN"||k==="lzD")return DATA.lz.filter(z=>z.cat===k).length;if(k==="pwr")return DATA.pwr.length;if(k==="wka")return DATA.wka.length;if(k==="own")return OWN.length;return DATA.pts.filter(p=>p.cat===k).length;}
 function updLegendCounts(){document.querySelectorAll("[data-cnt]").forEach(e=>e.textContent=counts(e.dataset.cnt));}
-$("bLayers").onclick=()=>{sheetOpen(`<h2>Ebenen</h2>${Object.keys(CAT).map(k=>{const C=CAT[k];return`<label class="lg"><input type="checkbox" data-k="${k}" ${map.hasLayer(groups[k])?"checked":""}>${C.line?`<span style="width:18px;height:0;border-top:3px solid ${C.c}"></span>`:`<span class="sw ${C.sq?"sq":""}" style="background:${C.c}"></span>`}<span>${C.n}</span><span class="cnt" data-cnt="${k}">${counts(k)}</span></label>`}).join("")}
+$("bLayers").onclick=()=>{sheetOpen(`<h2>Ebenen</h2><div class="bases">${[["OSM Standard","Karte"],["Luftbild (Esri)","Luftbild"],["TopPlus (BKG)","Topo"]].map(([k,l])=>`<button data-base="${k}" class="${k===curBase?"on":""}">${l}</button>`).join("")}</div><div class="lgrid">${Object.keys(CAT).map(k=>{const C=CAT[k];return`<label class="lg"><input type="checkbox" data-k="${k}" ${map.hasLayer(groups[k])?"checked":""}>${C.line?`<span style="width:13px;height:0;border-top:3px solid ${C.c};flex:none"></span>`:`<span class="sw ${C.sq?"sq":""}" style="background:${C.c}"></span>`}<span>${C.n}</span><span class="cnt" data-cnt="${k}">${counts(k)}</span></label>`}).join("")}</div>
  <div class="row"><button id="bRe">Datenstatus</button><button id="bOwnDel">Eigene Markierungen löschen</button></div>
  <div class="note">${DATA?`Datenstand: ${new Date(DATA.t).toLocaleString("de-DE")} (OpenStreetMap)`:""}</div>`);
+ document.querySelectorAll("[data-base]").forEach(b=>b.onclick=()=>setBase(b.dataset.base));
  document.querySelectorAll("[data-k]").forEach(cb=>cb.onchange=()=>{const g=groups[cb.dataset.k];cb.checked?g.addTo(map):map.removeLayer(g);});
  $("bRe").onclick=()=>{sheetClose();$("status").click();};
  $("bOwnDel").onclick=()=>{if($("bOwnDel").dataset.sure){OWN=[];saveOwn();renderOwn();sheetClose();}else{$("bOwnDel").dataset.sure=1;$("bOwnDel").textContent="Wirklich alle löschen?";}};};
@@ -473,6 +479,7 @@ function info(){$("mbox").innerHTML=`<h2 style="margin-top:0">Hinweise zur Nutzu
 <p class="note">Daten: © OpenStreetMap-Mitwirkende (ODbL) · Wind: Open-Meteo · Luftbild: Esri · TopPlus: © BKG</p>
 <div class="row"><button class="pri" onclick="document.getElementById('modal').style.display='none';try{localStorage.setItem('orgl-fri-ok','1')}catch(e){}">Verstanden</button></div>`;$("modal").style.display="flex";}
 $("bInfo").onclick=info;
+$("bRefresh").onclick=()=>{status("Aktualisiere …");location.reload();};
 try{if(!localStorage.getItem("orgl-fri-ok"))info();}catch(e){info();}
 loadIndex();
 startLoc();
