@@ -1607,6 +1607,13 @@ Version 5.05:
   („a, b“ = a ODER b). Mit „🚑 NA-Indikation“ markierte Knöpfe ziehen weiterhin einen Notarzt.
 - Nur „Unauffällig“ (ohne weitere Befunde) zählt weiter als unauffälliges E (R0 möglich).
 
+Version 5.94:
+- IVENA: neuer Knopf „🏷️ Fachabteilungen“. Damit kannst du die Fachabteilungen (Spalten) umbenennen, Kürzel ändern, die Reihenfolge verschieben, löschen und neue anlegen.
+- Mit „🏥 Kliniken“ hinter jeder Fachabteilung legst du direkt fest, welche Krankenhäuser sie haben. Das gilt auch für neu angelegte Fachabteilungen.
+- Umbenannte Standard-Fachabteilungen funktionieren weiter mit der Patientenzuweisung (intern bleibt der Standardname).
+- Eine gelöschte Standard-Fachabteilung wird bei der Zuweisung nicht mehr verlangt. Neue eigene Fachabteilungen werden von den Übungsfällen nicht automatisch angefordert.
+- Die Liste der Fachabteilungen wird nur auf diesem Gerät gespeichert (nicht in der Cloud), die Klinik-Zuordnungen schon.
+
 Version 5.93:
 - Mehrere Landeplätze: Reicht keine einzelne Fläche für alle Hubschrauber, werden mehrere Flächen genutzt (je 625 m² pro Hubschrauber). Die Hubschrauber werden nach Platz auf die Landeplätze verteilt und fliegen ihren zugeteilten Platz an.
 - Landeplatz-Absicherung: je Landeplatz ab 2 Hubschraubern 1 LF, ab 5 2 LF, ab 8 3 LF usw. Fehlt ein LF, wird das rot angezeigt mit Knopf „🚒 LF alarmieren“ (nimmt das nächste freie LF/HLF, das zum Landeplatz fährt).

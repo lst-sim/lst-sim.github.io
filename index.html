@@ -231,7 +231,7 @@ html[data-device="handy"] .fach-grid{grid-template-columns:1fr}
 <header id="topbar">
  <div class="tb-left">
   <span class="tb-brand">🚑 Leitstelle<span>.sim</span></span>
-  <span id="versionTag" class="tb-ver">v5.93</span>
+  <span id="versionTag" class="tb-ver">v5.94</span>
   <span id="syncState"></span>
   <a id="deskTag" href="#" onclick="renameDesk();return false" title="Name dieses Platzes (für „offen an …“) – antippen zum Ändern"></a>
  </div>
@@ -5689,7 +5689,7 @@ function crewRegister(u,call){
  if(db.cloud?.enabled)try{cloudRequest(`ivenaAssignments/${encodeURIComponent(String(a.id))}`,"PUT",a)}catch(e){}
  C.registered=true; C.asgId=a.id; C.hospId=h.id; C.drive=drive;
  const lab=pzcRmiLabel(info.rmi);
- crewSds(u,call,`${info.sk?`SK ${["","I","II","III","IV"][info.sk]}${info.card?` (Anhängekarte ${info.card})`:""} – `:""}Pat. ${info.gender||"?"}, ${age} J. – ${lab} – IVENA angemeldet: ${h.name}${fach?` (${fach})`:""}, PZC ${pzc}${flags.s?", Schockraum":""}${flags.n?", arztbegleitet":""}, Ankunft ca. ${hhmm(etaT)} Uhr${pick.zwang?" – ZWANGSZUWEISUNG":""}.`);
+ crewSds(u,call,`${info.sk?`SK ${["","I","II","III","IV"][info.sk]}${info.card?` (Anhängekarte ${info.card})`:""} – `:""}Pat. ${info.gender||"?"}, ${age} J. – ${lab} – IVENA angemeldet: ${h.name}${fach?` (${fachLabel(fach)})`:""}, PZC ${pzc}${flags.s?", Schockraum":""}${flags.n?", arztbegleitet":""}, Ankunft ca. ${hhmm(etaT)} Uhr${pick.zwang?" – ZWANGSZUWEISUNG":""}.`);
  const call2=call; call2.history=call2.history||[]; call2.history.push({q:`🏥 IVENA (${u.opta||u.name})`,a:`${h.name} · PZC ${pzc} · an ${hhmm(etaT)}`});
 }
 function crewTick(){
@@ -9089,7 +9089,7 @@ function renderIvenaMini(hospitals){
    <tbody>${hospitals.map(h=>{
      const closures=ivenaActiveClosures(h);
      return `<tr><td>${esc(h.name)}</td><td><span class="status ${ivenaStatusClass(h.status)}">${esc((h.status||"").toUpperCase())}</span></td>
-      <td>${closures.length||shockFull(h)?[...closures.map(cl=>`🚫 ${esc(cl.fach)} bis ${new Date(cl.until).toLocaleTimeString("de-DE",{hour:"2-digit",minute:"2-digit"})}`),...(shockFull(h)?[`🚫 Schockraum (S+) ${shockBusy(h).length}/${shockCap(h)} belegt – automatisch bis ca. ${new Date(shockFreeAt(h)).toLocaleTimeString("de-DE",{hour:"2-digit",minute:"2-digit"})}`]:[])].join("<br>"):`<span class="muted">keine</span>`}</td></tr>`;
+      <td>${closures.length||shockFull(h)?[...closures.map(cl=>`🚫 ${esc(fachLabel(cl.fach))} bis ${new Date(cl.until).toLocaleTimeString("de-DE",{hour:"2-digit",minute:"2-digit"})}`),...(shockFull(h)?[`🚫 Schockraum (S+) ${shockBusy(h).length}/${shockCap(h)} belegt – automatisch bis ca. ${new Date(shockFreeAt(h)).toLocaleTimeString("de-DE",{hour:"2-digit",minute:"2-digit"})}`]:[])].join("<br>"):`<span class="muted">keine</span>`}</td></tr>`;
    }).join("")}</tbody>
   </table></div>
  </details>`;
@@ -10174,7 +10174,7 @@ function openIvenaClosure(hid,preFach){
   <h2>🚫 Fachrichtung abmelden</h2>
   <p class="muted">${esc(h.name)} · ${esc(h.place||"")}</p>
   <label>Fachrichtung</label>
-  <select id="closureFach">${(h.fachrichtungen&&h.fachrichtungen.length?h.fachrichtungen:IVENA_FACHRICHTUNGEN).map(f=>`<option value="${esc(f)}" ${f===preFach?"selected":""}>${esc(f)}</option>`).join("")}</select>
+  <select id="closureFach">${(h.fachrichtungen&&h.fachrichtungen.length?h.fachrichtungen:IVENA_FACHRICHTUNGEN).map(f=>`<option value="${esc(f)}" ${f===preFach?"selected":""}>${esc(fachLabel(f))}</option>`).join("")}</select>
   <div class="row" style="margin-top:8px">${[1,2,4,8].map(hh=>`<button onclick="ivenaClosureQuick(${hh})">${hh} h</button>`).join("")}</div>
   <label style="margin-top:10px">Abgemeldet bis</label>
   <input id="closureUntil" type="datetime-local">
@@ -10442,7 +10442,7 @@ function ivenaClosedInfo(h,fach){
  if(String(h.status||"").toLowerCase()==="rot")return `${h.name} ist komplett abgemeldet (rot)`;
  if(!fach)return null;
  const cl=(typeof ivenaActiveClosures==="function"?ivenaActiveClosures(h):[]).find(c=>c.fach===fach);
- return cl?`${h.name}: ${fach} abgemeldet bis ${new Date(cl.until).toLocaleTimeString("de-DE",{hour:"2-digit",minute:"2-digit"})}`:null;
+ return cl?`${h.name}: ${fachLabel(fach)} abgemeldet bis ${new Date(cl.until).toLocaleTimeString("de-DE",{hour:"2-digit",minute:"2-digit"})}`:null;
 }
 function ivenaZwangHTML(prefix,checked=false){
  return `<div id="${prefix}ZwangBox" class="hidden" style="margin-top:10px;padding:8px 10px;border-radius:8px;background:#fee2e2;border:1px solid #fca5a5;color:#7f1d1d">
@@ -10451,11 +10451,12 @@ function ivenaZwangHTML(prefix,checked=false){
   <small>Ohne Haken kann diese Klinik für diesen Patienten nicht angefahren werden.</small></div>`;
 }
 // v5.84: Klinik hat die Fachrichtung überhaupt? (Schockraum/Intensiv: Intensivmedizin genügt)
-function hospitalHasFach(h,fach){if(!h||!fach)return true;const F=h.fachrichtungen||[];return F.includes(fach)||((fach==="Schockraum"||fach==="Intensivmedizin")&&F.includes("Intensivmedizin"))}
+function hospitalHasFach(h,fach){if(!h||!fach)return true;if(!IVENA_FACHRICHTUNGEN.includes(fach)&&IVENA_FACH_DEFAULT.includes(fach))return true; // v5.94: gelöschte Fachabteilung wird nicht mehr verlangt
+ const F=h.fachrichtungen||[];return F.includes(fach)||((fach==="Schockraum"||fach==="Intensivmedizin")&&F.includes("Intensivmedizin"))}
 function ivenaFachOptionsSync(selId,fach){
  const sel=document.getElementById(selId); if(!sel)return;
  const list=(selId==="vAsgHospital"&&typeof vehicleIvenaCache!=="undefined"&&vehicleIvenaCache&&vehicleIvenaCache.length)?vehicleIvenaCache:(db.ivena||[]);
- [...sel.options].forEach(o=>{const h=list.find(x=>String(x.id)===String(o.value));if(!h)return;const ok=hospitalHasFach(h,fach);o.disabled=!ok;o.textContent=o.textContent.replace(/ – ohne .*$/,"")+(ok?"":` – ohne ${fach}`)});
+ [...sel.options].forEach(o=>{const h=list.find(x=>String(x.id)===String(o.value));if(!h)return;const ok=hospitalHasFach(h,fach);o.disabled=!ok;o.textContent=o.textContent.replace(/ – ohne .*$/,"")+(ok?"":` – ohne ${fachLabel(fach)}`)});
  if(sel.selectedOptions[0]&&sel.selectedOptions[0].disabled){const f=[...sel.options].find(o=>!o.disabled);if(f)sel.value=f.value}
 }
 function ivenaZwangUpdate(prefix,h,fach){
@@ -10466,7 +10467,7 @@ function ivenaZwangUpdate(prefix,h,fach){
  return msg;
 }
 function ivenaZwangCheck(prefix,h,fach){
- if(fach&&!hospitalHasFach(h,fach)){toast(`⛔ ${h?h.name:"Diese Klinik"} hat keine ${fach} – bitte eine Klinik mit dieser Fachrichtung wählen`);return false} // v5.84
+ if(fach&&!hospitalHasFach(h,fach)){toast(`⛔ ${h?h.name:"Diese Klinik"} hat keine ${fachLabel(fach)} – bitte eine Klinik mit dieser Fachrichtung wählen`);return false} // v5.84
  let sPlus=false;try{sPlus=!!ivenaFlagsRead(prefix).flags.s}catch(e){}
  const msg=ivenaClosedInfo(h,fach)||(sPlus?shockClosedInfo(h):null);
  if(msg&&!document.getElementById(prefix+"Zwang")?.checked){ivenaZwangUpdate(prefix,h,fach);toast(`⛔ ${msg} – nur mit Haken „Zwangszuweisung“`);return false}
@@ -10568,7 +10569,7 @@ function pzcPreview(prefix){
  if(compact.length<5)need=`Noch 2 Ziffern Alter eintippen (Säugling = 00).`;
  else if(compact.length<6)need=`Noch Dringlichkeit eintippen: ${f.allowed.split("").join(" / ")}.`;
  else if(!r.dringlichkeit)need=`<span style="color:#d71920">Dringlichkeit ${esc(compact[5])} ist für ${f.code} nicht erlaubt (erlaubt: ${f.allowed.split("").join(" / ")}).</span>`;
- ch.innerHTML=`<b>${f.code} – ${esc(f.label)}</b> <span class="muted">(${esc(f.group)}${fach?` · ${esc(fach)}`:""})</span>`
+ ch.innerHTML=`<b>${f.code} – ${esc(f.label)}</b> <span class="muted">(${esc(f.group)}${fach?` · ${esc(fachLabel(fach))}`:""})</span>`
    +(r.alter!==""?` · Alter <b>${esc(r.alter)}</b>`:"")
    +(r.dringlichkeit?` · Dringlichkeit <b>${esc(PZC_DRINGLICHKEIT[r.dringlichkeit])}</b>`:"")
    +(r.pzc?` · <span style="color:#166534;font-weight:800">✔ PZC ${esc(r.pzc)}</span>`:`<br>${need}`);
@@ -10826,7 +10827,7 @@ function ivenaFachToggle(f){if(!ivenaFachEdit)return;const S=ivenaFachEdit.sel;S
 function ivenaFachAll(on){if(!ivenaFachEdit)return;ivenaFachEdit.sel=new Set(on?IVENA_FACHRICHTUNGEN:[]);render(currentPage)}
 function ivenaFachTile(f){
  const on=ivenaFachEdit&&ivenaFachEdit.sel.has(f), ab=IVENA_FACH_ABBR[f]||"";
- return `<button type="button" data-fach="${esc(f)}" class="fach-tile${on?" on":""}" onclick="ivenaFachToggle(${esc(JSON.stringify(f))})"><span class="fach-chk">${on?"✓":""}</span><span class="fach-name">${esc(f)}</span>${ab?`<span class="fach-ab">${esc(ab)}</span>`:""}</button>`;
+ return `<button type="button" data-fach="${esc(f)}" class="fach-tile${on?" on":""}" onclick="ivenaFachToggle(${esc(JSON.stringify(f))})"><span class="fach-chk">${on?"✓":""}</span><span class="fach-name">${esc(fachLabel(f))}</span>${ab?`<span class="fach-ab">${esc(ab)}</span>`:""}</button>`;
 }
 function ivenaFachEditorHTML(){
  const h=db.ivena.find(x=>String(x.id)===String(ivenaFachEdit.hid)); if(!h){ivenaFachEdit=null;return ""}
@@ -10849,6 +10850,67 @@ function saveIvenaFachrichtungen(hid){
  h.fachrichtungen=IVENA_FACHRICHTUNGEN.filter(f=>ivenaFachEdit.sel.has(f)).concat((h.fachrichtungen||[]).filter(f=>!IVENA_FACHRICHTUNGEN.includes(f)&&ivenaFachEdit.sel.has(f)));
  ivenaFachEdit=null; save();pushIvenaCloud();toast("Fachrichtungen gespeichert");render(currentPage);
 }
+// v5.94: Editor für die Fachabteilungen (Spalten in IVENA)
+let fachListEdit=null;
+function openFachList(){
+ fachListEdit={rows:IVENA_FACHRICHTUNGEN.map(k=>({key:k,label:fachLabel(k),abbr:IVENA_FACH_ABBR[k]||""})),hosp:null};
+ render("ivena"); window.scrollTo(0,0);
+}
+function fachListRead(){
+ if(!fachListEdit)return;
+ document.querySelectorAll("[data-fl]").forEach(el=>{const [i,f]=el.dataset.fl.split(":");const r=fachListEdit.rows[+i];if(r)r[f]=el.value});
+}
+function fachListMove(i,d){fachListRead();const R=fachListEdit.rows,j=i+d;if(j<0||j>=R.length)return;[R[i],R[j]]=[R[j],R[i]];render("ivena")}
+function fachListDel(i){fachListRead();const r=fachListEdit.rows[i];if(!r)return;
+ const n=db.ivena.filter(h=>(h.fachrichtungen||[]).includes(r.key)).length;
+ if(!confirm(`„${r.label||r.key}“ löschen?${n?` ${n} Klinik${n>1?"en haben":" hat"} diese Fachabteilung.`:""}`))return;
+ fachListEdit.rows.splice(i,1);if(fachListEdit.hosp===r.key)fachListEdit.hosp=null;render("ivena")}
+function fachListAdd(){fachListRead();fachListEdit.rows.push({key:"",label:"",abbr:"",isNew:true});render("ivena");setTimeout(()=>{const els=document.querySelectorAll('[data-fl$=":label"]');els[els.length-1]?.focus()},50)}
+function fachListHosp(i){fachListRead();const r=fachListEdit.rows[i];if(!r)return;
+ if(!r.key){r.key=String(r.label||"").trim();if(!r.key){toast("Bitte zuerst einen Namen eingeben");return}if(fachListEdit.rows.some((x,j)=>j!==i&&x.key===r.key)){toast("Name gibt es schon");r.key="";return}}
+ if(!fachListEdit.sel)fachListEdit.sel={};
+ if(!fachListEdit.sel[r.key])fachListEdit.sel[r.key]=new Set(db.ivena.filter(h=>(h.fachrichtungen||[]).includes(r.key)).map(h=>String(h.id)));
+ fachListEdit.hosp=fachListEdit.hosp===r.key?null:r.key;render("ivena");if(fachListEdit.hosp)setTimeout(()=>document.getElementById("fachHospRow")?.scrollIntoView({block:"nearest",behavior:"smooth"}),30)}
+function fachListHospToggle(hid){const k=fachListEdit.hosp,S=fachListEdit.sel[k];S.has(hid)?S.delete(hid):S.add(hid);fachListRead();render("ivena")}
+function fachListHospAll(on){const k=fachListEdit.hosp;fachListRead();fachListEdit.sel[k]=new Set(on?db.ivena.map(h=>String(h.id)):[]);render("ivena")}
+function fachListEditorHTML(){
+ const R=fachListEdit.rows, k=fachListEdit.hosp;
+ const cnt=r=>{const S=fachListEdit.sel&&fachListEdit.sel[r.key];return S?S.size:db.ivena.filter(h=>(h.fachrichtungen||[]).includes(r.key)).length};
+ const hospHTML=()=>{let hosp="";const S=fachListEdit.sel[k];const lab=(R.find(r=>r.key===k)||{}).label||k;
+   const byArea={};db.ivena.forEach(h=>{(byArea[h.area||"Sonstige"]=byArea[h.area||"Sonstige"]||[]).push(h)});
+   hosp=`<div class="card" style="margin:4px 0 10px;border:2px solid #6366f1"><div class="row between"><h3 style="margin:0">🏥 Kliniken mit „${esc(lab)}“</h3><span class="pill"><b>${S.size}</b> gewählt</span></div>
+    <div class="row" style="gap:6px;margin:8px 0"><button style="font-size:13px;padding:4px 10px" onclick="fachListHospAll(true)">Alle</button><button style="font-size:13px;padding:4px 10px" onclick="fachListHospAll(false)">Keine</button></div>
+    ${Object.entries(byArea).map(([a,hs])=>`<div style="margin-top:8px"><div class="muted" style="font-size:12px;font-weight:700">${esc(a)}</div><div class="fach-grid">${hs.map(h=>{const on=S.has(String(h.id));return `<button type="button" class="fach-tile${on?" on":""}" onclick="fachListHospToggle('${esc(String(h.id))}')"><span class="fach-chk">${on?"✓":""}</span><span class="fach-name">${esc(h.name)}</span></button>`}).join("")}</div></div>`).join("")}</div>`;return hosp};
+ const rows=R.map((r,i)=>`<tr${k&&r.key===k?' style="background:#eef2ff"':""}>
+   <td style="white-space:nowrap"><button onclick="fachListMove(${i},-1)" ${i?"":"disabled"} style="padding:2px 7px">↑</button><button onclick="fachListMove(${i},1)" ${i<R.length-1?"":"disabled"} style="padding:2px 7px">↓</button></td>
+   <td><input data-fl="${i}:label" value="${esc(r.label)}" placeholder="z. B. Unfallchirurgie" style="width:100%;box-sizing:border-box"></td>
+   <td style="width:110px"><input data-fl="${i}:abbr" value="${esc(r.abbr)}" placeholder="UCH" maxlength="8" style="width:100%;box-sizing:border-box"></td>
+   <td style="white-space:nowrap"><button onclick="fachListHosp(${i})" style="padding:4px 8px">🏥 ${cnt(r)} Kliniken</button> <button onclick="fachListDel(${i})" title="Löschen" style="padding:4px 8px">🗑️</button></td>
+   <td class="muted" style="font-size:11px">${r.key&&IVENA_FACH_DEFAULT.includes(r.key)?(r.key!==r.label?`Standard: ${esc(r.key)}`:"Standard"):"eigene"}</td></tr>${k&&r.key===k?`<tr><td colspan="5" id="fachHospRow">${hospHTML()}</td></tr>`:""}`).join("");
+ return `<div class="card"><div class="row between"><h2 style="margin:0">🏷️ Fachabteilungen in IVENA</h2></div>
+  <p class="muted" style="font-size:13px">Namen und Kürzel ändern, Reihenfolge verschieben, löschen oder neue anlegen. Mit „🏥 Kliniken“ legst du fest, welche Krankenhäuser die Fachabteilung haben.</p>
+  <div style="overflow-x:auto"><table style="width:100%"><thead><tr><th></th><th>Bezeichnung</th><th>Kürzel</th><th></th><th></th></tr></thead><tbody>${rows}</tbody></table></div>
+  <div class="row" style="gap:6px;margin-top:8px"><button onclick="fachListAdd()">＋ Neue Fachabteilung</button><button onclick="fachListReset()" title="Standardliste wiederherstellen">↺ Standard</button></div>
+  <div class="row" style="gap:8px;margin-top:16px;border-top:1px solid var(--line);padding-top:12px"><button class="primary" onclick="fachListSave()">💾 Speichern</button><button onclick="fachListEdit=null;render('ivena')">Abbrechen</button></div></div>`;
+}
+function fachListReset(){if(!confirm("Fachabteilungen auf die Standardliste zurücksetzen? Eigene Fachabteilungen werden entfernt."))return;fachListEdit={rows:IVENA_FACH_DEFAULT.map(k=>({key:k,label:k,abbr:IVENA_ABBR_DEFAULT[k]||""})),hosp:null};render("ivena")}
+function fachListSave(){
+ fachListRead(); const R=fachListEdit.rows, out=[], seen=new Set();
+ for(const r of R){const label=String(r.label||"").trim(); if(!label)continue;
+   let key=r.key||label; if(seen.has(key)){toast(`„${label}“ ist doppelt`);return}
+   seen.add(key); out.push({key,label,abbr:String(r.abbr||"").trim()||label.slice(0,3).toUpperCase()});
+   if(!r.key&&fachListEdit.sel&&fachListEdit.sel[""]){fachListEdit.sel[key]=fachListEdit.sel[""]}}
+ if(!out.length){toast("Mindestens eine Fachabteilung nötig");return}
+ db.ivenaFachList=out;
+ // Kliniken zuordnen
+ for(const [k,S] of Object.entries(fachListEdit.sel||{})){if(!seen.has(k))continue;
+   db.ivena.forEach(h=>{const F=new Set(h.fachrichtungen||[]);S.has(String(h.id))?F.add(k):F.delete(k);h.fachrichtungen=[...F]})}
+ // gelöschte eigene Fachabteilungen aus den Kliniken entfernen
+ const keep=new Set(out.map(x=>x.key));
+ db.ivena.forEach(h=>{if(h.fachrichtungen)h.fachrichtungen=h.fachrichtungen.filter(f=>keep.has(f)||IVENA_FACH_DEFAULT.includes(f))});
+ applyIvenaFachList(); fachListEdit=null; save(); try{pushIvenaCloud()}catch(e){}
+ toast("Fachabteilungen gespeichert"); render("ivena");
+}
 function toggleIvenaViewMode(){
  db.ivenaViewMode=db.ivenaViewMode==="fachrichtung"?"klinik":"fachrichtung";
  save();render("ivena");
@@ -10860,9 +10922,21 @@ function toggleIvenaViewMode(){
 const IVENA_KEEP_MS=24*60*60000;
 function ivenaRecent(a,now=Date.now()){const t=new Date(a.eta||a.createdAt||0).getTime();return !t||t>now-IVENA_KEEP_MS}
 const IVENA_FACH_ABBR={"Chirurgie":"CHI","Innere Medizin":"INN","Pädiatrie":"PÄD","Gynäkologie/Geburtshilfe":"GYN","Neurologie / Stroke Unit":"NEU/SU","Kardiologie / Chest Pain Unit":"KAR/CPU","Intensivmedizin":"ITS","Schockraum":"SR","Psychiatrie":"PSY","HNO":"HNO","Augenheilkunde":"AUG","Urologie":"URO"};
+// v5.94: Fachabteilungen selbst verwalten (umbenennen, Kürzel, Reihenfolge, löschen, neue anlegen).
+// Intern bleibt der Standardname der Schlüssel (Fälle, Klinikdaten); angezeigt wird die eigene Bezeichnung.
+const IVENA_FACH_DEFAULT=[...IVENA_FACHRICHTUNGEN], IVENA_ABBR_DEFAULT={...IVENA_FACH_ABBR}, IVENA_FACH_LABEL={};
+function fachLabel(f){return IVENA_FACH_LABEL[f]||f}
+function applyIvenaFachList(){
+ const L=Array.isArray(db.ivenaFachList)&&db.ivenaFachList.length?db.ivenaFachList:IVENA_FACH_DEFAULT.map(k=>({key:k,label:k,abbr:IVENA_ABBR_DEFAULT[k]||""}));
+ IVENA_FACHRICHTUNGEN.splice(0,IVENA_FACHRICHTUNGEN.length,...L.map(x=>x.key));
+ Object.keys(IVENA_FACH_LABEL).forEach(k=>delete IVENA_FACH_LABEL[k]);
+ Object.keys(IVENA_FACH_ABBR).forEach(k=>delete IVENA_FACH_ABBR[k]); Object.assign(IVENA_FACH_ABBR,IVENA_ABBR_DEFAULT);
+ L.forEach(x=>{if(x.label&&x.label!==x.key)IVENA_FACH_LABEL[x.key]=x.label;if(x.abbr)IVENA_FACH_ABBR[x.key]=x.abbr});
+}
+try{applyIvenaFachList()}catch(e){console.warn(e)}
 function ivenaMatrixHTML(rows){
  const now=Date.now();
- const head=IVENA_FACHRICHTUNGEN.map(f=>`<th class="ivm-h" title="${esc(f)}" style="text-align:center;padding:3px 1px;font-size:9px;white-space:nowrap;letter-spacing:0">${esc(IVENA_FACH_ABBR[f]||f)}</th>`).join("");
+ const head=IVENA_FACHRICHTUNGEN.map(f=>`<th class="ivm-h" title="${esc(fachLabel(f))}" style="text-align:center;padding:3px 1px;font-size:9px;white-space:nowrap;letter-spacing:0">${esc(IVENA_FACH_ABBR[f]||f)}</th>`).join("");
  const body=rows.map(h=>{
    const closures=ivenaActiveClosures(h);
    const offered=new Set(h.fachrichtungen||[]);
@@ -10870,15 +10944,15 @@ function ivenaMatrixHTML(rows){
    const dot={"grün":"#16a34a","gelb":"#eab308","rot":"#dc2626"}[st]||"#94a3b8";
    const incoming=(db.ivenaAssignments||[]).filter(a=>!a.deleted&&String(a.hospitalId)===String(h.id)&&ivenaRecent(a,now)).length;
    const cells=IVENA_FACHRICHTUNGEN.map(f=>{
-     if(!offered.has(f))return `<td title="${esc(f)}: nicht vorhanden" style="background:#e5e7eb;border:1px solid #fff"></td>`;
+     if(!offered.has(f))return `<td title="${esc(fachLabel(f))}: nicht vorhanden" style="background:#e5e7eb;border:1px solid #fff"></td>`;
      const cl=closures.find(c=>c.fach===f);
      const manual=db.ivenaMode!=="auto";
      if(f==="Schockraum"&&!cl){const n=shockBusy(h).length,cap=shockCap(h);
        if(n>=cap)return `<td title="Schockraum: ${n}/${cap} belegt – für S+ automatisch abgemeldet bis ca. ${new Date(shockFreeAt(h)).toLocaleTimeString("de-DE",{hour:"2-digit",minute:"2-digit"})}" style="background:#dc2626;color:#fff;text-align:center;font-size:9px;font-weight:800;border:1px solid #fff">${n}/${cap}</td>`;
        if(n>0)return `<td title="Schockraum: ${n}/${cap} belegt" style="background:#f59e0b;color:#111;text-align:center;font-size:9px;font-weight:800;border:1px solid #fff">${n}/${cap}</td>`}
      const fq=esc(JSON.stringify(f));
-     if(cl){const until=new Date(cl.until).toLocaleTimeString("de-DE",{hour:"2-digit",minute:"2-digit"});return `<td title="${esc(f)}: abgemeldet bis ${until}${manual?" – antippen zum Freigeben":""}" ${manual?`onclick="ivenaReopen('${h.id}','${cl.id}')"`:""} style="background:#dc2626;color:#fff;text-align:center;font-size:10px;font-weight:800;border:1px solid #fff;${manual?"cursor:pointer":""}">${until}</td>`;}
-     return `<td title="${esc(f)}: frei${manual?" – antippen zum Abmelden":""}" ${manual?`onclick="openIvenaClosure('${h.id}',${fq})"`:""} style="background:#16a34a;border:1px solid #fff;${manual?"cursor:pointer":""}"></td>`;
+     if(cl){const until=new Date(cl.until).toLocaleTimeString("de-DE",{hour:"2-digit",minute:"2-digit"});return `<td title="${esc(fachLabel(f))}: abgemeldet bis ${until}${manual?" – antippen zum Freigeben":""}" ${manual?`onclick="ivenaReopen('${h.id}','${cl.id}')"`:""} style="background:#dc2626;color:#fff;text-align:center;font-size:10px;font-weight:800;border:1px solid #fff;${manual?"cursor:pointer":""}">${until}</td>`;}
+     return `<td title="${esc(fachLabel(f))}: frei${manual?" – antippen zum Abmelden":""}" ${manual?`onclick="openIvenaClosure('${h.id}',${fq})"`:""} style="background:#16a34a;border:1px solid #fff;${manual?"cursor:pointer":""}"></td>`;
    }).join("");
    return `<tr style="height:28px"><td class="ivm-name" onclick="openIvenaFachrichtungen(${JSON.stringify(String(h.id)).replace(/"/g,"&quot;")})" style="cursor:pointer;padding:2px 6px;font-size:12px;line-height:1.2;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;position:sticky;left:0;background:#fff;z-index:1" title="${esc(h.name)}${h.place?` (${esc(h.place)})`:""} – antippen: 🏷️ Fachrichtungen bearbeiten"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${dot};margin-right:4px"></span><b>${esc(h.name)}</b> <small class="muted">${esc(h.place||"")}</small></td>${cells}<td style="text-align:center;font-weight:800;font-size:12px;padding:0">${incoming||""}</td></tr>`;
  }).join("");
@@ -10939,7 +11013,7 @@ function ivenaIncomingHTML(){
     ${td(`<div style="${big}">${ivenaBlue(a,"geschlecht",esc(a.geschlecht||"–"))}</div><div style="${big}">${ivenaBlue(a,"pzc",(a.alter!==""&&a.alter!=null)?esc(a.alter):"–")}</div>`)}
     ${td(`<div style="${big}">${pm(!!f.b,"B","b",a)}</div><div style="${big}">${pm(!!f.r,"R","r",a)}</div>`)}
     ${td(`<span style="${big}">${f.i?pm(true,"I","i",a):"k.A."}</span>`)}
-    ${td(`<div style="font-weight:700">${ivenaBlue(a,"pzc",esc(a.fach||"–"))}</div><div style="font-weight:700">${ivenaBlue(a,"pzc",a.rmi?`${esc(a.rmi)} ${esc(pzcRmiLabel(a.rmi))}`:"")}</div>`,`background:${a.deleted?"#f1f5f9":closed?"#ffc4c4":IVENA_G}`)}
+    ${td(`<div style="font-weight:700">${ivenaBlue(a,"pzc",esc(fachLabel(a.fach)||"–"))}</div><div style="font-weight:700">${ivenaBlue(a,"pzc",a.rmi?`${esc(a.rmi)} ${esc(pzcRmiLabel(a.rmi))}`:"")}</div>`,`background:${a.deleted?"#f1f5f9":closed?"#ffc4c4":IVENA_G}`)}
     ${td(`<b>${esc(a.lst||IVENA_LST_LABEL)}</b>`)}
     ${td(`<b title="${a.source==="vehicle"?"vom Rettungsmittel selbst angemeldet":"von der Leitstelle angemeldet"}">${a.source==="vehicle"?"RD":"LST"}</b>${a.zwang?`<div title="Zwangszuweisung – Klinik war für diese Fachrichtung abgemeldet" style="color:#b91c1c;font-weight:900">ZW</div>`:""}`,a.zwang&&!a.deleted?"background:#ffc4c4":"")}
     ${td(`<span style="${big}">${pm(!!f.n,"N","n",a)}</span>`)}
@@ -10963,7 +11037,7 @@ function ivenaIncomingHTML(){
         <div style="font-size:12px;color:#475569">Alarm ${hm(a.createdAt)} · <b style="color:#1d4ed8">ETA ${ivenaBlue(a,"eta",hm(a.eta))}</b> · ${a.source==="vehicle"?"RD":"LST"}${a.zwang?` · <b style="color:#b91c1c">⛔ Zwangszuweisung</b>`:""}</div></div>
        <div style="text-align:right;flex:0 0 auto"><div style="font-size:17px;font-weight:900">${ivenaBlue(a,"pzc",sk)}</div><div style="font-size:12px;font-weight:700">${ivenaBlue(a,"geschlecht",esc(a.geschlecht||"–"))} · ${ivenaBlue(a,"pzc",alt)}</div></div>
       </div>
-      <div style="margin-top:6px;padding:4px 8px;border-radius:6px;font-weight:700;background:${a.deleted?"#f1f5f9":closed?"#ffc4c4":IVENA_G}">${ivenaBlue(a,"pzc",esc(a.fach||"–"))}${a.rmi?` · ${ivenaBlue(a,"pzc",`${esc(a.rmi)} ${esc(pzcRmiLabel(a.rmi))}`)}`:""}</div>
+      <div style="margin-top:6px;padding:4px 8px;border-radius:6px;font-weight:700;background:${a.deleted?"#f1f5f9":closed?"#ffc4c4":IVENA_G}">${ivenaBlue(a,"pzc",esc(fachLabel(a.fach)||"–"))}${a.rmi?` · ${ivenaBlue(a,"pzc",`${esc(a.rmi)} ${esc(pzcRmiLabel(a.rmi))}`)}`:""}</div>
       <div style="margin-top:4px">${chip(!!f.s,"S","s",a)}${chip(!!f.h,"H","h",a)}${chip(!!f.n,"N","n",a)}${chip(!!f.b,"B","b",a)}${chip(!!f.r,"R","r",a)}${chip(!!f.bg,"BG","bg",a)}${f.ss?chip(true,"SS","ss",a):""}${f.i?chip(true,"I","i",a):""}</div>
       <div style="margin-top:4px;font-size:12px"><b>Anlass:</b> ${ivenaBlue(a,"anlass",esc(a.anlass||"k.A."))}${a.info?` · ${ivenaBlue(a,"info",esc(a.info))}`:""}</div>
       ${a.deleted?`<div style="font-size:12px;color:#b91c1c;text-decoration:none">🗑️ gelöscht ${hm(a.deletedAt)}</div>`:`<div class="row" style="justify-content:flex-end;gap:6px;margin-top:4px"><button style="padding:4px 10px" onclick="editIvenaAssignment('${a.id}','ivenaZuweisungen')">✏️ Bearbeiten</button><button style="padding:4px 10px" onclick="deleteIvenaAssignment('${a.id}','ivenaZuweisungen')">🗑️</button></div>`}
@@ -10985,12 +11059,13 @@ function ivenaIncomingHTML(){
 const IVENA_LST_LABEL="LST FRI/WHV";
 function ivena(){
  if(ivenaFachEdit){document.getElementById("app").innerHTML=ivenaFachEditorHTML();if(ivenaFachEdit)return}
+ if(fachListEdit){document.getElementById("app").innerHTML=fachListEditorHTML();return} // v5.94
  const areas=[...new Set(db.ivena.map(h=>h.area||"Sonstige"))];
  const rows=db.ivena.filter(h=>db.ivenaAreaFilter.includes(h.area||"Sonstige"));
  const isAuto=db.ivenaMode==="auto";
  const byFach=db.ivenaViewMode==="fachrichtung";
  document.getElementById("app").innerHTML=`${ivenaManvBannerHTML()}<div class="card ivc">
-  <div class="row between ivc-head"><div><h2>🏥 IVENA – Übungsansicht</h2><p class="muted">Lokale Simulation – keine Verbindung zum realen IVENA.</p></div><button class="primary" onclick="addIvena()">＋ Ziel hinzufügen</button></div>
+  <div class="row between ivc-head"><div><h2>🏥 IVENA – Übungsansicht</h2><p class="muted">Lokale Simulation – keine Verbindung zum realen IVENA.</p></div><div class="row" style="gap:6px"><button onclick="openFachList()" title="Fachabteilungen umbenennen, löschen oder neue anlegen und Kliniken zuordnen">🏷️ Fachabteilungen</button><button class="primary" onclick="addIvena()">＋ Ziel hinzufügen</button></div></div>
   <label style="margin-top:4px">Leitstellenbereiche</label>
   <div class="row">${areas.map(a=>`<button class="${db.ivenaAreaFilter.includes(a)?"primary":""}" onclick="toggleIvenaArea('${a.replace(/'/g,"\\'")}')">${db.ivenaAreaFilter.includes(a)?"✅ ":""}${esc(a)}</button>`).join("")}</div>
   <div class="row between ivc-bar" style="margin-top:8px;background:#f8fafc;border-radius:10px;padding:6px 10px;font-size:12px">
@@ -11014,7 +11089,7 @@ function ivena(){
    ${IVENA_FACHRICHTUNGEN.map(fach=>{
      const offering=rows.filter(h=>Array.isArray(h.fachrichtungen)&&h.fachrichtungen.includes(fach));
      if(!offering.length)return"";
-     return `<tr><td><b>${esc(fach)}</b></td><td>
+     return `<tr><td><b>${esc(fachLabel(fach))}</b></td><td>
        ${offering.map(h=>{
          const closed=ivenaActiveClosures(h).some(cl=>cl.fach===fach);
          const until=closed?ivenaActiveClosures(h).find(cl=>cl.fach===fach):null;
@@ -11030,7 +11105,7 @@ function ivena(){
     <td><b>${esc(h.name)}</b></td><td>${esc(h.place||"—")}</td><td>${esc(h.area||"—")}</td>
     <td><span class="status ${ivenaStatusClass(h.status)}">${esc(h.status.toUpperCase())}</span></td>
     <td>
-     ${closures.length?closures.map(cl=>`<div class="pill" style="margin:2px 0;display:inline-flex;gap:6px;align-items:center">🚫 ${esc(cl.fach)} bis ${new Date(cl.until).toLocaleString("de-DE",{day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"})} <span style="cursor:pointer" onclick="deleteIvenaClosure(${h.id},'${cl.id}')">✕</span></div><br>`).join(""):`<span class="muted">keine</span>`}
+     ${closures.length?closures.map(cl=>`<div class="pill" style="margin:2px 0;display:inline-flex;gap:6px;align-items:center">🚫 ${esc(fachLabel(cl.fach))} bis ${new Date(cl.until).toLocaleString("de-DE",{day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"})} <span style="cursor:pointer" onclick="deleteIvenaClosure(${h.id},'${cl.id}')">✕</span></div><br>`).join(""):`<span class="muted">keine</span>`}
      ${!isAuto?`<div><button onclick="openIvenaClosure(${h.id})">🚫 Fachrichtung abmelden</button></div>`:""}
     </td>
     <td>${esc(h.note||"")}</td>
