@@ -420,8 +420,9 @@ function setMe(pos){me=[pos.coords.latitude,pos.coords.longitude];const acc=pos.
  if(!setMe.w){setMe.w=1;getWind(me);}}
 let locDenied=false,locAuto=true;
 function locHelp(){sheetOpen(`<h2>Standort freigeben</h2><div>Safari hat dieser Seite den Standort nicht erlaubt. So schaltest du ihn frei (je nach iOS-Version leicht anders benannt):</div>
- <h3>1. Für diese Seite</h3><div>In Safari in der Adressleiste auf das Symbol links neben „lst-sim.github.io“ oder auf „aA“ tippen → <b>Website-Einstellungen</b> → <b>Standort</b> → <b>Erlauben</b>.</div>
- <h3>2. Falls das nicht hilft</h3><div><b>Einstellungen</b> → <b>Datenschutz &amp; Sicherheit</b> → <b>Ortungsdienste</b> einschalten → darin <b>Safari-Websites</b> → <b>Beim Verwenden der App</b> und <b>Genauer Standort</b> an.</div>
+ <h3>1. Für diese Seite</h3><div>In Safari auf „aA“ in der Adressleiste tippen. Je nach iOS-Version direkt oder unter <b>•••</b>: <b>Website-Einstellungen</b> → <b>Standort</b> → <b>Erlauben</b>.</div>
+ <h3>2. Oder in den Einstellungen</h3><div><b>Einstellungen</b> → <b>Apps</b> → <b>Safari</b> → <b>Standort</b> → <b>Erlauben</b> oder <b>Fragen</b>.</div>
+ <h3>3. Ortungsdienste prüfen</h3><div><b>Einstellungen</b> → <b>Datenschutz &amp; Sicherheit</b> → <b>Ortungsdienste</b> an → <b>Safari-Websites</b> → <b>Beim Verwenden der App</b>, <b>Genauer Standort</b> an.</div>
  <div class="row"><button class="pri" id="locRe">Erneut versuchen</button></div><div class="note">Das gilt auch, wenn die Karte als Symbol auf dem Home-Bildschirm liegt.</div>`);
  $("locRe").onclick=()=>{sheetClose();locDenied=false;locAuto=false;startLoc();};}
 function startLoc(){
