@@ -265,13 +265,19 @@ const status=t=>{$("status").textContent=t;};
 /* ================= Daten laden (ganz Deutschland, pro Kreis) ================= */
 const LOG=[];let KREISE=[],IDX_T=0,kreisLayer=null;const KD=new Map();const MAX_LOADED=10,MIN_ZOOM=9;
 const bbC=k=>[(k.bb[0]+k.bb[2])/2,(k.bb[1]+k.bb[3])/2];
-function kreisAt(c){for(const k of KREISE){if(c[0]<k.bb[0]||c[0]>k.bb[2]||c[1]<k.bb[1]||c[1]>k.bb[3])continue;let ins=false;for(const r of k.r)if(pip(c,r))ins=!ins;if(ins)return k;}return null;}
+// OSM liefert die Grenze als Einzelstücke -> zu geschlossenen Ringen zusammensetzen
+function assemble(segs){const key=p=>p[0]+","+p[1];const left=segs.map(s=>s.slice());const rings=[];
+ while(left.length){let ring=left.shift();let guard=0;
+  while(key(ring[0])!==key(ring[ring.length-1])&&guard++<5000){const e=key(ring[ring.length-1]);let i=left.findIndex(s=>key(s[0])===e||key(s[s.length-1])===e);if(i<0)break;let s=left.splice(i,1)[0];if(key(s[0])!==e)s=s.slice().reverse();ring=ring.concat(s.slice(1));}
+  if(ring.length>=4)rings.push(ring);}
+ return rings;}
+function kreisAt(c){for(const k of KREISE){if(c[0]<k.bb[0]||c[0]>k.bb[2]||c[1]<k.bb[1]||c[1]>k.bb[3])continue;if(!k._rings)k._rings=assemble(k.r);let ins=false;for(const r of k._rings)if(pip(c,r))ins=!ins;if(ins)return k;}return null;}
 function kreiseNear(c,m){const dla=m/111320,dlo=m/(111320*Math.cos(rad(c[0])));return KREISE.filter(k=>k.bb[0]<=c[0]+dla&&k.bb[2]>=c[0]-dla&&k.bb[1]<=c[1]+dlo&&k.bb[3]>=c[1]-dlo);}
 async function loadIndex(){
  try{const r=await fetch("data/kreise.json?"+Math.floor(Date.now()/3600000));if(!r.ok)throw new Error("HTTP "+r.status);const j=await r.json();KREISE=j.k;IDX_T=j.t;try{localStorage.setItem("orgl-idx",JSON.stringify(j));}catch(e){LOG.push("Kreisliste nicht offline speicherbar");}}
  catch(e){LOG.push("Kreisliste online nicht erreichbar: "+e.message);try{const j=JSON.parse(localStorage.getItem("orgl-idx"));if(j){KREISE=j.k;IDX_T=j.t;LOG.push("Kreisliste aus Offline-Speicher");}}catch(e2){}}
  if(!KREISE.length){status("⚠ Kreisdaten nicht verfügbar – Internet prüfen (antippen für Details)");return;}
- kreisLayer=L.layerGroup(KREISE.map(k=>L.polygon(k.r,{color:"#ffb300",weight:1.8,opacity:.95,fill:false,dashArray:"7 5",interactive:false}))).addTo(map);
+ kreisLayer=L.layerGroup(KREISE.map(k=>L.polyline(k.r,{color:"#ffb300",weight:1.8,opacity:.95,dashArray:"7 5",interactive:false}))).addTo(map);
  refreshView();}
 function cacheKreis(id,d){let lst=[];try{lst=JSON.parse(localStorage.getItem("orgl-klist")||"[]");}catch(e){}
  lst=lst.filter(x=>x!==id);for(let n=0;n<8;n++){try{localStorage.setItem("orgl-k-"+id,JSON.stringify(d));lst.push(id);localStorage.setItem("orgl-klist",JSON.stringify(lst));return;}catch(e){const old=lst.shift();if(old===undefined)return;try{localStorage.removeItem("orgl-k-"+old);}catch(e2){}}}}
