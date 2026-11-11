@@ -43,8 +43,11 @@ button.pri{background:var(--acc);color:#111;border-color:var(--acc);font-weight:
 .sq{border-radius:3px}
 .near{display:flex;justify-content:space-between;gap:8px;padding:7px 0;border-bottom:1px solid var(--line);cursor:pointer}
 .near span:last-child{color:var(--mut);white-space:nowrap}
-.mk{display:flex;align-items:center;justify-content:center;border-radius:50%;border:2px solid #fff;color:#fff;font:700 11px/1 sans-serif;box-shadow:0 1px 3px rgba(0,0,0,.5)}
-.own{border-radius:4px;border:2px solid #111;color:#111;background:var(--acc);font:800 11px/1 sans-serif;display:flex;align-items:center;justify-content:center;box-shadow:0 1px 4px rgba(0,0,0,.6)}
+.mk{display:flex;align-items:center;justify-content:center;border-radius:50%;border:3px solid #fff;color:#fff;font:800 14px/1 sans-serif;box-shadow:0 0 0 2px rgba(0,0,0,.6),0 2px 6px rgba(0,0,0,.6)}
+.own{border-radius:8px;border:4px solid #000;color:#000;background:#ffea00;font:900 18px/1 sans-serif;display:flex;align-items:center;justify-content:center;box-shadow:0 0 0 4px #fff,0 0 14px 6px rgba(255,234,0,.85);animation:ownPulse 1.6s ease-in-out infinite}
+@keyframes ownPulse{50%{box-shadow:0 0 0 4px #fff,0 0 22px 12px rgba(255,234,0,.45)}}
+.leaflet-tooltip.ownLbl{background:#000;color:#ffea00;border:2px solid #ffea00;font:800 15px/1.2 sans-serif;padding:4px 8px;border-radius:6px;box-shadow:0 2px 8px rgba(0,0,0,.6)}
+.leaflet-tooltip.ownLbl:before{display:none}
 #status{position:absolute;left:8px;z-index:1000;top:calc(env(safe-area-inset-top) + 62px);background:rgba(27,31,36,.9);border:1px solid var(--line);border-radius:8px;padding:5px 8px;font-size:12px;max-width:calc(100% - 80px)}
 #wind{position:absolute;right:10px;z-index:1000;top:calc(env(safe-area-inset-top) + 62px);background:rgba(27,31,36,.9);border:1px solid var(--line);border-radius:8px;padding:5px 8px;font-size:12px;text-align:center;min-width:70px;cursor:pointer}
 #wind .arr{font-size:22px;display:inline-block;line-height:1}
@@ -254,17 +257,17 @@ async function load(force){
  }catch(e){status("Laden fehlgeschlagen: "+e.message+" – später erneut versuchen (☰ Ebenen → Daten neu laden).");}}
 
 /* ================= Darstellung ================= */
-function icon(cat,size){const C=CAT[cat];size=size||24;return L.divIcon({className:"",iconSize:[size,size],iconAnchor:[size/2,size/2],html:`<div class="mk" style="width:${size}px;height:${size}px;background:${C.c};${C.sq?"border-radius:4px;":""}${cat==="lzD"?"color:#111;":""}">${C.l}</div>`});}
+function icon(cat,size){const C=CAT[cat];size=size||30;return L.divIcon({className:"",iconSize:[size,size],iconAnchor:[size/2,size/2],html:`<div class="mk" style="width:${size}px;height:${size}px;background:${C.c};${C.sq?"border-radius:4px;":""}${cat==="lzD"?"color:#111;":""}">${C.l}</div>`});}
 function render(){
  for(const k in groups)if(k!=="own")groups[k].clearLayers();
  if(boundaryLayer)map.removeLayer(boundaryLayer);
  if(DATA.bnd.length){boundaryLayer=L.polyline(DATA.bnd,{color:"#ffb300",weight:3,dashArray:"8 6",interactive:false}).addTo(map);if(!render.done){map.fitBounds(boundaryLayer.getBounds(),{padding:[10,10]});render.done=1;}}
  for(const z of DATA.lz){const C=CAT[z.cat];const warn=z.dl<WARN_LINE_M||z.dw<WARN_WIND_M;
-  const poly=L.polygon(z.g,{color:warn?"#ff1744":C.c,weight:warn?3:2,fillColor:C.c,fillOpacity:.35,dashArray:warn?"4 4":null});
+  const poly=L.polygon(z.g,{color:warn?"#ff1744":C.c,weight:warn?4:3,fillColor:C.c,fillOpacity:.45,dashArray:warn?"4 4":null});
   poly.on("click",()=>showLZ(z));groups[z.cat].addLayer(poly);
   const m=L.marker(z.c,{icon:L.divIcon({className:"",iconSize:[22,22],iconAnchor:[11,11],html:`<div class="mk" style="width:22px;height:22px;border-radius:4px;background:${C.c};color:#111;${warn?"border-color:#ff1744;":""}">${warn?"!":"L"}</div>`})});
   m.on("click",()=>showLZ(z));groups[z.cat].addLayer(m);}
- for(const p of DATA.pts){const m=L.marker(p.c,{icon:icon(p.cat,p.cat==="aed"?18:24)});m.on("click",()=>showPt(p));groups[p.cat].addLayer(m);}
+ for(const p of DATA.pts){const m=L.marker(p.c,{icon:icon(p.cat,p.cat==="aed"?24:30)});m.on("click",()=>showPt(p));groups[p.cat].addLayer(m);}
  for(const ln of DATA.pwr){const hv=parseInt(ln.v)>=60000;groups.pwr.addLayer(L.polyline(ln.g,{color:"#ff1744",weight:hv?3:2,opacity:.85,dashArray:ln.k==="minor_line"?"6 5":null}).bindTooltip(`Freileitung ${ln.v?Math.round(parseInt(ln.v)/1000)+" kV":"(Spannung unbek.)"}`));}
  for(const w of DATA.wka){groups.wka.addLayer(L.marker(w.c,{icon:icon("wka",20)}).on("click",()=>showWKA(w)));}
  renderOwn();updLegendCounts();}
@@ -350,8 +353,8 @@ function showNear(){if(!DATA){sheetOpen("<h2>Einsatzstelle</h2><div>Daten noch n
 /* ================= Eigene Markierungen (lokal gespeichert) ================= */
 const OWN_KEY="orgl-fri-own";let OWN=[];try{OWN=JSON.parse(localStorage.getItem(OWN_KEY)||"[]");}catch(e){}
 const saveOwn=()=>{try{localStorage.setItem(OWN_KEY,JSON.stringify(OWN));}catch(e){status("Speichern im Browser nicht möglich – Markierungen gehen beim Schließen verloren.");}};
-function renderOwn(){groups.own.clearLayers();for(const o of OWN){const m=L.marker(o.c,{draggable:true,zIndexOffset:800,icon:L.divIcon({className:"",iconSize:[34,24],iconAnchor:[17,12],html:`<div class="own" style="width:34px;height:24px">${o.t}</div>`})});
- m.bindTooltip(o.txt||OWN_TYPES.find(x=>x[0]===o.t)[1],{permanent:true,direction:"right",offset:[14,0]});
+function renderOwn(){groups.own.clearLayers();for(const o of OWN){const m=L.marker(o.c,{draggable:true,zIndexOffset:800,icon:L.divIcon({className:"",iconSize:[56,40],iconAnchor:[28,20],html:`<div class="own" style="width:56px;height:40px">${o.t}</div>`})});
+ m.bindTooltip(o.txt||OWN_TYPES.find(x=>x[0]===o.t)[1],{permanent:true,direction:"right",offset:[32,0],className:"ownLbl"});
  m.on("dragend",()=>{const l=m.getLatLng();o.c=[l.lat,l.lng];saveOwn();});m.on("click",()=>showOwn(o));groups.own.addLayer(m);}updLegendCounts();}
 window.markHere=(lat,lon)=>{sheetOpen(`<h2>✎ Eigene Markierung</h2><select id="oT">${OWN_TYPES.map(t=>`<option value="${t[0]}">${t[0]} – ${t[1]}</option>`).join("")}</select><div style="height:8px"></div><input type="text" id="oX" placeholder="Bezeichnung / Notiz (optional)"><div class="row"><button class="pri" id="oS">Speichern</button><button onclick="sheetClose()">Abbrechen</button></div><div class="note">${mgrs(lat,lon)} · Wird nur auf diesem Gerät gespeichert.</div>`);
  $("oS").onclick=()=>{OWN.push({id:Date.now(),c:[lat,lon],t:$("oT").value,txt:$("oX").value.trim()});saveOwn();renderOwn();if(!map.hasLayer(groups.own))groups.own.addTo(map);sheetClose();};};
@@ -384,9 +387,11 @@ const DRAW_KEY="orgl-fri-draw";let DRAW=[];try{DRAW=JSON.parse(localStorage.getI
 const drawGroup=L.layerGroup().addTo(map);
 let dColor="#ff1744",dArea=false,dErase=false,dPan=false,cur=null,curPts=null;
 const saveDraw=()=>{try{localStorage.setItem(DRAW_KEY,JSON.stringify(DRAW));}catch(e){status("Zeichnung konnte im Browser nicht gespeichert werden.");}};
-function drawShape(d){const opt={color:d.c,weight:4,opacity:.95,lineCap:"round",lineJoin:"round"};
- const l=d.a?L.polygon(d.p,Object.assign(opt,{fillColor:d.c,fillOpacity:.2})):L.polyline(d.p,opt);
- l.on("click",ev=>{if(dErase){L.DomEvent.stop(ev);DRAW=DRAW.filter(x=>x!==d);saveDraw();renderDraw();}});return l;}
+function drawShape(d){const opt={color:d.c,weight:8,opacity:1,lineCap:"round",lineJoin:"round"};
+ const l=d.a?L.polygon(d.p,Object.assign(opt,{fillColor:d.c,fillOpacity:.35})):L.polyline(d.p,opt);
+ l.on("click",ev=>{if(dErase){L.DomEvent.stop(ev);DRAW=DRAW.filter(x=>x!==d);saveDraw();renderDraw();}});
+ const halo=(d.a?L.polygon:L.polyline)(d.p,{color:d.c==="#111111"?"#fff":"#000",weight:14,opacity:.7,fill:false,lineCap:"round",lineJoin:"round",interactive:false});
+ return L.layerGroup([halo,l]);}
 function renderDraw(){drawGroup.clearLayers();for(const d of DRAW)drawGroup.addLayer(drawShape(d));}
 renderDraw();
 const dl=$("drawLayer");
@@ -401,7 +406,7 @@ $("dUndo").onclick=()=>{DRAW.pop();saveDraw();renderDraw();};
 $("dClear").onclick=()=>{const b=$("dClear");if(b.dataset.sure){DRAW=[];saveDraw();renderDraw();delete b.dataset.sure;b.textContent="🗑 Alles";}else{b.dataset.sure=1;b.textContent="Wirklich?";setTimeout(()=>{delete b.dataset.sure;b.textContent="🗑 Alles";},3000);}};
 let lastPx=null;
 dl.addEventListener("pointerdown",e=>{if(!e.isPrimary)return;e.preventDefault();dl.setPointerCapture(e.pointerId);const ll=map.mouseEventToLatLng(e);curPts=[[ll.lat,ll.lng]];lastPx=[e.clientX,e.clientY];
- cur=L.polyline(curPts,{color:dColor,weight:4,opacity:.95,lineCap:"round",lineJoin:"round",interactive:false}).addTo(map);});
+ cur=L.polyline(curPts,{color:dColor,weight:8,opacity:1,lineCap:"round",lineJoin:"round",interactive:false}).addTo(map);});
 dl.addEventListener("pointermove",e=>{if(!cur||!e.isPrimary)return;e.preventDefault();if(Math.hypot(e.clientX-lastPx[0],e.clientY-lastPx[1])<3)return;lastPx=[e.clientX,e.clientY];const ll=map.mouseEventToLatLng(e);curPts.push([ll.lat,ll.lng]);cur.setLatLngs(curPts);});
 function endStroke(){if(!cur)return;map.removeLayer(cur);cur=null;if(curPts.length>=2){DRAW.push({c:dColor,a:dArea&&curPts.length>=3,p:curPts.map(p=>[+p[0].toFixed(6),+p[1].toFixed(6)])});saveDraw();renderDraw();}curPts=null;}
 dl.addEventListener("pointerup",endStroke);dl.addEventListener("pointercancel",endStroke);
