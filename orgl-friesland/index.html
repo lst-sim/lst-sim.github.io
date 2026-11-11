@@ -89,6 +89,8 @@ select,input[type=text],input[type=password]{font:inherit;color:var(--ink);backg
 .fix{border-radius:8px;border:2px solid #fff;color:#fff;background:#15243a;font:700 14px/1 "Atkinson Hyperlegible",sans-serif;display:flex;align-items:center;justify-content:center;box-shadow:0 0 0 2px #15243a,0 3px 10px rgba(0,0,0,.35)}
 .leaflet-tooltip.fixLbl{background:#fff;color:#15243a;border:2px solid #15243a;font:700 13px/1.2 "Atkinson Hyperlegible",sans-serif;padding:4px 8px;border-radius:8px;box-shadow:0 2px 6px rgba(0,0,0,.25)}
 .leaflet-tooltip.fixLbl:before{display:none}
+.leaflet-tooltip.measLbl{background:var(--paper);color:var(--ink);border:0;border-radius:8px;font:700 13px/1.2 "Atkinson Hyperlegible",sans-serif;padding:3px 7px;box-shadow:0 1px 5px rgba(0,0,0,.3)}
+.leaflet-tooltip.measLbl:before{display:none}
 
 /* Malen */
 #drawLayer{position:absolute;inset:0;z-index:950;display:none;touch-action:none;cursor:crosshair}
@@ -412,7 +414,7 @@ function startCross(mode){crossMode=mode;$("cross").style.display="block";sheetC
  sheetOpen(`<h2>${mode==="est"?"Einsatzstelle setzen":mode==="fixmove"?"Festen Punkt verschieben":"Markierung setzen"}</h2><div>Karte verschieben, bis das Fadenkreuz auf der Stelle liegt – oder lange auf die Karte tippen.</div><div class="row"><button class="pri" id="cOk">Hier setzen</button>${mode==="est"&&me?'<button id="cMe">Mein Standort</button>':""}<button id="cNo">Abbrechen</button></div>`);
  $("cOk").onclick=()=>{const c=map.getCenter();finishCross([c.lat,c.lng]);};$("cNo").onclick=()=>{crossMode=null;$("cross").style.display="none";sheetClose();};
  if($("cMe"))$("cMe").onclick=()=>finishCross(me.slice());}
-function finishCross(c){const m=crossMode;crossMode=null;$("cross").style.display="none";if(m==="est")setEst(c);else if(m==="fixmove"){const p=fixMove;fixMove=null;sheetClose();fbDb.ref("orgl/points/"+p.id).update({c:[+c[0].toFixed(6),+c[1].toFixed(6)],by:fbUser.email,ts:Date.now()}).then(()=>status("Verschoben.")).catch(fbErr);}else markHere(c[0],c[1]);}
+function finishCross(c){const m=crossMode;crossMode=null;$("cross").style.display="none";if(m==="est")setEst(c);else if(m==="fixmove"){const p=fixMove;fixMove=null;sheetClose();dbReq("/"+p.id,"PATCH",{c:[+c[0].toFixed(6),+c[1].toFixed(6)],ts:Date.now()}).then(()=>status("Verschoben.")).catch(fbErr);}else markHere(c[0],c[1]);}
 map.on("contextmenu",e=>{const c=[e.latlng.lat,e.latlng.lng];if(crossMode)finishCross(c);else{sheetOpen(`<h2>Punkt auf der Karte</h2><div class="row"><button class="pri" id="pE">Als Einsatzstelle</button><button id="pM">Hier markieren</button></div>${posBlock(c)}`);$("pE").onclick=()=>setEst(c);$("pM").onclick=()=>markHere(c[0],c[1]);}});
 $("bEst").onclick=()=>{if(est)showNear();else startCross("est");};
 $("bMark").onclick=()=>startCross("own");
@@ -466,7 +468,7 @@ $("wind").onclick=()=>{const w=getWind.last;if(!w){getWind(me||est||[map.getCent
 function counts(k){if(k==="fix")return FIX.length;if(!DATA)return"";if(k==="lzN"||k==="lzD")return DATA.lz.filter(z=>z.cat===k).length;if(k==="pwr")return DATA.pwr.length;if(k==="wka")return DATA.wka.length;if(k==="own")return OWN.length;return DATA.pts.filter(p=>p.cat===k).length;}
 function updLegendCounts(){document.querySelectorAll("[data-cnt]").forEach(e=>e.textContent=counts(e.dataset.cnt));}
 $("bLayers").onclick=()=>{sheetOpen(`<h2>Ebenen</h2><div class="lgrid">${Object.keys(CAT).map(k=>{const C=CAT[k];return`<label class="lg"><input type="checkbox" data-k="${k}" ${map.hasLayer(groups[k])?"checked":""}>${C.line?`<span style="width:13px;height:0;border-top:3px solid ${C.c};flex:none"></span>`:`<span class="sw ${C.sq?"sq":""}" style="background:${C.c}"></span>`}<span>${C.n}</span><span class="cnt" data-cnt="${k}">${counts(k)}</span></label>`}).join("")}</div>
- <div class="row"><button id="bRe">Datenstatus</button><button id="bAdm">${fbUser?"Admin (angemeldet)":"Admin-Anmeldung"}</button><button id="bOwnDel">Eigene Markierungen löschen</button></div>
+ <div class="row"><button id="bRe">Datenstatus</button><button id="bAdm">${admin?"Admin aktiv":"Admin"}</button><button id="bOwnDel">Eigene Markierungen löschen</button></div>
  <div class="note">${DATA?`Datenstand: ${new Date(DATA.t).toLocaleString("de-DE")} (OpenStreetMap)`:""}</div>`);
  document.querySelectorAll("[data-k]").forEach(cb=>cb.onchange=()=>{const g=groups[cb.dataset.k];cb.checked?g.addTo(map):map.removeLayer(g);syncPolys();});
  $("bRe").onclick=()=>{sheetClose();$("status").click();};$("bAdm").onclick=adminSheet;
@@ -477,9 +479,23 @@ const DRAW_KEY="orgl-fri-draw";let DRAW=[];try{DRAW=JSON.parse(localStorage.getI
 const drawGroup=L.layerGroup().addTo(map);
 let dColor="#ff6d00",dArea=false,dErase=false,dPan=false,cur=null,curPts=null;
 const saveDraw=()=>{try{localStorage.setItem(DRAW_KEY,JSON.stringify(DRAW));}catch(e){status("Zeichnung konnte im Browser nicht gespeichert werden.");}};
+/* Messen: Fläche, Umfang, Länge, Abmessung */
+const fmtA=a=>a>=10000?`${(a/10000).toFixed(2).replace(".",",")} ha`:`${Math.round(a).toLocaleString("de-DE")} m²`;
+function measure(pts,area){const P=proj(pts[0]);const xy=pts.map(P);let len=0;for(let i=1;i<xy.length;i++)len+=Math.hypot(xy[i][0]-xy[i-1][0],xy[i][1]-xy[i-1][1]);
+ if(!area)return{len};const close=Math.hypot(xy[0][0]-xy[xy.length-1][0],xy[0][1]-xy[xy.length-1][1]);const [s,l]=mbr(xy);return{a:polyArea(xy),u:len+close,s,l};}
+function measShort(d){const m=measure(d.p,d.a);return d.a?fmtA(m.a):fmtD(m.len);}
+function fitTxt(s,l){return s>=LZ_NIGHT[0]&&l>=LZ_NIGHT[1]?"groß genug für Landung bei Tag und Nacht (≥35 × 70 m)":s>=LZ_DAY[0]&&l>=LZ_DAY[1]?"groß genug für Landung nur bei Tag (≥30 × 30 m)":"zu klein für eine RTH-Landung (Tag mind. 30 × 30 m)";}
+function measBlock(pts,area){const m=measure(pts,area);
+ return area?`<div class="kv"><b>Fläche</b><span>${fmtA(m.a)}${m.a>=10000?` (${Math.round(m.a).toLocaleString("de-DE")} m²)`:""}</span><b>Umfang</b><span>${fmtD(m.u)}</span><b>Abmessung</b><span>ca. ${Math.round(m.s)} × ${Math.round(m.l)} m</span><b>Landeplatz</b><span>${fitTxt(m.s,m.l)}</span></div><div class="note">Abmessung = umschließendes Rechteck. Hindernisse sind nicht geprüft.</div>`
+ :`<div class="kv"><b>Länge</b><span>${fmtD(m.len)}</span></div>`;}
+function showShape(d){const c=d.a?centroid(d.p):d.p[Math.floor(d.p.length/2)];
+ sheetOpen(`<h2>${d.a?"Gezeichnete Fläche":"Gezeichnete Linie"}</h2>${measBlock(d.p,d.a)}${posBlock(c)}<div class="row">${isAdmin()&&d.a?'<button class="pri" id="sFix">Als festen Bereich für alle speichern</button>':""}<button id="sDel">Zeichnung löschen</button></div>`);
+ $("sDel").onclick=()=>{DRAW=DRAW.filter(x=>x!==d);saveDraw();renderDraw();sheetClose();};
+ if($("sFix"))$("sFix").onclick=()=>fixForm(null,c,"BR","",d.p);}
 function drawShape(d){const opt={color:d.c,weight:8,opacity:1,lineCap:"round",lineJoin:"round"};
  const l=d.a?L.polygon(d.p,Object.assign(opt,{fillColor:d.c,fillOpacity:.35})):L.polyline(d.p,opt);
- l.on("click",ev=>{if(dErase){L.DomEvent.stop(ev);DRAW=DRAW.filter(x=>x!==d);saveDraw();renderDraw();}});
+ l.on("click",ev=>{L.DomEvent.stop(ev);if(dErase){DRAW=DRAW.filter(x=>x!==d);saveDraw();renderDraw();}else showShape(d);});
+ l.bindTooltip(measShort(d),{permanent:true,direction:"center",className:"measLbl"});
  const halo=(d.a?L.polygon:L.polyline)(d.p,{color:d.c==="#111111"?"#fff":"#000",weight:14,opacity:.7,fill:false,lineCap:"round",lineJoin:"round",interactive:false});
  return L.layerGroup([halo,l]);}
 function renderDraw(){drawGroup.clearLayers();for(const d of DRAW)drawGroup.addLayer(drawShape(d));}
@@ -518,44 +534,48 @@ $("bInfo").onclick=info;
 document.querySelectorAll("#baseSw [data-base]").forEach(b=>b.onclick=()=>setBase(b.dataset.base));
 $("bRefresh").onclick=()=>{status("Aktualisiere …");location.reload();};
 try{if(!localStorage.getItem("orgl-fri-ok"))info();}catch(e){info();}
-/* ================= Feste Punkte (Admin, Firebase-Projekt "ORGL") ================= */
-// Zugangsdaten aus Firebase → Projekteinstellungen → Meine Apps. null = Admin-Bereich noch nicht eingerichtet.
-const FB_CONFIG=null;
+/* ================= Feste Punkte (Admin) ================= */
+// Gespeichert im vorhandenen Lager-Firebase, eigener Bereich sanlager/orgl (das Lager liest diesen Bereich nicht).
+const DB_URL="https://lager-52f88-default-rtdb.europe-west1.firebasedatabase.app";
+const FIX_URL=DB_URL+"/sanlager/orgl/points";
+const ADMIN_CODE="112"; // nur Schnellzugriff, kein echter Schutz
 const FIX_KEY="orgl-fix";let FIX=[];try{FIX=JSON.parse(localStorage.getItem(FIX_KEY)||"[]");}catch(e){}
-let fbDb=null,fbAuth=null,fbUser=null,fixMove=null;
-const isAdmin=()=>!!fbUser;
+let admin=false,fixMove=null,FIXM={};
+const isAdmin=()=>admin;
 const esc=t=>String(t==null?"":t).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
-function loadScript(src){return new Promise((ok,no)=>{const s=document.createElement("script");s.src=src;s.onload=ok;s.onerror=()=>no(new Error("nicht ladbar: "+src));document.head.appendChild(s);});}
-async function initFB(){if(!FB_CONFIG)return;try{const b="https://www.gstatic.com/firebasejs/10.12.2/";
- await loadScript(b+"firebase-app-compat.js");await Promise.all([loadScript(b+"firebase-auth-compat.js"),loadScript(b+"firebase-database-compat.js")]);
- firebase.initializeApp(FB_CONFIG);fbDb=firebase.database();fbAuth=firebase.auth();
- fbDb.ref("orgl/points").on("value",snap=>{const v=snap.val()||{};FIX=Object.entries(v).map(([id,p])=>Object.assign({id},p));try{localStorage.setItem(FIX_KEY,JSON.stringify(FIX));}catch(e){}renderFix();},e=>LOG.push("Feste Punkte: "+e.message));
- fbAuth.onAuthStateChanged(u=>{fbUser=u;});
- }catch(e){LOG.push("Datenbank: "+e.message);}}
+async function dbReq(path,method,body){const r=await fetch(FIX_URL+path+".json",{method,headers:{"Content-Type":"application/json"},body:body===undefined?undefined:JSON.stringify(body)});if(!r.ok)throw new Error("HTTP "+r.status);return r.json();}
+function fixFromMirror(){FIX=Object.entries(FIXM||{}).filter(([,p])=>p&&p.c).map(([id,p])=>Object.assign({id},p));try{localStorage.setItem(FIX_KEY,JSON.stringify(FIX));}catch(e){}renderFix();}
+function setPath(path,data,merge){const k=path.split("/").filter(Boolean);if(!k.length){FIXM=merge?Object.assign(FIXM||{},data):(data||{});return;}let o=FIXM;for(let n=0;n<k.length-1;n++){if(typeof o[k[n]]!=="object"||o[k[n]]===null)o[k[n]]={};o=o[k[n]];}const last=k[k.length-1];if(data===null)delete o[last];else if(merge&&typeof o[last]==="object")Object.assign(o[last],data);else o[last]=data;}
+function initFix(){renderFix();try{const es=new EventSource(FIX_URL+".json");
+ es.addEventListener("put",e=>{const m=JSON.parse(e.data);setPath(m.path,m.data,false);fixFromMirror();});
+ es.addEventListener("patch",e=>{const m=JSON.parse(e.data);setPath(m.path,m.data,true);fixFromMirror();});
+ es.onerror=()=>LOG.push("Feste Punkte: Verbindung unterbrochen, versuche erneut …");}catch(e){LOG.push("Feste Punkte: "+e.message);}}
 function renderFix(){groups.fix.clearLayers();for(const p of FIX){if(!p.c)continue;const T=OWN_TYPES.find(x=>x[0]===p.t)||["?","Punkt"];
+ if(p.g)groups.fix.addLayer(L.polygon(p.g,{color:"#15243a",weight:3,dashArray:"8 5",fillColor:"#15243a",fillOpacity:.12}).on("click",()=>showFix(p)));
  const m=L.marker(p.c,{zIndexOffset:700,icon:L.divIcon({className:"",iconSize:[44,30],iconAnchor:[22,15],html:`<div class="fix" style="width:44px;height:30px">${esc(p.t)}</div>`})});
  m.bindTooltip(esc(p.n||T[1]),{permanent:true,direction:"right",offset:[24,0],className:"fixLbl"});m.on("click",()=>showFix(p));groups.fix.addLayer(m);}updLegendCounts();}
-function fbErr(e){status("Nicht gespeichert: "+(/permission/i.test(e.message||"")?"keine Admin-Berechtigung.":e.message));}
+function fbErr(e){status("Nicht gespeichert: "+e.message+". Internet prüfen.");}
 function showFix(p){const T=OWN_TYPES.find(x=>x[0]===p.t)||["?","Punkt"];
- sheetOpen(`<h2>${esc(p.n||T[1])}</h2><div>${esc(T[1])}, fest hinterlegt</div>${p.txt?`<div style="margin-top:6px">${esc(p.txt)}</div>`:""}${posBlock(p.c)}
+ sheetOpen(`<h2>${esc(p.n||T[1])}</h2><div>${esc(T[1])}, fest hinterlegt</div>${p.txt?`<div style="margin-top:6px">${esc(p.txt)}</div>`:""}${p.g?"<h3>Bereich</h3>"+measBlock(p.g,true):""}${posBlock(p.c)}
  ${isAdmin()?`<h3>Bearbeiten</h3><div class="row"><button id="fRen">Ändern</button><button id="fMov">Verschieben</button><button id="fDel">Löschen</button></div>`:""}
- <div class="note">Festgelegt${p.by?" von "+esc(p.by):""}${p.ts?" am "+new Date(p.ts).toLocaleDateString("de-DE"):""}.</div>`);
+ <div class="note">Festgelegt${p.ts?" am "+new Date(p.ts).toLocaleDateString("de-DE"):""}.</div>`);
  if(isAdmin()){$("fRen").onclick=()=>fixForm(p);$("fMov").onclick=()=>{fixMove=p;startCross("fixmove");};
-  $("fDel").onclick=()=>{const b=$("fDel");if(!b.dataset.sure){b.dataset.sure=1;b.textContent="Wirklich löschen?";return;}fbDb.ref("orgl/points/"+p.id).remove().then(()=>{sheetClose();status("Gelöscht.");}).catch(fbErr);};}}
-function fixForm(p,c,t0,n0){const isNew=!p;p=p||{t:t0||"BR",n:n0||"",txt:"",c};
- sheetOpen(`<h2>${isNew?"Festen Punkt anlegen":"Festen Punkt ändern"}</h2><select id="xT">${OWN_TYPES.map(t=>`<option value="${t[0]}" ${t[0]===p.t?"selected":""}>${t[1]}</option>`).join("")}</select>
+  $("fDel").onclick=()=>{const b=$("fDel");if(!b.dataset.sure){b.dataset.sure=1;b.textContent="Wirklich löschen?";return;}dbReq("/"+p.id,"DELETE").then(()=>{sheetClose();status("Gelöscht.");}).catch(fbErr);};}}
+function fixForm(p,c,t0,n0,g){const isNew=!p;p=p||{t:t0||"BR",n:n0||"",txt:"",c,g};
+ sheetOpen(`<h2>${isNew?(p.g?"Festen Bereich anlegen":"Festen Punkt anlegen"):"Festen Punkt ändern"}</h2>${p.g&&isNew?measBlock(p.g,true):""}<div style="height:8px"></div><select id="xT">${OWN_TYPES.map(t=>`<option value="${t[0]}" ${t[0]===p.t?"selected":""}>${t[1]}</option>`).join("")}</select>
  <div style="height:8px"></div><input type="text" id="xN" placeholder="Name, z. B. BR Sportplatz Schortens" value="${esc(p.n)}"><div style="height:8px"></div><input type="text" id="xX" placeholder="Hinweis, z. B. Zufahrt über Nordstraße (optional)" value="${esc(p.txt)}">
  <div class="row"><button class="pri" id="xS">${isNew?"Für alle speichern":"Änderungen speichern"}</button><button onclick="sheetClose()">Abbrechen</button></div><div class="note">${mgrs(p.c[0],p.c[1])}. Sofort für alle sichtbar.</div>`);
- $("xS").onclick=()=>{const d={t:$("xT").value,n:$("xN").value.trim(),txt:$("xX").value.trim(),c:[+p.c[0].toFixed(6),+p.c[1].toFixed(6)],by:fbUser.email,ts:Date.now()};
-  (isNew?fbDb.ref("orgl/points").push(d):fbDb.ref("orgl/points/"+p.id).update(d)).then(()=>{sheetClose();status(isNew?"Für alle gespeichert.":"Änderungen gespeichert.");if(!map.hasLayer(groups.fix))groups.fix.addTo(map);}).catch(fbErr);};}
-function adminSheet(){if(!FB_CONFIG){sheetOpen(`<h2>Admin</h2><div>Der Admin-Bereich ist noch nicht eingerichtet. Es fehlen die Zugangsdaten des Firebase-Projekts.</div>`);return;}
- if(!fbAuth){sheetOpen(`<h2>Admin</h2><div>Keine Verbindung zur Datenbank. Internet prüfen und Seite aktualisieren.</div>`);return;}
- if(fbUser){sheetOpen(`<h2>Admin</h2><div>Angemeldet als ${esc(fbUser.email)}.</div><div class="note">Neuen festen Punkt anlegen: unten „Markieren“, dann „Für alle speichern“. Bestehende Punkte antippen, um sie zu ändern.</div><div class="row"><button id="aOut">Abmelden</button></div>`);$("aOut").onclick=()=>fbAuth.signOut().then(()=>{sheetClose();status("Abgemeldet.");});return;}
- sheetOpen(`<h2>Admin-Anmeldung</h2><input type="text" id="aE" placeholder="E-Mail" autocomplete="username" inputmode="email" autocapitalize="off"><div style="height:8px"></div><input type="password" id="aP" placeholder="Passwort" autocomplete="current-password"><div class="row"><button class="pri" id="aIn">Anmelden</button></div><div class="note" id="aMsg"></div>`);
- $("aIn").onclick=()=>{$("aMsg").textContent="Anmelden …";fbAuth.signInWithEmailAndPassword($("aE").value.trim(),$("aP").value).then(()=>{sheetClose();status("Als Admin angemeldet.");}).catch(e=>{$("aMsg").textContent=/password|credential|user|email/i.test(e.code||"")?"E-Mail oder Passwort falsch.":"Anmeldung fehlgeschlagen: "+e.message;});};}
+ $("xS").onclick=()=>{const d={t:$("xT").value,n:$("xN").value.trim(),txt:$("xX").value.trim(),c:[+p.c[0].toFixed(6),+p.c[1].toFixed(6)],ts:Date.now()};
+  if(p.g)d.g=simplify(p.g,1.5).map(q=>[+q[0].toFixed(6),+q[1].toFixed(6)]);
+  (isNew?dbReq("","POST",d):dbReq("/"+p.id,"PATCH",d)).then(()=>{sheetClose();status(isNew?"Für alle gespeichert.":"Änderungen gespeichert.");if(!map.hasLayer(groups.fix))groups.fix.addTo(map);}).catch(fbErr);};}
+function adminSheet(){
+ if(admin){sheetOpen(`<h2>Admin aktiv</h2><div class="note">Neuen festen Punkt: unten „Markieren“, dann „Für alle speichern“. Fester Bereich: mit „Malen“ eine Fläche zeichnen, antippen, „Als festen Bereich für alle speichern“. Bestehende Punkte antippen zum Ändern.</div><div class="row"><button id="aOut">Admin beenden</button></div>`);$("aOut").onclick=()=>{admin=false;sheetClose();status("Admin beendet.");};return;}
+ sheetOpen(`<h2>Admin</h2><input type="password" id="aP" placeholder="Code" inputmode="numeric" autocomplete="off"><div class="row"><button class="pri" id="aIn">Freischalten</button></div><div class="note" id="aMsg"></div>`);
+ const go=()=>{if($("aP").value.trim()===ADMIN_CODE){admin=true;sheetClose();status("Admin freigeschaltet.");}else $("aMsg").textContent="Code falsch.";};
+ $("aIn").onclick=go;$("aP").onkeydown=e=>{if(e.key==="Enter")go();};}
 
 loadIndex();
-initFB();
+initFix();
 startLoc();
 </script>
 </body>
