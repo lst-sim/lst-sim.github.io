@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#1b1f24">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>ORGL-Lagekarte Friesland</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>
+:root{--bg:#1b1f24;--panel:#242a31;--line:#3a424c;--fg:#eef1f4;--mut:#9aa5b1;--acc:#ffb300;
+--heli:#e53935;--lzN:#ff7a00;--lzD:#f2c200;--pat:#1e88e5;--br:#8e44ad;--kh:#2e7d32;--fw:#b71c1c;--rw:#ffffff;--pol:#0d47a1;--wr:#00acc1;--aed:#43a047;--haz:#111;}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--fg);font:15px/1.35 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif}
+#map{position:absolute;inset:0}
+.bar{position:absolute;left:0;right:0;top:0;z-index:1000;display:flex;gap:6px;align-items:center;padding:calc(env(safe-area-inset-top) + 6px) 8px 6px;background:rgba(27,31,36,.92);border-bottom:1px solid var(--line)}
+.bar h1{font-size:15px;margin:0 auto 0 4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bar small{display:block;color:var(--mut);font-weight:400;font-size:11px}
+button{font:inherit;color:var(--fg);background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:8px 10px;min-height:40px;cursor:pointer}
+button.on{background:var(--acc);color:#111;border-color:var(--acc)}
+button.pri{background:var(--acc);color:#111;border-color:var(--acc);font-weight:600}
+.fab{position:absolute;right:10px;z-index:1000;display:flex;flex-direction:column;gap:8px;bottom:calc(env(safe-area-inset-bottom) + 24px)}
+.fab button{width:52px;height:52px;border-radius:50%;font-size:20px;padding:0;box-shadow:0 2px 8px rgba(0,0,0,.4)}
+#cross{position:absolute;left:50%;top:50%;width:36px;height:36px;margin:-18px 0 0 -18px;z-index:900;pointer-events:none;display:none}
+#cross:before,#cross:after{content:"";position:absolute;background:var(--acc)}
+#cross:before{left:17px;top:0;width:2px;height:36px}#cross:after{top:17px;left:0;height:2px;width:36px}
+.sheet{position:absolute;left:0;right:0;bottom:0;z-index:1100;background:var(--panel);border-top:1px solid var(--line);border-radius:14px 14px 0 0;max-height:62%;overflow:auto;padding:12px 14px calc(env(safe-area-inset-bottom) + 14px);display:none;box-shadow:0 -4px 16px rgba(0,0,0,.4)}
+.sheet.open{display:block}
+.sheet h2{font-size:17px;margin:0 30px 4px 0}
+.sheet h3{font-size:13px;color:var(--mut);margin:12px 0 4px;text-transform:uppercase;letter-spacing:.04em}
+.x{position:absolute;right:8px;top:8px;min-height:32px;padding:4px 10px}
+.row{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:3px 10px;font-size:14px}
+.kv b{color:var(--mut);font-weight:500}
+.warn{background:#4a2a00;border:1px solid #a86500;border-radius:8px;padding:6px 8px;margin:6px 0;font-size:14px}
+.ok{background:#173a1d;border:1px solid #2e7d32;border-radius:8px;padding:6px 8px;margin:6px 0;font-size:14px}
+.note{color:var(--mut);font-size:12px;margin-top:10px}
+.lg{display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid var(--line)}
+.lg input{width:22px;height:22px}
+.lg .cnt{margin-left:auto;color:var(--mut);font-size:13px}
+.sw{width:18px;height:18px;border-radius:50%;border:2px solid #fff;flex:none}
+.sq{border-radius:3px}
+.near{display:flex;justify-content:space-between;gap:8px;padding:7px 0;border-bottom:1px solid var(--line);cursor:pointer}
+.near span:last-child{color:var(--mut);white-space:nowrap}
+.mk{display:flex;align-items:center;justify-content:center;border-radius:50%;border:2px solid #fff;color:#fff;font:700 11px/1 sans-serif;box-shadow:0 1px 3px rgba(0,0,0,.5)}
+.own{border-radius:4px;border:2px solid #111;color:#111;background:var(--acc);font:800 11px/1 sans-serif;display:flex;align-items:center;justify-content:center;box-shadow:0 1px 4px rgba(0,0,0,.6)}
+#status{position:absolute;left:8px;z-index:1000;top:calc(env(safe-area-inset-top) + 62px);background:rgba(27,31,36,.9);border:1px solid var(--line);border-radius:8px;padding:5px 8px;font-size:12px;max-width:calc(100% - 80px)}
+#wind{position:absolute;right:10px;z-index:1000;top:calc(env(safe-area-inset-top) + 62px);background:rgba(27,31,36,.9);border:1px solid var(--line);border-radius:8px;padding:5px 8px;font-size:12px;text-align:center;min-width:70px;cursor:pointer}
+#wind .arr{font-size:22px;display:inline-block;line-height:1}
+select,input[type=text]{font:inherit;color:var(--fg);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:8px;width:100%}
+.navb{flex:1 1 30%;text-align:center;text-decoration:none;color:#111;background:var(--acc);border-radius:10px;padding:11px 6px;font-weight:700;min-height:44px}
+#drawLayer{position:absolute;inset:0;z-index:950;display:none;touch-action:none;cursor:crosshair}
+#drawBar{position:absolute;left:8px;right:72px;z-index:1050;bottom:calc(env(safe-area-inset-bottom) + 24px);background:rgba(36,42,49,.96);border:1px solid var(--line);border-radius:12px;padding:8px;display:none;flex-wrap:wrap;gap:6px;align-items:center}
+#drawBar .c{width:34px;height:34px;min-height:34px;border-radius:50%;padding:0;border:3px solid transparent}
+#drawBar .c.sel{border-color:#fff}
+#drawBar button{min-height:36px;padding:6px 9px}
+.leaflet-control-attribution{font-size:10px}
+.leaflet-top{top:calc(env(safe-area-inset-top) + 100px)}
+#modal{position:absolute;inset:0;z-index:2000;background:rgba(0,0,0,.6);display:none;align-items:center;justify-content:center;padding:16px}
+#modal .box{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px;max-width:520px;max-height:85%;overflow:auto}
+</style>
+</head>
+<body>
+<div id="map"></div>
+<div id="cross"></div>
+<div id="drawLayer"></div>
+<div id="drawBar">
+  <button class="c sel" data-c="#ff1744" style="background:#ff1744"></button>
+  <button class="c" data-c="#2979ff" style="background:#2979ff"></button>
+  <button class="c" data-c="#ffd600" style="background:#ffd600"></button>
+  <button class="c" data-c="#00c853" style="background:#00c853"></button>
+  <button class="c" data-c="#111111" style="background:#111"></button>
+  <button id="dMode">〰 Linie</button>
+  <button id="dPan">✋ Karte bewegen</button>
+  <button id="dUndo">↶</button>
+  <button id="dErase">🧽 Löschen</button>
+  <button id="dClear">🗑 Alles</button>
+  <button id="dDone" class="pri">✓ Fertig</button>
+</div>
+<div class="bar">
+  <h1>ORGL-Lagekarte Friesland<small id="sub">OSM-Daten · Planungshilfe</small></h1>
+  <button id="bLayers" title="Ebenen">☰ Ebenen</button>
+  <button id="bInfo" title="Hinweise">ⓘ</button>
+</div>
+<div id="status">Lade …</div>
+<div id="wind" title="Wind (Open-Meteo)"><span class="arr" id="wArr">·</span><div id="wTxt">Wind</div></div>
+<div class="fab">
+  <button id="bEst" title="Einsatzstelle setzen">✚</button>
+  <button id="bDraw" title="Auf der Karte malen">🖌</button>
+  <button id="bMark" title="Eigene Markierung setzen">📍</button>
+  <button id="bLoc" title="Live-Standort">◎</button>
+</div>
+<div class="sheet" id="sheet"><button class="x" id="sx">✕</button><div id="sc"></div></div>
+<div id="modal"><div class="box" id="mbox"></div></div>
+
+<script>
+"use strict";
+/* ================= Konfiguration ================= */
+// Größenkriterien Außenlandeplatz RTH (DRF Luftrettung, Checklisten für Feuerwehren):
+// Tag: mind. 30 x 30 m (konservativer Wert; DRF nennt teils 25 x 25 m), Nacht: mind. 35 x 70 m.
+const LZ_DAY = [30,30], LZ_NIGHT = [35,70];
+const WARN_LINE_M = 100;     // Freileitung näher als ... m -> Warnung
+const WARN_WIND_M = 300;     // Windenergieanlage näher als ... m -> Warnung
+const PARK_MIN_M2 = 1500;    // Parkplatz ab ... m² als möglicher Bereitstellungsraum
+const CACHE_KEY = "orgl-fri-v1";
+const OVERPASS = ["https://overpass-api.de/api/interpreter","https://overpass.kumi.systems/api/interpreter","https://overpass.private.coffee/api/interpreter"];
+const AREA = 'area["boundary"="administrative"]["admin_level"="6"]["name"~"^(Landkreis )?Friesland$"]->.a;';
+const QUERY = `[out:json][timeout:180];
+${AREA}
+rel["boundary"="administrative"]["admin_level"="6"]["name"~"^(Landkreis )?Friesland$"];
+out geom;
+(
+ nwr(area.a)["aeroway"~"^(helipad|heliport|aerodrome)$"];
+ way(area.a)["leisure"~"^(pitch|stadium)$"];
+ way(area.a)["landuse"="recreation_ground"];
+ nwr(area.a)["amenity"~"^(hospital|fire_station|police|school|community_centre)$"];
+ nwr(area.a)["emergency"~"^(ambulance_station|water_rescue|lifeguard_base|lifeguard_station|defibrillator)$"];
+ nwr(area.a)["leisure"="sports_hall"];
+ way(area.a)["building"="sports_hall"];
+ way(area.a)["amenity"="parking"]["parking"!~"underground|multi-storey|rooftop"];
+ node(area.a)["power"="generator"]["generator:source"="wind"];
+ way(area.a)["power"~"^(line|minor_line)$"];
+);
+out tags geom;`;
+
+/* Kategorien: key -> {name, color, letter, shape, on} */
+const CAT = {
+ heli:{n:"Hubschrauberlandeplatz (offiziell, OSM)",c:"#e53935",l:"H",on:true},
+ lzN:{n:"Landeplatz-Kandidat Tag + Nacht (≥35×70 m)",c:"#ff7a00",l:"",sq:true,on:true},
+ lzD:{n:"Landeplatz-Kandidat nur Tag (≥30×30 m)",c:"#f2c200",l:"",sq:true,on:true},
+ pat:{n:"Patientensammelstelle / BHP (Halle, Schule, Gemeindehaus)",c:"#1e88e5",l:"P",on:true},
+ br:{n:"Bereitstellungsraum (Parkplatz ≥1.500 m²)",c:"#8e44ad",l:"B",sq:true,on:false},
+ kh:{n:"Krankenhaus",c:"#2e7d32",l:"K",on:true},
+ rw:{n:"Rettungswache",c:"#c62828",l:"R",on:true},
+ fw:{n:"Feuerwehr",c:"#b71c1c",l:"F",on:true},
+ wr:{n:"Wasserrettung / DLRG",c:"#00acc1",l:"W",on:true},
+ pol:{n:"Polizei",c:"#0d47a1",l:"Po",on:false},
+ aed:{n:"AED / Defibrillator",c:"#43a047",l:"♥",on:false},
+ wka:{n:"Gefahr: Windenergieanlage",c:"#222",l:"✳",on:true},
+ pwr:{n:"Gefahr: Freileitung",c:"#ff1744",l:"",line:true,on:true},
+ own:{n:"Eigene Markierungen",c:"#ffb300",l:"✎",sq:true,on:true}
+};
+const OWN_TYPES = [["LP","Landeplatz (festgelegt)"],["PA","Patientenablage"],["BHP","Behandlungsplatz"],["BR","Bereitstellungsraum"],["SST","Sammelstelle Unverletzte"],["EL","Einsatzleitung / ELW"],["!","Gefahrenstelle"],["T","Text / Sonstiges"]];
+
+/* ================= Hilfsfunktionen Geometrie ================= */
+const R = 6371008.8, rad = d => d*Math.PI/180, deg = r => r*180/Math.PI;
+function dist(a,b){const dLa=rad(b[0]-a[0]),dLo=rad(b[1]-a[1]);const h=Math.sin(dLa/2)**2+Math.cos(rad(a[0]))*Math.cos(rad(b[0]))*Math.sin(dLo/2)**2;return 2*R*Math.asin(Math.sqrt(h));}
+function bearing(a,b){const y=Math.sin(rad(b[1]-a[1]))*Math.cos(rad(b[0]));const x=Math.cos(rad(a[0]))*Math.sin(rad(b[0]))-Math.sin(rad(a[0]))*Math.cos(rad(b[0]))*Math.cos(rad(b[1]-a[1]));return (deg(Math.atan2(y,x))+360)%360;}
+const DIRS=["N","NNO","NO","ONO","O","OSO","SO","SSO","S","SSW","SW","WSW","W","WNW","NW","NNW"];
+const dirTxt = b => DIRS[Math.round(b/22.5)%16];
+const fmtD = m => m<1000? Math.round(m)+" m" : (m/1000).toFixed(m<10000?1:0).replace(".",",")+" km";
+// lokale Projektion (Meter) um Bezugspunkt
+function proj(o){const k=Math.cos(rad(o[0]));return p=>[rad(p[1]-o[1])*R*k, rad(p[0]-o[0])*R];}
+function polyArea(xy){let s=0;for(let i=0,j=xy.length-1;i<xy.length;j=i++)s+=(xy[j][0]+xy[i][0])*(xy[j][1]-xy[i][1]);return Math.abs(s/2);}
+function hull(pts){const p=pts.slice().sort((a,b)=>a[0]-b[0]||a[1]-b[1]);if(p.length<3)return p;const cr=(o,a,b)=>(a[0]-o[0])*(b[1]-o[1])-(a[1]-o[1])*(b[0]-o[0]);const lo=[],up=[];for(const q of p){while(lo.length>=2&&cr(lo[lo.length-2],lo[lo.length-1],q)<=0)lo.pop();lo.push(q);}for(let i=p.length-1;i>=0;i--){const q=p[i];while(up.length>=2&&cr(up[up.length-2],up[up.length-1],q)<=0)up.pop();up.push(q);}up.pop();lo.pop();return lo.concat(up);}
+// kleinstes umschließendes Rechteck -> [kurz, lang]
+function mbr(xy){const h=hull(xy);if(h.length<3)return[0,0];let best=null;for(let i=0;i<h.length;i++){const a=h[i],b=h[(i+1)%h.length];const ang=Math.atan2(b[1]-a[1],b[0]-a[0]);const c=Math.cos(-ang),s=Math.sin(-ang);let x0=1e9,x1=-1e9,y0=1e9,y1=-1e9;for(const p of h){const x=p[0]*c-p[1]*s,y=p[0]*s+p[1]*c;x0=Math.min(x0,x);x1=Math.max(x1,x);y0=Math.min(y0,y);y1=Math.max(y1,y);}const w=x1-x0,l=y1-y0;if(!best||w*l<best[0]*best[1])best=[w,l];}return best[0]<best[1]?best:[best[1],best[0]];}
+function segDist(p,a,b){const dx=b[0]-a[0],dy=b[1]-a[1];const L=dx*dx+dy*dy;let t=L?((p[0]-a[0])*dx+(p[1]-a[1])*dy)/L:0;t=Math.max(0,Math.min(1,t));const x=a[0]+t*dx-p[0],y=a[1]+t*dy-p[1];return Math.hypot(x,y);}
+function segSeg(a,b,c,d){const o=(p,q,r)=>Math.sign((q[0]-p[0])*(r[1]-p[1])-(q[1]-p[1])*(r[0]-p[0]));if(o(a,b,c)!==o(a,b,d)&&o(c,d,a)!==o(c,d,b))return 0;return Math.min(segDist(a,c,d),segDist(b,c,d),segDist(c,a,b),segDist(d,a,b));}
+function pip(p,xy){let ins=false;for(let i=0,j=xy.length-1;i<xy.length;j=i++){const a=xy[i],b=xy[j];if((a[1]>p[1])!==(b[1]>p[1])&&p[0]<(b[0]-a[0])*(p[1]-a[1])/(b[1]-a[1])+a[0])ins=!ins;}return ins;}
+function centroid(pts){let a=0,b=0;for(const p of pts){a+=p[0];b+=p[1];}return[a/pts.length,b/pts.length];}
+
+/* ================= UTMREF / MGRS (WGS84) ================= */
+function utm(lat,lon){let zone=Math.floor((lon+180)/6)+1;if(lat>=56&&lat<64&&lon>=3&&lon<12)zone=32;
+ if(lat>=72&&lat<84){if(lon>=0&&lon<9)zone=31;else if(lon>=9&&lon<21)zone=33;else if(lon>=21&&lon<33)zone=35;else if(lon>=33&&lon<42)zone=37;}
+ const a=6378137,f=1/298.257223563,k0=0.9996,e2=f*(2-f),ep2=e2/(1-e2);const lo0=rad((zone-1)*6-180+3);const phi=rad(lat),lam=rad(lon);
+ const N=a/Math.sqrt(1-e2*Math.sin(phi)**2),T=Math.tan(phi)**2,C=ep2*Math.cos(phi)**2,A=Math.cos(phi)*(lam-lo0);
+ const M=a*((1-e2/4-3*e2*e2/64-5*e2**3/256)*phi-(3*e2/8+3*e2*e2/32+45*e2**3/1024)*Math.sin(2*phi)+(15*e2*e2/256+45*e2**3/1024)*Math.sin(4*phi)-(35*e2**3/3072)*Math.sin(6*phi));
+ const E=k0*N*(A+(1-T+C)*A**3/6+(5-18*T+T*T+72*C-58*ep2)*A**5/120)+500000;
+ let Nn=k0*(M+N*Math.tan(phi)*(A*A/2+(5-T+9*C+4*C*C)*A**4/24+(61-58*T+T*T+600*C-330*ep2)*A**6/720));if(lat<0)Nn+=1e7;return{zone,E,N:Nn};}
+function mgrs(lat,lon){const u=utm(lat,lon);const band="CDEFGHJKLMNPQRSTUVWXX"[Math.floor((lat+80)/8)];
+ const set=(u.zone%6)||6;const A=65,I=73,O=79,V=86,Z=90;const co="AJSAJS".charCodeAt(set-1),ro="AFAFAF".charCodeAt(set-1);
+ let c=co+Math.floor(u.E/1e5)-1,r=ro+Math.floor(u.N/1e5)%20,ro_=false;
+ if(c>Z){c=c-Z+A-1;ro_=true;}
+ if(c===I||(co<I&&c>I)||((c>I||co<I)&&ro_))c++;
+ if(c===O||(co<O&&c>O)||((c>O||co<O)&&ro_)){c++;if(c===I)c++;}
+ if(c>Z)c=c-Z+A-1;
+ if(r>V){r=r-V+A-1;ro_=true;}else ro_=false;
+ if(r===I||(ro<I&&r>I)||((r>I||ro<I)&&ro_))r++;
+ if(r===O||(ro<O&&r>O)||((r>O||ro<O)&&ro_)){r++;if(r===I)r++;}
+ if(r>V)r=r-V+A-1;
+ const e=String(Math.floor(u.E%1e5)).padStart(5,"0"),n=String(Math.floor(u.N%1e5)).padStart(5,"0");
+ return `${u.zone}${band} ${String.fromCharCode(c)}${String.fromCharCode(r)} ${e} ${n}`;}
+if(typeof module!=="undefined")module.exports={mgrs,utm,mbr};
+</script>
+<script>
+"use strict";
+if(typeof L==="undefined"){document.getElementById("status").textContent="Kartenbibliothek konnte nicht geladen werden – Internetverbindung prüfen.";throw new Error("no leaflet");}
+/* ================= Karte ================= */
+const map=L.map("map",{zoomControl:true,preferCanvas:true,tap:true}).setView([53.52,7.98],10);
+const base={
+ "OSM Standard":L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:19,attribution:"© OpenStreetMap-Mitwirkende"}),
+ "Luftbild (Esri)":L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",{maxZoom:19,attribution:"Luftbild © Esri, Maxar, Earthstar Geographics"}),
+ "TopPlus (BKG)":L.tileLayer("https://sgx.geodatenzentrum.de/wmts_topplus_open/tile/1.0.0/web/default/WEBMERCATOR/{z}/{y}/{x}.png",{maxZoom:18,attribution:"© BKG (2026) dl-de/by-2-0"})
+};
+base["OSM Standard"].addTo(map);
+L.control.layers(base,null,{position:"topleft"}).addTo(map);
+L.control.scale({imperial:false}).addTo(map);
+const groups={};for(const k in CAT){groups[k]=L.layerGroup();if(CAT[k].on)groups[k].addTo(map);}
+let DATA=null,boundaryLayer=null,me=null,meMk=null,meAcc=null,follow=false,watchId=null,estMk=null,est=null,crossMode=null;
+const $=id=>document.getElementById(id);
+const status=t=>{$("status").textContent=t;};
+
+/* ================= Daten laden ================= */
+async function overpass(q){let lastErr;for(const url of OVERPASS){try{const r=await fetch(url,{method:"POST",body:"data="+encodeURIComponent(q),headers:{"Content-Type":"application/x-www-form-urlencoded"}});if(!r.ok)throw new Error(url+" HTTP "+r.status);return await r.json();}catch(e){lastErr=e;}}throw lastErr;}
+function geomOf(el){
+ if(el.type==="node")return{pt:[el.lat,el.lon]};
+ if(el.type==="way"&&el.geometry)return{line:el.geometry.map(g=>[g.lat,g.lon])};
+ if(el.type==="relation"&&el.members){const rings=el.members.filter(m=>m.geometry&&m.role!=="inner").map(m=>m.geometry.map(g=>[g.lat,g.lon]));if(rings.length)return{line:[].concat(...rings),rings};}
+ return null;}
+function nm(t){return t.name||t["name:de"]||t.operator||t.ref||"";}
+function process(js){
+ const els=js.elements||[];const out={t:Date.now(),bnd:[],pts:[],lz:[],pwr:[],wka:[]};
+ const bnd=els.find(e=>e.type==="relation"&&e.tags&&e.tags.boundary==="administrative");
+ if(bnd){out.bnd=bnd.members.filter(m=>m.role==="outer"&&m.geometry).map(m=>m.geometry.map(g=>[+g.lat.toFixed(5),+g.lon.toFixed(5)]));}
+ const seen=new Set();
+ for(const el of els){if(el===bnd||!el.tags)continue;const t=el.tags,g=geomOf(el);if(!g)continue;const id=el.type[0]+el.id;if(seen.has(id))continue;seen.add(id);
+  const ring=g.line, c=g.pt||centroid(ring);
+  if(t.power==="line"||t.power==="minor_line"){out.pwr.push({id,v:t.voltage||"",k:t.power,g:ring.map(p=>[+p[0].toFixed(6),+p[1].toFixed(6)])});continue;}
+  if(t.power==="generator"){out.wka.push({id,c,h:t.height||t["tower:height"]||""});continue;}
+  let cat=null,extra={};
+  if(t.aeroway==="helipad"||t.aeroway==="heliport")cat="heli";
+  else if(t.aeroway==="aerodrome")cat="heli",extra.aerodrome=1;
+  else if(t.amenity==="hospital")cat="kh";
+  else if(t.emergency==="ambulance_station")cat="rw";
+  else if(t.amenity==="fire_station")cat="fw";
+  else if(/^(water_rescue|lifeguard_base|lifeguard_station)$/.test(t.emergency||""))cat="wr";
+  else if(t.amenity==="police")cat="pol";
+  else if(t.emergency==="defibrillator")cat="aed";
+  else if(t.leisure==="sports_hall"||t.building==="sports_hall"||t.amenity==="school"||t.amenity==="community_centre")cat="pat";
+  else if(t.amenity==="parking"&&ring){const P=proj(c);const a=polyArea(ring.map(P));if(a>=PARK_MIN_M2){cat="br";extra.area=Math.round(a);}}
+  else if((t.leisure==="pitch"||t.leisure==="stadium"||t.landuse==="recreation_ground")&&ring&&ring.length>=4){
+   const P=proj(c);const xy=ring.map(P);const [s,l]=mbr(xy);const area=polyArea(xy);
+   if(s>=LZ_DAY[0]&&l>=LZ_DAY[1]){const night=s>=LZ_NIGHT[0]&&l>=LZ_NIGHT[1];
+    out.lz.push({id,cat:night?"lzN":"lzD",c,s:Math.round(s),l:Math.round(l),a:Math.round(area),fill:+(area/(s*l)).toFixed(2),g:ring.map(p=>[+p[0].toFixed(6),+p[1].toFixed(6)]),n:nm(t),sport:t.sport||t.leisure||t.landuse,surf:t.surface||"",lit:t.lit||"",acc:t.access||""});}
+   continue;}
+  if(cat){let typ=t.amenity||t.emergency||t.aeroway||t.leisure||t.building||"";out.pts.push(Object.assign({id,cat,c,n:nm(t),typ,addr:[t["addr:street"]&&(t["addr:street"]+" "+(t["addr:housenumber"]||"")),t["addr:city"]].filter(Boolean).join(", "),acc:t.access||"",tel:t.phone||t["contact:phone"]||"",ind:t.indoor||"",lvl:t.level||"",op:t.operator||""},extra));}
+ }
+ // Gefahrenprüfung je Landeplatz-Kandidat
+ for(const z of out.lz){const P=proj(z.c);const zxy=z.g.map(P);let dl=1e9,lv="";
+  for(const ln of out.pwr){const lxy=ln.g.map(P);let near=false;for(const p of lxy)if(Math.abs(p[0])<1500&&Math.abs(p[1])<1500){near=true;break;}if(!near)continue;
+   for(let i=0;i<lxy.length-1;i++)for(let j=0;j<zxy.length-1;j++){const d=segSeg(lxy[i],lxy[i+1],zxy[j],zxy[j+1]);if(d<dl){dl=d;lv=ln.v;}}
+   for(const p of lxy)if(pip(p,zxy)){dl=0;lv=ln.v;}}
+  z.dl=Math.round(dl);z.lv=lv;let dw=1e9;for(const w of out.wka)dw=Math.min(dw,dist(z.c,w.c));z.dw=Math.round(dw);}
+ return out;}
+async function load(force){
+ if(!force){try{const c=localStorage.getItem(CACHE_KEY);if(c){DATA=JSON.parse(c);render();status(`Daten vom ${new Date(DATA.t).toLocaleString("de-DE")} (Zwischenspeicher) · ⟳ unter Ebenen`);return;}}catch(e){}}
+ status("Lade OpenStreetMap-Daten für Landkreis Friesland … (bis zu 1–2 Min.)");
+ try{const js=await overpass(QUERY);DATA=process(js);
+  if(!DATA.bnd.length&&!DATA.pts.length)throw new Error("Keine Daten – Kreisgrenze nicht gefunden");
+  try{localStorage.setItem(CACHE_KEY,JSON.stringify(DATA));}catch(e){}
+  render();status(`Stand ${new Date(DATA.t).toLocaleString("de-DE")} · ${DATA.lz.length} LP-Kandidaten · ${DATA.pts.length} Objekte`);
+ }catch(e){status("Laden fehlgeschlagen: "+e.message+" – später erneut versuchen (☰ Ebenen → Daten neu laden).");}}
+
+/* ================= Darstellung ================= */
+function icon(cat,size){const C=CAT[cat];size=size||24;return L.divIcon({className:"",iconSize:[size,size],iconAnchor:[size/2,size/2],html:`<div class="mk" style="width:${size}px;height:${size}px;background:${C.c};${C.sq?"border-radius:4px;":""}${cat==="lzD"?"color:#111;":""}">${C.l}</div>`});}
+function render(){
+ for(const k in groups)if(k!=="own")groups[k].clearLayers();
+ if(boundaryLayer)map.removeLayer(boundaryLayer);
+ if(DATA.bnd.length){boundaryLayer=L.polyline(DATA.bnd,{color:"#ffb300",weight:3,dashArray:"8 6",interactive:false}).addTo(map);if(!render.done){map.fitBounds(boundaryLayer.getBounds(),{padding:[10,10]});render.done=1;}}
+ for(const z of DATA.lz){const C=CAT[z.cat];const warn=z.dl<WARN_LINE_M||z.dw<WARN_WIND_M;
+  const poly=L.polygon(z.g,{color:warn?"#ff1744":C.c,weight:warn?3:2,fillColor:C.c,fillOpacity:.35,dashArray:warn?"4 4":null});
+  poly.on("click",()=>showLZ(z));groups[z.cat].addLayer(poly);
+  const m=L.marker(z.c,{icon:L.divIcon({className:"",iconSize:[22,22],iconAnchor:[11,11],html:`<div class="mk" style="width:22px;height:22px;border-radius:4px;background:${C.c};color:#111;${warn?"border-color:#ff1744;":""}">${warn?"!":"L"}</div>`})});
+  m.on("click",()=>showLZ(z));groups[z.cat].addLayer(m);}
+ for(const p of DATA.pts){const m=L.marker(p.c,{icon:icon(p.cat,p.cat==="aed"?18:24)});m.on("click",()=>showPt(p));groups[p.cat].addLayer(m);}
+ for(const ln of DATA.pwr){const hv=parseInt(ln.v)>=60000;groups.pwr.addLayer(L.polyline(ln.g,{color:"#ff1744",weight:hv?3:2,opacity:.85,dashArray:ln.k==="minor_line"?"6 5":null}).bindTooltip(`Freileitung ${ln.v?Math.round(parseInt(ln.v)/1000)+" kV":"(Spannung unbek.)"}`));}
+ for(const w of DATA.wka){groups.wka.addLayer(L.marker(w.c,{icon:icon("wka",20)}).on("click",()=>showWKA(w)));}
+ renderOwn();updLegendCounts();}
+
+/* ================= Info-Blätter ================= */
+function sheetOpen(html){$("sc").innerHTML=html;$("sheet").classList.add("open");$("sheet").scrollTop=0;}
+function sheetClose(){$("sheet").classList.remove("open");}
+$("sx").onclick=sheetClose;
+function posBlock(c){const ref=me||est;let s=`<h3>Lage</h3><div class="kv"><b>UTMREF</b><span>${mgrs(c[0],c[1])}</span><b>WGS84</b><span>${c[0].toFixed(5)}, ${c[1].toFixed(5)}</span>`;
+ if(me){s+=`<b>Von mir</b><span>${fmtD(dist(me,c))} Richtung ${dirTxt(bearing(me,c))} (${Math.round(bearing(me,c))}°)</span>`;}
+ if(est){s+=`<b>Von E-Stelle</b><span>${fmtD(dist(est,c))} Richtung ${dirTxt(bearing(est,c))}</span>`;}
+ s+=`</div><div class="row"><button onclick="copyTxt('${mgrs(c[0],c[1])}')">UTMREF kopieren</button><button onclick="copyTxt('${c[0].toFixed(6)}, ${c[1].toFixed(6)}')">Koordinaten kopieren</button></div>
+ <h3>Hinfahren (Route ab deinem Standort)</h3>${navBtns(c)}
+ <div class="row"><button onclick="markHere(${c[0]},${c[1]})">📍 Als eigene Markierung</button></div>`;return s;}
+function navBtns(c){const ll=c[0].toFixed(6)+","+c[1].toFixed(6);
+ return `<div class="row nav"><a class="navb" href="https://maps.apple.com/?daddr=${ll}&dirflg=d" target="_blank" rel="noopener">🧭 Apple Karten</a><a class="navb" href="https://www.google.com/maps/dir/?api=1&destination=${ll}&travelmode=driving&dir_action=navigate" target="_blank" rel="noopener">🧭 Google Maps</a><a class="navb" href="https://waze.com/ul?ll=${ll}&navigate=yes" target="_blank" rel="noopener">🧭 Waze</a></div>`;}
+function showLZ(z){
+ let w="";
+ if(z.dl===0)w+=`<div class="warn">⚠ Freileitung kreuzt die Fläche${z.lv?" ("+Math.round(parseInt(z.lv)/1000)+" kV)":""} – ungeeignet ohne Prüfung!</div>`;
+ else if(z.dl<WARN_LINE_M)w+=`<div class="warn">⚠ Freileitung in ca. ${z.dl} m${z.lv?" ("+Math.round(parseInt(z.lv)/1000)+" kV)":""} – Anflugsektor prüfen!</div>`;
+ if(z.dw<WARN_WIND_M)w+=`<div class="warn">⚠ Windenergieanlage in ca. ${z.dw} m</div>`;
+ if(z.fill<0.75)w+=`<div class="warn">Unregelmäßige Form (Füllgrad ${Math.round(z.fill*100)} %) – nutzbare Fläche kann kleiner sein als das Rechteck.</div>`;
+ if(!w)w=`<div class="ok">Keine Freileitung im Umkreis ${WARN_LINE_M} m und keine WEA im Umkreis ${WARN_WIND_M} m in den OSM-Daten.</div>`;
+ const sp={soccer:"Fußball",multi:"Mehrzweck",tennis:"Tennis",athletics:"Leichtathletik",equestrian:"Reitplatz",baseball:"Baseball",stadium:"Stadion",recreation_ground:"Freizeitgelände",pitch:"Sportfläche"};
+ sheetOpen(`<h2>${z.cat==="lzN"?"🟧 Landeplatz-Kandidat Tag + Nacht":"🟨 Landeplatz-Kandidat (nur Tag)"}</h2>
+ <div>${z.n||"Sportfläche ohne Namen"}</div>${w}
+ <div class="kv"><b>Abmessung</b><span>ca. ${z.s} × ${z.l} m (umschließendes Rechteck)</span><b>Fläche</b><span>ca. ${z.a.toLocaleString("de-DE")} m²</span><b>Art</b><span>${(z.sport||"").split(";").map(s=>sp[s]||s).join(", ")}</span>${z.surf?`<b>Belag</b><span>${z.surf}</span>`:""}<b>Flutlicht</b><span>${z.lit==="yes"?"ja (laut OSM)":z.lit==="no"?"nein (laut OSM)":"unbekannt"}</span>${z.acc?`<b>Zugang</b><span>${z.acc}</span>`:""}</div>
+ ${posBlock(z.c)}
+ <div class="note">Automatische Auswertung aus OSM. Hindernisse wie Bäume, Masten, Flutlichtmasten, Ballfangzäune und Gebäude sind nicht geprüft. Die Entscheidung über den Landeplatz trifft immer der Pilot.</div>`);}
+function showPt(p){const C=CAT[p.cat];
+ const hint={pat:"Mögliche Patientensammelstelle / Behandlungsplatz / Betreuungsstelle. Verfügbarkeit, Schlüssel und Heizung vor Ort klären.",br:`Mögliche Fläche für Bereitstellungsraum (${(p.area||0).toLocaleString("de-DE")} m²).`,heli:p.aerodrome?"Flugplatz (OSM aeroway=aerodrome).":"In OSM als Hubschrauberlandeplatz eingetragen. Zulassung / Nachtfähigkeit nicht geprüft.",aed:"Zugänglichkeit (24/7?) vor Ort prüfen."}[p.cat]||"";
+ const typ={school:"Schule",sports_hall:"Sporthalle",community_centre:"Gemeinde-/Dorfgemeinschaftshaus",hospital:"Krankenhaus",fire_station:"Feuerwehr",ambulance_station:"Rettungswache",police:"Polizei",defibrillator:"AED",helipad:"Hubschrauberlandeplatz",heliport:"Hubschrauberlandeplatz",aerodrome:"Flugplatz",parking:"Parkplatz",water_rescue:"Wasserrettung",lifeguard_base:"Wasserrettung",lifeguard_station:"Wasserrettung"}[p.typ]||p.typ;
+ sheetOpen(`<h2>${C.n.split(" (")[0]}</h2><div><b>${p.n||"(ohne Namen)"}</b> · ${typ}</div>
+ <div class="kv" style="margin-top:6px">${p.addr?`<b>Adresse</b><span>${p.addr}</span>`:""}${p.op?`<b>Betreiber</b><span>${p.op}</span>`:""}${p.tel?`<b>Telefon</b><span>${p.tel}</span>`:""}${p.acc?`<b>Zugang</b><span>${p.acc}</span>`:""}${p.ind?`<b>Innen</b><span>${p.ind}</span>`:""}</div>
+ ${hint?`<div class="note" style="color:var(--fg)">${hint}</div>`:""}${posBlock(p.c)}<div class="note">Quelle: OpenStreetMap – nicht amtlich, kann veraltet oder unvollständig sein.</div>`);}
+function showWKA(w){sheetOpen(`<h2>✳ Windenergieanlage</h2>${w.h?`<div>Höhe laut OSM: ${w.h} m</div>`:""}<div class="note">Luftfahrthindernis. Bei Anflug und Landeplatzwahl berücksichtigen.</div>${posBlock(w.c)}`);}
+window.copyTxt=async t=>{try{await navigator.clipboard.writeText(t);status("Kopiert: "+t);}catch(e){status(t);}};
+
+/* ================= Live-Standort ================= */
+function setMe(pos){me=[pos.coords.latitude,pos.coords.longitude];const acc=pos.coords.accuracy;
+ if(!meMk){meAcc=L.circle(me,{radius:acc,color:"#2979ff",weight:1,fillOpacity:.12,interactive:false}).addTo(map);
+  meMk=L.marker(me,{icon:L.divIcon({className:"",iconSize:[20,20],iconAnchor:[10,10],html:'<div style="width:20px;height:20px;border-radius:50%;background:#2979ff;border:3px solid #fff;box-shadow:0 0 0 3px rgba(41,121,255,.35)"></div>'}),zIndexOffset:1000}).addTo(map).on("click",()=>sheetOpen(`<h2>Mein Standort</h2><div>Genauigkeit ± ${Math.round(acc)} m</div>${posBlock(me)}`));map.setView(me,15);}
+ else{meMk.setLatLng(me);meAcc.setLatLng(me).setRadius(acc);if(follow)map.panTo(me);}
+ if(!setMe.w){setMe.w=1;getWind(me);}}
+$("bLoc").onclick=()=>{
+ if(!("geolocation" in navigator)){status("Dieses Gerät/dieser Browser bietet keine Standortabfrage.");return;}
+ if(watchId===null){watchId=navigator.geolocation.watchPosition(setMe,e=>{status("Standort nicht verfügbar: "+(e.code===1?"Berechtigung verweigert (Browser-Einstellungen prüfen; Seite muss über https laufen)":e.message));$("bLoc").classList.remove("on");navigator.geolocation.clearWatch(watchId);watchId=null;follow=false;},{enableHighAccuracy:true,maximumAge:5000,timeout:20000});follow=true;$("bLoc").classList.add("on");status("Standort wird gesucht … (Mitführen aktiv)");}
+ else if(follow){follow=false;$("bLoc").classList.remove("on");status("Mitführen aus – Standort wird weiter angezeigt. Erneut tippen zum Zentrieren.");}
+ else{follow=true;$("bLoc").classList.add("on");if(me)map.setView(me,Math.max(map.getZoom(),15));}};
+map.on("dragstart",()=>{if(follow){follow=false;$("bLoc").classList.remove("on");}});
+
+/* ================= Einsatzstelle & Nächstgelegene ================= */
+function startCross(mode){crossMode=mode;$("cross").style.display="block";sheetClose();
+ sheetOpen(`<h2>${mode==="est"?"Einsatzstelle setzen":"Eigene Markierung setzen"}</h2><div>Karte verschieben, bis das Fadenkreuz auf der Stelle liegt – oder lange auf die Karte tippen.</div><div class="row"><button class="pri" id="cOk">Hier setzen</button>${mode==="est"&&me?'<button id="cMe">Mein Standort</button>':""}<button id="cNo">Abbrechen</button></div>`);
+ $("cOk").onclick=()=>{const c=map.getCenter();finishCross([c.lat,c.lng]);};$("cNo").onclick=()=>{crossMode=null;$("cross").style.display="none";sheetClose();};
+ if($("cMe"))$("cMe").onclick=()=>finishCross(me.slice());}
+function finishCross(c){const m=crossMode;crossMode=null;$("cross").style.display="none";if(m==="est")setEst(c);else markHere(c[0],c[1]);}
+map.on("contextmenu",e=>{const c=[e.latlng.lat,e.latlng.lng];if(crossMode)finishCross(c);else{sheetOpen(`<h2>Punkt auf der Karte</h2><div class="row"><button class="pri" id="pE">Als Einsatzstelle</button><button id="pM">✎ Eigene Markierung</button></div>${posBlock(c)}`);$("pE").onclick=()=>setEst(c);$("pM").onclick=()=>markHere(c[0],c[1]);}});
+$("bEst").onclick=()=>{if(est)showNear();else startCross("est");};
+$("bMark").onclick=()=>startCross("own");
+function setEst(c){est=c;if(estMk)map.removeLayer(estMk);
+ estMk=L.marker(c,{draggable:true,zIndexOffset:900,icon:L.divIcon({className:"",iconSize:[34,34],iconAnchor:[17,17],html:'<div style="width:34px;height:34px;border-radius:50%;background:#ff1744;border:3px solid #fff;color:#fff;font:800 13px/28px sans-serif;text-align:center;box-shadow:0 0 0 4px rgba(255,23,68,.35)">ES</div>'})}).addTo(map);
+ estMk.on("click",showNear);estMk.on("dragend",()=>{const l=estMk.getLatLng();est=[l.lat,l.lng];showNear();});
+ $("bEst").classList.add("on");getWind(c);showNear();}
+function nearest(list,n){return list.map(x=>[x,dist(est,x.c)]).sort((a,b)=>a[1]-b[1]).slice(0,n);}
+function showNear(){if(!DATA){sheetOpen("<h2>Einsatzstelle</h2><div>Daten noch nicht geladen.</div>");return;}
+ const row=(x,d,fn)=>`<div class="near" onclick="${fn}"><span>${x.n||"(ohne Namen)"}${x.s?` · ${x.s}×${x.l} m`:""}${(x.dl!==undefined&&(x.dl<WARN_LINE_M||x.dw<WARN_WIND_M))?" ⚠":""}</span><span>${fmtD(d)} ${dirTxt(bearing(est,x.c))}</span></div>`;
+ const lzN=nearest(DATA.lz.filter(z=>z.cat==="lzN"),4),lzD=nearest(DATA.lz,4),heli=nearest(DATA.pts.filter(p=>p.cat==="heli"),2);
+ const pat=nearest(DATA.pts.filter(p=>p.cat==="pat"),4),kh=nearest(DATA.pts.filter(p=>p.cat==="kh"),3),rw=nearest(DATA.pts.filter(p=>p.cat==="rw"||p.cat==="fw"||p.cat==="wr"),4);
+ window._near={};let i=0;const reg=(arr,f)=>arr.map(([x,d])=>{const k="n"+(i++);window._near[k]=()=>{map.setView(x.c,17);f(x);};return row(x,d,`_near.${k}()`);}).join("");
+ sheetOpen(`<h2>🔴 Einsatzstelle</h2><div class="kv"><b>UTMREF</b><span>${mgrs(est[0],est[1])}</span>${me?`<b>Von mir</b><span>${fmtD(dist(me,est))} ${dirTxt(bearing(me,est))}</span>`:""}</div>
+ <div class="row"><button onclick="copyTxt('${mgrs(est[0],est[1])}')">UTMREF kopieren</button><button id="eMove">Neu setzen</button><button id="eDel">Entfernen</button></div>
+ <h3>Zur Einsatzstelle fahren</h3>${navBtns(est)}
+ <h3>Landeplatz Tag + Nacht (≥35×70 m)</h3>${reg(lzN,showLZ)||"<div class='note'>keine</div>"}
+ <h3>Landeplatz alle (≥30×30 m)</h3>${reg(lzD,showLZ)}
+ <h3>Offizielle H-Plätze / Flugplätze</h3>${reg(heli,showPt)||"<div class='note'>keine in OSM</div>"}
+ <h3>Patientensammelstelle / BHP</h3>${reg(pat,showPt)}
+ <h3>Krankenhaus (Luftlinie)</h3>${reg(kh,showPt)||"<div class='note'>keine im Kreis</div>"}
+ <h3>Wachen (RW / FW / Wasserrettung)</h3>${reg(rw,showPt)}
+ <div class="note">Entfernungen Luftlinie. Marker „ES“ ist verschiebbar. ⚠ = Freileitung oder WEA in der Nähe.</div>`);
+ $("eMove").onclick=()=>startCross("est");$("eDel").onclick=()=>{map.removeLayer(estMk);estMk=null;est=null;$("bEst").classList.remove("on");sheetClose();};}
+
+/* ================= Eigene Markierungen (lokal gespeichert) ================= */
+const OWN_KEY="orgl-fri-own";let OWN=[];try{OWN=JSON.parse(localStorage.getItem(OWN_KEY)||"[]");}catch(e){}
+const saveOwn=()=>{try{localStorage.setItem(OWN_KEY,JSON.stringify(OWN));}catch(e){status("Speichern im Browser nicht möglich – Markierungen gehen beim Schließen verloren.");}};
+function renderOwn(){groups.own.clearLayers();for(const o of OWN){const m=L.marker(o.c,{draggable:true,zIndexOffset:800,icon:L.divIcon({className:"",iconSize:[34,24],iconAnchor:[17,12],html:`<div class="own" style="width:34px;height:24px">${o.t}</div>`})});
+ m.bindTooltip(o.txt||OWN_TYPES.find(x=>x[0]===o.t)[1],{permanent:true,direction:"right",offset:[14,0]});
+ m.on("dragend",()=>{const l=m.getLatLng();o.c=[l.lat,l.lng];saveOwn();});m.on("click",()=>showOwn(o));groups.own.addLayer(m);}updLegendCounts();}
+window.markHere=(lat,lon)=>{sheetOpen(`<h2>✎ Eigene Markierung</h2><select id="oT">${OWN_TYPES.map(t=>`<option value="${t[0]}">${t[0]} – ${t[1]}</option>`).join("")}</select><div style="height:8px"></div><input type="text" id="oX" placeholder="Bezeichnung / Notiz (optional)"><div class="row"><button class="pri" id="oS">Speichern</button><button onclick="sheetClose()">Abbrechen</button></div><div class="note">${mgrs(lat,lon)} · Wird nur auf diesem Gerät gespeichert.</div>`);
+ $("oS").onclick=()=>{OWN.push({id:Date.now(),c:[lat,lon],t:$("oT").value,txt:$("oX").value.trim()});saveOwn();renderOwn();if(!map.hasLayer(groups.own))groups.own.addTo(map);sheetClose();};};
+window.sheetClose=sheetClose;
+function showOwn(o){const T=OWN_TYPES.find(x=>x[0]===o.t);sheetOpen(`<h2>✎ ${T[1]}</h2>${o.txt?`<div>${o.txt.replace(/</g,"&lt;")}</div>`:""}${posBlock(o.c)}<div class="row"><button id="oD">Markierung löschen</button></div><div class="note">Zum Verschieben Marker gedrückt halten und ziehen.</div>`);
+ $("oD").onclick=()=>{OWN=OWN.filter(x=>x!==o);saveOwn();renderOwn();sheetClose();};}
+
+/* ================= Wind (Open-Meteo) ================= */
+async function getWind(c){try{const r=await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${c[0].toFixed(3)}&longitude=${c[1].toFixed(3)}&current=wind_speed_10m,wind_direction_10m,wind_gusts_10m&wind_speed_unit=kmh&timezone=Europe%2FBerlin`);const j=await r.json();const w=j.current;
+ getWind.last={d:w.wind_direction_10m,v:w.wind_speed_10m,g:w.wind_gusts_10m,t:w.time};
+ $("wArr").style.transform=`rotate(${w.wind_direction_10m+180}deg)`;$("wArr").textContent="↑";$("wTxt").innerHTML=`${dirTxt(w.wind_direction_10m)} ${Math.round(w.wind_speed_10m)} km/h<br>Böen ${Math.round(w.wind_gusts_10m)}`;}catch(e){$("wTxt").textContent="Wind n. v.";}}
+$("wind").onclick=()=>{const w=getWind.last;if(!w){getWind(me||est||[map.getCenter().lat,map.getCenter().lng]);return;}
+ const lee=dirTxt((w.d+180)%360);
+ sheetOpen(`<h2>Wind</h2><div class="kv"><b>Wind aus</b><span>${dirTxt(w.d)} (${Math.round(w.d)}°)</span><b>Mittel</b><span>${Math.round(w.v)} km/h</span><b>Böen</b><span>${Math.round(w.g)} km/h</span><b>Zeit</b><span>${w.t.replace("T"," ")}</span></div>
+ <div class="note" style="color:var(--fg)">Hubschrauber landen und starten gegen den Wind: Anflug kommt von der Leeseite (${lee}). Den Sektor auf der ${lee}-Seite des Landeplatzes besonders hindernisfrei halten. Bei Gefahrstofflagen: Ausbreitung Richtung ${lee}.</div>
+ <div class="row"><button onclick="getWind([map.getCenter().lat,map.getCenter().lng]);sheetClose()">Für Kartenmitte aktualisieren</button></div><div class="note">Modelldaten Open-Meteo (10 m Höhe), kein Messwert vor Ort.</div>`);};
+
+/* ================= Ebenen / Legende ================= */
+function counts(k){if(!DATA)return"";if(k==="lzN"||k==="lzD")return DATA.lz.filter(z=>z.cat===k).length;if(k==="pwr")return DATA.pwr.length;if(k==="wka")return DATA.wka.length;if(k==="own")return OWN.length;return DATA.pts.filter(p=>p.cat===k).length;}
+function updLegendCounts(){document.querySelectorAll("[data-cnt]").forEach(e=>e.textContent=counts(e.dataset.cnt));}
+$("bLayers").onclick=()=>{sheetOpen(`<h2>Ebenen</h2>${Object.keys(CAT).map(k=>{const C=CAT[k];return`<label class="lg"><input type="checkbox" data-k="${k}" ${map.hasLayer(groups[k])?"checked":""}>${C.line?`<span style="width:18px;height:0;border-top:3px solid ${C.c}"></span>`:`<span class="sw ${C.sq?"sq":""}" style="background:${C.c}"></span>`}<span>${C.n}</span><span class="cnt" data-cnt="${k}">${counts(k)}</span></label>`}).join("")}
+ <div class="row"><button id="bRe">⟳ Daten neu laden</button><button id="bOwnDel">Eigene Markierungen löschen</button></div>
+ <div class="note">${DATA?`Datenstand: ${new Date(DATA.t).toLocaleString("de-DE")} (OpenStreetMap)`:""}</div>`);
+ document.querySelectorAll("[data-k]").forEach(cb=>cb.onchange=()=>{const g=groups[cb.dataset.k];cb.checked?g.addTo(map):map.removeLayer(g);});
+ $("bRe").onclick=()=>{sheetClose();load(true);};
+ $("bOwnDel").onclick=()=>{if($("bOwnDel").dataset.sure){OWN=[];saveOwn();renderOwn();sheetClose();}else{$("bOwnDel").dataset.sure=1;$("bOwnDel").textContent="Wirklich alle löschen?";}};};
+
+/* ================= Malen (lokal gespeichert) ================= */
+const DRAW_KEY="orgl-fri-draw";let DRAW=[];try{DRAW=JSON.parse(localStorage.getItem(DRAW_KEY)||"[]");}catch(e){}
+const drawGroup=L.layerGroup().addTo(map);
+let dColor="#ff1744",dArea=false,dErase=false,dPan=false,cur=null,curPts=null;
+const saveDraw=()=>{try{localStorage.setItem(DRAW_KEY,JSON.stringify(DRAW));}catch(e){status("Zeichnung konnte im Browser nicht gespeichert werden.");}};
+function drawShape(d){const opt={color:d.c,weight:4,opacity:.95,lineCap:"round",lineJoin:"round"};
+ const l=d.a?L.polygon(d.p,Object.assign(opt,{fillColor:d.c,fillOpacity:.2})):L.polyline(d.p,opt);
+ l.on("click",ev=>{if(dErase){L.DomEvent.stop(ev);DRAW=DRAW.filter(x=>x!==d);saveDraw();renderDraw();}});return l;}
+function renderDraw(){drawGroup.clearLayers();for(const d of DRAW)drawGroup.addLayer(drawShape(d));}
+renderDraw();
+const dl=$("drawLayer");
+function setDrawUI(){dl.style.display=(!dErase&&!dPan)?"block":"none";$("dErase").classList.toggle("on",dErase);$("dPan").classList.toggle("on",dPan);$("dMode").textContent=dArea?"⬠ Fläche":"〰 Linie";}
+$("bDraw").onclick=()=>{sheetClose();dErase=false;dPan=false;$("drawBar").style.display="flex";$("bDraw").classList.add("on");if(follow){follow=false;$("bLoc").classList.remove("on");}setDrawUI();status("Malmodus: mit dem Finger zeichnen. ✋ zum Verschieben der Karte.");};
+$("dDone").onclick=()=>{$("drawBar").style.display="none";dl.style.display="none";dErase=false;$("bDraw").classList.remove("on");status("Malmodus beendet.");};
+document.querySelectorAll("#drawBar .c").forEach(b=>b.onclick=()=>{document.querySelectorAll("#drawBar .c").forEach(x=>x.classList.remove("sel"));b.classList.add("sel");dColor=b.dataset.c;dErase=false;dPan=false;setDrawUI();});
+$("dMode").onclick=()=>{dArea=!dArea;dErase=false;dPan=false;setDrawUI();};
+$("dPan").onclick=()=>{dPan=!dPan;dErase=false;setDrawUI();};
+$("dErase").onclick=()=>{dErase=!dErase;dPan=false;setDrawUI();if(dErase)status("Löschen: gezeichnete Linie/Fläche antippen.");};
+$("dUndo").onclick=()=>{DRAW.pop();saveDraw();renderDraw();};
+$("dClear").onclick=()=>{const b=$("dClear");if(b.dataset.sure){DRAW=[];saveDraw();renderDraw();delete b.dataset.sure;b.textContent="🗑 Alles";}else{b.dataset.sure=1;b.textContent="Wirklich?";setTimeout(()=>{delete b.dataset.sure;b.textContent="🗑 Alles";},3000);}};
+let lastPx=null;
+dl.addEventListener("pointerdown",e=>{if(!e.isPrimary)return;e.preventDefault();dl.setPointerCapture(e.pointerId);const ll=map.mouseEventToLatLng(e);curPts=[[ll.lat,ll.lng]];lastPx=[e.clientX,e.clientY];
+ cur=L.polyline(curPts,{color:dColor,weight:4,opacity:.95,lineCap:"round",lineJoin:"round",interactive:false}).addTo(map);});
+dl.addEventListener("pointermove",e=>{if(!cur||!e.isPrimary)return;e.preventDefault();if(Math.hypot(e.clientX-lastPx[0],e.clientY-lastPx[1])<3)return;lastPx=[e.clientX,e.clientY];const ll=map.mouseEventToLatLng(e);curPts.push([ll.lat,ll.lng]);cur.setLatLngs(curPts);});
+function endStroke(){if(!cur)return;map.removeLayer(cur);cur=null;if(curPts.length>=2){DRAW.push({c:dColor,a:dArea&&curPts.length>=3,p:curPts.map(p=>[+p[0].toFixed(6),+p[1].toFixed(6)])});saveDraw();renderDraw();}curPts=null;}
+dl.addEventListener("pointerup",endStroke);dl.addEventListener("pointercancel",endStroke);
+
+/* ================= Hinweise ================= */
+function info(){$("mbox").innerHTML=`<h2 style="margin-top:0">Hinweise zur Nutzung</h2>
+<p><b>Planungshilfe, kein amtliches Führungsmittel.</b> Alle Objekte stammen automatisiert aus OpenStreetMap (OSM) und können fehlen, veraltet oder falsch sein. Vor Ort immer verifizieren.</p>
+<p><b>Landeplatz-Kandidaten</b> sind Sportplätze, Stadien und Freizeitflächen, deren umschließendes Rechteck die Mindestmaße erreicht: <b>Tag ≥ 30 × 30 m</b>, <b>Nacht ≥ 35 × 70 m</b> (DRF Luftrettung, Checklisten für Feuerwehren). Geprüft werden nur Freileitungen (Warnung &lt; ${WARN_LINE_M} m) und Windenergieanlagen (&lt; ${WARN_WIND_M} m), soweit in OSM erfasst. <b>Nicht geprüft</b>: Bäume, Masten, Flutlicht, Zäune, Gebäude, Neigung, Untergrund, Tiere in der Nähe. <b>Den Landeplatz bestimmt immer der Pilot.</b></p>
+<p><b>Patientensammelstellen / BHP</b>: Sporthallen, Schulen, Dorfgemeinschaftshäuser. <b>Bereitstellungsräume</b>: Parkplätze ab ${PARK_MIN_M2.toLocaleString("de-DE")} m² (Ebene standardmäßig aus).</p>
+<p><b>Bedienung</b>: ◎ Live-Standort (nochmal tippen = Mitführen an/aus) · ✚ Einsatzstelle setzen → nächstgelegene Landeplätze, Sammelstellen, Kliniken · 📍 eigene Markierungen (PA, BHP, BR, LP …) · 🖌 Malen: Linien oder Flächen in 5 Farben, ✋ zum Verschieben der Karte, 🧽 zum Löschen einzelner Striche · Lange auf die Karte tippen = Punktmenü · Windanzeige antippen für Details.</p>
+<p><b>Navigation</b>: Bei jedem Objekt startet „🧭 Apple Karten / Google Maps / Waze“ die Route von deinem aktuellen Standort zum Ziel direkt in der App.</p>
+<p>Markierungen und Zeichnungen werden <b>nur auf diesem Gerät</b> gespeichert und nicht geteilt.</p>
+<p><b>Live-Standort</b> funktioniert nur, wenn die Seite über <b>https</b> geöffnet wird (z. B. GitHub Pages) und der Browser die Standortfreigabe erhält.</p>
+<p><b>Offline</b>: Die OSM-Auswertung wird im Browser zwischengespeichert, Kartenkacheln nicht. Ohne Netz bleiben Markierungen sichtbar, der Kartenhintergrund kann fehlen.</p>
+<p class="note">Daten: © OpenStreetMap-Mitwirkende (ODbL) · Wind: Open-Meteo · Luftbild: Esri · TopPlus: © BKG</p>
+<div class="row"><button class="pri" onclick="document.getElementById('modal').style.display='none';try{localStorage.setItem('orgl-fri-ok','1')}catch(e){}">Verstanden</button></div>`;$("modal").style.display="flex";}
+$("bInfo").onclick=info;
+try{if(!localStorage.getItem("orgl-fri-ok"))info();}catch(e){info();}
+load(false);
+</script>
+</body>
+</html>
