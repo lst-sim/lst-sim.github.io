@@ -1607,6 +1607,10 @@ Version 5.05:
   („a, b“ = a ODER b). Mit „🚑 NA-Indikation“ markierte Knöpfe ziehen weiterhin einen Notarzt.
 - Nur „Unauffällig“ (ohne weitere Befunde) zählt weiter als unauffälliges E (R0 möglich).
 
+Version 5.96:
+- eCall: Eingabefeld „💬 Mit den Betroffenen sprechen“. Frage eintippen, die Antwort kommt nach ein paar Sekunden als Text – aber nur manchmal (bei schweren Unfällen seltener, sonst Stöhnen, Rauschen oder Stille).
+- Versteht Fragen zu: was passiert, verletzt, wie viele, eingeklemmt, wo, Rauch/Feuer, ansprechbar/atmet, Kinder.
+
 Version 5.95:
 - Neuer Bereich „📡 eCall“ (rechte Spalte, mit roter Zahl für offene eCalls): automatische Fahrzeugnotrufe nur als Daten, ohne Sprache.
 - Daten angelehnt an den eCall-Mindestdatensatz: automatisch/manuell, Fahrzeugklasse, FIN, Energiespeicher, Zeit, Position (vertrauenswürdig ja/nein), Fahrtrichtung, 2 letzte Positionen, Insassen (Gurte).

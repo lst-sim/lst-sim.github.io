@@ -231,7 +231,7 @@ html[data-device="handy"] .fach-grid{grid-template-columns:1fr}
 <header id="topbar">
  <div class="tb-left">
   <span class="tb-brand">🚑 Leitstelle<span>.sim</span></span>
-  <span id="versionTag" class="tb-ver">v5.95</span>
+  <span id="versionTag" class="tb-ver">v5.96</span>
   <span id="syncState"></span>
   <a id="deskTag" href="#" onclick="renameDesk();return false" title="Name dieses Platzes (für „offen an …“) – antippen zum Ändern"></a>
  </div>
@@ -7003,6 +7003,32 @@ function ecallCallback(id){
  ec._cbBusy=true; ec.log.push({t:new Date().toISOString(),q:"📞 Rückruf ins Fahrzeug",a:"… klingelt …"}); save(); render("ecall");
  setTimeout(()=>{ec._cbBusy=false;ec.log[ec.log.length-1].a=ec.truth.cb;ec.called=true;save();if(currentPage==="ecall")render("ecall")},rint(3,7)*1000);
 }
+// v5.95: Mit den Betroffenen im Fahrzeug sprechen (Text). Antworten kommen nur manchmal.
+function ecRespP(ec){
+ const T=ec.truth; if(!T.real)return /niemand im Auto/.test(T.reason)?0:0.85;
+ return {auffahr:0.8,seite:0.7,wild:0.85,zeuge:0.9,graben:0.5,baum:0.35,frontal:0.3}[T.k]??0.6;
+}
+function ecAnswer(ec,q){
+ const T=ec.truth, s=String(q||"").toLowerCase();
+ if(/verletz|schmerz|blut|weh/.test(s))return T.real?(T.inj?pick([`Ja… ${T.inj>1?`wir sind ${T.inj} verletzt`:"ich bin verletzt"}. ${T.k==="auffahr"?"Nacken und Rücken tun weh.":"Es blutet am Kopf."}`,`${T.inj>1?`${T.inj} Leute`:"Einer"} – bitte schnell!`]):"Nein, ich glaube, uns ist nichts passiert."):"Nein, niemand ist verletzt.";
+ if(/wie viele|personen|insassen|wer ist|allein/.test(s))return ec.pax>1?`Wir sind ${ec.pax} im Auto.`:"Ich bin allein.";
+ if(/eingeklemmt|raus|aussteigen|tür/.test(s))return T.real&&T.trap?"Ich komm nicht raus! Die Tür klemmt, mein Bein steckt fest!":T.real?"Wir sind ausgestiegen, stehen neben dem Auto.":"Ich sitze ganz normal im Auto.";
+ if(/wo |wo\?|wo sind|straße|richtung|position|ort/.test(s))return Math.random()<0.6?`Auf der ${[ec.ref,ec.road].filter(Boolean).join(" ")||"Landstraße"}${ec.toward?`, Richtung ${ec.toward}`:""}.`:"Weiß ich nicht genau… irgendwo hinter "+(ec.town||"dem Ort")+".";
+ if(/feuer|rauch|brenn|qualm|benzin|ausl/.test(s))return T.real&&["wild","baum","frontal"].includes(T.k)?"Vorne qualmt es, es riecht komisch!":"Nein, da brennt nichts.";
+ if(/atm|bewusst|ansprech|wach|reagier/.test(s))return T.real&&["baum","frontal","graben"].includes(T.k)&&T.inj>1?"Mein Beifahrer reagiert nicht! Er atmet aber, glaub ich…":"Ja, alle sind wach.";
+ if(/passiert|was ist|unfall|was los/.test(s))return T.cb.startsWith("(")?(T.real?`${({auffahr:"Uns ist einer hinten drauf gefahren",baum:"Wir sind gegen einen Baum gefahren",graben:"Wir haben uns überschlagen, liegen im Graben",frontal:"Da kam uns einer entgegen – frontal",seite:"Einer ist uns in die Seite gefahren",wild:"Ich hab ein Reh erwischt",zeuge:"Vor mir hat sich einer überschlagen"})[T.k]||"Es hat gekracht"}… es ging alles so schnell.`:"Ach, das war nur aus Versehen."):T.cb;
+ if(/kind|baby/.test(s))return /Kind/.test(T.cb)||/Kind hat/.test(T.reason)?"Ja, mein Kind ist dabei.":"Nein, keine Kinder.";
+ return T.real?pick(["Bitte schicken Sie schnell Hilfe!","Ich weiß nicht… bitte kommen Sie!","Hallo? Hören Sie mich?"]):pick(["Wie gesagt, alles in Ordnung.","Es ist wirklich nichts passiert, tut mir leid."]);
+}
+function ecallSay(id,text){
+ const ec=(db.ecalls||[]).find(x=>x.id===id); text=String(text||"").trim(); if(!ec||!text)return;
+ const e={t:new Date().toISOString(),q:`💬 ${text}`,a:"…"}; ec.log.push(e); if(ec.state==="neu")ec.state="gesehen"; save(); render("ecall");
+ setTimeout(()=>{
+   const T=ec.truth;
+   e.a=Math.random()<ecRespP(ec)?ecAnswer(ec,text):(T.real?pick(["(keine Antwort)","(nur Stöhnen zu hören)","(Rauschen, dann Stille)","(Husten, keine verständliche Antwort)"]):pick(["(keine Antwort)","(Radio im Hintergrund, niemand antwortet)"]));
+   save(); if(currentPage==="ecall"){render("ecall");setTimeout(()=>document.getElementById("ecSay")?.focus(),30)}
+ },rint(2,5)*1000);
+}
 function ecallToCall(id){
  const ec=(db.ecalls||[]).find(x=>x.id===id); if(!ec)return;
  if(ec.callId){const c=allOpenCalls().find(x=>String(x.id)===String(ec.callId));if(c){if(db.currentCall!==c)try{activateCallById(c.id)}catch(e){}render("notruf");return}}
@@ -7132,6 +7158,7 @@ function ecallPage(){
       ${row("Kennzeichen",`<span style="border:2px solid #111;border-radius:4px;padding:0 6px;font-family:monospace;background:#fff;color:#111">${esc(v.plate)}</span>`)}
      </table></div></div>
     ${ec.log.length?`<div style="margin-top:10px">${ec.log.map(l=>`<div style="padding:6px 8px;border-radius:8px;background:#f1f5f9;margin-top:4px;font-size:13px"><b>${esc(l.q)}:</b> ${esc(l.a)}</div>`).join("")}</div>`:""}
+    <div class="row" style="gap:6px;margin-top:8px"><input id="ecSay" placeholder="💬 Mit den Betroffenen sprechen – Frage eintippen, Enter" style="flex:1;min-width:0" onkeydown="if(event.key==='Enter'){ecallSay('${ec.id}',this.value);this.value=''}"><button onclick="const i=document.getElementById('ecSay');ecallSay('${ec.id}',i.value);i.value=''">Senden</button></div>
     <div class="row" style="gap:8px;margin-top:12px;flex-wrap:wrap">
      ${ec.state==="einsatz"?`<button class="primary" onclick="ecallToCall('${ec.id}')">➡️ Zum Einsatz</button>`:`<button class="primary" onclick="ecallToCall('${ec.id}')">🚨 Einsatz anlegen</button>`}
      <button onclick="ecallCallback('${ec.id}')" ${ec._cbBusy?"disabled":""}>📞 Rückruf ins Fahrzeug</button>
