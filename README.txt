@@ -1607,6 +1607,10 @@ Version 5.05:
   („a, b“ = a ODER b). Mit „🚑 NA-Indikation“ markierte Knöpfe ziehen weiterhin einen Notarzt.
 - Nur „Unauffällig“ (ohne weitere Befunde) zählt weiter als unauffälliges E (R0 möglich).
 
+Version 5.99:
+- eCall: Die Karte füllt jetzt die ganze Seite und zeigt einen größeren Ausschnitt (Zoom 14 statt 16). Die Liste links ist weg; andere eCalls wählt man oben über die Auswahlliste.
+- Lagebild, Gespräch und Knöpfe liegen unten links als Fenster auf der Karte, die Fahrzeugdaten rechts (ein-/ausblendbar).
+
 Version 5.98:
 - KV-Dienst: mehrere Bereitschaftsdienstpraxen. Varel: St. Johannes-Hospital, Bleichenpfad 9 (Mi 16–18, Sa/So/Feiertag 10–12 + 16–18 Uhr, laut Krankenhaus Varel). Jever und Zetel: jeweils Gemeinschaftspraxis (Nutzerangabe) – Name, Adresse und Zeiten noch nicht hinterlegt, Position = Ortsmitte.
 - Im KV-Feld stehen alle Praxen mit „jetzt geöffnet/geschlossen“; die nächste zum Einsatzort ist markiert und wird bei „Bereitschaftsdienstpraxis“ genannt.

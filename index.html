@@ -231,7 +231,7 @@ html[data-device="handy"] .fach-grid{grid-template-columns:1fr}
 <header id="topbar">
  <div class="tb-left">
   <span class="tb-brand">🚑 Leitstelle<span>.sim</span></span>
-  <span id="versionTag" class="tb-ver">v5.98</span>
+  <span id="versionTag" class="tb-ver">v5.99</span>
   <span id="syncState"></span>
   <a id="deskTag" href="#" onclick="renameDesk();return false" title="Name dieses Platzes (für „offen an …“) – antippen zum Ändern"></a>
  </div>
@@ -7081,7 +7081,8 @@ function ecallBannerRefresh(){
  let el=document.getElementById("ecBanner");
  const list=(db.ecalls||[]).filter(x=>x.state==="neu");
  if(!list.length||IS_MONITOR){el?.remove();return}
- if(!el){el=document.createElement("div");el.id="ecBanner";el.style.cssText="position:fixed;left:16px;bottom:16px;z-index:1800;display:flex;flex-direction:column-reverse;gap:6px;width:min(480px,calc(100vw - 32px))";document.body.appendChild(el)}
+ if(!el){el=document.createElement("div");el.id="ecBanner";document.body.appendChild(el)}
+ el.style.cssText=currentPage==="ecall"?"position:fixed;left:50%;transform:translateX(-50%);top:120px;z-index:1800;display:flex;flex-direction:column;gap:6px;width:min(480px,calc(100vw - 32px))":"position:fixed;left:16px;bottom:16px;z-index:1800;display:flex;flex-direction:column-reverse;gap:6px;width:min(480px,calc(100vw - 32px))";
  el.innerHTML=list.slice(0,3).map(x=>`<div style="background:#ea580c;color:#fff;border-radius:12px;padding:10px 14px;display:flex;align-items:center;gap:10px;box-shadow:0 6px 20px rgba(0,0,0,.25)">
    <span style="font-size:24px">📡</span><div style="flex:1;min-width:0"><b>eCall – Sprechverbindung steht</b><div style="font-size:13px;opacity:.95;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${x.auto?"automatisch":"manuell"} · ${esc(ecPlaceTxt(x))}</div></div>
    <button onclick="render('ecall');ecallSelect('${x.id}')" style="background:#fff;color:#ea580c;border:0;font-weight:800">Annehmen</button></div>`).join("")+(list.length>3?`<div style="text-align:center;font-size:12px;background:#ea580c;color:#fff;border-radius:8px">+ ${list.length-3} weitere</div>`:"");
@@ -7159,63 +7160,67 @@ function ecStateBadge(ec){
  const m={neu:["NEU","#dc2626"],gesehen:["offen","#f59e0b"],einsatz:["Einsatz","#2563eb"],fehl:["kein Einsatz","#64748b"]}[ec.state]||["?","#64748b"];
  return `<span style="background:${m[1]};color:#fff;border-radius:6px;padding:1px 7px;font-size:11px;font-weight:800">${m[0]}</span>`;
 }
+// v5.99: Karte füllt die ganze Seite; Lagebild, Gespräch und Daten liegen als Fenster auf der Karte.
+let ecDetailsOpen=true;
 function ecallPage(){
  const list=db.ecalls||[];
  if(!ecSel||!list.some(x=>x.id===ecSel))ecSel=(list.find(x=>x.state==="neu"||x.state==="gesehen")||list[0]||{}).id||null;
  const ec=list.find(x=>x.id===ecSel);
  const t=s=>new Date(s).toLocaleTimeString("de-DE",{hour:"2-digit",minute:"2-digit",second:"2-digit"});
- const items=list.slice(0,30).map(x=>`<div onclick="ecallSelect('${x.id}')" style="cursor:pointer;padding:8px 10px;border-radius:10px;margin-bottom:6px;border:2px solid ${x.id===ecSel?"#2563eb":"var(--line,#e5e7eb)"};${x.state==="neu"?"background:#fef2f2":""}">
-   <div class="row between" style="gap:6px"><b>${t(x.t)}</b>${ecStateBadge(x)}</div>
-   <div style="font-size:13px">${x.auto?"🅰️ automatisch":"🖐️ manuell"} · ${esc([x.ref,x.road].filter(Boolean).join(" ")||"–")}</div>
-   <div class="muted" style="font-size:12px">${esc(x.veh.make)} ${esc(x.veh.model)} · ${esc(x.veh.plate)}${x.linked?` · 🔗 gehört zu ${esc(x.linked)}`:""}</div></div>`).join("")||`<p class="muted">Noch keine eCalls.</p>`;
- let det="";
+ const panel="position:absolute;z-index:1100;background:var(--panel,#fff);border-radius:12px;box-shadow:0 6px 24px rgba(0,0,0,.25);";
+ const head=`<div style="${panel}top:10px;left:10px;right:10px;padding:8px 12px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+   <b style="font-size:17px">📡 eCall</b>
+   ${list.length?`<select onchange="ecallSelect(this.value)" style="max-width:300px">${list.slice(0,30).map(x=>`<option value="${x.id}" ${x.id===ecSel?"selected":""}>${t(x.t)} · ${x.state==="neu"?"NEU · ":x.state==="gesehen"?"offen · ":x.state==="einsatz"?"Einsatz · ":"erledigt · "}${esc(x.veh.plate)}${x.linked?" 🔗":""}</option>`).join("")}</select>`:""}
+   ${ec?ecStateBadge(ec):""}
+   <span style="flex:1"></span>
+   ${ec?`<button onclick="ecDetailsOpen=!ecDetailsOpen;render('ecall')">${ecDetailsOpen?"Daten ausblenden":"🚗 Fahrzeugdaten"}</button>`:""}
+   <button class="${db.ecallAuto?"primary":""}" onclick="ecallToggleAuto()">${db.ecallAuto?"🎲 Zufällig: AN":"🎲 Zufällig: AUS"}</button>
+   <button onclick="ecallCreate().then(e=>{ecSel=e.id;render('ecall')})">＋ eCall jetzt</button></div>`;
+ let left="", right="";
  if(ec){
    const v=ec.veh, x=ec.extra, decided=ec.state==="einsatz"||ec.state==="fehl";
    const row=(k,val)=>`<tr><td class="muted" style="padding:3px 8px 3px 0;white-space:nowrap;vertical-align:top">${k}</td><td style="padding:3px 0"><b>${val}</b></td></tr>`;
-   const truth=decided?`<div style="margin-top:10px;padding:10px;border-radius:10px;background:${ec.truth.real?(ec.state==="fehl"?"#fee2e2":"#dcfce7"):(ec.state==="einsatz"?"#fef9c3":"#dcfce7")}">
+   const truth=decided?`<div style="margin-top:8px;padding:8px;border-radius:10px;font-size:13px;background:${ec.truth.real?(ec.state==="fehl"?"#fee2e2":"#dcfce7"):(ec.state==="einsatz"?"#fef9c3":"#dcfce7")}">
      <b>Auflösung (Übung):</b> ${ec.truth.real?`Echter Unfall – ${esc(ec.truth.reason)}, ${ec.truth.inj} Verletzte${ec.truth.trap?", 1 eingeklemmt":""}.`:`Fehlalarm – ${esc(ec.truth.reason)}.`}
-     ${ec.truth.real&&ec.state==="fehl"?" ⚠️ Hier hätte ein Einsatz angelegt werden müssen.":""}${!ec.truth.real&&ec.state==="einsatz"?" Einsatz war nicht nötig – bei echten eCalls ohne Rückmeldung aber trotzdem richtig, lieber einmal zu viel.":""}</div>`:"";
-   det=`<div class="card">
-    <div class="row between" style="gap:8px;flex-wrap:wrap"><h2 style="margin:0">📡 eCall ${esc(ec.id)} ${ecStateBadge(ec)}</h2><span class="muted">${new Date(ec.t).toLocaleString("de-DE")}</span></div>
-    <div style="margin:8px 0;padding:8px 10px;border-radius:10px;background:#eff6ff;font-size:14px"><b>Lagebild:</b> ${esc(ecLageText(ec))}</div>
-    <div id="ecMap" style="height:max(440px,calc(100vh - 230px));border-radius:12px;margin:8px 0"></div>
-    <div style="display:flex;gap:14px;flex-wrap:wrap;align-items:flex-start">
-     <div style="display:flex;gap:10px;align-items:flex-start">${ecallCarSVG(ec)}${ecallLegendHTML(ec)}</div>
-     <div style="flex:1;min-width:260px"><table style="font-size:13px;border-collapse:collapse;width:100%">
-      ${row("Auslösung",ec.auto?"automatisch":"manuell (SOS-Taste)")}
-      ${row("Testanruf","nein")}
-      ${row("Fahrzeugklasse",v.cls==="N1"?"N1 – Lkw bis 3,5 t":"M1 – Pkw")}
-      ${row("FIN",`<span style="font-family:monospace">${esc(v.vin)}</span>`)}
-      ${row("Energiespeicher",esc(v.msdFuel))}
-      ${row("Position",`${ec.lat.toFixed(5)}, ${ec.lng.toFixed(5)} ${ec.trusted?"✅ vertrauenswürdig":"⚠️ nicht vertrauenswürdig"}`)}
-      ${row("Fahrtrichtung",`${ec.heading}° (${ecDirTxt(ec.heading)})${ec.toward?` – Richtung ${esc(ec.toward)}`:""}`)}
-      ${row("Straße",esc([ec.ref,ec.road].filter(Boolean).join(" ")||"–"))}
-      ${row("Insassen",`${ec.pax} (angelegte Gurte)`)}
-      <tr><td colspan="2" style="padding-top:8px;font-size:11px" class="muted">Zusatzdaten Hersteller (nicht in jedem eCall):</td></tr>
-      ${x?row("Airbags",x.bags.length?esc(x.bags.join(", ")):"keine ausgelöst")+row("Aufprall",esc({front:"vorne",heck:"hinten",links:"links",rechts:"rechts",dach:"Überschlag"}[x.impact]||"–"))+row("Δv",`ca. ${x.dv} km/h`)+(x.rollover?row("Überschlag","ja"):""):row("Zusatzdaten","keine übertragen")}
-      <tr><td colspan="2" style="padding-top:8px;font-size:11px" class="muted">Weitere Angaben (Übung, nicht im eCall-Datensatz):</td></tr>
-      ${row("Fahrzeug",`${esc(v.make)} ${esc(v.model)}, ${esc(v.color)}, Bj. ${v.year}`)}
-      ${row("Kennzeichen",`<span style="border:2px solid #111;border-radius:4px;padding:0 6px;font-family:monospace;background:#fff;color:#111">${esc(v.plate)}</span>`)}
-     </table></div></div>
-    ${ec.log.length?`<div style="margin-top:10px">${ec.log.map(l=>`<div style="padding:6px 8px;border-radius:8px;background:#f1f5f9;margin-top:4px;font-size:13px"><b>${esc(l.q)}:</b> ${esc(l.a)}</div>`).join("")}</div>`:""}
-    <div class="row" style="gap:6px;margin-top:8px"><input id="ecSay" placeholder="💬 Mit den Betroffenen sprechen – Frage eintippen, Enter" style="flex:1;min-width:0" onkeydown="if(event.key==='Enter'){ecallSay('${ec.id}',this.value);this.value=''}"><button onclick="const i=document.getElementById('ecSay');ecallSay('${ec.id}',i.value);i.value=''">Senden</button></div>
-    <div class="row" style="gap:8px;margin-top:12px;flex-wrap:wrap">
+     ${ec.truth.real&&ec.state==="fehl"?" ⚠️ Hier hätte ein Einsatz angelegt werden müssen.":""}${!ec.truth.real&&ec.state==="einsatz"?" Einsatz war nicht nötig – bei eCalls ohne klare Rückmeldung aber vertretbar.":""}</div>`:"";
+   left=`<div style="${panel}left:10px;bottom:10px;width:min(460px,calc(100% - 20px));max-height:calc(100% - 90px);overflow:auto;padding:10px 12px">
+    <div style="font-size:13px;padding:6px 8px;border-radius:8px;background:#eff6ff;color:#0f172a"><b>Lagebild:</b> ${esc(ecLageText(ec))}</div>
+    <div id="ecLog" style="max-height:220px;overflow:auto;margin-top:6px">${ec.log.map(l=>`<div style="padding:5px 8px;border-radius:8px;background:#f1f5f9;color:#0f172a;margin-top:4px;font-size:13px"><b>${esc(l.q)}:</b> ${esc(l.a)}</div>`).join("")}</div>
+    <div class="row" style="gap:6px;margin-top:6px"><input id="ecSay" placeholder="💬 Frage eintippen, Enter" style="flex:1;min-width:0" onkeydown="if(event.key==='Enter'){ecallSay('${ec.id}',this.value);this.value=''}"><button onclick="const i=document.getElementById('ecSay');ecallSay('${ec.id}',i.value);i.value=''">Senden</button></div>
+    <div class="row" style="gap:6px;margin-top:8px;flex-wrap:wrap">
      ${ec.state==="einsatz"?`<button class="primary" onclick="ecallToCall('${ec.id}')">➡️ Zum Einsatz</button>`:`<button class="primary" onclick="ecallToCall('${ec.id}')">🚨 Einsatz anlegen</button>`}
      <button onclick="ecallCallback('${ec.id}')" ${ec._cbBusy?"disabled":""}>📞 Erneut verbinden</button>
-     ${decided?"":`<button onclick="ecallDismiss('${ec.id}')">✖ Kein Einsatz (Fehlalarm)</button>`}
+     ${decided?"":`<button onclick="ecallDismiss('${ec.id}')">✖ Kein Einsatz</button>`}
     </div>${truth}</div>`;
+   if(ecDetailsOpen)right=`<div style="${panel}right:10px;top:70px;width:min(360px,calc(100% - 20px));max-height:calc(100% - 80px);overflow:auto;padding:10px 12px;font-size:13px">
+    <div style="display:flex;gap:8px;align-items:flex-start">${ecallCarSVG(ec)}${ecallLegendHTML(ec)}</div>
+    <table style="font-size:13px;border-collapse:collapse;width:100%;margin-top:6px">
+      ${row("Auslösung",ec.auto?"automatisch":"manuell (SOS-Taste)")}
+      ${row("Testanruf","nein")}
+      ${row("Klasse",v.cls==="N1"?"N1 – Lkw bis 3,5 t":"M1 – Pkw")}
+      ${row("FIN",`<span style="font-family:monospace">${esc(v.vin)}</span>`)}
+      ${row("Energie",esc(v.msdFuel))}
+      ${row("Position",`${ec.lat.toFixed(5)}, ${ec.lng.toFixed(5)}<br>${ec.trusted?"✅ vertrauenswürdig":"⚠️ nicht vertrauenswürdig"}`)}
+      ${row("Fahrtrichtung",`${ec.heading}° (${ecDirTxt(ec.heading)})${ec.toward?`<br>Richtung ${esc(ec.toward)}`:""}`)}
+      ${row("Straße",esc([ec.ref,ec.road].filter(Boolean).join(" ")||"–"))}
+      ${row("Insassen",`${ec.pax} (Gurte)`)}
+      <tr><td colspan="2" style="padding-top:6px;font-size:11px" class="muted">Zusatzdaten Hersteller (nicht in jedem eCall):</td></tr>
+      ${x?row("Airbags",x.bags.length?esc(x.bags.join(", ")):"keine ausgelöst")+row("Aufprall",esc({front:"vorne",heck:"hinten",links:"links",rechts:"rechts",dach:"Überschlag"}[x.impact]||"–"))+row("Δv",`ca. ${x.dv} km/h`)+(x.rollover?row("Überschlag","ja"):""):row("Zusatzdaten","keine übertragen")}
+      <tr><td colspan="2" style="padding-top:6px;font-size:11px" class="muted">Übung, nicht im eCall-Datensatz:</td></tr>
+      ${row("Fahrzeug",`${esc(v.make)} ${esc(v.model)}, ${esc(v.color)}, Bj. ${v.year}`)}
+      ${row("Kennzeichen",`<span style="border:2px solid #111;border-radius:4px;padding:0 6px;font-family:monospace;background:#fff;color:#111">${esc(v.plate)}</span>`)}
+    </table></div>`;
  }
- document.getElementById("app").innerHTML=`<div class="card"><div class="row between" style="gap:8px;flex-wrap:wrap">
-   <div><h2 style="margin:0">📡 eCall</h2><p class="muted" style="margin:2px 0 0;font-size:13px">Automatische Notrufe aus Fahrzeugen – hier nur die Daten, ohne Sprachverbindung. In der Übung sind ca. 52 % Fehlalarme.</p></div>
-   <div class="row" style="gap:6px"><button class="${db.ecallAuto?"primary":""}" onclick="ecallToggleAuto()">${db.ecallAuto?"🎲 Zufällig: AN":"🎲 Zufällig: AUS"}</button><button onclick="ecallCreate().then(e=>{ecSel=e.id;render('ecall')})">＋ eCall jetzt</button></div></div></div>
-  <div style="display:grid;grid-template-columns:minmax(220px,300px) minmax(0,1fr);gap:12px;align-items:start">
-   <div class="card" style="max-height:80vh;overflow:auto">${items}</div><div style="min-width:0">${det}</div></div>`;
- if(ec)setTimeout(()=>ecallDrawMap(ec),0);
+ document.getElementById("app").innerHTML=`<div style="position:relative;height:calc(100vh - 66px);min-height:520px;border-radius:14px;overflow:hidden;background:#e5e7eb">
+   <div id="ecMap" style="position:absolute;inset:0"></div>
+   ${ec?"":`<div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center" class="muted">Noch keine eCalls – „＋ eCall jetzt“ oder „🎲 Zufällig“.</div>`}
+   ${head}${right}${left}</div>`;
+ if(ec)setTimeout(()=>{ecallDrawMap(ec);const L0=document.getElementById("ecLog");if(L0)L0.scrollTop=L0.scrollHeight},0);
 }
 function ecallDrawMap(ec){
  const el=document.getElementById("ecMap"); if(!el||typeof L==="undefined")return;
  try{if(ecMap)ecMap.remove()}catch(e){}
- ecMap=L.map("ecMap").setView([ec.lat,ec.lng],16);
+ ecMap=L.map("ecMap",{zoomControl:false}).setView([ec.lat,ec.lng],14);L.control.zoom({position:"bottomright"}).addTo(ecMap); // v5.99: größerer Ausschnitt
  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:19,attribution:"© OpenStreetMap"}).addTo(ecMap);
  const pts=[...(ec.trail||[]).slice().reverse(),[ec.lat,ec.lng]];
  if(pts.length>1)L.polyline(pts,{color:"#2563eb",weight:4,dashArray:"6 6"}).addTo(ecMap);
