@@ -1607,6 +1607,10 @@ Version 5.05:
   („a, b“ = a ODER b). Mit „🚑 NA-Indikation“ markierte Knöpfe ziehen weiterhin einen Notarzt.
 - Nur „Unauffällig“ (ohne weitere Befunde) zählt weiter als unauffälliges E (R0 möglich).
 
+Version 5.98:
+- KV-Dienst: mehrere Bereitschaftsdienstpraxen. Varel: St. Johannes-Hospital, Bleichenpfad 9 (Mi 16–18, Sa/So/Feiertag 10–12 + 16–18 Uhr, laut Krankenhaus Varel). Jever und Zetel: jeweils Gemeinschaftspraxis (Nutzerangabe) – Name, Adresse und Zeiten noch nicht hinterlegt, Position = Ortsmitte.
+- Im KV-Feld stehen alle Praxen mit „jetzt geöffnet/geschlossen“; die nächste zum Einsatzort ist markiert und wird bei „Bereitschaftsdienstpraxis“ genannt.
+
 Version 5.97:
 - 116 117 (Ärztlicher Bereitschaftsdienst): Übungsanrufe über 116 117 kommen jetzt rein – in Türkis statt Rot (auch über das Anrufer-Terminal).
 - Im Notruf erscheint dann das Feld „🩺 116 117 – KV-Dienst“: Hausbesuch ÄBD, Leichenschau ÄBD, Bereitschaftsdienstpraxis, telefonische Beratung, Notdienst-Apotheke oder „Doch Notfall → Rettungsdienst“. Abgefragt werden nur Einsatzort und Ereignis.

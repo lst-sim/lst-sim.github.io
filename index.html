@@ -231,7 +231,7 @@ html[data-device="handy"] .fach-grid{grid-template-columns:1fr}
 <header id="topbar">
  <div class="tb-left">
   <span class="tb-brand">🚑 Leitstelle<span>.sim</span></span>
-  <span id="versionTag" class="tb-ver">v5.97</span>
+  <span id="versionTag" class="tb-ver">v5.98</span>
   <span id="syncState"></span>
   <a id="deskTag" href="#" onclick="renameDesk();return false" title="Name dieses Platzes (für „offen an …“) – antippen zum Ändern"></a>
  </div>
@@ -12526,7 +12526,17 @@ function simTierMark(){try{localStorage.setItem("lst-sim-tier-day",simDayKey(Dat
 // Mo–Fr 20–21 Uhr, Sa/So/Feiertag 10–12 und 20–22 Uhr. Feiertage werden hier nicht erkannt.
 const KV_COLOR="#0d9488";
 function kvOnDuty(d=new Date()){const w=d.getDay(),h=d.getHours();return h<8||w===0||w===6||([1,2,4].includes(w)&&h>=18)||([3,5].includes(w)&&h>=13)}
-function kvPraxisOpen(d=new Date()){const w=d.getDay(),m=d.getHours()*60+d.getMinutes();return (w===0||w===6)?((m>=600&&m<720)||(m>=1200&&m<1320)):(m>=1200&&m<1260)}
+// v5.98: mehrere Bereitschaftsdienstpraxen. open(d) → true/false, null = Sprechzeiten unbekannt.
+const KV_PRAXEN=[
+ {n:"Bereitschaftsdienstpraxis Wilhelmshaven",addr:"Klinikum Wilhelmshaven, Friedrich-Paffrath-Str. 100",lat:53.54582,lng:8.08495,hours:"Mo–Fr 20–21, Sa/So/Feiertag 10–12 + 20–22 Uhr",
+  open:d=>{const w=d.getDay(),m=d.getHours()*60+d.getMinutes();return (w===0||w===6)?((m>=600&&m<720)||(m>=1200&&m<1320)):(m>=1200&&m<1260)}},
+ {n:"Bereitschaftsdienstpraxis Varel",addr:"St. Johannes-Hospital, Bleichenpfad 9, Varel",lat:53.39271,lng:8.13959,hours:"Mi 16–18, Sa/So/Feiertag 10–12 + 16–18 Uhr",
+  open:d=>{const w=d.getDay(),m=d.getHours()*60+d.getMinutes();return w===3?(m>=960&&m<1080):(w===0||w===6)?((m>=600&&m<720)||(m>=960&&m<1080)):false}},
+ {n:"Bereitschaftsdienst Jever",addr:"große Gemeinschaftspraxis in Jever (Name/Adresse noch nicht hinterlegt)",lat:53.5737,lng:7.8996,hours:"Sprechzeiten unbekannt",open:()=>null,unsure:true},
+ {n:"Bereitschaftsdienst Zetel",addr:"Gemeinschaftspraxis in Zetel (Name/Adresse noch nicht hinterlegt)",lat:53.4167,lng:7.9833,hours:"Sprechzeiten unbekannt",open:()=>null,unsure:true}
+];
+function kvNearestPraxis(c){const p=c&&Number.isFinite(Number(c.lat))?[Number(c.lat),Number(c.lng)]:null;if(!p)return KV_PRAXEN[0];return KV_PRAXEN.slice().sort((a,b)=>haversine(p[0],p[1],a.lat,a.lng)-haversine(p[0],p[1],b.lat,b.lng))[0]}
+function kvPraxisOpen(d=new Date()){return KV_PRAXEN[0].open(d)}
 const KV_PRAXIS="Bereitschaftsdienstpraxis Wilhelmshaven, Klinikum, Friedrich-Paffrath-Str. 100";
 const KV_CHOICES=[
  ["hausbesuch","🩺 Hausbesuch ÄBD","Arzt fährt zum Patienten (ohne Sonderrechte)"],
@@ -12560,11 +12570,11 @@ function kvPanelHTML(c){
    if(c.alarmTime||!c.answers||c.answers.callType!=="112")return "";
    return `<div class="card" style="border-left:6px solid ${KV_COLOR};padding:10px 14px"><div class="row between" style="gap:8px;flex-wrap:wrap"><span style="font-size:13px">Kein Notfall? Anruf an den ärztlichen Bereitschaftsdienst übergeben.</span><button onclick="kvTakeOver('${esc(String(c.id))}')" style="border-color:${KV_COLOR};color:${KV_COLOR}">🩺 An KV-Dienst übergeben</button></div></div>`;
  }
- const duty=kvOnDuty(), pr=kvPraxisOpen(), free=kvUnits().filter(u=>["1","2"].includes(String(u.status))).length;
+ const duty=kvOnDuty(), free=kvUnits().filter(u=>["1","2"].includes(String(u.status))).length;
  return `<div class="card" style="border:2px solid ${KV_COLOR};background:#f0fdfa">
   <div class="row between" style="gap:8px;flex-wrap:wrap"><h2 style="margin:0;color:${KV_COLOR}">🩺 116 117 – KV-Dienst</h2>
    <span style="font-size:12px"><b style="color:${duty?"#15803d":"#b91c1c"}">${duty?"● Bereitschaftsdienst im Dienst":"● außerhalb der Dienstzeit (→ Hausarzt)"}</b> · ÄBD frei: <b>${free}</b></span></div>
-  <div class="muted" style="font-size:12px;margin:4px 0 8px">Praxis: ${esc(KV_PRAXIS)} – ${pr?"<b style='color:#15803d'>jetzt geöffnet</b>":"jetzt geschlossen"} (Mo–Fr 20–21, Sa/So 10–12 + 20–22 Uhr)</div>
+  <div style="font-size:12px;margin:4px 0 8px">${KV_PRAXEN.map(P=>{const o=P.open(new Date()),near=P===kvNearestPraxis(c);return `<div class="${near?"":"muted"}">${near?"📍 <b>":""}${esc(P.n)}${near?"</b> (am nächsten)":""} – ${esc(P.addr)} · ${o===null?"⚪ Zeiten unbekannt":o?"<b style='color:#15803d'>🟢 jetzt geöffnet</b>":"🔴 geschlossen"} <span class="muted">(${esc(P.hours)})</span></div>`}).join("")}</div>
   <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:6px">${KV_CHOICES.map(([k,l,d])=>`<button onclick="kvDecide('${esc(String(c.id))}','${k}')" title="${esc(d)}" style="text-align:left;${c.kvChoice===k?`background:${KV_COLOR};color:#fff;border-color:${KV_COLOR}`:""}">${l}</button>`).join("")}</div>
   ${c.kvChoice==="hausbesuch"||c.kvChoice==="leichenschau"?`<div class="muted" style="font-size:12px;margin-top:6px">Vorschlag steht rechts – zum Alarmieren wie gewohnt „Alarmieren“ drücken.</div>`:""}
  </div>`;
@@ -12601,7 +12611,8 @@ function kvDecide(id,choice){
    if(c===db.currentCall){evaluate();try{prepareAlarm()}catch(e){}}
    save(); render("notruf"); return;
  }
- const extra=choice==="praxis"?` – ${KV_PRAXIS}${kvPraxisOpen()?"":" (Hinweis: Praxis gerade geschlossen)"}`:"";
+ const P=kvNearestPraxis(c), po=P.open(new Date());
+ const extra=choice==="praxis"?` – ${P.n}, ${P.addr}${po===false?" (Hinweis: Praxis gerade geschlossen)":""}`:"";
  c.history.push({q:"🩺 KV-Dienst",a:label+extra});
  if(fb){c.history.push({q:"🎓 Übungs-Check",a:fb});toast(fb)}
  c.keyword="KV – "+label.replace(/^\S+\s/,""); c.phoneDone="kv_"+choice;
