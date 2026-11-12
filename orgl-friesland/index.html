@@ -133,11 +133,10 @@ select,input[type=text],input[type=password]{font:inherit;color:var(--ink);backg
 <div id="drawLayer"></div>
 <div id="drawBar">
   <button class="c tag" data-c="#e10600" style="background:#e10600" aria-label="Einsatzstelle">ES</button>
-  <button class="c sel tag" data-c="#ff7a00" style="background:#ff7a00" aria-label="Landeplatz">LP</button>
-  <button class="c tag" data-c="#1e88e5" style="background:#1e88e5" aria-label="Behandlungsplatz">BHP</button>
-  <button class="c tag" data-c="#6d4c41" style="background:#6d4c41" aria-label="Bereitstellungsraum">BR</button>
-  <button class="c" data-c="#ffd600" style="background:#ffd600" aria-label="Gelb"></button>
-  <button class="c" data-c="#00c853" style="background:#00c853" aria-label="Grün"></button>
+  <button class="c sel tag" data-c="#2e7d32" style="background:#2e7d32" aria-label="Landeplatz">LP</button>
+  <button class="c tag" data-c="#f57c00" style="background:repeating-linear-gradient(135deg,#f57c00 0 4px,#ffd8b0 4px 7px);color:#15243a" aria-label="Behandlungsplatz">BHP</button>
+  <button class="c tag" data-c="#fbc02d" style="background:repeating-linear-gradient(135deg,#fbc02d 0 4px,#fff3c4 4px 7px);color:#15243a" aria-label="Bereitstellungsraum">BR</button>
+  <button class="c" data-c="#1565c0" style="background:#1565c0" aria-label="Blau"></button>
   <button class="c" data-c="#111111" style="background:#111" aria-label="Schwarz"></button>
   <button id="dMode">Linie</button>
   <button id="dPan">Karte bewegen</button>
@@ -203,12 +202,12 @@ const r5=p=>[+p[0].toFixed(5),+p[1].toFixed(5)];
 
 /* Kategorien: key -> {name, color, letter, shape, on} */
 const CAT = {
- heli:{n:"H-Landeplatz",c:"#00838f",l:"H",on:true},
- lzN:{n:"Landeplatz Tag + Nacht",c:"#ff7a00",l:"",sq:true,on:true},
- lzD:{n:"Landeplatz nur Tag",c:"#f2c200",l:"",sq:true,on:true},
- pat:{n:"Sammelstelle / BHP",c:"#1e88e5",l:"P",on:true},
- br:{n:"Bereit\u00ADstellungs\u00ADraum",c:"#6d4c41",l:"B",sq:true,on:false},
- kh:{n:"Krankenhaus",c:"#2e7d32",l:"K",on:true},
+ heli:{n:"H-Landeplatz",c:"#2e7d32",l:"H",on:true},
+ lzN:{n:"Landeplatz Tag + Nacht",c:"#2e7d32",l:"H",on:true},
+ lzD:{n:"Landeplatz nur Tag",c:"#8bc34a",l:"H",on:true},
+ pat:{n:"Sammelstelle / BHP",c:"#f57c00",l:"P",hatch:true,on:true},
+ br:{n:"Bereit\u00ADstellungs\u00ADraum",c:"#fbc02d",l:"B",sq:true,hatch:true,on:false},
+ kh:{n:"Krankenhaus",c:"#00838f",l:"K",on:true},
  wka:{n:"Windrad",c:"#222",l:"✳",on:true},
  pwr:{n:"Freileitung",c:"#7b1fa2",l:"",line:true,on:true},
  own:{n:"Eigene Markierungen",c:"#ffb300",l:"✎",sq:true,on:true},
@@ -365,14 +364,23 @@ function icon(cat,size){const C=CAT[cat];size=size||18;return L.divIcon({classNa
 const POLY_ZOOM=14;const polyGroups={};for(const k in CAT)polyGroups[k]=L.layerGroup();
 function syncPolys(){const z=map.getZoom();for(const k in polyGroups){const on=z>=POLY_ZOOM&&map.hasLayer(groups[k]);if(on&&!map.hasLayer(polyGroups[k]))polyGroups[k].addTo(map);else if(!on&&map.hasLayer(polyGroups[k]))map.removeLayer(polyGroups[k]);}}
 map.on("zoomend",syncPolys);
+// Schraffur als Canvas-Muster (diagonale Linien in der Farbe)
+const HATCH={};function hatch(col){if(HATCH[col])return HATCH[col];const c=document.createElement("canvas");c.width=c.height=10;const x=c.getContext("2d");
+ x.fillStyle=col+"33";x.fillRect(0,0,10,10);x.strokeStyle=col;x.lineWidth=2.4;x.beginPath();x.moveTo(-2,12);x.lineTo(12,-2);x.moveTo(-2,2);x.lineTo(2,-2);x.moveTo(8,12);x.lineTo(12,8);x.stroke();
+ const pat=x.createPattern(c,"repeat");HATCH[col]=pat||col+"55";return HATCH[col];}
+const HATCH_COLS=["#fbc02d","#f57c00"];const fillFor=(col,op)=>HATCH_COLS.includes(col)?{fillColor:hatch(col),fillOpacity:1}:{fillColor:col,fillOpacity:op};
+// Kreis mit Buchstabe direkt auf dem Canvas (schnell auch bei Tausenden Punkten)
+const LetterMarker=L.CircleMarker.extend({_updatePath(){L.CircleMarker.prototype._updatePath.call(this);const r=this._renderer,ctx=r&&r._ctx,p=this._point;if(!ctx||!p||this._empty&&this._empty())return;
+ ctx.save();ctx.fillStyle=this.options.textColor||"#fff";ctx.font="700 "+Math.round(this._radius*1.25)+"px 'Atkinson Hyperlegible',sans-serif";ctx.textAlign="center";ctx.textBaseline="middle";ctx.fillText(this.options.letter||"",p.x,p.y+0.5);ctx.restore();}});
+function hdot(c,col,r,stroke,txt){return new LetterMarker(c,{radius:r,color:stroke||"#fff",weight:2,fillColor:col,fillOpacity:1,letter:"H",textColor:txt||"#fff",bubblingMouseEvents:false});}
 function dot(c,col,r,stroke){return L.circleMarker(c,{radius:r,color:stroke||"#fff",weight:2,fillColor:col,fillOpacity:1,bubblingMouseEvents:false});}
 function render(){
  for(const k in groups)if(k!=="own"){groups[k].clearLayers();polyGroups[k].clearLayers();}
  for(const z of DATA.lz){const C=CAT[z.cat];const warn=z.dl<WARN_LINE_M||z.dw<WARN_WIND_M;
   polyGroups[z.cat].addLayer(L.polygon(z.g,{color:warn?"#15243a":C.c,weight:4,opacity:1,fillColor:C.c,fillOpacity:.5,dashArray:warn?"10 6":null}).on("click",()=>showLZ(z)));
-  groups[z.cat].addLayer(dot(z.c,C.c,6,warn?"#15243a":"#fff").on("click",()=>showLZ(z)));}
+  groups[z.cat].addLayer(hdot(z.c,C.c,8,warn?"#15243a":"#fff",z.cat==="lzD"?"#15243a":"#fff").on("click",()=>showLZ(z)));}
  for(const p of DATA.pts){const C=CAT[p.cat];
-  if(p.g)polyGroups[p.cat].addLayer(L.polygon(p.g.map(r=>[r]),{color:C.c,weight:3,opacity:1,fillColor:C.c,fillOpacity:.45}).on("click",()=>showPt(p)));
+  if(p.g)polyGroups[p.cat].addLayer(L.polygon(p.g.map(r=>[r]),Object.assign({color:C.c,weight:3,opacity:1},fillFor(C.c,.45))).on("click",()=>showPt(p)));
   if(p.cat==="heli"||p.cat==="kh")groups[p.cat].addLayer(L.marker(p.c,{icon:icon(p.cat,18)}).on("click",()=>showPt(p)));
   else groups[p.cat].addLayer(dot(p.c,C.c,5).on("click",()=>showPt(p)));}
  for(const ln of DATA.pwr){const hv=parseInt(ln.v)>=60000;groups.pwr.addLayer(L.polyline(ln.g,{color:"#7b1fa2",weight:hv?2:1.5,opacity:.6,dashArray:ln.k==="minor_line"?"6 5":null,interactive:false}));}
@@ -494,7 +502,7 @@ $("wind").onclick=()=>{const w=getWind.last;if(!w){getWind(me||est||[map.getCent
 /* ================= Ebenen / Legende ================= */
 function counts(k){if(k==="fix")return FIX.length;if(!DATA)return"";if(k==="lzN"||k==="lzD")return DATA.lz.filter(z=>z.cat===k).length;if(k==="pwr")return DATA.pwr.length;if(k==="wka")return DATA.wka.length;if(k==="own")return OWN.length;return DATA.pts.filter(p=>p.cat===k).length;}
 function updLegendCounts(){document.querySelectorAll("[data-cnt]").forEach(e=>e.textContent=counts(e.dataset.cnt));}
-$("bLayers").onclick=()=>{sheetOpen(`<h2>Ebenen</h2><div class="lgrid">${Object.keys(CAT).map(k=>{const C=CAT[k];return`<label class="lg"><input type="checkbox" data-k="${k}" ${map.hasLayer(groups[k])?"checked":""}>${C.line?`<span style="width:13px;height:0;border-top:3px solid ${C.c};flex:none"></span>`:`<span class="sw ${C.sq?"sq":""}" style="background:${C.c}"></span>`}<span>${C.n}</span><span class="cnt" data-cnt="${k}">${counts(k)}</span></label>`}).join("")}</div>
+$("bLayers").onclick=()=>{sheetOpen(`<h2>Ebenen</h2><div class="lgrid">${Object.keys(CAT).map(k=>{const C=CAT[k];return`<label class="lg"><input type="checkbox" data-k="${k}" ${map.hasLayer(groups[k])?"checked":""}>${C.line?`<span style="width:13px;height:0;border-top:3px solid ${C.c};flex:none"></span>`:`<span class="sw ${C.sq?"sq":""}" style="background:${C.hatch?`repeating-linear-gradient(135deg,${C.c} 0 3px,#fff 3px 5px)`:C.c};${C.l==="H"?"width:16px;height:16px;color:#fff;font:700 10px/13px sans-serif;text-align:center;":""}">${C.l==="H"?"H":""}</span>`}<span>${C.n}</span><span class="cnt" data-cnt="${k}">${counts(k)}</span></label>`}).join("")}</div>
  <div class="row"><button id="bRe">Datenstatus</button><button id="bAdm">${admin?"Admin aktiv":"Admin"}</button><button id="bOwnDel">Eigene Markierungen löschen</button></div>
  <div class="note">${DATA?`Datenstand: ${new Date(DATA.t).toLocaleString("de-DE")} (OpenStreetMap)`:""}</div>`);
  document.querySelectorAll("[data-k]").forEach(cb=>cb.onchange=()=>{const g=groups[cb.dataset.k];cb.checked?g.addTo(map):map.removeLayer(g);syncPolys();});
@@ -504,7 +512,7 @@ $("bLayers").onclick=()=>{sheetOpen(`<h2>Ebenen</h2><div class="lgrid">${Object.
 /* ================= Malen (lokal gespeichert) ================= */
 const DRAW_KEY="orgl-fri-draw";let DRAW=[];try{DRAW=JSON.parse(localStorage.getItem(DRAW_KEY)||"[]");}catch(e){}
 const drawGroup=L.layerGroup().addTo(map);
-let dColor="#ff7a00",dArea=false,dErase=false,dPan=false,cur=null,curPts=null;
+let dColor="#2e7d32",dArea=false,dErase=false,dPan=false,cur=null,curPts=null;
 const saveDraw=()=>{try{localStorage.setItem(DRAW_KEY,JSON.stringify(DRAW));}catch(e){status("Zeichnung konnte im Browser nicht gespeichert werden.");}};
 /* Messen: Fläche, Umfang, Länge, Abmessung */
 const fmtA=a=>a>=10000?`${(a/10000).toFixed(2).replace(".",",")} ha`:`${Math.round(a).toLocaleString("de-DE")} m²`;
@@ -512,7 +520,9 @@ function measure(pts,area){const P=proj(pts[0]);const xy=pts.map(P);let len=0;fo
  if(!area)return{len};const close=Math.hypot(xy[0][0]-xy[xy.length-1][0],xy[0][1]-xy[xy.length-1][1]);const [s,l]=mbr(xy);return{a:polyArea(xy),u:len+close,s,l};}
 // Malfarben mit Bedeutung (gleiche Farben wie die Kartenebenen)
 const ES_COL="#e10600";
-const COL_TYPE={"#e10600":"ES","#ff7a00":"LP","#1e88e5":"BHP","#6d4c41":"BR"};const TYPE_COL={LP:"#ff7a00",BHP:"#1e88e5",BR:"#6d4c41"};
+const COL_TYPE={"#e10600":"ES","#2e7d32":"LP","#f57c00":"BHP","#fbc02d":"BR"};const TYPE_COL={LP:"#2e7d32",BHP:"#f57c00",BR:"#fbc02d"};
+// alte Malfarben auf neue umstellen
+const OLD_COL={"#ff7a00":"#2e7d32","#1e88e5":"#f57c00","#6d4c41":"#fbc02d","#ff6d00":"#2e7d32"};
 // Geschlossene Form (Ende nahe am Anfang) = Fläche, auch im Linien-Modus
 function isLoop(pts){if(pts.length<4)return false;const len=measure(pts,false).len;return len>40&&dist(pts[0],pts[pts.length-1])<=Math.max(30,0.2*len);}
 function measShort(d){const m=measure(d.p,d.a);const t=COL_TYPE[d.c];return d.a?`${t?t+" ":""}${fmtA(m.a)}<br><span style="font-weight:400">ca. ${Math.round(m.s)} × ${Math.round(m.l)} m</span>`:(t?t+" ":"")+fmtD(m.len);}
@@ -524,8 +534,8 @@ function showShape(d){const c=d.a?centroid(d.p):d.p[Math.floor(d.p.length/2)];
  sheetOpen(`<h2>${d.a?"Gezeichnete Fläche":"Gezeichnete Linie"}</h2>${measBlock(d.p,d.a)}${posBlock(c)}<div class="row">${isAdmin()&&d.a?'<button class="pri" id="sFix">Als festen Bereich für alle speichern</button>':""}<button id="sDel">Zeichnung löschen</button></div>`);
  $("sDel").onclick=()=>{DRAW=DRAW.filter(x=>x!==d);saveDraw();renderDraw();sheetClose();};
  if($("sFix"))$("sFix").onclick=()=>fixForm(null,c,COL_TYPE[d.c]||"BR","",d.p);}
-function drawShape(d){if(!d.a&&isLoop(d.p))d.a=true;const opt={color:d.c,weight:8,opacity:1,lineCap:"round",lineJoin:"round"};
- const l=d.a?L.polygon(d.p,Object.assign(opt,{fillColor:d.c,fillOpacity:.35})):L.polyline(d.p,opt);
+function drawShape(d){if(OLD_COL[d.c])d.c=OLD_COL[d.c];if(!d.a&&isLoop(d.p))d.a=true;const opt={color:d.c,weight:6,opacity:1,lineCap:"round",lineJoin:"round"};
+ const l=d.a?L.polygon(d.p,Object.assign(opt,fillFor(d.c,.35))):L.polyline(d.p,opt);
  l.on("click",ev=>{L.DomEvent.stop(ev);if(dErase){DRAW=DRAW.filter(x=>x!==d);saveDraw();renderDraw();}else showShape(d);});
  l.bindTooltip(measShort(d),{permanent:true,direction:"center",className:"measLbl"});
  const halo=(d.a?L.polygon:L.polyline)(d.p,{color:d.c==="#111111"?"#fff":"#000",weight:14,opacity:.7,fill:false,lineCap:"round",lineJoin:"round",interactive:false});
@@ -588,7 +598,7 @@ function initFix(){renderFix();try{const es=new EventSource(FIX_URL+".json");
  es.addEventListener("patch",e=>{const m=JSON.parse(e.data);setPath(m.path,m.data,true);fixFromMirror();});
  es.onerror=()=>LOG.push("Feste Punkte: Verbindung unterbrochen, versuche erneut …");}catch(e){LOG.push("Feste Punkte: "+e.message);}}
 function renderFix(){groups.fix.clearLayers();for(const p of FIX){if(!p.c)continue;const T=OWN_TYPES.find(x=>x[0]===p.t)||["?","Punkt"];
- if(p.g)groups.fix.addLayer(L.polygon(p.g,{color:TYPE_COL[p.t]||"#15243a",weight:3,dashArray:"8 5",fillColor:TYPE_COL[p.t]||"#15243a",fillOpacity:.12}).on("click",()=>showFix(p)));
+ if(p.g)groups.fix.addLayer(L.polygon(p.g,Object.assign({color:TYPE_COL[p.t]||"#15243a",weight:3,dashArray:"8 5"},fillFor(TYPE_COL[p.t]||"#15243a",.12))).on("click",()=>showFix(p)));
  const m=L.marker(p.c,{zIndexOffset:700,icon:L.divIcon({className:"",iconSize:[44,30],iconAnchor:[22,15],html:`<div class="fix" style="width:44px;height:30px">${esc(p.t)}</div>`})});
  m.bindTooltip(esc(p.n||T[1]),{permanent:true,direction:"right",offset:[24,0],className:"fixLbl"});m.on("click",()=>showFix(p));groups.fix.addLayer(m);}updLegendCounts();renderAdmin();}
 function fbErr(e){status("Nicht gespeichert: "+e.message+". Internet prüfen.");}
