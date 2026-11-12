@@ -231,7 +231,7 @@ html[data-device="handy"] .fach-grid{grid-template-columns:1fr}
 <header id="topbar">
  <div class="tb-left">
   <span class="tb-brand">🚑 Leitstelle<span>.sim</span></span>
-  <span id="versionTag" class="tb-ver">v5.99</span>
+  <span id="versionTag" class="tb-ver">v6.00</span>
   <span id="syncState"></span>
   <a id="deskTag" href="#" onclick="renameDesk();return false" title="Name dieses Platzes (für „offen an …“) – antippen zum Ändern"></a>
  </div>
@@ -1406,35 +1406,21 @@ function render0(page="leitstelle"){
 
 let leafletMap=null, incidentMarker=null, selectedMapLocation=null;
 
-function karte(){
+function karte(){ // v6.00: Karte füllt die ganze Seite, Steuerung als Leiste auf der Karte, ohne Notfallort-Liste
   const c=db.currentCall;
-  document.getElementById("app").innerHTML=`<div class="grid">
-    <section>
-      <div class="card">
-        <div class="row between">
-          <div><h2>🗺️ Einsatzkarte</h2><div class="muted">${stagingPickMode?"🅿️ <b>Bereitstellungsort wählen:</b> auf die Karte tippen.":"Alle Notfallorte der offenen Einsätze. Der Einsatzort selbst wird in der Notrufabfrage festgelegt."}</div></div>
-          ${c?`<span class="status s2">Einsatz #${c.id}</span>`:`<span class="pill">Kein laufender Einsatz</span>`}
-        </div>
-        <div class="mapSearch" style="margin-top:12px">
-          <input id="mapQuery" placeholder="Ort auf der Karte suchen (nur ansehen), z. B. Dangast Strand">
-          <button class="primary" onclick="searchMap()">🔎 Suchen</button>
-        </div>
-        <div id="mapResults" style="margin:8px 0"></div>
-        ${c?`<div class="row" style="gap:6px;margin-bottom:8px;flex-wrap:wrap"><button class="${stagingPickMode?"primary":""}" onclick="stagingPickMode=!stagingPickMode;karte()">🅿️ ${stagingPickMode?"Bereitstellungsort wird gewählt – zum Abbrechen tippen":"Bereitstellungsort auf Karte wählen"}</button>${c.staging?`<span class="pill">🅿️ ${esc(c.staging.name)}</span><button onclick="setStaging(null,'karte')">✕ entfernen</button>`:""}${stagingPickMode?`<button onclick="stagingPickMode=false;prepareAlarm()">⬅️ Zurück zur Alarmierung</button>`:""}</div>`:""}
-        <div id="map"></div>
+  const panel="position:absolute;z-index:1100;background:var(--panel,#fff);border-radius:12px;box-shadow:0 6px 24px rgba(0,0,0,.25);";
+  document.getElementById("app").innerHTML=`<div style="position:relative;height:calc(100vh - 66px);min-height:480px;border-radius:14px;overflow:hidden;background:#e5e7eb">
+    <div id="map" style="position:absolute;inset:0;height:auto;min-height:0;border:0;border-radius:0"></div>
+    <div style="${panel}top:10px;left:10px;right:10px;padding:8px 12px">
+      <div class="row" style="gap:8px;align-items:center;flex-wrap:wrap">
+        <b style="font-size:17px">🗺️ Einsatzkarte</b>
+        ${c?`<span class="status s2">Einsatz #${c.id}</span>`:""}
+        <input id="mapQuery" placeholder="Ort suchen (nur ansehen), z. B. Dangast Strand" style="flex:1;min-width:180px" onkeydown="if(event.key==='Enter')searchMap()">
+        <button class="primary" onclick="searchMap()">🔎 Suchen</button>
+        ${c?`<button class="${stagingPickMode?"primary":""}" onclick="stagingPickMode=!stagingPickMode;karte()">🅿️ ${stagingPickMode?"Bereitstellungsort wird gewählt – zum Abbrechen tippen":"Bereitstellungsort wählen"}</button>${c.staging?`<span class="pill">🅿️ ${esc(c.staging.name)}</span><button onclick="setStaging(null,'karte')">✕</button>`:""}${stagingPickMode?`<button onclick="stagingPickMode=false;prepareAlarm()">⬅️ Zurück zur Alarmierung</button>`:""}`:""}
       </div>
-    </section>
-    <aside>
-      <div class="card">
-        <h2>📍 Notfallorte</h2>
-        ${(()=>{const list=allOpenCalls().filter(x=>Number.isFinite(Number(x.lat))&&Number.isFinite(Number(x.lng))&&x.lat!==""&&x.lng!=="");
-          const none=allOpenCalls().filter(x=>!list.includes(x));
-          return (list.length?list.map(x=>`<div class="row between" style="padding:7px 0;border-bottom:1px solid var(--line);flex-wrap:nowrap;gap:8px;cursor:pointer" onclick="mapFocusCall('${esc(String(x.id))}')">
-            <div style="min-width:0"><b>${x.alarmTime?"🚨":"📞"} #${esc(x.id)}</b> <span class="muted">${esc(x.keyword||"in Abfrage")}</span>${deskBadgeHTML(x)}<br><small class="muted">${esc(x.location||"")}</small></div>
-            <button style="padding:4px 10px;flex:0 0 auto" onclick="event.stopPropagation();selectCall('${esc(String(x.id))}','notruf')">Öffnen</button></div>`).join(""):`<p class="muted">Kein offener Einsatz mit bekanntem Ort.</p>`)
-           +(none.length?`<p class="muted" style="margin-top:8px;font-size:13px">Ohne Ort: ${none.map(x=>"#"+esc(x.id)).join(", ")}</p>`:"");})()}
-      </div>
-    </aside>
+      <div id="mapResults" style="max-height:40vh;overflow:auto"></div>
+    </div>
   </div>`;
   setTimeout(initMap,0);
 }
@@ -1452,7 +1438,7 @@ function initMap(){
   }
   const c=db.currentCall;
   const SCC=(SCENARIOS[currentScenarioId]&&SCENARIOS[currentScenarioId].center)||[53.3965,8.1364]; const lat=Number(c?.lat)||SCC[0], lng=Number(c?.lng)||SCC[1]; // Standard: Varel bzw. Mittelpunkt des eigenen Szenarios
-  {const [vc,vz]=mapStartView("map",c,[lat,lng],c?.lat?16:11); leafletMap=L.map("map").setView(vc,vz); mapKeepView(leafletMap,"map",c)}
+  {const [vc,vz]=mapStartView("map",c,[lat,lng],c?.lat?14:10); leafletMap=L.map("map",{zoomControl:false}).setView(vc,vz); L.control.zoom({position:"bottomright"}).addTo(leafletMap); mapKeepView(leafletMap,"map",c)} // v6.00: größerer Ausschnitt
   L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{
     maxZoom:19,
     attribution:'&copy; OpenStreetMap-Mitwirkende'

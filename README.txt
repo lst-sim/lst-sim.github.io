@@ -1607,6 +1607,10 @@ Version 5.05:
   („a, b“ = a ODER b). Mit „🚑 NA-Indikation“ markierte Knöpfe ziehen weiterhin einen Notarzt.
 - Nur „Unauffällig“ (ohne weitere Befunde) zählt weiter als unauffälliges E (R0 möglich).
 
+Version 6.00:
+- Einsatzkarte (🗺️ Karte): füllt jetzt die ganze Seite. Suche und Bereitstellungsort liegen als Leiste oben auf der Karte, die Liste „Notfallorte“ rechts ist entfernt.
+- Größerer Ausschnitt beim Öffnen: mit Einsatz Zoom 14 statt 16, ohne Einsatz 10 statt 11. Zoom-Knöpfe unten rechts.
+
 Version 5.99:
 - eCall: Die Karte füllt jetzt die ganze Seite und zeigt einen größeren Ausschnitt (Zoom 14 statt 16). Die Liste links ist weg; andere eCalls wählt man oben über die Auswahlliste.
 - Lagebild, Gespräch und Knöpfe liegen unten links als Fenster auf der Karte, die Fahrzeugdaten rechts (ein-/ausblendbar).
