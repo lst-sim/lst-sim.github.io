@@ -1607,6 +1607,9 @@ Version 5.05:
   („a, b“ = a ODER b). Mit „🚑 NA-Indikation“ markierte Knöpfe ziehen weiterhin einen Notarzt.
 - Nur „Unauffällig“ (ohne weitere Befunde) zählt weiter als unauffälliges E (R0 möglich).
 
+Version 6.01:
+- Wilhelmshaven: RTW, NEF und KTW der Berufsfeuerwehr (Florian Wilhelmshaven …/82, …/83) gelten jetzt immer als Rettungsdienst – auch wenn sie in gespeicherten Daten oder in der Cloud noch als Feuerwehr eingetragen waren. Die Umstellung passiert automatisch beim Start und beim Laden aus der Cloud.
+
 Version 6.00:
 - Einsatzkarte (🗺️ Karte): füllt jetzt die ganze Seite. Suche und Bereitstellungsort liegen als Leiste oben auf der Karte, die Liste „Notfallorte“ rechts ist entfernt.
 - Größerer Ausschnitt beim Öffnen: mit Einsatz Zoom 14 statt 16, ohne Einsatz 10 statt 11. Zoom-Knöpfe unten rechts.

@@ -231,7 +231,7 @@ html[data-device="handy"] .fach-grid{grid-template-columns:1fr}
 <header id="topbar">
  <div class="tb-left">
   <span class="tb-brand">🚑 Leitstelle<span>.sim</span></span>
-  <span id="versionTag" class="tb-ver">v6.00</span>
+  <span id="versionTag" class="tb-ver">v6.01</span>
   <span id="syncState"></span>
   <a id="deskTag" href="#" onclick="renameDesk();return false" title="Name dieses Platzes (für „offen an …“) – antippen zum Ändern"></a>
  </div>
@@ -1122,7 +1122,13 @@ db.units=db.units.filter(u=>!RETIRED_UNIT_OPTAS.includes(u.opta));
 // LNA-Einträge zum LNA (Privat-PKW). In allen AAOs wird „OrgL/LNA“ zu „OrgL“ und zusätzlich 1 LNA alarmiert.
 // v5.74: läuft bei jedem Start UND nach dem Laden eines gespeicherten Stands (Cloud/Datei), damit ältere
 // gespeicherte Stände nicht wieder „OrgL/LNA“ einführen oder doppelte OrgL-Fahrzeuge entstehen.
-function lnaSplitMigrate(){
+// v6.01: RTW/NEF/KTW der BF Wilhelmshaven gelten als Rettungsdienst (auch wenn sie in gespeicherten Daten als Feuerwehr stehen)
+function whvRdOrgMigrate(){
+ let ch=0; const RDT=/^(RTW|NEF|KTW|NKTW|NAW|ITW|SRTW)$/;
+ (db.units||[]).forEach(u=>{if(u&&u.org!=="Rettungsdienst"&&RDT.test(String(u.type||""))&&(/Wilhelmshaven/i.test(String(u.opta||"")+" "+String(u.location||""))||/^WHV-/.test(String(u.name||"")))){u.org="Rettungsdienst";ch++}});
+ return ch;
+}
+function lnaSplitMigrate(){ try{if(whvRdOrgMigrate())save()}catch(e){}
  let ch=false;
  (db.units||[]).forEach(u=>{
    const nm=String(u.opta||u.name||"");
