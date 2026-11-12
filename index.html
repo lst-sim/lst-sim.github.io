@@ -231,7 +231,7 @@ html[data-device="handy"] .fach-grid{grid-template-columns:1fr}
 <header id="topbar">
  <div class="tb-left">
   <span class="tb-brand">🚑 Leitstelle<span>.sim</span></span>
-  <span id="versionTag" class="tb-ver">v6.01</span>
+  <span id="versionTag" class="tb-ver">v6.02</span>
   <span id="syncState"></span>
   <a id="deskTag" href="#" onclick="renameDesk();return false" title="Name dieses Platzes (für „offen an …“) – antippen zum Ändern"></a>
  </div>
@@ -12597,7 +12597,13 @@ function kvDecide(id,choice){
  c.history=c.history||[];
  const fb=kvFeedback(c,choice);
  if(choice==="rd"){
-   c.kvd=false; c.kvChoice=null; c.answers.callType="112"; c.history.push({q:"🚑 Hochgestuft",a:"Kein Fall für den KV-Dienst – weiter als Notruf 112"});
+   c.kvd=false; c.kvChoice=null;
+   // v6.02: Rettungsdienst-Abfrage komplett neu durchgehen – nur Rufnummer und Einsatzort bleiben stehen
+   const keep=new Set(["callType","location"]), drop=new Set(Object.keys(c.answers||{}).filter(k=>!keep.has(k)));
+   drop.forEach(k=>{delete c.answers[k];if(c.answerLabels)delete c.answerLabels[k]});
+   c.history=c.history.filter(h=>!(h.id&&drop.has(h.id)));
+   if(drop.has("count"))c.count="";
+   c.answers.callType="112"; c.history.push({q:"🚑 Hochgestuft",a:"Kein Fall für den KV-Dienst – Notrufabfrage 112 wird neu durchgegangen"});
    if(c.sim&&c.sim.d&&c.sim.d.kv){c.history.push({q:"🎓 Übungs-Check",a:fb});toast(fb)}
    if(c===db.currentCall)evaluate(); save(); render("notruf"); return;
  }

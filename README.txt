@@ -1607,6 +1607,9 @@ Version 5.05:
   („a, b“ = a ODER b). Mit „🚑 NA-Indikation“ markierte Knöpfe ziehen weiterhin einen Notarzt.
 - Nur „Unauffällig“ (ohne weitere Befunde) zählt weiter als unauffälliges E (R0 möglich).
 
+Version 6.02:
+- 116 117 → „Doch Notfall → Rettungsdienst“: Die Notrufabfrage für den Rettungsdienst muss jetzt komplett neu durchgeklickt werden (alle Fragen ab „Was ist passiert?“). Nur Rufnummer und Einsatzort bleiben stehen. Das gilt auch, wenn ein 112-Anruf vorher an den KV-Dienst übergeben wurde.
+
 Version 6.01:
 - Wilhelmshaven: RTW, NEF und KTW der Berufsfeuerwehr (Florian Wilhelmshaven …/82, …/83) gelten jetzt immer als Rettungsdienst – auch wenn sie in gespeicherten Daten oder in der Cloud noch als Feuerwehr eingetragen waren. Die Umstellung passiert automatisch beim Start und beim Laden aus der Cloud.
 
