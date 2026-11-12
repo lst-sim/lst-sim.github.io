@@ -1607,6 +1607,17 @@ Version 5.05:
   („a, b“ = a ODER b). Mit „🚑 NA-Indikation“ markierte Knöpfe ziehen weiterhin einen Notarzt.
 - Nur „Unauffällig“ (ohne weitere Befunde) zählt weiter als unauffälliges E (R0 möglich).
 
+Version 5.95:
+- Neuer Bereich „📡 eCall“ (rechte Spalte, mit roter Zahl für offene eCalls): automatische Fahrzeugnotrufe nur als Daten, ohne Sprache.
+- Daten angelehnt an den eCall-Mindestdatensatz: automatisch/manuell, Fahrzeugklasse, FIN, Energiespeicher, Zeit, Position (vertrauenswürdig ja/nein), Fahrtrichtung, 2 letzte Positionen, Insassen (Gurte).
+- Zusätzlich (nicht in jedem eCall, herstellerabhängig): Airbags, Aufprallseite, Überschlag, Δv. Kennzeichen, Modell und Farbe sind nicht Teil des echten eCall-Datensatzes und hier nur für die Übung erfunden.
+- Lagebild: große Karte mit Pfeil in Fahrtrichtung, Spur aus den letzten Positionen, Genauigkeitskreis; Lagetext automatisch; schematische Fahrzeugzeichnung (Sitze, Airbags, Aufprallbereich, Hochvolt-Batterie, Tank/Gastank).
+- Positionen liegen auf echten Straßen (Route über OpenStreetMap/OSRM zwischen zwei Orten).
+- Ca. 52 % Fehlalarme (Taste versehentlich, Kind, Panne, Werkstatt-Test, Fehlauslösung, Blechschaden). Echte Unfälle: Auffahrunfall, Baum, Überschlag, Frontal (zweites Fahrzeug meldet sich auch), Seitenaufprall, Wildunfall, Zeuge.
+- Knöpfe: „📞 Rückruf ins Fahrzeug“ (Antwort als Text), „🚨 Einsatz anlegen“ (Einsatz mit allen Daten), „✖ Kein Einsatz“. Danach wird aufgelöst, ob es echt war. Die erste eintreffende Einheit meldet die tatsächliche Lage.
+- „🎲 Zufällig“ lässt eCalls im Schnitt alle 20 min kommen; „＋ eCall jetzt“ erzeugt sofort einen.
+- Rechte Spalte passt die Knopfgröße jetzt an die Bildschirmhöhe an.
+
 Version 5.94:
 - IVENA: neuer Knopf „🏷️ Fachabteilungen“. Damit kannst du die Fachabteilungen (Spalten) umbenennen, Kürzel ändern, die Reihenfolge verschieben, löschen und neue anlegen.
 - Mit „🏥 Kliniken“ hinter jeder Fachabteilung legst du direkt fest, welche Krankenhäuser sie haben. Das gilt auch für neu angelegte Fachabteilungen.

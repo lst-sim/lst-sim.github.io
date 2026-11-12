@@ -170,7 +170,7 @@ html:not([data-device="handy"]) .outer-grid{grid-template-columns:1fr 104px}
 html:not([data-device="handy"]) .outer-grid>aside{top:58px!important}
 html:not([data-device="handy"]) .bereiche-card{height:auto!important;max-height:calc(100vh - 70px);overflow-y:auto!important;padding:10px!important;border-radius:16px!important;border:1px solid var(--line)!important;background:#fff}
 html:not([data-device="handy"]) .bereiche-card nav{justify-content:flex-start!important;gap:8px!important;overflow:visible}
-html:not([data-device="handy"]) .bereiche-card nav button{width:70px!important;height:70px!important;border-radius:14px;background:#f1f5f9;color:#0f172a;border:1px solid #e2e8f0;box-shadow:none;transition:background .15s,transform .1s}
+html:not([data-device="handy"]) .bereiche-card nav button{width:70px!important;height:var(--navbtn,70px)!important;min-height:40px;border-radius:14px;background:#f1f5f9;color:#0f172a;border:1px solid #e2e8f0;box-shadow:none;transition:background .15s,transform .1s}
 html:not([data-device="handy"]) .bereiche-card nav button:hover{background:#e2e8f0}
 html:not([data-device="handy"]) .bereiche-card nav button:active{transform:scale(.96)}
 html:not([data-device="handy"]) .bereiche-card nav button.active{background:var(--accent);color:#fff;border-color:var(--accent);box-shadow:0 4px 12px #e3061340}
@@ -231,7 +231,7 @@ html[data-device="handy"] .fach-grid{grid-template-columns:1fr}
 <header id="topbar">
  <div class="tb-left">
   <span class="tb-brand">🚑 Leitstelle<span>.sim</span></span>
-  <span id="versionTag" class="tb-ver">v5.94</span>
+  <span id="versionTag" class="tb-ver">v5.95</span>
   <span id="syncState"></span>
   <a id="deskTag" href="#" onclick="renameDesk();return false" title="Name dieses Platzes (für „offen an …“) – antippen zum Ändern"></a>
  </div>
@@ -994,7 +994,7 @@ const isTerminalLink=(()=>{
  return !!(p.get("vehicle")||p.get("neighbor")||p.get("caller"));
 })();
 const NAV_PAGES_ALL=[
- ["leitstelle","🏠 Leitstelle"],["karte","🗺️ Karte"],["mittel","🚑 Fahrzeuge"],["aao","🧠 AAO"],["ivena","🏥 IVENA"],["ivenaZuweisungen","📨 IVENA-Zuweisungen"],["nachbarLks","🤝 Nachbar LKs"],["funk","📻 Funkrufgruppen"],["manv","👥 MANV"],["veranstaltung","🎪 Großveranstaltung"]
+ ["leitstelle","🏠 Leitstelle"],["karte","🗺️ Karte"],["mittel","🚑 Fahrzeuge"],["aao","🧠 AAO"],["ivena","🏥 IVENA"],["ivenaZuweisungen","📨 IVENA-Zuweisungen"],["nachbarLks","🤝 Nachbar LKs"],["funk","📻 Funkrufgruppen"],["manv","👥 MANV"],["ecall","📡 eCall"],["veranstaltung","🎪 Großveranstaltung"]
 ];
 // Zusatz-Monitor (per QR vom Hauptplatz geöffnet): vollwertige Leitstellen-Oberfläche, die ihren
 // kompletten Zustand in Echtzeit mit dem Hauptplatz und allen anderen Monitoren teilt.
@@ -1345,10 +1345,11 @@ function statusOptionsFor(u){
 const NAV_PAGES=NAV_PAGES_ALL;
 function navHTML(active){
  const pages=currentScenarioId==="fri-whv"?NAV_PAGES:NAV_PAGES.filter(x=>x[0]!=="nachbarLks");
- return `<nav style="position:static;padding:0;background:transparent;display:flex;flex-direction:column;gap:12px;flex:1;justify-content:space-between;align-items:center">${pages.map(x=>{
+ return `<nav style="--navbtn:min(70px,calc((100vh - 110px) / ${pages.length} - 10px));position:static;padding:0;background:transparent;display:flex;flex-direction:column;gap:10px;flex:1;justify-content:space-between;align-items:center">${pages.map(x=>{
    const icon=x[1].split(" ")[0];
-   const content=x[0]==="aao"?`<span style="font-weight:800;font-size:15px">AAO</span>`:`<span style="font-size:36px;line-height:1">${icon}</span>`;
-   return `<button class="${active===x[0]?"active":""}" style="width:70px;height:70px;flex-shrink:0;display:flex;align-items:center;justify-content:center;padding:0" title="${esc(x[1])}" onclick="render('${x[0]}')">${content}</button>`;
+   const nEc=x[0]==="ecall"?ecallOpenCount():0;
+   const content=x[0]==="aao"?`<span style="font-weight:800;font-size:15px">AAO</span>`:`<span style="font-size:min(36px,calc(var(--navbtn,70px) * .5));line-height:1">${icon}</span>`;
+   return `<button class="${active===x[0]?"active":""}" style="position:relative;width:70px;flex-shrink:0;display:flex;align-items:center;justify-content:center;padding:0" title="${esc(x[1])}" onclick="render('${x[0]}')">${content}${nEc?`<span style="position:absolute;top:-6px;right:-6px;background:#dc2626;color:#fff;border-radius:999px;min-width:22px;height:22px;font-size:13px;font-weight:800;display:flex;align-items:center;justify-content:center;padding:0 5px">${nEc}</span>`:""}</button>`;
  }).join("")}</nav>`;
 }
 let currentPage="leitstelle";
@@ -1388,6 +1389,7 @@ function render0(page="leitstelle"){
  if(page==="funk") funkPage();
  if(page==="manv") manvPage();
  if(page==="veranstaltung") veranstaltungPage();
+ if(page==="ecall") ecallPage();
  const app=document.getElementById("app");
  if(app){
    const inner=app.innerHTML;
@@ -6871,11 +6873,297 @@ async function heliPickLanding(c){
  if(list.map(s=>s.name).join("|")===oldNames)return;
  (c.history=c.history||[]).push({q:`🚁 ${oldNames?"Landeplätze geändert":"Landeplatz"} (${n} Hubschrauber, ≥ ${need} m²)`,a:list.map((s,i)=>(list.length>1?`${i+1}) `:"")+s.name).join(" · ")}); save();
 }
+// ═══ v5.95: eCall – automatische Notrufe aus Fahrzeugen (Übung, nur Daten, ohne Sprache) ═══════
+// Angelehnt an den eCall-Mindestdatensatz (MSD, EN 15722): Auslösung auto/manuell, Fahrzeugklasse, FIN,
+// Energiespeicher, Zeit, Position (+ vertrauenswürdig), Fahrtrichtung, 2 letzte Positionen, Insassen.
+// Airbag/Aufprall/Δv sind KEIN Teil des Standard-MSD – nur manche Hersteller schicken solche Zusatzdaten.
+// Kennzeichen ist ebenfalls nicht im MSD – hier nur für die Übung erfunden.
+// Ca. 52 % Fehlalarme. Position: echte Straße über OSRM-Route zwischen zwei Orten (Fallback: SIM_ROADS).
+const ECALL_FALSE_RATE=0.52;
+const ECALL_PLACES={
+ fri:[["Varel",53.3965,8.1360],["Jever",53.5740,7.9010],["Schortens",53.5370,7.9480],["Sande",53.5040,8.0150],["Zetel",53.4200,7.9740],["Bockhorn",53.3990,8.0150],["Hohenkirchen",53.6560,7.9110],["Hooksiel",53.6380,8.0280],["Neuenburg",53.3900,7.9640]],
+ whv:[["Wilhelmshaven",53.5260,8.1080],["Wilhelmshaven-Fedderwarden",53.5820,8.0560],["Wilhelmshaven-Voslapp",53.6020,8.1080]],
+ out:[["Oldenburg",53.1435,8.2146],["Westerstede",53.2570,7.9290],["Wittmund",53.5760,7.7820],["Rastede",53.2450,8.1990]]
+};
+const ECALL_CARS=[
+ // [Hersteller, Modell, Aufbau, WMI, Klasse, Antrieb(e)]
+ ["VW","Golf","Kompakt","WVW","M1",["Benzin","Diesel"]],["VW","Polo","Kleinwagen","WVW","M1",["Benzin"]],
+ ["VW","Passat Variant","Kombi","WVW","M1",["Diesel"]],["VW","Tiguan","SUV","WVG","M1",["Benzin","Diesel"]],
+ ["VW","ID.3","Kompakt","WVW","M1",["Elektro"]],["VW","Transporter","Transporter","WV1","N1",["Diesel"]],
+ ["Audi","A4 Avant","Kombi","WAU","M1",["Diesel","Benzin"]],["Audi","Q5","SUV","WAU","M1",["Diesel","Hybrid"]],
+ ["BMW","3er Touring","Kombi","WBA","M1",["Diesel","Benzin"]],["BMW","X1","SUV","WBA","M1",["Benzin","Hybrid"]],
+ ["Mercedes-Benz","C-Klasse T-Modell","Kombi","W1K","M1",["Diesel"]],["Mercedes-Benz","A-Klasse","Kompakt","W1K","M1",["Benzin"]],
+ ["Opel","Corsa","Kleinwagen","W0L","M1",["Benzin","Elektro"]],["Opel","Astra Sports Tourer","Kombi","W0L","M1",["Benzin","Diesel"]],
+ ["Ford","Focus Turnier","Kombi","WF0","M1",["Benzin","Diesel"]],["Ford","Fiesta","Kleinwagen","WF0","M1",["Benzin"]],
+ ["Skoda","Octavia Combi","Kombi","TMB","M1",["Diesel","Benzin","Erdgas"]],["Skoda","Enyaq","SUV","TMB","M1",["Elektro"]],
+ ["Seat","Leon Sportstourer","Kombi","VSS","M1",["Benzin"]],["Renault","Clio","Kleinwagen","VF1","M1",["Benzin","Autogas"]],
+ ["Renault","Zoe","Kleinwagen","VF1","M1",["Elektro"]],["Toyota","Yaris","Kleinwagen","VNK","M1",["Hybrid"]],
+ ["Tesla","Model Y","SUV","XP7","M1",["Elektro"]]
+];
+const ECALL_COLORS=["schwarz","weiß","silber","grau","blau","rot","dunkelgrün","beige"];
+const ECALL_PLATES=[["FRI",5],["WHV",4],["OL",2],["WST",1],["WTM",1],["BRA",1],["AUR",1],["HH",0.5],["H",0.5],["B",0.3],["HB",0.5]];
+const ECALL_FUELMSD={Benzin:"Benzintank",Diesel:"Dieseltank",Elektro:"Hochvolt-Batterie",Hybrid:"Benzintank + Hochvolt-Batterie",Erdgas:"Erdgas (CNG) + Benzintank",Autogas:"Autogas (LPG) + Benzintank"};
+function ecWeighted(list){let t=list.reduce((a,x)=>a+x[1],0)*Math.random();for(const x of list){t-=x[1];if(t<=0)return x[0]}return list[0][0]}
+function ecLetters(n,set="ABCDEFGHJKLMNPRSTUVWXYZ"){let s="";for(let i=0;i<n;i++)s+=set[Math.floor(Math.random()*set.length)];return s}
+function ecVin(wmi,year){const Y={2018:"J",2019:"K",2020:"L",2021:"M",2022:"N",2023:"P",2024:"R",2025:"S"};const c="ABCDEFGHJKLMNPRSTUVWXYZ0123456789";return wmi+ecLetters(6,c)+ecLetters(1,"0123456789X")+(Y[year]||"N")+ecLetters(1,c)+String(rint(0,999999)).padStart(6,"0")}
+function ecPlate(fuel){const k=ecWeighted(ECALL_PLATES);return `${k}-${ecLetters(rint(1,2))} ${rint(1,k.length>=3?999:9999)}${fuel==="Elektro"&&Math.random()<0.4?"E":""}`}
+function ecBearing(a,b){const toR=x=>x*Math.PI/180,y=Math.sin(toR(b[1]-a[1]))*Math.cos(toR(b[0])),x=Math.cos(toR(a[0]))*Math.sin(toR(b[0]))-Math.sin(toR(a[0]))*Math.cos(toR(b[0]))*Math.cos(toR(b[1]-a[1]));return (Math.atan2(y,x)*180/Math.PI+360)%360}
+function ecDirTxt(h){return ["N","NO","O","SO","S","SW","W","NW"][Math.round(h/45)%8]}
+function ecNearestTown(lat,lng){let best=null;for(const k of ["fri","whv"])for(const p of ECALL_PLACES[k]){const d=haversine(lat,lng,p[1],p[2]);if(!best||d<best.d)best={n:p[0],d,area:k}}return best}
+
+// Fahrzeug + Ereignis würfeln
+function ecMakeVehicle(){
+ const m=pick(ECALL_CARS), fuel=pick(m[5]), year=rint(2018,2025);
+ return {make:m[0],model:m[1],body:m[2],cls:m[4],fuel,msdFuel:ECALL_FUELMSD[fuel]||fuel,year,color:pick(ECALL_COLORS),vin:ecVin(m[3],year),plate:ecPlate(fuel)};
+}
+const ECALL_FALSE=[
+ {w:30,auto:false,k:"knopf",reason:"SOS-Taste versehentlich gedrückt",cb:()=>pick(["Oh, Entschuldigung – da bin ich wohl an den SOS-Knopf gekommen. Alles in Ordnung, ich fahre weiter.","Ach je, das war ich aus Versehen beim Brille-Suchen. Uns geht's gut."])},
+ {w:12,auto:false,k:"kind",reason:"Kind hat die SOS-Taste gedrückt",cb:()=>"Tut mir leid, meine Tochter hat von hinten auf den Knopf gedrückt. Es ist nichts passiert."},
+ {w:14,auto:false,k:"panne",reason:"Panne – Fahrer wollte Pannenhilfe",cb:()=>pick(["Ich hab einen Platten und stehe auf dem Seitenstreifen. Ich dachte, das ist der Pannendienst.","Mein Auto ist einfach ausgegangen, springt nicht mehr an. Verletzt ist keiner – ich brauche einen Abschleppwagen."])},
+ {w:8,auto:false,k:"werkstatt",reason:"Werkstatt hat das System getestet",cb:()=>"Hier Autohaus, Werkstatt – wir haben gerade das Notrufsystem geprüft, Entschuldigung, das sollte als Test laufen."},
+ {w:14,auto:true,k:"bordstein",reason:"Automatische Fehlauslösung (Bordstein/Schlagloch)",cb:()=>pick(["Ich bin gerade heftig über einen Bordstein gerumpelt – aber alles gut, kein Unfall.","Da war ein tiefes Schlagloch, hat ordentlich gekracht. Mir geht's gut, das Auto fährt noch."])},
+ {w:10,auto:false,k:"still",reason:"Versehentlich ausgelöst, Fahrzeug abgestellt – niemand im Auto",cb:()=>"(keine Antwort – im Hintergrund nur Stille, kein Motorgeräusch)"},
+ {w:12,auto:false,k:"zeuge",reason:"nur Blechschaden ohne Verletzte – kein Rettungsdienst nötig (Polizei)",cb:()=>"Mir ist beim Ausparken einer reingefahren, nur Blechschaden. Verletzt ist niemand, wir warten auf die Polizei."}
+];
+const ECALL_REAL=[
+ {w:22,k:"auffahr",desc:"Auffahrunfall",impact:"heck",bags:[],dv:[15,30],inj:[1,2],trap:0,cb:i=>`Mir ist jemand hinten drauf gefahren! Mein Nacken tut weh, ${i>1?"meinem Beifahrer auch":"sonst geht's"}.`},
+ {w:18,k:"baum",desc:"Pkw gegen Baum",impact:"front",bags:["Fahrer-Front","Beifahrer-Front","Kopf links"],dv:[45,75],inj:[1,2],trap:0.6,cb:()=>pick(["(keine Antwort – nur Stöhnen zu hören)","(keine Antwort)","Hilfe… ich komm nicht raus, mein Bein…"])},
+ {w:14,k:"graben",desc:"Pkw im Graben, überschlagen",impact:"dach",bags:["Fahrer-Front","Kopf links","Kopf rechts"],dv:[30,55],inj:[1,3],trap:0.4,rollover:true,cb:()=>pick(["Wir liegen auf dem Dach im Graben! Meine Frau blutet am Kopf!","(Kind weint im Hintergrund, keine klare Antwort)"])},
+ {w:16,k:"frontal",desc:"Frontalzusammenstoß",impact:"front",bags:["Fahrer-Front","Beifahrer-Front","Knie Fahrer"],dv:[50,80],inj:[2,4],trap:0.7,two:true,cb:()=>pick(["(keine Antwort)","Da ist uns einer entgegengekommen… ich kann mich nicht bewegen…"])},
+ {w:12,k:"seite",desc:"Seitenaufprall an Kreuzung/Einmündung",impact:"links",bags:["Seite","Kopf"],dv:[25,45],inj:[1,2],trap:0.3,cb:()=>"Uns ist einer in die Seite gefahren! Meine Schulter… und die Tür geht nicht auf."},
+ {w:10,k:"wild",desc:"Wildunfall",impact:"front",bags:["Fahrer-Front"],dv:[20,40],inj:[0,1],trap:0,cb:()=>"Ich hab ein Reh erwischt, der Airbag ist aufgegangen. Mir ist schwindelig, das Auto qualmt vorne."},
+ {w:8,k:"zeuge",desc:"Fahrer meldet Unfall vor sich (manuell ausgelöst)",manual:true,impact:null,bags:[],dv:[0,0],inj:[1,3],trap:0.3,cb:()=>"Vor mir hat sich gerade ein Auto überschlagen! Da liegt einer auf der Straße!"}
+];
+async function ecRoutePoint(area){
+ const own=ECALL_PLACES[area]||ECALL_PLACES.fri, all=[...ECALL_PLACES.fri,...ECALL_PLACES.whv,...ECALL_PLACES.out];
+ for(let tries=0;tries<3;tries++){
+   const a=pick(own); let b=pick(all); if(b[0]===a[0])b=pick(ECALL_PLACES.out);
+   const [from,to]=Math.random()<0.5?[a,b]:[b,a];
+   try{
+     const j=await (await fetch(`https://router.project-osrm.org/route/v1/driving/${from[2]},${from[1]};${to[2]},${to[1]}?overview=full&geometries=geojson&steps=true`)).json();
+     const r=j&&j.routes&&j.routes[0]; if(!r)continue;
+     const C=r.geometry.coordinates.map(x=>[x[1],x[0]]);
+     const ok=C.map((p,i)=>i).filter(i=>i>3&&i<C.length-1&&(()=>{const t=ecNearestTown(C[i][0],C[i][1]);return t&&t.area===area&&t.d<9})());
+     if(!ok.length)continue;
+     const i=pick(ok), p=C[i];
+     // 2 zurückliegende Positionen (ca. 100 m / 200 m vorher)
+     const back=[];let acc=0;for(let k=i-1;k>=0&&back.length<2;k--){acc+=haversine(C[k][0],C[k][1],C[k+1][0],C[k+1][1])*1000;if(acc>=100*(back.length+1))back.push(C[k])}
+     let road="",ref="";for(const lg of r.legs||[])for(const st of lg.steps||[]){const g=(st.geometry&&st.geometry.coordinates)||[];if(g.some(x=>Math.abs(x[1]-p[0])<1e-5&&Math.abs(x[0]-p[1])<1e-5)){road=st.name||road;ref=st.ref||ref}}
+     return {lat:p[0],lng:p[1],heading:ecBearing(C[Math.max(0,i-1)],p),trail:back,road,ref:String(ref).split(";")[0].trim(),toward:to[0],osrm:true};
+   }catch(e){}
+ }
+ // Fallback ohne Routing: bekannte Straßen, Richtung geschätzt
+ const r=pick(simAreaPool(SIM_ROADS,"town")), h=rint(0,179)*2, lat=r.c[0]+rnd(-0.002,0.002), lng=r.c[1]+rnd(-0.002,0.002);
+ const step=(d)=>[lat-Math.cos(h*Math.PI/180)*d/111320,lng-Math.sin(h*Math.PI/180)*d/(111320*Math.cos(lat*Math.PI/180))];
+ return {lat,lng,heading:h,trail:[step(100),step(200)],road:r.n.replace(/^auf der /,"").replace(/ in .*$/,""),ref:"",toward:"",osrm:false};
+}
+async function ecallCreate(opts={}){
+ const area=opts.area||(dispatchArea()==="whv"?"whv":dispatchArea()==="fri"?"fri":pick(["fri","whv"]));
+ const pos=opts.pos||await ecRoutePoint(area);
+ const isFalse=opts.isFalse!=null?opts.isFalse:Math.random()<ECALL_FALSE_RATE;
+ const veh=ecMakeVehicle(), t=new Date().toISOString(), town=ecNearestTown(pos.lat,pos.lng);
+ const spd=/^A/.test(pos.ref)?rint(95,140):/^B/.test(pos.ref)?rint(65,100):rint(30,60);
+ let e;
+ if(isFalse){
+   const f=ecWeighted(ECALL_FALSE.map(x=>[x,x.w]));
+   const pax=f.k==="still"?0:rint(1,f.k==="kind"?4:2);
+   e={auto:f.auto,pax,extra:f.auto&&Math.random()<0.6?{bags:[],impact:"front",dv:rint(4,9),rollover:false}:null,
+      truth:{real:false,reason:f.reason,cb:f.cb(),inj:0,trap:0},speed:f.k==="still"||f.k==="werkstatt"?0:spd};
+ }else{
+   const r=opts.realCase||ecWeighted(ECALL_REAL.map(x=>[x,x.w]));
+   const inj=rint(r.inj[0],r.inj[1]), trap=Math.random()<r.trap?1:0, pax=r.manual?rint(1,2):Math.max(1,Math.min(5,inj+(Math.random()<0.3?1:0)));
+   e={auto:!r.manual,pax,extra:r.manual?null:(Math.random()<0.75?{bags:r.bags,impact:r.k==="seite"?pick(["links","rechts"]):r.impact,dv:rint(r.dv[0],r.dv[1]),rollover:!!r.rollover}:null),
+      truth:{real:true,reason:r.desc,cb:typeof r.cb==="function"?r.cb(inj):r.cb,inj,trap,k:r.k},speed:spd,two:r.two};
+ }
+ const ec={id:"EC"+Date.now().toString().slice(-6)+rint(0,9),t,area:town?town.area:area,lat:pos.lat,lng:pos.lng,heading:Math.round(pos.heading/2)*2,
+   trail:pos.trail,trusted:Math.random()>0.08,road:pos.road,ref:pos.ref,toward:pos.toward,town:town?town.n:"",townKm:town?Math.round(town.d*10)/10:null,
+   auto:e.auto,test:false,veh,pax:e.pax,extra:e.extra,speed:e.speed,truth:e.truth,state:"neu",log:[],linked:opts.linked||null};
+ db.ecalls=db.ecalls||[]; db.ecalls.unshift(ec); if(db.ecalls.length>60)db.ecalls.length=60;
+ // Frontalzusammenstoß: das zweite Fahrzeug meldet sich kurz danach auch (Gegenrichtung)
+ if(e.two&&!opts.linked){
+   const p2={...pos,lat:pos.lat+rnd(-0.00015,0.00015),lng:pos.lng+rnd(-0.00015,0.00015),heading:(pos.heading+180)%360,trail:(pos.trail||[]).map(q=>[2*pos.lat-q[0],2*pos.lng-q[1]]),toward:""};
+   setTimeout(()=>ecallCreate({pos:p2,isFalse:false,realCase:ECALL_REAL.find(x=>x.k==="frontal"),linked:ec.id,area}),rint(8,25)*1000);
+ }
+ save(); toast(`📡 eCall eingegangen – ${ec.auto?"automatisch":"manuell"} ausgelöst · ${ecPlaceTxt(ec)}`);
+ if(currentPage==="ecall")bgRender("ecall"); else try{bgRender(currentPage)}catch(err){}
+ return ec;
+}
+function ecPlaceTxt(ec){const rd=[ec.ref,ec.road].filter(Boolean).join(" ")||"Straße unbekannt";return `${rd}${ec.toward?`, Fahrtrichtung ${ec.toward}`:""}${ec.town?` (bei ${ec.town})`:""}`}
+function ecLageText(ec){
+ const v=ec.veh, x=ec.extra;
+ const parts=[`${ec.auto?"Automatisch":"Manuell"} ausgelöster eCall`,ecPlaceTxt(ec),`${v.cls==="N1"?"Lkw ≤ 3,5 t":"Pkw"} ${v.body}, ${v.color}, ${v.make} ${v.model} (${v.fuel})`,`Insassen (Gurte): ${ec.pax}`];
+ if(x){parts.push(x.bags.length?`Airbags: ${x.bags.join(", ")}`:"keine Airbag-Auslösung");if(x.impact)parts.push(`Aufprall: ${{front:"vorne",heck:"hinten",links:"links",rechts:"rechts",dach:"Überschlag"}[x.impact]||x.impact}`);if(x.dv)parts.push(`Δv ca. ${x.dv} km/h`)}
+ if(["Elektro","Hybrid"].includes(v.fuel))parts.push("⚡ Hochvolt-Fahrzeug");
+ if(["Erdgas","Autogas"].includes(v.fuel))parts.push("⚠️ Gastank");
+ return parts.join(" · ");
+}
+// Rückruf ins Fahrzeug (Text, ohne Sprache)
+function ecallCallback(id){
+ const ec=(db.ecalls||[]).find(x=>x.id===id); if(!ec||ec._cbBusy)return;
+ ec._cbBusy=true; ec.log.push({t:new Date().toISOString(),q:"📞 Rückruf ins Fahrzeug",a:"… klingelt …"}); save(); render("ecall");
+ setTimeout(()=>{ec._cbBusy=false;ec.log[ec.log.length-1].a=ec.truth.cb;ec.called=true;save();if(currentPage==="ecall")render("ecall")},rint(3,7)*1000);
+}
+function ecallToCall(id){
+ const ec=(db.ecalls||[]).find(x=>x.id===id); if(!ec)return;
+ if(ec.callId){const c=allOpenCalls().find(x=>String(x.id)===String(ec.callId));if(c){if(db.currentCall!==c)try{activateCallById(c.id)}catch(e){}render("notruf");return}}
+ if(db.currentCall)parkCurrentCall();
+ const addr=ecPlaceTxt(ec), stamp=Date.now().toString();
+ const c={id:stamp.slice(-6),location:addr,lat:ec.lat,lng:ec.lng,geocodedAddress:addr,count:String(Math.max(1,ec.pax||1)),answers:{location:addr,event:"Verkehrsunfall (eCall)"},answerLabels:{},
+   history:[{q:"☎️ Über welche Nummer ist der Anruf eingegangen?",a:"eCall (Fahrzeugnotruf)"},{q:"📡 eCall-Daten",a:ecLageText(ec)},{q:"🚗 Fahrzeug",a:`${ec.veh.make} ${ec.veh.model}, ${ec.veh.color}, FIN ${ec.veh.vin}, Kennz. ${ec.veh.plate}`},...ec.log.filter(l=>!/klingelt/.test(l.a)).map(l=>({q:l.q,a:l.a}))],
+   keyword:"",suggestion:"",createdAt:new Date().toISOString(),phoneStart:Date.now(),callerNumber:"eCall",ecallId:ec.id};
+ db.currentCall=c; ec.state="einsatz"; ec.callId=c.id; ec.decidedAt=new Date().toISOString();
+ save(); render("notruf"); toast("Einsatz aus eCall angelegt – bitte Stichwort wählen und alarmieren");
+}
+function ecallDismiss(id){
+ const ec=(db.ecalls||[]).find(x=>x.id===id); if(!ec)return;
+ ec.state="fehl"; ec.decidedAt=new Date().toISOString(); save(); render("ecall");
+ toast(ec.truth.real?"⚠️ Achtung: Das war ein echter Unfall!":"✔️ Richtig – das war ein Fehlalarm");
+}
+function ecallSelect(id){ecSel=id;const ec=(db.ecalls||[]).find(x=>x.id===id);if(ec&&ec.state==="neu"){ec.state="gesehen";save()}render("ecall")}
+let ecSel=null, ecMap=null;
+function ecallOpenCount(){return (db.ecalls||[]).filter(x=>x.state==="neu"||x.state==="gesehen").length}
+// Lagemeldung der ersten eintreffenden Einheit (Status 4) aus dem tatsächlichen Geschehen
+function ecallArrivalTick(){
+ for(const c of allOpenCalls()){
+   if(!c.ecallId||c._ecLage)continue;
+   const ec=(db.ecalls||[]).find(x=>x.id===c.ecallId); if(!ec)continue;
+   const u=(c.alarmedUnits||[]).map(id=>db.units.find(x=>String(x.id)===String(id))).find(u=>u&&String(u.status)==="4"); if(!u)continue;
+   c._ecLage=true; const T=ec.truth;
+   const txt=T.real?`Lage: ${T.reason}. ${T.inj?`${T.inj} Verletzte`:"keine Verletzten"}${T.trap?", 1 Person eingeklemmt":""}.`:`Lage: kein Unfall – ${T.reason}. Keine Verletzten, Einsatzabbruch möglich.`;
+   try{crewSds(u,c,txt)}catch(e){(c.history=c.history||[]).push({q:`📟 ${unitLabel(u)}`,a:txt})}
+   return true;
+ }
+ return false;
+}
+// automatische eCalls (Übung)
+function ecallAutoTick(now){
+ if(IS_MONITOR||!db.ecallAuto)return;
+ if(!db.ecallNextAt){db.ecallNextAt=now+(-Math.log(1-Math.random()))*(db.ecallEveryMin||20)*60000;return}
+ if(now>=db.ecallNextAt){db.ecallNextAt=0;ecallCreate()}
+}
+function ecallToggleAuto(){db.ecallAuto=!db.ecallAuto;db.ecallNextAt=0;save();render("ecall");toast(db.ecallAuto?"📡 eCalls kommen ab jetzt zufällig":"📡 Automatische eCalls aus")}
+
+// ── Schematische Draufsicht (keine Herstellerzeichnung) ──
+function ecallCarSVG(ec){
+ const v=ec.veh, x=ec.extra||{}, body=v.body;
+ const L={Kleinwagen:170,Kompakt:185,Kombi:205,SUV:200,Transporter:230}[body]||190, W=body==="SUV"||body==="Transporter"?92:84;
+ const X=(140-W)/2, Y=(260-L)/2, red="#dc2626", bag="#f59e0b";
+ const imp=x.impact, zone={front:`<rect x="${X}" y="${Y}" width="${W}" height="${L*0.18}" rx="20" fill="${red}" opacity=".45"/>`,heck:`<rect x="${X}" y="${Y+L*0.82}" width="${W}" height="${L*0.18}" rx="20" fill="${red}" opacity=".45"/>`,
+   links:`<rect x="${X}" y="${Y+L*0.3}" width="${W*0.25}" height="${L*0.4}" fill="${red}" opacity=".45"/>`,rechts:`<rect x="${X+W*0.75}" y="${Y+L*0.3}" width="${W*0.25}" height="${L*0.4}" fill="${red}" opacity=".45"/>`,
+   dach:`<rect x="${X}" y="${Y}" width="${W}" height="${L}" rx="22" fill="${red}" opacity=".25"/>`}[imp]||"";
+ const seatsY=[Y+L*0.38,Y+L*0.6], seatXs=[[X+W*0.18,X+W*0.56],[X+W*0.1,X+W*0.38,X+W*0.66]];
+ let n=0, seats="";
+ seatXs.forEach((row,ri)=>row.forEach(sx=>{const on=n<(ec.pax||0);n++;seats+=`<rect x="${sx}" y="${seatsY[ri]}" width="${ri?W*0.24:W*0.26}" height="${L*0.12}" rx="5" fill="${on?"#2563eb":"#e5e7eb"}" stroke="#64748b" stroke-width="1"/>`}));
+ const bags=x.bags||[], has=r=>bags.some(b=>r.test(b));
+ const star=(cx,cy)=>`<circle cx="${cx}" cy="${cy}" r="7" fill="${bag}" stroke="#92400e" stroke-width="1.5"/>`;
+ let bg="";
+ if(has(/Fahrer-Front/))bg+=star(X+W*0.31,Y+L*0.33);
+ if(has(/Beifahrer-Front/))bg+=star(X+W*0.69,Y+L*0.33);
+ if(has(/Knie/))bg+=star(X+W*0.31,Y+L*0.37);
+ if(has(/Seite/)){bg+=star(X+6,Y+L*0.45);bg+=star(X+W-6,Y+L*0.45)}
+ if(has(/Kopf/)){bg+=`<line x1="${X+4}" y1="${Y+L*0.3}" x2="${X+4}" y2="${Y+L*0.72}" stroke="${bag}" stroke-width="5" stroke-linecap="round"/><line x1="${X+W-4}" y1="${Y+L*0.3}" x2="${X+W-4}" y2="${Y+L*0.72}" stroke="${bag}" stroke-width="5" stroke-linecap="round"/>`}
+ const hv=["Elektro","Hybrid"].includes(v.fuel), gas=["Erdgas","Autogas"].includes(v.fuel), tank=v.fuel!=="Elektro";
+ const energy=(hv?`<rect x="${X+W*0.12}" y="${Y+L*(v.fuel==="Elektro"?0.3:0.62)}" width="${W*0.76}" height="${L*(v.fuel==="Elektro"?0.42:0.12)}" fill="url(#hvp)" stroke="#ea580c" stroke-width="1.5" opacity=".9"/>`:"")
+   +(tank?`<rect x="${X+W*0.3}" y="${Y+L*0.75}" width="${W*0.4}" height="${L*0.06}" rx="3" fill="#334155"/>`:"")
+   +(gas?`<rect x="${X+W*0.2}" y="${Y+L*0.84}" width="${W*0.6}" height="${L*0.07}" rx="12" fill="#16a34a" stroke="#14532d"/>`:"");
+ return `<svg viewBox="0 0 140 260" width="140" height="260" style="flex-shrink:0">
+  <defs><pattern id="hvp" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="6" height="6" fill="#fed7aa"/><line x1="0" y1="0" x2="0" y2="6" stroke="#f97316" stroke-width="3"/></pattern></defs>
+  <text x="70" y="${Y-6}" text-anchor="middle" font-size="10" fill="#64748b">▲ vorne</text>
+  <rect x="${X-5}" y="${Y+L*0.14}" width="9" height="${L*0.12}" rx="3" fill="#1f2937"/><rect x="${X+W-4}" y="${Y+L*0.14}" width="9" height="${L*0.12}" rx="3" fill="#1f2937"/>
+  <rect x="${X-5}" y="${Y+L*0.72}" width="9" height="${L*0.12}" rx="3" fill="#1f2937"/><rect x="${X+W-4}" y="${Y+L*0.72}" width="9" height="${L*0.12}" rx="3" fill="#1f2937"/>
+  <rect x="${X}" y="${Y}" width="${W}" height="${L}" rx="${body==="Transporter"?10:22}" fill="#f8fafc" stroke="#0f172a" stroke-width="2"/>
+  ${energy}
+  <path d="M${X+8} ${Y+L*0.27} Q70 ${Y+L*0.2} ${X+W-8} ${Y+L*0.27} L${X+W-12} ${Y+L*0.33} L${X+12} ${Y+L*0.33}Z" fill="#bae6fd" stroke="#0f172a" stroke-width="1"/>
+  ${body==="Transporter"?"":`<path d="M${X+12} ${Y+L*0.8} L${X+W-12} ${Y+L*0.8} L${X+W-8} ${Y+L*0.86} Q70 ${Y+L*0.9} ${X+8} ${Y+L*0.86}Z" fill="#bae6fd" stroke="#0f172a" stroke-width="1"/>`}
+  ${seats}${zone}${bg}
+  ${x.rollover?`<text x="70" y="${Y+L*0.52}" text-anchor="middle" font-size="22">🔄</text>`:""}
+ </svg>`;
+}
+function ecallLegendHTML(ec){
+ const v=ec.veh;
+ return `<div style="font-size:12px;line-height:1.6">
+  <div><span style="display:inline-block;width:12px;height:12px;background:#2563eb;border-radius:3px;vertical-align:middle"></span> Sitz belegt (Gurt angelegt)</div>
+  ${ec.extra?`<div><span style="display:inline-block;width:12px;height:12px;background:#f59e0b;border-radius:50%;vertical-align:middle"></span> Airbag ausgelöst</div><div><span style="display:inline-block;width:12px;height:12px;background:#dc2626;opacity:.5;vertical-align:middle"></span> Aufprallbereich</div>`:""}
+  ${["Elektro","Hybrid"].includes(v.fuel)?`<div><span style="display:inline-block;width:12px;height:12px;background:#fed7aa;border:1px solid #ea580c;vertical-align:middle"></span> Hochvolt-Batterie (Lage schematisch)</div>`:""}
+  ${v.fuel!=="Elektro"?`<div><span style="display:inline-block;width:12px;height:12px;background:#334155;vertical-align:middle"></span> Kraftstofftank</div>`:""}
+  ${["Erdgas","Autogas"].includes(v.fuel)?`<div><span style="display:inline-block;width:12px;height:12px;background:#16a34a;vertical-align:middle"></span> Gastank (${v.fuel==="Erdgas"?"CNG":"LPG"})</div>`:""}
+  <div class="muted" style="margin-top:4px">Schematisch – Rettungskarte des Herstellers beachten.</div></div>`;
+}
+function ecStateBadge(ec){
+ const m={neu:["NEU","#dc2626"],gesehen:["offen","#f59e0b"],einsatz:["Einsatz","#2563eb"],fehl:["kein Einsatz","#64748b"]}[ec.state]||["?","#64748b"];
+ return `<span style="background:${m[1]};color:#fff;border-radius:6px;padding:1px 7px;font-size:11px;font-weight:800">${m[0]}</span>`;
+}
+function ecallPage(){
+ const list=db.ecalls||[];
+ if(!ecSel||!list.some(x=>x.id===ecSel))ecSel=(list.find(x=>x.state==="neu"||x.state==="gesehen")||list[0]||{}).id||null;
+ const ec=list.find(x=>x.id===ecSel);
+ const t=s=>new Date(s).toLocaleTimeString("de-DE",{hour:"2-digit",minute:"2-digit",second:"2-digit"});
+ const items=list.slice(0,30).map(x=>`<div onclick="ecallSelect('${x.id}')" style="cursor:pointer;padding:8px 10px;border-radius:10px;margin-bottom:6px;border:2px solid ${x.id===ecSel?"#2563eb":"var(--line,#e5e7eb)"};${x.state==="neu"?"background:#fef2f2":""}">
+   <div class="row between" style="gap:6px"><b>${t(x.t)}</b>${ecStateBadge(x)}</div>
+   <div style="font-size:13px">${x.auto?"🅰️ automatisch":"🖐️ manuell"} · ${esc([x.ref,x.road].filter(Boolean).join(" ")||"–")}</div>
+   <div class="muted" style="font-size:12px">${esc(x.veh.make)} ${esc(x.veh.model)} · ${esc(x.veh.plate)}${x.linked?" · 🔗 2. Fahrzeug":""}</div></div>`).join("")||`<p class="muted">Noch keine eCalls.</p>`;
+ let det="";
+ if(ec){
+   const v=ec.veh, x=ec.extra, decided=ec.state==="einsatz"||ec.state==="fehl";
+   const row=(k,val)=>`<tr><td class="muted" style="padding:3px 8px 3px 0;white-space:nowrap;vertical-align:top">${k}</td><td style="padding:3px 0"><b>${val}</b></td></tr>`;
+   const truth=decided?`<div style="margin-top:10px;padding:10px;border-radius:10px;background:${ec.truth.real?(ec.state==="fehl"?"#fee2e2":"#dcfce7"):(ec.state==="einsatz"?"#fef9c3":"#dcfce7")}">
+     <b>Auflösung (Übung):</b> ${ec.truth.real?`Echter Unfall – ${esc(ec.truth.reason)}, ${ec.truth.inj} Verletzte${ec.truth.trap?", 1 eingeklemmt":""}.`:`Fehlalarm – ${esc(ec.truth.reason)}.`}
+     ${ec.truth.real&&ec.state==="fehl"?" ⚠️ Hier hätte ein Einsatz angelegt werden müssen.":""}${!ec.truth.real&&ec.state==="einsatz"?" Einsatz war nicht nötig – bei echten eCalls ohne Rückmeldung aber trotzdem richtig, lieber einmal zu viel.":""}</div>`:"";
+   det=`<div class="card">
+    <div class="row between" style="gap:8px;flex-wrap:wrap"><h2 style="margin:0">📡 eCall ${esc(ec.id)} ${ecStateBadge(ec)}</h2><span class="muted">${new Date(ec.t).toLocaleString("de-DE")}</span></div>
+    <div style="margin:8px 0;padding:8px 10px;border-radius:10px;background:#eff6ff;font-size:14px"><b>Lagebild:</b> ${esc(ecLageText(ec))}</div>
+    <div id="ecMap" style="height:max(440px,calc(100vh - 230px));border-radius:12px;margin:8px 0"></div>
+    <div style="display:flex;gap:14px;flex-wrap:wrap;align-items:flex-start">
+     <div style="display:flex;gap:10px;align-items:flex-start">${ecallCarSVG(ec)}${ecallLegendHTML(ec)}</div>
+     <div style="flex:1;min-width:260px"><table style="font-size:13px;border-collapse:collapse;width:100%">
+      ${row("Auslösung",ec.auto?"automatisch":"manuell (SOS-Taste)")}
+      ${row("Testanruf","nein")}
+      ${row("Fahrzeugklasse",v.cls==="N1"?"N1 – Lkw bis 3,5 t":"M1 – Pkw")}
+      ${row("FIN",`<span style="font-family:monospace">${esc(v.vin)}</span>`)}
+      ${row("Energiespeicher",esc(v.msdFuel))}
+      ${row("Position",`${ec.lat.toFixed(5)}, ${ec.lng.toFixed(5)} ${ec.trusted?"✅ vertrauenswürdig":"⚠️ nicht vertrauenswürdig"}`)}
+      ${row("Fahrtrichtung",`${ec.heading}° (${ecDirTxt(ec.heading)})${ec.toward?` – Richtung ${esc(ec.toward)}`:""}`)}
+      ${row("Straße",esc([ec.ref,ec.road].filter(Boolean).join(" ")||"–"))}
+      ${row("Insassen",`${ec.pax} (angelegte Gurte)`)}
+      <tr><td colspan="2" style="padding-top:8px;font-size:11px" class="muted">Zusatzdaten Hersteller (nicht in jedem eCall):</td></tr>
+      ${x?row("Airbags",x.bags.length?esc(x.bags.join(", ")):"keine ausgelöst")+row("Aufprall",esc({front:"vorne",heck:"hinten",links:"links",rechts:"rechts",dach:"Überschlag"}[x.impact]||"–"))+row("Δv",`ca. ${x.dv} km/h`)+(x.rollover?row("Überschlag","ja"):""):row("Zusatzdaten","keine übertragen")}
+      <tr><td colspan="2" style="padding-top:8px;font-size:11px" class="muted">Weitere Angaben (Übung, nicht im eCall-Datensatz):</td></tr>
+      ${row("Fahrzeug",`${esc(v.make)} ${esc(v.model)}, ${esc(v.color)}, Bj. ${v.year}`)}
+      ${row("Kennzeichen",`<span style="border:2px solid #111;border-radius:4px;padding:0 6px;font-family:monospace;background:#fff;color:#111">${esc(v.plate)}</span>`)}
+     </table></div></div>
+    ${ec.log.length?`<div style="margin-top:10px">${ec.log.map(l=>`<div style="padding:6px 8px;border-radius:8px;background:#f1f5f9;margin-top:4px;font-size:13px"><b>${esc(l.q)}:</b> ${esc(l.a)}</div>`).join("")}</div>`:""}
+    <div class="row" style="gap:8px;margin-top:12px;flex-wrap:wrap">
+     ${ec.state==="einsatz"?`<button class="primary" onclick="ecallToCall('${ec.id}')">➡️ Zum Einsatz</button>`:`<button class="primary" onclick="ecallToCall('${ec.id}')">🚨 Einsatz anlegen</button>`}
+     <button onclick="ecallCallback('${ec.id}')" ${ec._cbBusy?"disabled":""}>📞 Rückruf ins Fahrzeug</button>
+     ${decided?"":`<button onclick="ecallDismiss('${ec.id}')">✖ Kein Einsatz (Fehlalarm)</button>`}
+    </div>${truth}</div>`;
+ }
+ document.getElementById("app").innerHTML=`<div class="card"><div class="row between" style="gap:8px;flex-wrap:wrap">
+   <div><h2 style="margin:0">📡 eCall</h2><p class="muted" style="margin:2px 0 0;font-size:13px">Automatische Notrufe aus Fahrzeugen – hier nur die Daten, ohne Sprachverbindung. In der Übung sind ca. 52 % Fehlalarme.</p></div>
+   <div class="row" style="gap:6px"><button class="${db.ecallAuto?"primary":""}" onclick="ecallToggleAuto()">${db.ecallAuto?"🎲 Zufällig: AN":"🎲 Zufällig: AUS"}</button><button onclick="ecallCreate().then(e=>{ecSel=e.id;render('ecall')})">＋ eCall jetzt</button></div></div></div>
+  <div style="display:grid;grid-template-columns:minmax(220px,300px) minmax(0,1fr);gap:12px;align-items:start">
+   <div class="card" style="max-height:80vh;overflow:auto">${items}</div><div style="min-width:0">${det}</div></div>`;
+ if(ec)setTimeout(()=>ecallDrawMap(ec),0);
+}
+function ecallDrawMap(ec){
+ const el=document.getElementById("ecMap"); if(!el||typeof L==="undefined")return;
+ try{if(ecMap)ecMap.remove()}catch(e){}
+ ecMap=L.map("ecMap").setView([ec.lat,ec.lng],16);
+ L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:19,attribution:"© OpenStreetMap"}).addTo(ecMap);
+ const pts=[...(ec.trail||[]).slice().reverse(),[ec.lat,ec.lng]];
+ if(pts.length>1)L.polyline(pts,{color:"#2563eb",weight:4,dashArray:"6 6"}).addTo(ecMap);
+ (ec.trail||[]).forEach((p,i)=>L.circleMarker(p,{radius:4,color:"#2563eb",fillOpacity:1}).bindTooltip(`Position ${i?"-2":"-1"}`).addTo(ecMap));
+ L.circle([ec.lat,ec.lng],{radius:ec.trusted?25:250,color:ec.trusted?"#2563eb":"#f59e0b",fillOpacity:.08,weight:1}).addTo(ecMap);
+ const ic=L.divIcon({className:"",iconSize:[34,34],iconAnchor:[17,17],html:`<div style="width:34px;height:34px;border-radius:50%;background:#dc2626;border:3px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,.4);display:flex;align-items:center;justify-content:center;transform:rotate(${ec.heading}deg)"><span style="color:#fff;font-size:18px;line-height:1">▲</span></div>`});
+ L.marker([ec.lat,ec.lng],{icon:ic}).bindTooltip(`${ec.veh.make} ${ec.veh.model} – ${ec.heading}° ${ecDirTxt(ec.heading)}`).addTo(ecMap);
+ for(const o of (db.ecalls||[]))if(o.id!==ec.id&&(o.state==="neu"||o.state==="gesehen")&&haversine(o.lat,o.lng,ec.lat,ec.lng)<5)L.circleMarker([o.lat,o.lng],{radius:7,color:"#dc2626"}).bindTooltip(`eCall ${o.id}`).addTo(ecMap);
+}
 // alle 2 s: MANV-Rückmeldungen, BR durch OrgL, Landeplatz, Einsätze automatisch abschließen
 function callTick(){
  const now=Date.now(); let changed=false;
  if(db.cloud?.enabled)for(const c of allOpenCalls()){if(!c.manvPatients)continue;const h=(c.manvPatients||[]).map(p=>`${p.n}:${p.sk}:${p.unit||""}:${p.care?1:0}`).join("|");if(h!==c._manvPushH){c._manvPushH=h;setTimeout(()=>pushCallCloud(c),0)}} // v5.89
  try{if(bigEventTick(now))changed=true}catch(e){console.warn(e)} // v5.66 Großveranstaltung
+ try{ecallAutoTick(now);if(ecallArrivalTick())changed=true}catch(e){console.warn(e)} // v5.95 eCall
  for(const c of allOpenCalls()){
    if(c.kt||c.mergedInto||(c.deskId&&c.deskId!==DEVICE_ID))continue;
    const us=callUnits(c);
