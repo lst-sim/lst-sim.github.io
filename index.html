@@ -231,7 +231,7 @@ html[data-device="handy"] .fach-grid{grid-template-columns:1fr}
 <header id="topbar">
  <div class="tb-left">
   <span class="tb-brand">🚑 Leitstelle<span>.sim</span></span>
-  <span id="versionTag" class="tb-ver">v6.02</span>
+  <span id="versionTag" class="tb-ver">v6.03</span>
   <span id="syncState"></span>
   <a id="deskTag" href="#" onclick="renameDesk();return false" title="Name dieses Platzes (für „offen an …“) – antippen zum Ändern"></a>
  </div>
@@ -1873,6 +1873,7 @@ function useMyLocation(){
 
 
 function setUnitStatus(u,status){
+ if(String(status)==="7"){try{const cc=findUnitCall(u);if(cc)cc._txAt=Date.now()}catch(e){}} // v6.03: merkt sich, dass aus dem Einsatz transportiert wird
  if(String(status)!=="3")delete u.shuttleFrom;
  const wasFree=["1","2"].includes(String(u.status));
  if(String(status)!=="3")delete u.route;
@@ -5756,6 +5757,7 @@ function crewTick(){
      }
      if(C.mode==="evacT"){if(now>=C.departAt){const keep={...C,arriveAt:now+C.drive*60000};setUnitStatus(u,"7");u.crew=keep;changed=true}continue} // v5.63
      if(C.mode==="care"){const P=(call&&call.manvPatients||[]).find(x=>x.n===C.patient);if(!P||P.sk!==4){delete u.crew;changed=true}continue} // v5.60
+     if(C.mode==="none"&&now>=C.doneAt&&!rtwMayFree(u,call)){C.doneAt=now+60000;if(!C.waitTx){C.waitTx=true;crewSds(u,call,"Kein eigener Patient – bleiben vor Ort, bis der Patient abtransportiert wird.");changed=true}continue} // v6.03
      if(C.mode==="none"&&now>=C.doneAt){crewSds(u,call,C.info&&C.info.noPatient?"Kein Patient vor Ort – Einsatzende, wieder einsatzbereit.":"Kein weiterer Patient für uns – Einsatzende, wieder einsatzbereit.");setUnitStatus(u,"1");delete u.crew;changed=true;continue}
      if(C.mode==="home"&&now>=C.doneAt){crewSds(u,call,`Pat. vor Ort versorgt, kein Transport notwendig (ambulant/Hausarzt). Einsatzende ${hhmm(now)} – wieder einsatzbereit.`);(call.history=call.history||[]).push({q:`🏠 ${u.opta||u.name}`,a:"Pat. vor Ort versorgt, kein Transport"});setUnitStatus(u,"1");delete u.crew;changed=true;continue}
      if(C.mode==="transport"&&C.hbo&&!C.hbo.done){
@@ -5821,6 +5823,13 @@ function crewTick(){
  }
  try{if(crewSurplusTick())changed=true}catch(e){console.warn(e)}
  if(changed){save();if(["leitstelle","mittel","ivena","ivenaZuweisungen","karte"].includes(currentPage))bgRender(currentPage)}
+}
+// v6.03: Ein RTW (bzw. KTW/NKTW …) vor Ort darf sich ohne eigenen Patienten nur frei melden, wenn ein anderes
+// Fahrzeug des Einsatzes den Patienten bereits transportiert (Status 7) – sonst bleibt er vor Ort.
+function rtwMayFree(u,call){
+ if(!u||!call||!CREW_TRANSPORT.has(u.type))return true;
+ const info=u.crew&&u.crew.info; if(info&&info.noPatient)return true;
+ return !!call._txAt||callUnits(call).some(x=>x!==u&&["7","8"].includes(String(x.status)));
 }
 // v5.48: nicht benötigte Fahrzeuge wieder frei (Status 1)
 //  • MANV: alle Patienten haben ein Rettungsmittel → weitere RTW/NEF/KTW/RTH (auch auf Anfahrt) frei
@@ -6403,6 +6412,7 @@ function crewSurplusTick(){
          if(MANV_AIR.has(u.type)&&manvTakeable(call,u,1,o=>!MANV_AIR.has(o.type)))continue; // v5.61: SK I noch am Boden → RTH übernimmt
          if(C&&(C.mode==="standby"||C.standby)&&String(u.status)==="4"){free(u,`MANV: alle Patienten versorgt – ${u.type} nicht mehr benötigt, frei Einsatzstelle.`);continue}
          if(u.type==="NEF"&&docNeed>0&&["3","4"].includes(st)){docNeed--;continue}
+         if(st==="4"&&CREW_TRANSPORT.has(u.type)&&!rtwMayFree(u,call))continue; // v6.03
          if(st==="3"||(st==="4"&&(!C||C.mode==="none"||C.nef))||st==="2")free(u,u.type==="NEF"?"MANV: genügend Notärzte vor Ort – NEF nicht mehr benötigt, frei Einsatzstelle.":"MANV: alle Patienten versorgt – nicht mehr benötigt, frei Einsatzstelle.");
        }
      }

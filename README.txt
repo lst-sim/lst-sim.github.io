@@ -1607,6 +1607,10 @@ Version 5.05:
   („a, b“ = a ODER b). Mit „🚑 NA-Indikation“ markierte Knöpfe ziehen weiterhin einen Notarzt.
 - Nur „Unauffällig“ (ohne weitere Befunde) zählt weiter als unauffälliges E (R0 möglich).
 
+Version 6.03:
+- RTW (und andere Transportfahrzeuge wie KTW) vor Ort ohne eigenen Patienten melden sich nur noch frei, wenn ein anderes Fahrzeug des Einsatzes den Patienten bereits transportiert (Status 7). Bis dahin bleiben sie vor Ort und melden das per SDS. Gilt auch beim MANV („alle Patienten versorgt“).
+- Ausnahme: kein Patient vor Ort. Abbestellungen auf der Anfahrt (Status 3) bleiben wie bisher.
+
 Version 6.02:
 - 116 117 → „Doch Notfall → Rettungsdienst“: Die Notrufabfrage für den Rettungsdienst muss jetzt komplett neu durchgeklickt werden (alle Fragen ab „Was ist passiert?“). Nur Rufnummer und Einsatzort bleiben stehen. Das gilt auch, wenn ein 112-Anruf vorher an den KV-Dienst übergeben wurde.
 
