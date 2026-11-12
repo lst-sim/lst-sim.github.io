@@ -132,6 +132,7 @@ select,input[type=text],input[type=password]{font:inherit;color:var(--ink);backg
 <div id="cross"></div>
 <div id="drawLayer"></div>
 <div id="drawBar">
+  <button class="c tag" data-c="#e10600" style="background:#e10600" aria-label="Einsatzstelle">ES</button>
   <button class="c sel tag" data-c="#ff7a00" style="background:#ff7a00" aria-label="Landeplatz">LP</button>
   <button class="c tag" data-c="#1e88e5" style="background:#1e88e5" aria-label="Behandlungsplatz">BHP</button>
   <button class="c tag" data-c="#6d4c41" style="background:#6d4c41" aria-label="Bereitstellungsraum">BR</button>
@@ -436,7 +437,8 @@ map.on("dragstart",()=>{if(follow){follow=false;$("bLoc").classList.remove("on")
 
 /* ================= Einsatzstelle & Nächstgelegene ================= */
 function startCross(mode){crossMode=mode;$("cross").style.display="block";sheetClose();
- sheetOpen(`<h2>${mode==="est"?"Einsatzstelle setzen":mode==="fixmove"?"Festen Punkt verschieben":mode==="fixnew"?"Festen Punkt setzen":"Markierung setzen"}</h2><div>Karte verschieben, bis das Fadenkreuz auf der Stelle liegt – oder lange auf die Karte tippen.</div><div class="row"><button class="pri" id="cOk">Hier setzen</button>${mode==="est"&&me?'<button id="cMe">Mein Standort</button>':""}<button id="cNo">Abbrechen</button></div>`);
+ sheetOpen(`<h2>${mode==="est"?"Einsatzstelle setzen":mode==="fixmove"?"Festen Punkt verschieben":mode==="fixnew"?"Festen Punkt setzen":"Markierung setzen"}</h2><div>Karte verschieben, bis das Fadenkreuz auf der Stelle liegt – oder lange auf die Karte tippen.</div><div class="row"><button class="pri" id="cOk">Hier setzen</button>${mode==="est"&&me?'<button id="cMe">Mein Standort</button>':""}${mode==="est"?'<button id="cArea">Als Fläche einzeichnen</button>':""}<button id="cNo">Abbrechen</button></div>`);
+ if($("cArea"))$("cArea").onclick=()=>{crossMode=null;$("cross").style.display="none";sheetClose();drawEstArea();};
  $("cOk").onclick=()=>{const c=map.getCenter();finishCross([c.lat,c.lng]);};$("cNo").onclick=()=>{crossMode=null;$("cross").style.display="none";sheetClose();};
  if($("cMe"))$("cMe").onclick=()=>finishCross(me.slice());}
 function finishCross(c){const m=crossMode;crossMode=null;$("cross").style.display="none";if(m==="est")setEst(c);else if(m==="fixmove"){const p=fixMove;fixMove=null;sheetClose();dbReq("/"+p.id,"PATCH",{c:[+c[0].toFixed(6),+c[1].toFixed(6)],ts:Date.now()}).then(()=>status("Verschoben.")).catch(fbErr);}else if(m==="fixnew"){fixForm(null,c,startCross.t||"BR","");}else markHere(c[0],c[1]);}
@@ -454,7 +456,7 @@ function showNear(){if(!DATA){sheetOpen("<h2>Einsatzstelle</h2><div>Daten noch n
  const lzN=nearest(DATA.lz.filter(z=>z.cat==="lzN"),4),lzD=nearest(DATA.lz,4),heli=nearest(DATA.pts.filter(p=>p.cat==="heli"),2);
  const fx=nearest(FIX.filter(p=>p.c),5),pat=nearest(DATA.pts.filter(p=>p.cat==="pat"),4),kh=nearest(DATA.pts.filter(p=>p.cat==="kh"),3);
  window._near={};let i=0;const reg=(arr,f)=>arr.map(([x,d])=>{const k="n"+(i++);window._near[k]=()=>{map.setView(x.c,17);f(x);};return row(x,d,`_near.${k}()`);}).join("");
- sheetOpen(`<h2>Einsatzstelle</h2><div class="kv"><b>UTMREF</b><span>${mgrs(est[0],est[1])}</span>${me?`<b>Von mir</b><span>${fmtD(dist(me,est))} ${dirTxt(bearing(me,est))}</span>`:""}</div>
+ sheetOpen(`<h2>Einsatzstelle</h2><div class="kv"><b>UTMREF</b><span>${mgrs(est[0],est[1])}</span>${(()=>{const a=DRAW.find(x=>x.c===ES_COL&&x.a);return a?`<b>Fläche</b><span>${fmtA(measure(a.p,true).a)}, ca. ${Math.round(measure(a.p,true).s)} × ${Math.round(measure(a.p,true).l)} m</span>`:""})()}${me?`<b>Von mir</b><span>${fmtD(dist(me,est))} ${dirTxt(bearing(me,est))}</span>`:""}</div>
  <div class="row"><button onclick="copyTxt('${mgrs(est[0],est[1])}')">UTMREF kopieren</button><button id="eMove">Neu setzen</button><button id="eDel">Entfernen</button></div>
  <h3>Zur Einsatzstelle fahren</h3>${navBtns(est)}
  <h3>Landeplatz Tag + Nacht (≥35×70 m)</h3>${reg(lzN,showLZ)||"<div class='note'>keine</div>"}
@@ -464,7 +466,7 @@ function showNear(){if(!DATA){sheetOpen("<h2>Einsatzstelle</h2><div>Daten noch n
  ${fx.length?`<h3>Feste Punkte</h3>${reg(fx,showFix)}`:""}
  <h3>Krankenhaus (Luftlinie)</h3>${reg(kh,showPt)||"<div class='note'>keine im Kreis</div>"}
  <div class="note">Entfernungen Luftlinie. Marker „ES“ ist verschiebbar. ⚠ = Freileitung oder WEA in der Nähe.</div>`);
- $("eMove").onclick=()=>startCross("est");$("eDel").onclick=()=>{map.removeLayer(estMk);estMk=null;est=null;$("bEst").classList.remove("on");sheetClose();};}
+ $("eMove").onclick=()=>startCross("est");$("eDel").onclick=()=>{map.removeLayer(estMk);estMk=null;est=null;DRAW=DRAW.filter(x=>!(x.c===ES_COL&&x.a));saveDraw();renderDraw();$("bEst").classList.remove("on");sheetClose();};}
 
 /* ================= Eigene Markierungen (lokal gespeichert) ================= */
 const OWN_KEY="orgl-fri-own";let OWN=[];try{OWN=JSON.parse(localStorage.getItem(OWN_KEY)||"[]");}catch(e){}
@@ -509,7 +511,8 @@ const fmtA=a=>a>=10000?`${(a/10000).toFixed(2).replace(".",",")} ha`:`${Math.rou
 function measure(pts,area){const P=proj(pts[0]);const xy=pts.map(P);let len=0;for(let i=1;i<xy.length;i++)len+=Math.hypot(xy[i][0]-xy[i-1][0],xy[i][1]-xy[i-1][1]);
  if(!area)return{len};const close=Math.hypot(xy[0][0]-xy[xy.length-1][0],xy[0][1]-xy[xy.length-1][1]);const [s,l]=mbr(xy);return{a:polyArea(xy),u:len+close,s,l};}
 // Malfarben mit Bedeutung (gleiche Farben wie die Kartenebenen)
-const COL_TYPE={"#ff7a00":"LP","#1e88e5":"BHP","#6d4c41":"BR"};const TYPE_COL={LP:"#ff7a00",BHP:"#1e88e5",BR:"#6d4c41"};
+const ES_COL="#e10600";
+const COL_TYPE={"#e10600":"ES","#ff7a00":"LP","#1e88e5":"BHP","#6d4c41":"BR"};const TYPE_COL={LP:"#ff7a00",BHP:"#1e88e5",BR:"#6d4c41"};
 // Geschlossene Form (Ende nahe am Anfang) = Fläche, auch im Linien-Modus
 function isLoop(pts){if(pts.length<4)return false;const len=measure(pts,false).len;return len>40&&dist(pts[0],pts[pts.length-1])<=Math.max(30,0.2*len);}
 function measShort(d){const m=measure(d.p,d.a);const t=COL_TYPE[d.c];return d.a?`${t?t+" ":""}${fmtA(m.a)}<br><span style="font-weight:400">ca. ${Math.round(m.s)} × ${Math.round(m.l)} m</span>`:(t?t+" ":"")+fmtD(m.len);}
@@ -532,7 +535,7 @@ renderDraw();
 const dl=$("drawLayer");
 function setDrawUI(){dl.style.display=(!dErase&&!dPan)?"block":"none";$("dErase").classList.toggle("on",dErase);$("dPan").classList.toggle("on",dPan);$("dMode").textContent=dArea?"Fläche":"Linie";}
 $("bDraw").onclick=()=>{sheetClose();dErase=false;dPan=false;$("drawBar").style.display="flex";$("dock").style.display="none";$("bDraw").classList.add("on");if(follow){follow=false;$("bLoc").classList.remove("on");}setDrawUI();status("Malmodus: mit dem Finger zeichnen. ✋ zum Verschieben der Karte.");};
-$("dDone").onclick=()=>{adminDraw=null;$("drawBar").style.display="none";$("dock").style.display="";dl.style.display="none";dErase=false;$("bDraw").classList.remove("on");status("Malmodus beendet.");};
+$("dDone").onclick=()=>{adminDraw=null;esDraw=false;$("drawBar").style.display="none";$("dock").style.display="";dl.style.display="none";dErase=false;$("bDraw").classList.remove("on");status("Malmodus beendet.");};
 document.querySelectorAll("#drawBar .c").forEach(b=>b.onclick=()=>{document.querySelectorAll("#drawBar .c").forEach(x=>x.classList.remove("sel"));b.classList.add("sel");dColor=b.dataset.c;dErase=false;dPan=false;setDrawUI();});
 $("dMode").onclick=()=>{dArea=!dArea;dErase=false;dPan=false;setDrawUI();};
 $("dPan").onclick=()=>{dPan=!dPan;dErase=false;setDrawUI();};
@@ -543,7 +546,11 @@ let lastPx=null;
 dl.addEventListener("pointerdown",e=>{if(!e.isPrimary)return;e.preventDefault();dl.setPointerCapture(e.pointerId);const ll=map.mouseEventToLatLng(e);curPts=[[ll.lat,ll.lng]];lastPx=[e.clientX,e.clientY];
  cur=L.polyline(curPts,{color:dColor,weight:8,opacity:1,lineCap:"round",lineJoin:"round",interactive:false}).addTo(map);});
 dl.addEventListener("pointermove",e=>{if(!cur||!e.isPrimary)return;e.preventDefault();if(Math.hypot(e.clientX-lastPx[0],e.clientY-lastPx[1])<3)return;lastPx=[e.clientX,e.clientY];const ll=map.mouseEventToLatLng(e);curPts.push([ll.lat,ll.lng]);cur.setLatLngs(curPts);});
-function endStroke(){if(!cur)return;map.removeLayer(cur);cur=null;if(adminDraw&&curPts.length>=3){const pts=curPts.map(p=>[+p[0].toFixed(6),+p[1].toFixed(6)]),t=adminDraw.t;adminDraw=null;curPts=null;$("dDone").click();fixForm(null,centroid(pts),t,"",pts);return;}if(curPts.length>=2){DRAW.push({c:dColor,a:(dArea&&curPts.length>=3)||isLoop(curPts),p:curPts.map(p=>[+p[0].toFixed(6),+p[1].toFixed(6)])});saveDraw();renderDraw();}curPts=null;}
+let esDraw=false;
+function drawEstArea(){esDraw=true;$("bDraw").click();dArea=true;dColor=ES_COL;document.querySelectorAll("#drawBar .c").forEach(x=>x.classList.toggle("sel",x.dataset.c===dColor));setDrawUI();status("Einsatzstelle: Fläche mit dem Finger umfahren.",true);}
+function estFromDrawing(d){DRAW=DRAW.filter(x=>x===d||x.c!==ES_COL||!x.a);saveDraw();renderDraw();setEst(centroid(d.p));}
+function endStroke(){if(!cur)return;map.removeLayer(cur);cur=null;
+ if(curPts&&curPts.length>=3&&(esDraw||(dColor===ES_COL&&(dArea||isLoop(curPts))))){const d={c:ES_COL,a:true,p:curPts.map(p=>[+p[0].toFixed(6),+p[1].toFixed(6)])};curPts=null;DRAW.push(d);const wasEs=esDraw;esDraw=false;if(wasEs)$("dDone").click();estFromDrawing(d);return;}if(adminDraw&&curPts.length>=3){const pts=curPts.map(p=>[+p[0].toFixed(6),+p[1].toFixed(6)]),t=adminDraw.t;adminDraw=null;curPts=null;$("dDone").click();fixForm(null,centroid(pts),t,"",pts);return;}if(curPts.length>=2){DRAW.push({c:dColor,a:(dArea&&curPts.length>=3)||isLoop(curPts),p:curPts.map(p=>[+p[0].toFixed(6),+p[1].toFixed(6)])});saveDraw();renderDraw();}curPts=null;}
 dl.addEventListener("pointerup",endStroke);dl.addEventListener("pointercancel",endStroke);
 
 /* ================= Hinweise ================= */
