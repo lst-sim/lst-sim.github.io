@@ -231,7 +231,7 @@ html[data-device="handy"] .fach-grid{grid-template-columns:1fr}
 <header id="topbar">
  <div class="tb-left">
   <span class="tb-brand">🚑 Leitstelle<span>.sim</span></span>
-  <span id="versionTag" class="tb-ver">v5.96</span>
+  <span id="versionTag" class="tb-ver">v5.97</span>
   <span id="syncState"></span>
   <a id="deskTag" href="#" onclick="renameDesk();return false" title="Name dieses Platzes (für „offen an …“) – antippen zum Ändern"></a>
  </div>
@@ -439,6 +439,10 @@ const DEFAULTS_FRI_WHV={
   // v5.67: Leitende Notärzte kommen getrennt vom OrgL mit dem Privat-PKW (nicht ortbar). Echte
   // LNA-Gruppe und Rufnamen sind nicht hinterlegt → zwei Übungs-LNA, Wohnort zufällig im Landkreis.
   {id:2201,name:"LNA 1",opta:"LNA Friesland 1",type:"LNA",org:"Rettungsdienst",location:"Friesland",status:"2",crew:"1",skills:"Leitender Notarzt (Privat-PKW, nicht ortbar)",verified:"Übungsannahme – echte LNA-Gruppe/Rufnamen nicht hinterlegt"},
+  // v5.97: Ärztlicher Bereitschaftsdienst (KVN) – Hausbesuchsdienst. Standort Bereitschaftsdienstpraxis am Klinikum
+  // Wilhelmshaven (zuständig auch für Varel/Jade/Bockhorn/Zetel laut St. Johannes-Hospital Varel). Anzahl/Fahrzeuge nicht verifiziert.
+  {id:2501,name:"ÄBD 1",opta:"ÄBD Wilhelmshaven/Friesland 1",type:"ÄBD",org:"KV-Dienst",location:"Wilhelmshaven",homeLat:53.54582,homeLng:8.08495,status:"2",crew:"2",skills:"Ärztlicher Bereitschaftsdienst – Hausbesuche (Arzt + Fahrer)",verified:"Übungsannahme – Standort BD-Praxis WHV belegt, Fahrdienst/Anzahl nicht verifiziert"},
+  {id:2502,name:"ÄBD 2",opta:"ÄBD Wilhelmshaven/Friesland 2",type:"ÄBD",org:"KV-Dienst",location:"Wilhelmshaven",homeLat:53.54582,homeLng:8.08495,status:"2",crew:"2",skills:"Ärztlicher Bereitschaftsdienst – Hausbesuche (Arzt + Fahrer)",verified:"Übungsannahme – Standort BD-Praxis WHV belegt, Fahrdienst/Anzahl nicht verifiziert"},
   {id:2202,name:"LNA 2",opta:"LNA Friesland 2",type:"LNA",org:"Rettungsdienst",location:"Friesland",status:"2",crew:"1",skills:"Leitender Notarzt (Privat-PKW, nicht ortbar)",verified:"Übungsannahme – echte LNA-Gruppe/Rufnamen nicht hinterlegt"},
 
   {id:201,name:"12-11-01",opta:"Florian Friesland 12-11-1",type:"ELW",org:"Feuerwehr",location:"Varel",status:"2",crew:"6",skills:"Einsatzleitung",verified:"Feuerwehr Varel"},
@@ -1345,7 +1349,7 @@ function statusOptionsFor(u){
 const NAV_PAGES=NAV_PAGES_ALL;
 function navHTML(active){
  const pages=currentScenarioId==="fri-whv"?NAV_PAGES:NAV_PAGES.filter(x=>x[0]!=="nachbarLks");
- return `<nav style="--navbtn:min(70px,calc((100vh - 110px) / ${pages.length} - 10px));position:static;padding:0;background:transparent;display:flex;flex-direction:column;gap:10px;flex:1;justify-content:space-between;align-items:center">${pages.map(x=>{
+ return `<nav style="--navbtn:min(70px,calc((100vh - 190px) / ${pages.length} - 10px));position:static;padding:0;background:transparent;display:flex;flex-direction:column;gap:10px;flex:1;justify-content:space-between;align-items:center">${pages.map(x=>{
    const icon=x[1].split(" ")[0];
    const nEc=x[0]==="ecall"?ecallOpenCount():0;
    const content=x[0]==="aao"?`<span style="font-weight:800;font-size:15px">AAO</span>`:`<span style="font-size:min(36px,calc(var(--navbtn,70px) * .5));line-height:1">${icon}</span>`;
@@ -1397,6 +1401,7 @@ function render0(page="leitstelle"){
  }
  if(page==="leitstelle")alignFunkBar();
  renderCallerBanner();
+ try{ecallBannerRefresh()}catch(e){}
 }
 
 let leafletMap=null, incidentMarker=null, selectedMapLocation=null;
@@ -4049,6 +4054,7 @@ function notruf(){
    <div style="height:6px;background:#eef2f6;border-radius:999px;margin-top:4px;overflow:hidden"><div style="height:100%;width:${Math.round(100*answeredCount/QS.length)}%;background:#e30613"></div></div>`:""}
    <div style="margin-top:15px">${outOfArea?`<div class="suggest" style="background:#fff8e1;border-color:#f0c419"><h2>⚠️ Vermutlich nicht zuständig</h2><p>Der Einsatzort scheint auf dem Gebiet der Stadt Wilhelmshaven oder außerhalb des Landkreises Friesland zu liegen (${esc(c.geocodedAddress||c.location)}).</p><div class="row" style="margin:10px 0"><button class="primary" onclick="weiterverbindenCall()">📞 Weiterverbinden</button><button onclick="overrideJurisdiction()">Trotzdem hier bearbeiten</button></div></div>`:(q?qsWithPrefill(q):(c.answers.callType&&c.answers.callType!=="112"?`<div class="suggest"><h2>☎️ Weiterleitung</h2><p>${esc(c.suggestion)}</p><p class="muted">Kein Fall für diese Rettungsleitstelle – kein Alarmvorschlag, keine weiteren Fragen nötig.</p><button onclick="render('leitstelle')">Zur Übersicht</button></div>`:`<div class="suggest"><h2>✅ Abfrage abgeschlossen</h2><p>${c.suggestion||"Kein Alarmvorschlag verfügbar."}</p><div class="row" style="margin:10px 0"><button class="primary" onclick="prepareAlarm()">🚨 Vorschlag alarmieren</button><button onclick="render('karte')">🗺️ Notfallort prüfen</button></div><button onclick="toggleNotrufDetails()">🔍 ${notrufDetailsVisible?"Details verbergen":"Interne Codes & Rohdaten anzeigen"}</button><div class="${notrufDetailsVisible?"":"hidden"}" style="margin-top:10px"><hr><b>Einsatzstichwort (intern)</b><div class="big">${esc(c.keyword)}</div><b>Antworten (Rohdaten)</b><pre style="white-space:pre-wrap">${esc(JSON.stringify(c.answers,null,2))}</pre></div></div>`))}</div>
   </div>
+  ${kvPanelHTML(c)}
   ${c.sim?`<div id="simChatBox">${simChatHTML(c)}</div>`:""}
   <div class="card"><h3>Abfrageverlauf</h3>${c.history.length?c.history.map(x=>`<div style="padding:7px 0;border-bottom:1px solid var(--line)"><b>${esc(x.q)}</b><br>${esc(x.a)}</div>`).join(""):"<span class='muted'>Noch keine Antworten.</span>"}</div>
  </section>
@@ -4379,7 +4385,7 @@ function qsPrefill(id){
 }
 function questionHTML(q){
  const [id,label,type]=q;
- if(qsIsHidden(db.currentCall,id)&&!(id!=="callType"&&db.currentCall?.answers?.callType&&db.currentCall.answers.callType!=="112")){setTimeout(()=>answer(id,"nicht erhoben",true),0);return `<span class="muted">Ausgeblendete Frage – wird übersprungen …</span>`}
+ if(qsIsHidden(db.currentCall,id)&&!(id!=="callType"&&db.currentCall?.answers?.callType&&db.currentCall.answers.callType!=="112")&&!(db.currentCall?.answers?.callType==="116117"&&["location","event"].includes(id))){setTimeout(()=>answer(id,"nicht erhoben",true),0);return `<span class="muted">Ausgeblendete Frage – wird übersprungen …</span>`}
  if(type==="ktType")return `<label>${label}</label><div class="answer">${["KT-Entlassung","KT-Verlegung","KT-Einweisung"].map(v=>`<button onclick="answer('ktType','${v}')">🚑 ${v}</button>`).join("")}</div>`;
  const c=db.currentCall, e=c?.answers?.event||"";
  const fire=e==="Feuer / Rauchentwicklung";
@@ -4393,7 +4399,9 @@ function questionHTML(q){
 
  // Kein 112-Notruf: Rest der Abfrage entfällt komplett, es wird nur weitergeleitet.
  const callType=c?.answers?.callType;
- if(id!=="callType" && callType && callType!=="112")
+ if(id!=="callType" && callType==="116117" && !["location","event"].includes(id))
+   return skip("entfällt – KV-Dienst"); // v5.97
+ if(id!=="callType" && callType && callType!=="112" && callType!=="116117")
    return skip("entfällt – Weiterleitung");
  if(type==="custom")return qsCustomHTML(q,c);
  if(!c?.kt&&qsMaskOf(id))return qsMaskHTML(c,qsMaskOf(id));
@@ -4799,6 +4807,7 @@ function evaluate(){
 function evaluate0(){
  const c=db.currentCall, a=c.answers, e=a.event||"";
 
+ if(a.callType==="116117"||c.kvd){kvEvaluate(c);return} // v5.97: KV-Dienst disponieren
  if(a.callType && a.callType!=="112"){
    const target=a.callType==="110"?"die Polizei (110)":"den Ärztlichen Bereitschaftsdienst (116 117)";
    c.keyword=a.callType==="110"?"WEITERLEITUNG – An 110":"WEITERLEITUNG – An 116 117";
@@ -6979,12 +6988,19 @@ async function ecallCreate(opts={}){
    trail:pos.trail,trusted:Math.random()>0.08,road:pos.road,ref:pos.ref,toward:pos.toward,town:town?town.n:"",townKm:town?Math.round(town.d*10)/10:null,
    auto:e.auto,test:false,veh,pax:e.pax,extra:e.extra,speed:e.speed,truth:e.truth,state:"neu",log:[],linked:opts.linked||null};
  db.ecalls=db.ecalls||[]; db.ecalls.unshift(ec); if(db.ecalls.length>60)db.ecalls.length=60;
- // Frontalzusammenstoß: das zweite Fahrzeug meldet sich kurz danach auch (Gegenrichtung)
- if(e.two&&!opts.linked){
-   const p2={...pos,lat:pos.lat+rnd(-0.00015,0.00015),lng:pos.lng+rnd(-0.00015,0.00015),heading:(pos.heading+180)%360,trail:(pos.trail||[]).map(q=>[2*pos.lat-q[0],2*pos.lng-q[1]]),toward:""};
-   setTimeout(()=>ecallCreate({pos:p2,isFalse:false,realCase:ECALL_REAL.find(x=>x.k==="frontal"),linked:ec.id,area}),rint(8,25)*1000);
+ // v5.97: Bei Unfällen melden sich manchmal mehrere Fahrzeuge (Unfallgegner, Auffahrkette, Zeuge im vorbeifahrenden Auto)
+ if(!isFalse&&!opts.linked){
+   const k=e.truth.k, mv=(m,hd)=>{const h=hd*Math.PI/180;return [pos.lat+Math.cos(h)*m/111320,pos.lng+Math.sin(h)*m/(111320*Math.cos(pos.lat*Math.PI/180))]};
+   const follow=[];
+   const near=(m,hd,newHead)=>{const [la,ln]=mv(m,hd);const nh=(newHead+360)%360;return {...pos,lat:la,lng:ln,heading:nh,toward:Math.abs(nh-pos.heading)<30?pos.toward:"",trail:[mv(m+100,nh+180),mv(m+200,nh+180)]}};
+   if(k==="frontal")follow.push({pos:near(4,pos.heading,pos.heading+180),rc:"frontal"});
+   if(k==="auffahr"&&Math.random()<0.5){follow.push({pos:near(6,pos.heading+180,pos.heading),rc:"auffahr"});if(Math.random()<0.3)follow.push({pos:near(12,pos.heading+180,pos.heading),rc:"auffahr"})}
+   if(k==="seite"&&Math.random()<0.5)follow.push({pos:near(5,pos.heading+90,pos.heading+(Math.random()<0.5?90:-90)),rc:"frontal"});
+   if(["baum","graben","frontal"].includes(k)&&Math.random()<0.3)follow.push({pos:near(rint(60,150),pos.heading+180,pos.heading),rc:"zeuge"});
+   follow.forEach((f,n)=>setTimeout(()=>ecallCreate({pos:f.pos,isFalse:false,realCase:ECALL_REAL.find(x=>x.k===f.rc),linked:ec.id,area}),rint(6,25)*1000*(n+1)));
  }
  save(); toast(`📡 eCall eingegangen – ${ec.auto?"automatisch":"manuell"} ausgelöst · ${ecPlaceTxt(ec)}`);
+ ecallVoiceOpen(ec); ecallBannerRefresh(); // v5.97: Sprechverbindung baut sich wie beim echten eCall automatisch auf
  if(currentPage==="ecall")bgRender("ecall"); else try{bgRender(currentPage)}catch(err){}
  return ec;
 }
@@ -7032,6 +7048,11 @@ function ecallSay(id,text){
 function ecallToCall(id){
  const ec=(db.ecalls||[]).find(x=>x.id===id); if(!ec)return;
  if(ec.callId){const c=allOpenCalls().find(x=>String(x.id)===String(ec.callId));if(c){if(db.currentCall!==c)try{activateCallById(c.id)}catch(e){}render("notruf");return}}
+ // v5.97: weiterer eCall zum selben Unfall → dem bestehenden Einsatz zuordnen
+ const rel=(db.ecalls||[]).filter(x=>x.id!==ec.id&&(x.id===ec.linked||x.linked===ec.id||(ec.linked&&x.linked===ec.linked))&&x.callId);
+ for(const r of rel){const c=allOpenCalls().find(x=>String(x.id)===String(r.callId));if(!c)continue;
+   (c.history=c.history||[]).push({q:"📡 Weiterer eCall zum selben Unfall",a:ecLageText(ec)});c.count=String(Math.max(Number(c.count)||1,(Number(c.count)||1)+(ec.pax||0)));
+   ec.state="einsatz";ec.callId=c.id;ec.decidedAt=new Date().toISOString();save();toast(`eCall dem Einsatz #${c.id} zugeordnet`);render("ecall");return}
  if(db.currentCall)parkCurrentCall();
  const addr=ecPlaceTxt(ec), stamp=Date.now().toString();
  const c={id:stamp.slice(-6),location:addr,lat:ec.lat,lng:ec.lng,geocodedAddress:addr,count:String(Math.max(1,ec.pax||1)),answers:{location:addr,event:"Verkehrsunfall (eCall)"},answerLabels:{},
@@ -7045,7 +7066,26 @@ function ecallDismiss(id){
  ec.state="fehl"; ec.decidedAt=new Date().toISOString(); save(); render("ecall");
  toast(ec.truth.real?"⚠️ Achtung: Das war ein echter Unfall!":"✔️ Richtig – das war ein Fehlalarm");
 }
-function ecallSelect(id){ecSel=id;const ec=(db.ecalls||[]).find(x=>x.id===id);if(ec&&ec.state==="neu"){ec.state="gesehen";save()}render("ecall")}
+function ecallSelect(id){ecSel=id;const ec=(db.ecalls||[]).find(x=>x.id===id);if(ec&&ec.state==="neu"){ec.state="gesehen";save()}render("ecall");ecallBannerRefresh();setTimeout(()=>document.getElementById("ecSay")?.focus(),50)}
+// Automatische Sprechverbindung beim Eingang: meldet sich jemand – oder eben nicht
+function ecallVoiceOpen(ec){
+ const e={t:new Date().toISOString(),q:"🔊 Sprechverbindung (automatisch)",a:"… Verbindung wird aufgebaut …"}; ec.log.push(e);
+ setTimeout(()=>{
+   const T=ec.truth, talk=Math.random()<ecRespP(ec);
+   e.a=talk&&!T.cb.startsWith("(")?T.cb:(T.real?pick(["(keine Antwort – nur Stöhnen zu hören)","(keine Antwort)","(Rauschen, Motorgeräusch, niemand spricht)"]):T.cb.startsWith("(")?T.cb:pick(["(keine Antwort – Radio im Hintergrund)","(keine Antwort)"]));
+   ec.voiceAnswered=talk; save(); if(currentPage==="ecall")bgRender("ecall");
+ },rint(2,5)*1000);
+}
+// Eingangsanzeige oben wie beim Notruf – bleibt, bis der eCall geöffnet wurde
+function ecallBannerRefresh(){
+ let el=document.getElementById("ecBanner");
+ const list=(db.ecalls||[]).filter(x=>x.state==="neu");
+ if(!list.length||IS_MONITOR){el?.remove();return}
+ if(!el){el=document.createElement("div");el.id="ecBanner";el.style.cssText="position:fixed;left:16px;bottom:16px;z-index:1800;display:flex;flex-direction:column-reverse;gap:6px;width:min(480px,calc(100vw - 32px))";document.body.appendChild(el)}
+ el.innerHTML=list.slice(0,3).map(x=>`<div style="background:#ea580c;color:#fff;border-radius:12px;padding:10px 14px;display:flex;align-items:center;gap:10px;box-shadow:0 6px 20px rgba(0,0,0,.25)">
+   <span style="font-size:24px">📡</span><div style="flex:1;min-width:0"><b>eCall – Sprechverbindung steht</b><div style="font-size:13px;opacity:.95;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${x.auto?"automatisch":"manuell"} · ${esc(ecPlaceTxt(x))}</div></div>
+   <button onclick="render('ecall');ecallSelect('${x.id}')" style="background:#fff;color:#ea580c;border:0;font-weight:800">Annehmen</button></div>`).join("")+(list.length>3?`<div style="text-align:center;font-size:12px;background:#ea580c;color:#fff;border-radius:8px">+ ${list.length-3} weitere</div>`:"");
+}
 let ecSel=null, ecMap=null;
 function ecallOpenCount(){return (db.ecalls||[]).filter(x=>x.state==="neu"||x.state==="gesehen").length}
 // Lagemeldung der ersten eintreffenden Einheit (Status 4) aus dem tatsächlichen Geschehen
@@ -7127,7 +7167,7 @@ function ecallPage(){
  const items=list.slice(0,30).map(x=>`<div onclick="ecallSelect('${x.id}')" style="cursor:pointer;padding:8px 10px;border-radius:10px;margin-bottom:6px;border:2px solid ${x.id===ecSel?"#2563eb":"var(--line,#e5e7eb)"};${x.state==="neu"?"background:#fef2f2":""}">
    <div class="row between" style="gap:6px"><b>${t(x.t)}</b>${ecStateBadge(x)}</div>
    <div style="font-size:13px">${x.auto?"🅰️ automatisch":"🖐️ manuell"} · ${esc([x.ref,x.road].filter(Boolean).join(" ")||"–")}</div>
-   <div class="muted" style="font-size:12px">${esc(x.veh.make)} ${esc(x.veh.model)} · ${esc(x.veh.plate)}${x.linked?" · 🔗 2. Fahrzeug":""}</div></div>`).join("")||`<p class="muted">Noch keine eCalls.</p>`;
+   <div class="muted" style="font-size:12px">${esc(x.veh.make)} ${esc(x.veh.model)} · ${esc(x.veh.plate)}${x.linked?` · 🔗 gehört zu ${esc(x.linked)}`:""}</div></div>`).join("")||`<p class="muted">Noch keine eCalls.</p>`;
  let det="";
  if(ec){
    const v=ec.veh, x=ec.extra, decided=ec.state==="einsatz"||ec.state==="fehl";
@@ -7161,7 +7201,7 @@ function ecallPage(){
     <div class="row" style="gap:6px;margin-top:8px"><input id="ecSay" placeholder="💬 Mit den Betroffenen sprechen – Frage eintippen, Enter" style="flex:1;min-width:0" onkeydown="if(event.key==='Enter'){ecallSay('${ec.id}',this.value);this.value=''}"><button onclick="const i=document.getElementById('ecSay');ecallSay('${ec.id}',i.value);i.value=''">Senden</button></div>
     <div class="row" style="gap:8px;margin-top:12px;flex-wrap:wrap">
      ${ec.state==="einsatz"?`<button class="primary" onclick="ecallToCall('${ec.id}')">➡️ Zum Einsatz</button>`:`<button class="primary" onclick="ecallToCall('${ec.id}')">🚨 Einsatz anlegen</button>`}
-     <button onclick="ecallCallback('${ec.id}')" ${ec._cbBusy?"disabled":""}>📞 Rückruf ins Fahrzeug</button>
+     <button onclick="ecallCallback('${ec.id}')" ${ec._cbBusy?"disabled":""}>📞 Erneut verbinden</button>
      ${decided?"":`<button onclick="ecallDismiss('${ec.id}')">✖ Kein Einsatz (Fehlalarm)</button>`}
     </div>${truth}</div>`;
  }
@@ -7191,6 +7231,7 @@ function callTick(){
  if(db.cloud?.enabled)for(const c of allOpenCalls()){if(!c.manvPatients)continue;const h=(c.manvPatients||[]).map(p=>`${p.n}:${p.sk}:${p.unit||""}:${p.care?1:0}`).join("|");if(h!==c._manvPushH){c._manvPushH=h;setTimeout(()=>pushCallCloud(c),0)}} // v5.89
  try{if(bigEventTick(now))changed=true}catch(e){console.warn(e)} // v5.66 Großveranstaltung
  try{ecallAutoTick(now);if(ecallArrivalTick())changed=true}catch(e){console.warn(e)} // v5.95 eCall
+ try{if(kvTick(now))changed=true}catch(e){console.warn(e)} // v5.97 KV-Dienst
  for(const c of allOpenCalls()){
    if(c.kt||c.mergedInto||(c.deskId&&c.deskId!==DEVICE_ID))continue;
    const us=callUnits(c);
@@ -7225,7 +7266,7 @@ function callTick(){
    // Einsatz selbst abschließen, wenn alle Fahrzeuge wieder frei sind (Status 1/2)
    if(c.alarmTime&&us.length&&!(uiLocked&&c===db.currentCall)){
      const free=us.every(u=>["1","2"].includes(String(u.status))||allOpenCalls().some(o=>o!==c&&String(o.id)!==String(c.id)&&(o.alarmedUnits||[]).some(id=>String(id)===String(u.id))));
-     const open=(c.manvPatients&&c.manvPatients.some(p=>!p.unit&&p.sk<=4))||manvStayOpen(c)||(c.manvComps||[]).some(k=>!k.created)||policeHold(c);
+     const open=(c.manvPatients&&c.manvPatients.some(p=>!p.unit&&p.sk<=4))||manvStayOpen(c)||(c.manvComps||[]).some(k=>!k.created)||policeHold(c)||(c.kvNeed&&!us.some(u=>["RTW","KTW","NKTW"].includes(u.type))); // v5.97: ÄBD fordert RTW/KTW nach
      if(free&&!open){c.allFreeSince=c.allFreeSince||now;if(now-c.allFreeSince>=60000){(c.history=c.history||[]).push({q:"✅ Einsatz automatisch abgeschlossen",a:"alle Fahrzeuge wieder frei (Status 1/2)"});toast(`✅ Einsatz #${c.id} abgeschlossen – alle Fahrzeuge frei`);finishCall(c.id);changed=true;continue}}
      else delete c.allFreeSince;
    }
@@ -8221,7 +8262,7 @@ function callerReqHTML(r){
    const slot=(db.callers||[]).find(x=>String(x.id)===String(r.callerId));
    const idx=(db.callers||[]).indexOf(slot);
    const label=slot?`Anrufer ${idx+1}`:`Anrufer-Terminal ${esc(String(r.callerId))}`;
-   return `<div class="card" style="background:#e30613;color:#fff;border:none;margin-bottom:8px;display:flex;align-items:center;justify-content:space-between;gap:12px">
+   return `<div class="card" style="background:${r.number==="116117"?KV_COLOR:r.number==="19222"?"#1d4ed8":"#e30613"};color:#fff;border:none;margin-bottom:8px;display:flex;align-items:center;justify-content:space-between;gap:12px">
      <div class="row" style="gap:10px"><span style="font-size:26px">📞</span><div><b>${esc(CALLER_NUMBERS[r.number||"112"]?.banner||"Notruf 112")} – ${esc(label)}</b><br><span style="opacity:.9">${r.lat!=null&&r.lng!=null?"GPS-Standort verfügbar":"Kein GPS-Standort übermittelt"}</span></div></div>
      <button class="primary" style="background:#fff;color:#e30613" onclick="acceptCallerRequest('${esc(String(r.callerId))}')">✅ Annehmen</button>
    </div>`;
@@ -9636,8 +9677,8 @@ async function saveVehicleIvenaAssignment(unitId,dburl,sid){
  renderVehicleTerminal(unitId,dburl,sid);
 }
 
-const ORG_ORDER=["DLRG","DRK","Rettungsdienst","Feuerwehr","THW","Polizei","Luftrettung","DGzRS"];
-const ORG_ICON={"DLRG":"🌊","Rettungsdienst":"🚑","Feuerwehr":"🚒","THW":"🛠️","Polizei":"👮","Luftrettung":"🚁","DGzRS":"⚓"};
+const ORG_ORDER=["DLRG","DRK","Rettungsdienst","KV-Dienst","Feuerwehr","THW","Polizei","Luftrettung","DGzRS"];
+const ORG_ICON={"KV-Dienst":"🩺","DLRG":"🌊","Rettungsdienst":"🚑","Feuerwehr":"🚒","THW":"🛠️","Polizei":"👮","Luftrettung":"🚁","DGzRS":"⚓"};
 function setMittelOrgFilter(org){
  db.mittelOrgFilter=org||null;
  save();
@@ -12448,7 +12489,7 @@ function closeByPhone(id,why){
 function simMakeCall(){
  // Anrufer halten sich an die AAO: Fälle ohne passende AAO (kein Soll-Fahrzeug) werden übersprungen
  let sim=null;
- for(let i=0;i<6;i++){const x=simMakeCall0();if(!x||x.kt||x.d.phoneOnly||x.d.inkubator||/^tier_/.test(x.caseId)){sim=x;break}const so=simSollAao(x);if(so&&Object.keys(so.types).length){x.soll=so;sim=x;break}}
+ for(let i=0;i<6;i++){const x=simMakeCall0();if(!x||x.kt||x.d.kv||x.d.phoneOnly||x.d.inkubator||/^tier_/.test(x.caseId)){sim=x;break}const so=simSollAao(x);if(so&&Object.keys(so.types).length){x.soll=so;sim=x;break}}
  if(!sim)sim=simMakeCall0();
  try{simQueueWitnesses(sim)}catch(e){}
  return sim;
@@ -12479,6 +12520,178 @@ function simTierDue(){try{const d=simDayKey(Date.now());return localStorage.getI
 // v5.35: ganz selten – Schwerlast (SRTW) und Inkubatortransport aus Varel, je höchstens einmal am Tag
 function simRareDue(){try{const d=simDayKey(Date.now());for(const [id,p] of [["srtw_home",0.02],["inkubator_varel",0.015]]){const k="lst-sim-rare-"+id;if(localStorage.getItem(k)!==d&&Math.random()<p){localStorage.setItem(k,d);return id}}}catch(e){}return null}
 function simTierMark(){try{localStorage.setItem("lst-sim-tier-day",simDayKey(Date.now()))}catch(e){}}
+// ═══ v5.97: 116 117 – Ärztlicher Bereitschaftsdienst (KV-Dienst) ═══════════════════════════════
+// Dienstzeiten KVN-Bereitschaftsdienst (laut St. Johannes-Hospital Varel): Mo/Di/Do 18–8 Uhr, Mi/Fr 13–8 Uhr,
+// Sa/So/Feiertag 8–8 Uhr. Bereitschaftsdienstpraxis Wilhelmshaven (Klinikum, Friedrich-Paffrath-Str. 100):
+// Mo–Fr 20–21 Uhr, Sa/So/Feiertag 10–12 und 20–22 Uhr. Feiertage werden hier nicht erkannt.
+const KV_COLOR="#0d9488";
+function kvOnDuty(d=new Date()){const w=d.getDay(),h=d.getHours();return h<8||w===0||w===6||([1,2,4].includes(w)&&h>=18)||([3,5].includes(w)&&h>=13)}
+function kvPraxisOpen(d=new Date()){const w=d.getDay(),m=d.getHours()*60+d.getMinutes();return (w===0||w===6)?((m>=600&&m<720)||(m>=1200&&m<1320)):(m>=1200&&m<1260)}
+const KV_PRAXIS="Bereitschaftsdienstpraxis Wilhelmshaven, Klinikum, Friedrich-Paffrath-Str. 100";
+const KV_CHOICES=[
+ ["hausbesuch","🩺 Hausbesuch ÄBD","Arzt fährt zum Patienten (ohne Sonderrechte)"],
+ ["leichenschau","⚱️ Leichenschau ÄBD","Erwarteter Tod – Arzt stellt Todesbescheinigung aus"],
+ ["praxis","🏥 Bereitschaftsdienstpraxis","Patient kommt selbst in die Praxis"],
+ ["beratung","📞 Telefonische Beratung","Rat am Telefon, ggf. morgen Hausarzt"],
+ ["apotheke","💊 Notdienst-Apotheke","Rezept/Medikament über Notdienst-Apotheke"],
+ ["rd","🚑 Doch Notfall → Rettungsdienst","Als 112-Notfall weiter abfragen"]
+];
+function kvUnits(){return (db.units||[]).filter(u=>u.type==="ÄBD")}
+function kvEvaluate(c){
+ const ch=c.kvChoice;
+ c.sr=false; c.rZero=true; c.aaoWinner=null; c.aaoWinnerId=null; c.aaoMatches=[]; c.aaoCombined=[]; c.neighborProposal=[];
+ if(ch==="hausbesuch"||ch==="leichenschau"){
+   const cand=nearestFirst(kvUnits().filter(u=>["1","2"].includes(String(u.status))));
+   const u=cand[0]||null;
+   c.keyword=ch==="leichenschau"?"ÄBD – Leichenschau":"ÄBD – Hausbesuch";
+   c.proposal=u?[{...u}]:[{missing:true,type:"ÄBD",org:"KV-Dienst"}];
+   c.proposedUnitIds=u?[u.id]:[];
+   c.suggestion=u?`${u.opta||u.name} – ohne Sonderrechte${Number.isFinite(geographicRank(u))&&geographicRank(u)<999?` (ca. ${estimatedEtaMinutes(u)} min)`:""}${kvOnDuty()?"":" ⚠️ außerhalb der Dienstzeit"}`:"⚠️ Kein ÄBD-Fahrzeug frei";
+ }else{
+   c.keyword=ch?("KV – "+(KV_CHOICES.find(x=>x[0]===ch)||[,""])[1].replace(/^\S+\s/,"")):"KV-Dienst – Entscheidung offen";
+   c.proposal=[]; c.proposedUnitIds=[];
+   c.suggestion=ch?"Kein Fahrzeug – Anruf abschließen.":"Bitte im Feld „116 117 – KV-Dienst“ entscheiden.";
+ }
+}
+function kvPanelHTML(c){
+ if(!c||c.kt)return "";
+ const isKv=c.answers&&c.answers.callType==="116117"||c.kvd;
+ if(!isKv){
+   if(c.alarmTime||!c.answers||c.answers.callType!=="112")return "";
+   return `<div class="card" style="border-left:6px solid ${KV_COLOR};padding:10px 14px"><div class="row between" style="gap:8px;flex-wrap:wrap"><span style="font-size:13px">Kein Notfall? Anruf an den ärztlichen Bereitschaftsdienst übergeben.</span><button onclick="kvTakeOver('${esc(String(c.id))}')" style="border-color:${KV_COLOR};color:${KV_COLOR}">🩺 An KV-Dienst übergeben</button></div></div>`;
+ }
+ const duty=kvOnDuty(), pr=kvPraxisOpen(), free=kvUnits().filter(u=>["1","2"].includes(String(u.status))).length;
+ return `<div class="card" style="border:2px solid ${KV_COLOR};background:#f0fdfa">
+  <div class="row between" style="gap:8px;flex-wrap:wrap"><h2 style="margin:0;color:${KV_COLOR}">🩺 116 117 – KV-Dienst</h2>
+   <span style="font-size:12px"><b style="color:${duty?"#15803d":"#b91c1c"}">${duty?"● Bereitschaftsdienst im Dienst":"● außerhalb der Dienstzeit (→ Hausarzt)"}</b> · ÄBD frei: <b>${free}</b></span></div>
+  <div class="muted" style="font-size:12px;margin:4px 0 8px">Praxis: ${esc(KV_PRAXIS)} – ${pr?"<b style='color:#15803d'>jetzt geöffnet</b>":"jetzt geschlossen"} (Mo–Fr 20–21, Sa/So 10–12 + 20–22 Uhr)</div>
+  <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:6px">${KV_CHOICES.map(([k,l,d])=>`<button onclick="kvDecide('${esc(String(c.id))}','${k}')" title="${esc(d)}" style="text-align:left;${c.kvChoice===k?`background:${KV_COLOR};color:#fff;border-color:${KV_COLOR}`:""}">${l}</button>`).join("")}</div>
+  ${c.kvChoice==="hausbesuch"||c.kvChoice==="leichenschau"?`<div class="muted" style="font-size:12px;margin-top:6px">Vorschlag steht rechts – zum Alarmieren wie gewohnt „Alarmieren“ drücken.</div>`:""}
+ </div>`;
+}
+function kvTakeOver(id){
+ const c=[db.currentCall,...(db.activeCalls||[])].find(x=>x&&String(x.id)===String(id)); if(!c)return;
+ c.kvd=true; (c.history=c.history||[]).push({q:"🩺 Übergabe",a:"An den ärztlichen Bereitschaftsdienst (KV-Dienst)"});
+ if(c===db.currentCall)evaluate(); save(); render("notruf");
+}
+function kvFeedback(c,choice){
+ const s=c.sim; if(!s||!s.d)return null;
+ const kv=s.d.kv;
+ if(!kv){ // 112-Fall an den KV-Dienst gegeben
+   if(choice==="rd")return null;
+   return s.d.phoneOnly?"ℹ️ Vertretbar – kein Notfall für den Rettungsdienst.":`⚠️ Das war ein Notfall – laut AAO wäre ${simSollText(s.soll||simSollAao(s))} nötig gewesen.`;
+ }
+ const ok=kv.soll.includes(choice);
+ return ok?`✅ Passend: ${kv.why}`:`⚠️ Besser: ${kv.soll.map(k=>(KV_CHOICES.find(x=>x[0]===k)||[,k])[1]).join(" oder ")} – ${kv.why}`;
+}
+function kvDecide(id,choice){
+ const c=[db.currentCall,...(db.activeCalls||[])].find(x=>x&&String(x.id)===String(id)); if(!c)return;
+ const label=(KV_CHOICES.find(x=>x[0]===choice)||[,choice])[1];
+ c.history=c.history||[];
+ const fb=kvFeedback(c,choice);
+ if(choice==="rd"){
+   c.kvd=false; c.kvChoice=null; c.answers.callType="112"; c.history.push({q:"🚑 Hochgestuft",a:"Kein Fall für den KV-Dienst – weiter als Notruf 112"});
+   if(c.sim&&c.sim.d&&c.sim.d.kv){c.history.push({q:"🎓 Übungs-Check",a:fb});toast(fb)}
+   if(c===db.currentCall)evaluate(); save(); render("notruf"); return;
+ }
+ c.kvChoice=choice;
+ if(choice==="hausbesuch"||choice==="leichenschau"){
+   c.history.push({q:"🩺 KV-Dienst",a:label});
+   if(fb){c.history.push({q:"🎓 Übungs-Check",a:fb});toast(fb)}
+   if(c===db.currentCall){evaluate();try{prepareAlarm()}catch(e){}}
+   save(); render("notruf"); return;
+ }
+ const extra=choice==="praxis"?` – ${KV_PRAXIS}${kvPraxisOpen()?"":" (Hinweis: Praxis gerade geschlossen)"}`:"";
+ c.history.push({q:"🩺 KV-Dienst",a:label+extra});
+ if(fb){c.history.push({q:"🎓 Übungs-Check",a:fb});toast(fb)}
+ c.keyword="KV – "+label.replace(/^\S+\s/,""); c.phoneDone="kv_"+choice;
+ finishCall(c.id);
+}
+// Hausbesuch vor Ort: nach 20–40 min Ergebnis per SDS, ÄBD wieder frei
+function kvTick(now){
+ let changed=false;
+ for(const u of kvUnits()){
+   if(String(u.status)!=="4"){if(u.kvDue){delete u.kvDue;changed=true}continue}
+   const c=findUnitCall(u); if(!c)continue;
+   if(!u.kvDue){u.kvDue=now+rint(20,40)*60000;changed=true;continue}
+   if(now<u.kvDue)continue;
+   delete u.kvDue;
+   const d=c.sim&&c.sim.d&&c.sim.d.kv&&c.sim.d.kv.doc;
+   const res=d||{res:c.kvChoice==="leichenschau"?"tot":"home",txt:c.kvChoice==="leichenschau"?"Leichenschau durchgeführt, Todesbescheinigung ausgestellt.":"Patient versorgt, bleibt zu Hause."};
+   const tail=res.res==="rtw"?" Bitte RTW mit Sonderrechten nachalarmieren!":res.res==="ktw"?" Bitte KTW für Einweisung ins Krankenhaus.":"";
+   crewSds(u,c,`Hausbesuch beendet: ${res.txt}${tail}`);
+   if(res.res==="rtw"||res.res==="ktw"){c.kvNeed=res.res;(c.history=c.history||[]).push({q:"🩺 ÄBD",a:`${res.txt}${tail}`})}
+   setUnitStatus(u,"1"); changed=true;
+ }
+ return changed;
+}
+// Übungsanrufe über 116 117. kv.soll = passende Entscheidung(en), kv.doc = Befund des Arztes beim Hausbesuch.
+// Häufigkeit: im Bereitschaftsdienst normal, sonst selten (dann eher Hausarzt/Terminservice).
+const KV_W=x=>()=>kvOnDuty()?x:x*0.25;
+const KV_SIM_CASES=[
+ {id:"kv_fieber_alt",wf:KV_W(1.2),loc:"home",mk:()=>{const p=simPerson("w"),age=rint(78,92);return {rel:"meine Mutter",caller:simPerson(),patient:p,age,
+   open:["Guten Abend, meine Mutter hat seit gestern Fieber und kommt nicht mehr aus dem Bett. Kann da mal ein Arzt kommen?"],
+   event:"Sie hat seit gestern Fieber, so 38,8, hustet und ist ganz schlapp. Sie liegt im Bett, kann aber normal mit mir reden. Luft bekommt sie gut.",
+   f:{count:"1",x:"Nein",a:"Frei",b:"Normal",c:"Unauffällig",d:"Wach / orientiert",e:"Fieber, Husten, Schwäche, bettlägerig",psy:"Nein",danger:"nein"},
+   onset:"Seit gestern Mittag.",hist:"Sie hat Bluthochdruck und ist sonst noch ganz fit für ihr Alter.",extra:["Der Hausarzt hat ja jetzt zu.","Sie kann nicht mehr bis zum Auto laufen."],
+   kv:{soll:["hausbesuch"],why:"bettlägerig, nicht transportfähig, aber stabil – typischer Hausbesuch.",doc:Math.random()<0.3?{res:"ktw",txt:"V. a. Lungenentzündung, Einweisung ins Krankenhaus."}:{res:"home",txt:"Bronchitis, Antibiotikum verordnet, bleibt zu Hause."}}}}},
+ {id:"kv_ruecken",wf:KV_W(0.9),loc:"home",mk:()=>{const p=simPerson("m"),age=rint(35,60);return {rel:"ich selbst",caller:p,patient:p,age,
+   open:["Hallo, ich hab mich beim Heben verrissen und komm nicht mehr hoch, der Rücken!"],
+   event:"Beim Getränkekisten-Tragen hat's im Rücken geschossen, jetzt kann ich mich kaum bewegen. Die Beine kann ich normal bewegen, kein Kribbeln, Wasserlassen geht normal.",
+   f:{count:"1",x:"Nein",a:"Frei",b:"Normal",c:"Unauffällig",d:"Wach / orientiert",e:"akuter Rückenschmerz (Hexenschuss), keine neurologischen Ausfälle",psy:"Nein",danger:"nein"},
+   onset:"Seit zwei Stunden.",hist:"Hab öfter Rücken, sonst gesund.",extra:["Ich lieg hier auf dem Boden im Flur.","Ibuprofen hab ich keine mehr."],
+   kv:{soll:["hausbesuch"],why:"kann nicht selbst in die Praxis, keine Warnzeichen – Hausbesuch.",doc:{res:"home",txt:"Lumbago, Schmerzmittel gegeben, bleibt zu Hause."}}}}},
+ {id:"kv_hwi",wf:KV_W(0.8),loc:"home",mk:()=>{const p=simPerson("w"),age=rint(22,50);return {rel:"ich selbst",caller:p,patient:p,age,
+   open:["Hallo, ich glaub, ich hab eine Blasenentzündung – es brennt total beim Wasserlassen."],
+   event:"Seit heute Mittag brennt es beim Wasserlassen und ich muss ständig. Kein Fieber, keine Rückenschmerzen. Ich kann gut laufen und hab ein Auto.",
+   f:{count:"1",x:"Nein",a:"Frei",b:"Normal",c:"Unauffällig",d:"Wach / orientiert",e:"Brennen beim Wasserlassen, kein Fieber",psy:"Nein",danger:"nein"},
+   onset:"Seit heute Mittag.",hist:"Hatte das vor einem Jahr schon mal.",extra:["Kann ich da irgendwo hinkommen?"],
+   kv:{soll:["praxis","beratung"],why:"mobil, kein Notfall – Bereitschaftsdienstpraxis bzw. Beratung, kein Hausbesuch nötig."}}}},
+ {id:"kv_ohr_kind",wf:KV_W(0.8),loc:"home",mk:()=>{const p=simPerson(),age=rint(3,8);return {rel:p.g==="m"?"mein Sohn":"meine Tochter",caller:simPerson("w"),patient:p,age,
+   open:["Hallo, mein Kind hat ganz doll Ohrenschmerzen und weint die ganze Zeit."],
+   event:`${p.g==="m"?"Er":"Sie"} hat seit dem Nachmittag Ohrenschmerzen links, leichtes Fieber 38,2, ist aber wach und trinkt. Kein steifer Nacken, kein Ausschlag.`,
+   f:{count:"1",x:"Nein",a:"Frei",b:"Normal",c:"Unauffällig",d:"Wach / orientiert",e:"Ohrenschmerzen, leichtes Fieber, Kind wach",psy:"Nein",danger:"nein"},
+   onset:"Seit heute Nachmittag.",hist:"Sonst gesund, alle Impfungen.",extra:["Fiebersaft hab ich schon gegeben."],
+   kv:{soll:["praxis","beratung"],why:"Kind stabil, Eltern mobil – Bereitschaftsdienstpraxis oder Rat bis morgen zum Kinderarzt."}}}},
+ {id:"kv_gastro",wf:KV_W(0.7),loc:"home",mk:()=>{const p=simPerson(),age=rint(25,55);return {rel:"ich selbst",caller:p,patient:p,age,
+   open:["Hallo, ich hab seit gestern Durchfall und Erbrechen, was soll ich machen?"],
+   event:"Seit gestern Abend Durchfall und zweimal erbrochen, kein Blut. Trinken klappt in kleinen Schlucken, Wasserlassen auch. Kein hohes Fieber.",
+   f:{count:"1",x:"Nein",a:"Frei",b:"Normal",c:"Unauffällig",d:"Wach / orientiert",e:"Magen-Darm-Infekt, kann trinken",psy:"Nein",danger:"nein"},
+   onset:"Seit gestern Abend.",hist:"Sonst gesund.",extra:["Meine Kinder hatten das letzte Woche auch."],
+   kv:{soll:["beratung"],why:"kein Warnzeichen – Rat am Telefon (trinken, Schonkost, morgen Hausarzt, bei Verschlechterung wieder anrufen)."}}}},
+ {id:"kv_rezept",wf:KV_W(0.5),loc:"home",mk:()=>{const p=simPerson("w"),age=rint(55,80);return {rel:"ich selbst",caller:p,patient:p,age,
+   open:["Hallo, mir sind meine Blutdrucktabletten ausgegangen, der Hausarzt ist im Urlaub."],
+   event:"Ich hab heute meine letzte Tablette genommen und brauche ein neues Rezept. Mir geht's sonst gut.",
+   f:{count:"1",x:"Nein",a:"Frei",b:"Normal",c:"Unauffällig",d:"Wach / orientiert",e:"Rezept benötigt, keine Beschwerden",psy:"Nein",danger:"nein"},
+   onset:"Ist heute aufgefallen.",hist:"Bluthochdruck.",extra:["Ich kann auch irgendwo hinfahren."],
+   kv:{soll:["praxis","apotheke"],why:"kein medizinischer Notfall – Praxis für das Rezept bzw. Notdienst-Apotheke fragen."}}}},
+ {id:"kv_katheter",wf:KV_W(0.6),loc:"home",locPrefix:"im Seniorenpflegeheim, ",mk:()=>{const c=simPerson("w"),p=simPerson("m"),age=rint(80,94);return {rel:"ein Bewohner",caller:c,patient:p,age,staff:true,
+   open:[`${c.first} ${c.last}, Pflegeheim – bei einem Bewohner läuft der Dauerkatheter nicht mehr ab.`],
+   event:"Seit dem Nachmittag kommt kein Urin mehr in den Beutel, der Bauch ist etwas gespannt. Er ist wach und wie immer, kein Fieber.",
+   f:{count:"1",x:"Nein",a:"Frei",b:"Normal",c:"Unauffällig",d:"Wach / orientiert",e:"Dauerkatheter verstopft, sonst stabil",psy:"Nein",danger:"nein"},
+   onset:"Seit heute Nachmittag.",hist:"Demenz, Prostata, Dauerkatheter seit einem Jahr.",extra:["Wir dürfen den Katheter nicht selbst wechseln."],
+   kv:{soll:["hausbesuch"],why:"Katheterwechsel vor Ort – typischer ÄBD-Hausbesuch im Heim.",doc:{res:"home",txt:"Dauerkatheter gewechselt, fließt wieder ab."}}}}},
+ {id:"kv_leichenschau",wf:KV_W(0.5),loc:"home",mk:()=>{const c=simPerson(),p=simPerson(),age=rint(80,95);return {rel:p.g==="m"?"mein Vater":"meine Mutter",caller:c,patient:p,age,
+   open:[`Guten Abend… ${p.g==="m"?"mein Vater":"meine Mutter"} ist eben eingeschlafen. Er war ja palliativ… was müssen wir jetzt machen?`],
+   event:`${p.g==="m"?"Er":"Sie"} hatte Krebs im Endstadium und war zu Hause in palliativer Betreuung. Vor einer halben Stunde ist ${p.g==="m"?"er":"sie"} friedlich eingeschlafen, atmet nicht mehr. Wir wollen keine Wiederbelebung, das war so abgesprochen.`,
+   f:{count:"1",x:"Ja",a:"Frei",b:"Keine Atmung",c:"Auffällig",d:"Bewusstlos",e:"erwarteter Tod in palliativer Situation, Patientenverfügung",psy:"Nein",danger:"nein"},
+   onset:"Vor einer halben Stunde.",hist:"Krebs, Palliativversorgung zu Hause, Patientenverfügung liegt vor.",extra:["Der Palliativdienst ist heute nicht erreichbar.","Wir sind ganz ruhig, es war ja klar."],
+   kv:{soll:["leichenschau"],why:"erwarteter Tod in palliativer Situation – ÄBD macht die Leichenschau, kein Rettungsdienst.",doc:{res:"tot",txt:"Leichenschau durchgeführt, natürlicher Tod, Todesbescheinigung ausgestellt."}}}}},
+ {id:"kv_redflag_brust",wf:KV_W(0.6),loc:"home",mk:()=>{const p=simPerson("m"),age=rint(55,75);return {rel:"ich selbst",caller:p,patient:p,age,
+   open:["Hallo, ich wollte mal fragen, ob ein Arzt kommen kann – ich hab so ein Druckgefühl auf der Brust."],
+   event:"Seit zwanzig Minuten so ein Druck auf der Brust, zieht in den linken Arm. Ich schwitze und mir ist übel. Ich wollte nicht gleich die 112 belästigen.",
+   f:{count:"1",x:"Nein",a:"Frei",b:"Normal",c:"Auffällig",d:"Wach / orientiert",e:"Brustschmerz mit Ausstrahlung linker Arm, Schweiß, Übelkeit (V. a. ACS)",psy:"Nein",danger:"nein"},
+   onset:"Seit zwanzig Minuten.",hist:"Rauche, hoher Blutdruck.",extra:["Ist bestimmt nur der Magen…"],
+   kv:{soll:["rd"],why:"Brustschmerz mit Warnzeichen (V. a. Herzinfarkt) – sofort Rettungsdienst mit Notarzt!",doc:{res:"rtw",txt:"V. a. Herzinfarkt, Patient kaltschweißig."}}}}},
+ {id:"kv_redflag_schlag",wf:KV_W(0.5),loc:"home",mk:()=>{const p=simPerson("w"),age=rint(70,88);return {rel:"meine Frau",caller:simPerson("m"),patient:p,age,
+   open:["Hallo, meine Frau spricht seit einer halben Stunde so komisch, kann da ein Arzt vorbeikommen?"],
+   event:"Seit einer halben Stunde redet sie verwaschen und der rechte Mundwinkel hängt. Den rechten Arm kann sie schlecht heben.",
+   f:{count:"1",x:"Nein",a:"Frei",b:"Normal",c:"Unauffällig",d:"Wach / desorientiert",e:"plötzliche Sprachstörung, Fazialisparese, Armschwäche rechts (V. a. Schlaganfall)",psy:"Nein",danger:"nein"},
+   onset:"Seit ungefähr einer halben Stunde.",hist:"Vorhofflimmern, nimmt Blutverdünner.",extra:["Sie sagt, es geht schon wieder."],
+   kv:{soll:["rd"],why:"Schlaganfall-Zeichen (FAST) – sofort Rettungsdienst, Stroke Unit!",doc:{res:"rtw",txt:"V. a. Schlaganfall, Symptome seit ca. 1 Stunde."}}}}}
+].map(x=>({...x,num:"116117",get w(){return x.wf()}}));
+
+SIM_CASES.push(...KV_SIM_CASES);
 function simMakeCall0(){
  // Mit KI: bevorzugt ein von der KI frisch erfundener Fall (im Hintergrund vorbereitet)
  if(simAiReady()&&simAiCases.length&&!simMakeCall.noAi){const s=simAiCases.shift();s.created=Date.now();if(s.loc.geo)simGeocode(s);setTimeout(simAiFill,500);return s}
@@ -12560,7 +12773,7 @@ function simRing(pre){
  }
  const s=pre||simMakeCall(); s.ringAt=Date.now(); simPending.push(s);
  renderCallerBanner();
- toast(s.isFollow?`🔁 Erneuter Anruf – Rufnummer bekannt aus Einsatz #${s.refCallId}`:s.num==="19222"?"📞 Übungsanruf 19222 – Krankentransport":"📞 Übungsnotruf 112 eingegangen");
+ toast(s.isFollow?`🔁 Erneuter Anruf – Rufnummer bekannt aus Einsatz #${s.refCallId}`:s.num==="19222"?"📞 Übungsanruf 19222 – Krankentransport":s.num==="116117"?"🩺 Übungsanruf 116 117 – Ärztlicher Bereitschaftsdienst":"📞 Übungsnotruf 112 eingegangen");
  if(simVoice)simRingTone();
 }
 let simAudio=null;
@@ -12571,8 +12784,8 @@ function simRingTone(){
  }catch(e){}
 }
 function simBannerHTML(list){
- return (list||simPending).map(s=>{const col=s.num==="19222"?"#1d4ed8":"#e30613";return `<div class="card" style="background:${col};color:#fff;border:none;margin-bottom:8px;display:flex;align-items:center;justify-content:space-between;gap:12px">
-   <div class="row" style="gap:10px"><span style="font-size:26px">${s.isFollow?"🔁":"📞"}</span><div><b>${s.num==="19222"?"🚑 19222 – Krankentransport":"🚨 Notruf 112"} – Übungsanruf${s.fwdFrom?` <span style="opacity:.85">(weitergeleitet von ${esc(s.fwdFrom)})</span>`:""}</b><br><span style="opacity:.9">${s.isFollow?`Erneuter Anruf · Rufnummer ${esc(s.phone)} bekannt aus Einsatz #${esc(s.refCallId)}`:`Mobilfunk · Standort wird übermittelt${s.prepared?" · vorbereiteter Fall":""}`}</span></div></div>
+ return (list||simPending).map(s=>{const col=s.num==="19222"?"#1d4ed8":s.num==="116117"?KV_COLOR:"#e30613";return `<div class="card" style="background:${col};color:#fff;border:none;margin-bottom:8px;display:flex;align-items:center;justify-content:space-between;gap:12px">
+   <div class="row" style="gap:10px"><span style="font-size:26px">${s.isFollow?"🔁":"📞"}</span><div><b>${s.num==="19222"?"🚑 19222 – Krankentransport":s.num==="116117"?"🩺 116 117 – Ärztlicher Bereitschaftsdienst":"🚨 Notruf 112"} – Übungsanruf${s.fwdFrom?` <span style="opacity:.85">(weitergeleitet von ${esc(s.fwdFrom)})</span>`:""}</b><br><span style="opacity:.9">${s.isFollow?`Erneuter Anruf · Rufnummer ${esc(s.phone)} bekannt aus Einsatz #${esc(s.refCallId)}`:`Mobilfunk · Standort wird übermittelt${s.prepared?" · vorbereiteter Fall":""}`}</span></div></div>
    <div class="row" style="gap:6px">${otherDesks().length?`<button style="background:rgba(255,255,255,.2);color:#fff;border:1px solid #fff" onclick="xferDeskDialog('ring','${s.id}')" title="An anderen Platz weiterleiten">➡️ Platz</button>`:""}<button class="primary" style="background:#fff;color:${col}" onclick="simAccept('${s.id}')">✅ Annehmen</button></div>
  </div>`}).join("");
 }
@@ -12583,7 +12796,7 @@ function simAccept(simId){
  notrufDetailsVisible=false;
  const stamp=Date.now().toString();
  if(s.kt)db.currentCall={id:stamp.slice(-6),kt:true,location:"",count:"1",answers:{},history:[{q:"☎️ Anruf über",a:"🚑 19222 – Krankentransport"}],keyword:"Krankentransport",suggestion:"",createdAt:new Date().toISOString()};
- else db.currentCall={id:stamp.slice(-6),location:"",count:"",answers:{callType:"112"},history:[{q:"☎️ Über welche Nummer ist der Anruf eingegangen?",a:CALLER_NUMBERS["112"].label}],keyword:"",suggestion:"",createdAt:new Date().toISOString()};
+ else{const nm=s.num==="116117"?"116117":"112";db.currentCall={id:stamp.slice(-6),location:"",count:"",answers:{callType:nm},history:[{q:"☎️ Über welche Nummer ist der Anruf eingegangen?",a:CALLER_NUMBERS[nm].label}],keyword:"",suggestion:"",createdAt:new Date().toISOString()}}
  const c=db.currentCall;
  c.phoneStart=Date.now(); c.callerNumber=s.num; c.sim=s; s.owner=DEVICE_ID;
  if(s.isFollow){c.followOf=s.refCallId;c.history.push({q:"🔁 Erneuter Anruf",a:`Rufnummer ${s.phone} – bekannt aus Einsatz #${s.refCallId}`})}
@@ -12594,7 +12807,7 @@ function simAccept(simId){
  // Der Disponent meldet sich zuerst – der Anrufer spricht erst danach (v5.07)
  s.awaitGreeting=true; s.lastAt=Date.now();
  if(simVoice)simSpeechUnlock();
- if(!s.kt){const so=simSollAao(s);if(so)s.soll=so}
+ if(!s.kt&&!(s.d&&s.d.kv)){const so=simSollAao(s);if(so)s.soll=so}
  save(); renderCallerBanner(); render("notruf");
 }
 // Folgeanruf dem ursprünglichen Einsatz zuordnen: Gespräch läuft dort weiter, Abfragepunkte ändern
@@ -13945,7 +14158,7 @@ function simChatHTML(c){
  setTimeout(()=>{const lg=document.getElementById("simLog");if(lg)lg.scrollTop=lg.scrollHeight;simMicLiveUpdate()},0);
  const ref=s.isFollow&&String(s.refCallId)!==String(c.id)?simCallById(s.refCallId):null;
  return `<div class="card" style="border:2px solid ${s.num==="19222"?"#1d4ed8":"#e30613"}">
-  <div class="row between"><h3 style="margin:0">🗣️ Übungsanruf ${s.num==="19222"?"19222":"112"} ${simVoice?"– 🔊 Sprachmodus":"– 🔇 Textmodus"}</h3><small class="muted">Gespräch wird protokolliert · <a href="#" onclick="render('protokolle');return false">📼 Protokolle</a></small></div>
+  <div class="row between"><h3 style="margin:0">🗣️ Übungsanruf ${s.num==="19222"?"19222":s.num==="116117"?"116 117":"112"} ${simVoice?"– 🔊 Sprachmodus":"– 🔇 Textmodus"}</h3><small class="muted">Gespräch wird protokolliert · <a href="#" onclick="render('protokolle');return false">📼 Protokolle</a></small></div>
   ${s.isFollow?`<div style="margin-top:6px;padding:6px 10px;border-radius:8px;background:#fef3c7;color:#92400e;font-weight:700">🔁 Erneuter Anruf – Rufnummer bekannt aus Einsatz #${esc(s.refCallId)}${ref?` (${esc(ref.keyword||"—")}, ${esc(ref.location||"")})`:" (Einsatz bereits abgeschlossen)"}
     ${ref?`<button style="margin-left:8px" onclick="simMergeFollow('${esc(String(c.id))}')">↩️ Zu Einsatz #${esc(String(ref.id))} übernehmen</button>`:""}</div>`:""}
   <div id="simLog" style="max-height:${simVoice?"140":"260"}px;overflow:auto;margin-top:6px;padding:4px;background:#f8fafc;border-radius:8px">${s.awaitGreeting?`<div class="muted" style="padding:6px;font-weight:700">📞 Verbunden – Sie melden sich zuerst, z. B. „Notruf Feuerwehr und Rettungsdienst, wo genau ist der Notfallort?“</div>`:""}${simLogHTML(c)}</div>

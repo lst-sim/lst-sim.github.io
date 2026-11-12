@@ -1607,6 +1607,16 @@ Version 5.05:
   („a, b“ = a ODER b). Mit „🚑 NA-Indikation“ markierte Knöpfe ziehen weiterhin einen Notarzt.
 - Nur „Unauffällig“ (ohne weitere Befunde) zählt weiter als unauffälliges E (R0 möglich).
 
+Version 5.97:
+- 116 117 (Ärztlicher Bereitschaftsdienst): Übungsanrufe über 116 117 kommen jetzt rein – in Türkis statt Rot (auch über das Anrufer-Terminal).
+- Im Notruf erscheint dann das Feld „🩺 116 117 – KV-Dienst“: Hausbesuch ÄBD, Leichenschau ÄBD, Bereitschaftsdienstpraxis, telefonische Beratung, Notdienst-Apotheke oder „Doch Notfall → Rettungsdienst“. Abgefragt werden nur Einsatzort und Ereignis.
+- Bei 112-Anrufen gibt es den Knopf „🩺 An KV-Dienst übergeben“.
+- Zwei Übungs-Fahrzeuge „ÄBD Wilhelmshaven/Friesland 1/2“ (Fahrzeuge → KV-Dienst), Standort Bereitschaftsdienstpraxis am Klinikum Wilhelmshaven. Fahren ohne Sonderrechte; nach 20–40 min vor Ort kommt das Ergebnis per SDS (ggf. „bitte RTW/KTW nachalarmieren“ – der Einsatz bleibt dann offen).
+- Dienstzeiten (laut St. Johannes-Hospital Varel): Mo/Di/Do 18–8, Mi/Fr 13–8, Sa/So/Feiertag 8–8 Uhr; Praxis Mo–Fr 20–21, Sa/So 10–12 und 20–22 Uhr. Feiertage werden nicht erkannt. Anzahl der ÄBD-Fahrzeuge ist eine Annahme.
+- 10 neue 116-117-Fälle (Fieber, Rücken, Blasenentzündung, Ohrenschmerzen Kind, Magen-Darm, Rezept, Katheter im Heim, erwarteter Tod/Leichenschau) – darunter 2 versteckte Notfälle (Herzinfarkt, Schlaganfall), die an den Rettungsdienst gehören. Nach der Entscheidung gibt es einen Übungs-Check.
+- eCall: Die Sprechverbindung baut sich beim Eingang automatisch auf – manchmal meldet sich jemand, manchmal nicht. Unten links erscheint eine orange Eingangsanzeige mit „Annehmen“. „Rückruf“ heißt jetzt „Erneut verbinden“.
+- eCall: Bei Unfällen melden sich manchmal mehrere Fahrzeuge (Unfallgegner, Auffahrkette, Zeuge). Weitere eCalls zum selben Unfall werden beim „Einsatz anlegen“ dem bestehenden Einsatz zugeordnet.
+
 Version 5.96:
 - eCall: Eingabefeld „💬 Mit den Betroffenen sprechen“. Frage eintippen, die Antwort kommt nach ein paar Sekunden als Text – aber nur manchmal (bei schweren Unfällen seltener, sonst Stöhnen, Rauschen oder Stille).
 - Versteht Fragen zu: was passiert, verletzt, wie viele, eingeklemmt, wo, Rauch/Feuer, ansprechbar/atmet, Kinder.
