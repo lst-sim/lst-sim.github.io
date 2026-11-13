@@ -231,7 +231,7 @@ html[data-device="handy"] .fach-grid{grid-template-columns:1fr}
 <header id="topbar">
  <div class="tb-left">
   <span class="tb-brand">🚑 Leitstelle<span>.sim</span></span>
-  <span id="versionTag" class="tb-ver">v6.03</span>
+  <span id="versionTag" class="tb-ver">v6.04</span>
   <span id="syncState"></span>
   <a id="deskTag" href="#" onclick="renameDesk();return false" title="Name dieses Platzes (für „offen an …“) – antippen zum Ändern"></a>
  </div>
@@ -1918,6 +1918,7 @@ function setUnitStatus(u,status){
  if(db.cloud?.enabled) setTimeout(()=>pushUnitCloud(u),0);
 }
 function autoAdvanceEnRoute(){
+ if(vehManual())return; // v6.04
  // Automatische Statuswechsel bei "Ankunft" bzw. nach Ablauf der vorgesehenen Zeit.
  // Fahrzeuge, die über ein externes Handy gesteuert werden (phoneControlled), macht die
  // Besatzung selbst – hier wird für die NICHT automatisiert, außer der ursprünglichen
@@ -1972,6 +1973,7 @@ function autoAdvanceEnRoute(){
  if(changed)save();
 }
 function autoReturnToStation(){
+ if(vehManual())return; // v6.04
  const now=Date.now();
  let changed=false;
  db.units.forEach(u=>{
@@ -5697,6 +5699,7 @@ function crewRegister(u,call){
  const call2=call; call2.history=call2.history||[]; call2.history.push({q:`🏥 IVENA (${u.opta||u.name})`,a:`${h.name} · PZC ${pzc} · an ${hhmm(etaT)}`});
 }
 function crewTick(){
+ if(vehManual())return false; // v6.04
  const now=Date.now(); let changed=false;
  for(const u of (db.units||[])){
    if(unitPhoneLive(u))continue;
@@ -7093,6 +7096,7 @@ let ecSel=null, ecMap=null;
 function ecallOpenCount(){return (db.ecalls||[]).filter(x=>x.state==="neu"||x.state==="gesehen").length}
 // Lagemeldung der ersten eintreffenden Einheit (Status 4) aus dem tatsächlichen Geschehen
 function ecallArrivalTick(){
+ if(vehManual())return false; // v6.04
  for(const c of allOpenCalls()){
    if(!c.ecallId||c._ecLage)continue;
    const ec=(db.ecalls||[]).find(x=>x.id===c.ecallId); if(!ec)continue;
@@ -12633,6 +12637,7 @@ function kvDecide(id,choice){
 }
 // Hausbesuch vor Ort: nach 20–40 min Ergebnis per SDS, ÄBD wieder frei
 function kvTick(now){
+ if(vehManual())return false; // v6.04
  let changed=false;
  for(const u of kvUnits()){
    if(String(u.status)!=="4"){if(u.kvDue){delete u.kvDue;changed=true}continue}
@@ -14205,12 +14210,16 @@ const simRenderChat=simRefresh;
 // ─── Kopfleiste: 🔇/🔊 (Text/Stimme), 🎲 Übungsnotrufe an/aus, 🤖 KI ─────────────────────────────
 function simCtlHTML(){
  return `<button onclick="simToggleVoice()" title="${simVoice?"Sprachmodus – antippen für Textmodus":"Textmodus – antippen für Sprachmodus"}" style="font-size:20px;padding:2px 8px;background:none;border:1px solid var(--line);border-radius:8px">${simVoice?"🔊":"🔇"}</button>
+  <button onclick="vehManualToggle()" title="${vehManual()?"Fahrzeuge arbeiten NICHT selbst – Status, Freimeldungen und SDS machst du (oder die Handys). Antippen für automatisch.":"Fahrzeuge arbeiten selbst (Status, Transport, Freimeldung, SDS). Antippen, um alles selbst zu steuern."}" style="font-size:12px;padding:4px 10px;border-radius:8px;font-weight:800;${vehManual()?"background:#f59e0b;color:#fff;border:1px solid #f59e0b":"background:#fff;color:#334155;border:1px solid var(--line)"}">🚑 <span class="simLbl">Fahrzeuge </span>${vehManual()?"MANUELL":"AUTO"}</button>
   <button onclick="simToggleOn()" title="Automatische Übungsnotrufe ${simOn?"ausschalten":"einschalten"}" style="font-size:12px;padding:4px 10px;border-radius:8px;font-weight:800;${simOn?"background:#16a34a;color:#fff;border:1px solid #16a34a":"background:#fff;color:#334155;border:1px solid var(--line)"}">🎲 <span class="simLbl">Übungsnotrufe </span>${simOn?"AN":"AUS"}</button>
   <button onclick="phoneHereToggle()" title="Notrufannahme an diesem Platz (${esc(deskName())}): ${phoneHere?"AN – antippen, damit hier keine Anrufe mehr klingeln":"AUS – hier klingeln keine Anrufe; antippen zum Einschalten"}" style="font-size:12px;padding:4px 8px;border-radius:8px;font-weight:800;${phoneHere?"background:#e0f2fe;color:#075985;border:1px solid #7dd3fc":"background:#fff;color:#94a3b8;border:1px solid var(--line)"}">📞${phoneHere?"":"✕"}</button>
   ${simVoice?`<button onclick="simVoiceDialog()" title="Anrufer-Stimmen und Plattdeutsch" style="font-size:16px;padding:2px 8px;border-radius:8px;background:none;border:1px solid var(--line)">🗣️</button>`:""}
   <button onclick="simPrepDialog()" title="Eigenen Notruf vorbereiten (Parameter festlegen, Anrufer spielt ihn)" style="font-size:16px;padding:2px 8px;border-radius:8px;background:none;border:1px solid var(--line)">📝</button>
   <button onclick="render('protokolle')" title="Anruferprotokolle (nach Tagen) und Lernliste" style="font-size:16px;padding:2px 8px;border-radius:8px;background:none;border:1px solid var(--line)">📼</button>`;
 }
+// v6.04: Fahrzeuge arbeiten nicht selbst – keine automatischen Statuswechsel, Transporte, Freimeldungen oder SDS der Besatzungen
+function vehManual(){return !!(db&&db.vehManual)}
+function vehManualToggle(){db.vehManual=!db.vehManual;save();renderSimCtl();toast(db.vehManual?"🚑 Fahrzeuge MANUELL – Status setzt du selbst":"🚑 Fahrzeuge AUTOMATISCH – Besatzungen arbeiten wieder selbst")}
 function phoneHereToggle(){
  phoneHere=!phoneHere; try{localStorage.setItem("lst-phone-here",phoneHere?"1":"0")}catch(e){}
  deskHeartbeat(true);

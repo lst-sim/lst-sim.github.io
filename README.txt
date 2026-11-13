@@ -1607,6 +1607,10 @@ Version 5.05:
   („a, b“ = a ODER b). Mit „🚑 NA-Indikation“ markierte Knöpfe ziehen weiterhin einen Notarzt.
 - Nur „Unauffällig“ (ohne weitere Befunde) zählt weiter als unauffälliges E (R0 möglich).
 
+Version 6.04:
+- Neuer Knopf oben „🚑 Fahrzeuge AUTO / MANUELL“. Bei MANUELL arbeiten die Fahrzeuge nicht mehr selbst: keine automatischen Statuswechsel (3→4, 4→7, 7→8, 1→2), keine Transporte, Freimeldungen, Lagemeldungen, IVENA-Anmeldungen oder SDS der Besatzungen – alles setzt du selbst bzw. die angemeldeten Handys.
+- Dienstbeginn/-ende (Status 6 ↔ 2 nach Dienstzeiten) läuft weiter. Die Einstellung wird gespeichert.
+
 Version 6.03:
 - RTW (und andere Transportfahrzeuge wie KTW) vor Ort ohne eigenen Patienten melden sich nur noch frei, wenn ein anderes Fahrzeug des Einsatzes den Patienten bereits transportiert (Status 7). Bis dahin bleiben sie vor Ort und melden das per SDS. Gilt auch beim MANV („alle Patienten versorgt“).
 - Ausnahme: kein Patient vor Ort. Abbestellungen auf der Anfahrt (Status 3) bleiben wie bisher.
