@@ -231,7 +231,7 @@ html[data-device="handy"] .fach-grid{grid-template-columns:1fr}
 <header id="topbar">
  <div class="tb-left">
   <span class="tb-brand">🚑 Leitstelle<span>.sim</span></span>
-  <span id="versionTag" class="tb-ver">v6.04</span>
+  <span id="versionTag" class="tb-ver">v6.05</span>
   <span id="syncState"></span>
   <a id="deskTag" href="#" onclick="renameDesk();return false" title="Name dieses Platzes (für „offen an …“) – antippen zum Ändern"></a>
  </div>
@@ -5864,6 +5864,7 @@ function firstLageText(call,u){
 // GW-Betreuung (bzw. GW-SEG, wenn keine Betreuung da ist) eine Betreuungsstelle (grüne Patienten).
 const MANV_ST={san:{name:"Behandlungsplatz (BHP)",icon:"⛑️",cap:10,sk:[1,2,4]},bet:{name:"Betreuungsstelle",icon:"🫂",cap:25,sk:[3]},pa:{name:"Patientenablage (MANV-PA)",icon:"🩹",cap:15,sk:[1,2,3,4],quota:{1:5,2:3,3:7,4:5}}}; // v5.66: PA laut Nds. MBl. 2015: 5 SK I, 3 SK II, 7 SK III
 function manvStationTick(call,now){
+ if(vehManual())return false; // v6.05
  let ch=false; const us=callUnits(call); call.manvStations=call.manvStations||{};
  const ST=call.manvStations;
  for(const u of us){
@@ -6715,6 +6716,7 @@ function manvApplyPhoneReport(call,fb){
  return true;
 }
 function manvReport(c,u,kind){
+ if(vehManual())return; // v6.05: bei „Fahrzeuge MANUELL“ keine simulierte Sichtung – nur Sichtungen über die Handys
  const T=manvTruth(c), jit=v=>Math.max(0,v+(Math.random()<0.5?0:pick([-1,1])));
  manvPats(c);
  const R=kind==="first"?{rot:jit(T.rot),gelb:jit(T.gelb),gruen:jit(T.gruen),blau:T.blau,schwarz:T.schwarz}:{rot:T.rot,gelb:T.gelb,gruen:T.gruen,blau:T.blau,schwarz:T.schwarz};

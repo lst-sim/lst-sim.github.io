@@ -1607,6 +1607,9 @@ Version 5.05:
   („a, b“ = a ODER b). Mit „🚑 NA-Indikation“ markierte Knöpfe ziehen weiterhin einen Notarzt.
 - Nur „Unauffällig“ (ohne weitere Befunde) zählt weiter als unauffälliges E (R0 möglich).
 
+Version 6.05:
+- „🚑 Fahrzeuge MANUELL“: Beim MANV sichten die Fahrzeuge jetzt auch nicht mehr selbst (keine simulierte Vorsichtung, keine ärztliche Sichtung, kein automatischer Aufbau von Behandlungsplatz/Betreuungsstelle). Sichtungen und Rückmeldungen über die Handys funktionieren weiter.
+
 Version 6.04:
 - Neuer Knopf oben „🚑 Fahrzeuge AUTO / MANUELL“. Bei MANUELL arbeiten die Fahrzeuge nicht mehr selbst: keine automatischen Statuswechsel (3→4, 4→7, 7→8, 1→2), keine Transporte, Freimeldungen, Lagemeldungen, IVENA-Anmeldungen oder SDS der Besatzungen – alles setzt du selbst bzw. die angemeldeten Handys.
 - Dienstbeginn/-ende (Status 6 ↔ 2 nach Dienstzeiten) läuft weiter. Die Einstellung wird gespeichert.
