@@ -527,11 +527,28 @@ const OLD_COL={"#ff7a00":"#2e7d32","#1e88e5":"#f57c00","#6d4c41":"#fbc02d","#ff6
 function isLoop(pts){if(pts.length<4)return false;const len=measure(pts,false).len;return len>40&&dist(pts[0],pts[pts.length-1])<=Math.max(30,0.2*len);}
 function measShort(d){const m=measure(d.p,d.a);const t=COL_TYPE[d.c];return d.a?`${t?t+" ":""}${fmtA(m.a)}<br><span style="font-weight:400">ca. ${Math.round(m.s)} × ${Math.round(m.l)} m</span>`:(t?t+" ":"")+fmtD(m.len);}
 function fitTxt(s,l){return s>=LZ_NIGHT[0]&&l>=LZ_NIGHT[1]?"groß genug für Landung bei Tag und Nacht (≥35 × 70 m)":s>=LZ_DAY[0]&&l>=LZ_DAY[1]?"groß genug für Landung nur bei Tag (≥30 × 30 m)":"zu klein für eine RTH-Landung (Tag mind. 30 × 30 m)";}
-function measBlock(pts,area){const m=measure(pts,area);
+/* ---- Kapazität: Zelte und Fahrzeuge ----
+   Zelt-Aufbauflächen: THW-Taschenkarte Logistik (SG 30/40/50), SG 20 Herstellerangabe 4,74 × 5,00 m.
+   Rettungsmittel: Arbeitshilfe Hessen – 2,5 × 8 m Stellfläche, ~40 m² inkl. Fahrgasse, Fischgräten ~35 m².
+   MTW/Lkw: THW-Nettoabstellfläche 23,5 / 41 m², für Fahrgassen verdoppelt (eigene Ableitung). */
+const TENTS=[["SG 20",4.74,5.0],["SG 30",5.9,6.2],["SG 40",5.9,8.2],["SG 50",5.9,10.2]],TENT_GAP=2;
+const VEH=[["Rettungsmittel (RTW/KTW)",40],["Rettungsmittel, Fischgräten-Aufstellung",35],["MTW-Größe (ca. 6,7 m)",47],["Lkw-Größe (ca. 10 m)",82]];
+function mbrAngle(xy){const h=hull(xy);let best=null,ba=0;for(let i=0;i<h.length;i++){const a=h[i],b=h[(i+1)%h.length];const ang=Math.atan2(b[1]-a[1],b[0]-a[0]);const c=Math.cos(-ang),s=Math.sin(-ang);let x0=1e9,x1=-1e9,y0=1e9,y1=-1e9;for(const p of h){const x=p[0]*c-p[1]*s,y=p[0]*s+p[1]*c;x0=Math.min(x0,x);x1=Math.max(x1,x);y0=Math.min(y0,y);y1=Math.max(y1,y);}const ar=(x1-x0)*(y1-y0);if(best===null||ar<best){best=ar;ba=ang;}}return ba;}
+// Zelte im Raster tatsächlich in die Form einsetzen (alle 9 Prüfpunkte je Zelt müssen innen liegen)
+function fitTents(pts,w,l){const P=proj(centroid(pts));let xy=pts.map(P);const ang=mbrAngle(xy),c=Math.cos(-ang),s=Math.sin(-ang);xy=xy.map(p=>[p[0]*c-p[1]*s,p[0]*s+p[1]*c]);
+ let x0=1e9,x1=-1e9,y0=1e9,y1=-1e9;for(const p of xy){x0=Math.min(x0,p[0]);x1=Math.max(x1,p[0]);y0=Math.min(y0,p[1]);y1=Math.max(y1,p[1]);}
+ let best=0;for(const [a,b] of [[w,l],[l,w]])for(const ox of [0,.5])for(const oy of [0,.5]){let n=0;const sx=a+TENT_GAP,sy=b+TENT_GAP;
+  for(let x=x0+ox*sx;x+a<=x1+1e-6;x+=sx)for(let y=y0+oy*sy;y+b<=y1+1e-6;y+=sy){let ok=true;const e=.05;for(const px of [x+e,x+a/2,x+a-e]){for(const py of [y+e,y+b/2,y+b-e])if(!pip([px,py],xy)){ok=false;break;}if(!ok)break;}if(ok)n++;}
+  best=Math.max(best,n);}return best;}
+function capBlock(pts,type){if(type!=="BHP"&&type!=="BR")return"";const A=measure(pts,true).a;
+ const tents=type==="BHP"?`<h3>Zelte (jeweils nur dieser Typ)</h3><div class="kv">${TENTS.map(([n,w,l])=>`<b>${n}</b><span>${fitTents(pts,w,l)} Stück</span>`).join("")}</div>`:"";
+ const veh=`<h3>Fahrzeuge (ungefähr, Fläche komplett genutzt)</h3><div class="kv">${VEH.map(([n,m])=>`<b>${n}</b><span>ca. ${Math.floor(Math.round(A)/m)}</span>`).join("")}</div>`;
+ return tents+veh+`<div class="note">Zelte mit Aufbaufläche und ${TENT_GAP} m Abstand für Abspannung und Wege. Fahrzeuge: Rettungsmittel ~40 m² inkl. Fahrgasse (Fischgräten ~35 m²); MTW und Lkw als doppelte Nettofläche geschätzt. Zelte und Fahrzeuge teilen sich die Fläche. Hindernisse, Gefälle und Untergrund sind nicht geprüft.</div>`;}
+function measBlock(pts,area,type){if(area&&type)return measBlock(pts,area)+capBlock(pts,type);const m=measure(pts,area);
  return area?`<div class="kv"><b>Fläche</b><span>${fmtA(m.a)}${m.a>=10000?` (${Math.round(m.a).toLocaleString("de-DE")} m²)`:""}</span><b>Umfang</b><span>${fmtD(m.u)}</span><b>Abmessung</b><span>ca. ${Math.round(m.s)} × ${Math.round(m.l)} m</span><b>Landeplatz</b><span>${fitTxt(m.s,m.l)}</span></div><div class="note">Abmessung = umschließendes Rechteck. Hindernisse sind nicht geprüft.</div>`
  :`<div class="kv"><b>Länge</b><span>${fmtD(m.len)}</span></div>`;}
 function showShape(d){const c=d.a?centroid(d.p):d.p[Math.floor(d.p.length/2)];
- sheetOpen(`<h2>${d.a?"Gezeichnete Fläche":"Gezeichnete Linie"}</h2>${measBlock(d.p,d.a)}${posBlock(c)}<div class="row">${isAdmin()&&d.a?'<button class="pri" id="sFix">Als festen Bereich für alle speichern</button>':""}<button id="sDel">Zeichnung löschen</button></div>`);
+ sheetOpen(`<h2>${d.a?"Gezeichnete Fläche":"Gezeichnete Linie"}</h2>${measBlock(d.p,d.a,COL_TYPE[d.c])}${posBlock(c)}<div class="row">${isAdmin()&&d.a?'<button class="pri" id="sFix">Als festen Bereich für alle speichern</button>':""}<button id="sDel">Zeichnung löschen</button></div>`);
  $("sDel").onclick=()=>{DRAW=DRAW.filter(x=>x!==d);saveDraw();renderDraw();sheetClose();};
  if($("sFix"))$("sFix").onclick=()=>fixForm(null,c,COL_TYPE[d.c]||"BR","",d.p);}
 function drawShape(d){if(OLD_COL[d.c])d.c=OLD_COL[d.c];if(!d.a&&isLoop(d.p))d.a=true;const opt={color:d.c,weight:6,opacity:1,lineCap:"round",lineJoin:"round"};
@@ -603,13 +620,13 @@ function renderFix(){groups.fix.clearLayers();for(const p of FIX){if(!p.c)contin
  m.bindTooltip(esc(p.n||T[1]),{permanent:true,direction:"right",offset:[24,0],className:"fixLbl"});m.on("click",()=>showFix(p));groups.fix.addLayer(m);}updLegendCounts();renderAdmin();}
 function fbErr(e){status("Nicht gespeichert: "+e.message+". Internet prüfen.");}
 function showFix(p){const T=OWN_TYPES.find(x=>x[0]===p.t)||["?","Punkt"];
- sheetOpen(`<h2>${esc(p.n||T[1])}</h2><div>${esc(T[1])}, fest hinterlegt</div>${p.txt?`<div style="margin-top:6px">${esc(p.txt)}</div>`:""}${p.g?"<h3>Bereich</h3>"+measBlock(p.g,true):""}${posBlock(p.c)}
+ sheetOpen(`<h2>${esc(p.n||T[1])}</h2><div>${esc(T[1])}, fest hinterlegt</div>${p.txt?`<div style="margin-top:6px">${esc(p.txt)}</div>`:""}${p.g?"<h3>Bereich</h3>"+measBlock(p.g,true,p.t):""}${posBlock(p.c)}
  ${isAdmin()?`<h3>Bearbeiten</h3><div class="row"><button id="fRen">Ändern</button><button id="fMov">Verschieben</button><button id="fDel">Löschen</button></div>`:""}
  <div class="note">Festgelegt${p.ts?" am "+new Date(p.ts).toLocaleDateString("de-DE"):""}.</div>`);
  if(isAdmin()){$("fRen").onclick=()=>fixForm(p);$("fMov").onclick=()=>{fixMove=p;startCross("fixmove");};
   $("fDel").onclick=()=>{const b=$("fDel");if(!b.dataset.sure){b.dataset.sure=1;b.textContent="Wirklich löschen?";return;}dbReq("/"+p.id,"DELETE").then(()=>{sheetClose();status("Gelöscht.");}).catch(fbErr);};}}
 function fixForm(p,c,t0,n0,g){const isNew=!p;p=p||{t:t0||"BR",n:n0||"",txt:"",c,g};
- sheetOpen(`<h2>${isNew?(p.g?"Festen Bereich anlegen":"Festen Punkt anlegen"):"Festen Punkt ändern"}</h2>${p.g&&isNew?measBlock(p.g,true):""}<div style="height:8px"></div><select id="xT">${OWN_TYPES.map(t=>`<option value="${t[0]}" ${t[0]===p.t?"selected":""}>${t[1]}</option>`).join("")}</select>
+ sheetOpen(`<h2>${isNew?(p.g?"Festen Bereich anlegen":"Festen Punkt anlegen"):"Festen Punkt ändern"}</h2>${p.g&&isNew?measBlock(p.g,true,p.t):""}<div style="height:8px"></div><select id="xT">${OWN_TYPES.map(t=>`<option value="${t[0]}" ${t[0]===p.t?"selected":""}>${t[1]}</option>`).join("")}</select>
  <div style="height:8px"></div><input type="text" id="xN" placeholder="Name, z. B. BR Sportplatz Schortens" value="${esc(p.n)}"><div style="height:8px"></div><input type="text" id="xX" placeholder="Hinweis, z. B. Zufahrt über Nordstraße (optional)" value="${esc(p.txt)}">
  <div class="row"><button class="pri" id="xS">${isNew?"Für alle speichern":"Änderungen speichern"}</button><button onclick="sheetClose()">Abbrechen</button></div><div class="note">${mgrs(p.c[0],p.c[1])}. Sofort für alle sichtbar.</div>`);
  $("xS").onclick=()=>{const d={t:$("xT").value,n:$("xN").value.trim(),txt:$("xX").value.trim(),c:[+p.c[0].toFixed(6),+p.c[1].toFixed(6)],ts:Date.now()};
