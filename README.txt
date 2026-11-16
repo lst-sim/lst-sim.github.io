@@ -1607,6 +1607,9 @@ Version 5.05:
   („a, b“ = a ODER b). Mit „🚑 NA-Indikation“ markierte Knöpfe ziehen weiterhin einen Notarzt.
 - Nur „Unauffällig“ (ohne weitere Befunde) zählt weiter als unauffälliges E (R0 möglich).
 
+Version 6.13:
+- Einsatzansicht: Bei alarmierten Einsätzen stehen jetzt alle Fahrzeuge einzeln mit ihrem aktuellen Status klein dahinter (z. B. „Florian … 01/83-01 (RTW) 3 · Einsatz übernommen“), farbig wie die Statusfarben. Gilt für die aufgeklappte Einsatzkarte in der Leitstelle und für „Live-Bewertung“ beim geöffneten Einsatz.
+
 Version 6.12:
 - Kopfleiste neu gestaltet: dunkle Leiste im Leitstellen-Stil. Links Logo und Version, Mitte die drei Modus-Schalter (Notrufe, Realübung, Fahrzeuge) als Gruppe – eingeschaltet farbig hinterlegt mit AN/MANUELL – daneben die Werkzeuge (Notrufannahme 📞/📵, Stimme, 🗣️, 📝, 📼). Rechts Friesland/Wilhelmshaven, Monitor, Ansicht, Szenario und eine Uhr mit Sekunden.
 - Auf kleineren Bildschirmen werden zuerst die Uhr, dann die Beschriftungen ausgeblendet; nichts überlappt mehr (vorher lag bei ~1000 px die Bereichsauswahl über den Knöpfen).

@@ -262,7 +262,7 @@ html[data-device="handy"] .fach-grid{grid-template-columns:1fr}
 <header id="topbar">
  <div class="tb-left">
   <span class="tb-brand"><span class="tb-logo">🚑</span><span class="tb-name">Leitstelle<b>.sim</b></span></span>
-  <span id="versionTag" class="tb-ver">v6.12</span>
+  <span id="versionTag" class="tb-ver">v6.13</span>
   <span id="syncState"></span>
   <a id="deskTag" href="#" onclick="renameDesk();return false" title="Name dieses Platzes (für „offen an …“) – antippen zum Ändern"></a>
  </div>
@@ -1372,6 +1372,9 @@ function fifoStamp(){
 function save(){fifoStamp();localStorage.setItem(KEY,JSON.stringify(db));if(typeof scheduleStateSync==="function")scheduleStateSync()}
 function esc(s){return String(s??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]))}
 function toast(t){const x=document.getElementById("toast");x.textContent=t;x.style.display="block";setTimeout(()=>x.style.display="none",1800)}
+// v6.13: alarmierte Fahrzeuge mit kleinem Status dahinter (Einsatzansicht)
+function statusMini(u){const st=String(u&&u.status!=null?u.status:"?");return `<span class="status s${esc(st)}" title="Status ${esc(st)} – ${esc(statusName(st))}" style="display:inline-block;font-size:10px;line-height:15px;padding:0 6px;border-radius:999px;font-weight:800;vertical-align:middle;animation:none;margin-left:4px;white-space:nowrap">${esc(st)} · ${esc(statusName(st))}</span>`}
+function unitStatusListHTML(us){return `<div style="display:flex;flex-wrap:wrap;gap:4px 12px;margin-top:3px">${us.map(u=>`<span style="white-space:nowrap">${esc(u.opta||u.name)} <span class="muted" style="font-size:11px">(${esc(u.type)})</span>${statusMini(u)}</span>`).join("")}</div>`}
 function statusPill(u){const st=String(u&&u.status!=null?u.status:"?");return `<span class="status s${esc(st)}" title="${esc(statusName(st))}" style="display:inline-block;font-size:11px;padding:1px 7px;border-radius:999px;font-weight:800;vertical-align:middle;animation:none">${esc(st)} · ${esc(statusName(st))}</span>`}
 function statusName(s){return {0:"Priorisierter Sprechwunsch",1:"Frei über Funk",2:"Frei auf Wache",3:"Einsatz übernommen",4:"Am Einsatzort",5:"Sprechwunsch",6:"Nicht einsatzbereit",7:"Patient aufgenommen",8:"bed. Verfügbar"}[s]||s}
 function statusClass(s){return "s"+s}
@@ -3620,7 +3623,7 @@ function incidentCard(c,isSelected){
     <div><label>Einsatzstichwort</label><div class="big">${esc(c.keyword||"Noch keine Bewertung")}</div></div>
     <div><label>Betroffene</label><div class="big">${esc(c.count||"–")}</div></div>
    </div>
-   <div class="suggest-compact"><b>🧠 Vorschlag / alarmierte Mittel</b><div>${c.suggestion||"Noch nicht genügend Angaben."}</div>${(c.stackedUnits||[]).length?`<div style="margin-top:4px;color:#0369a1;font-weight:700">🔁 Gestapelt: ${(c.stackedUnits||[]).map(id=>db.units.find(u=>String(u.id)===String(id))).filter(Boolean).map(u=>`${esc(u.opta||u.name)} (${esc(u.type)}, Status ${esc(String(u.status))})`).join(", ")}</div>`:""}</div>
+   <div class="suggest-compact"><b>🧠 Vorschlag / alarmierte Mittel</b>${(()=>{const us=c.alarmTime?callUnits(c):[];return us.length?unitStatusListHTML(us):`<div>${c.suggestion||"Noch nicht genügend Angaben."}</div>`})()}${(c.stackedUnits||[]).length?`<div style="margin-top:4px;color:#0369a1;font-weight:700">🔁 Gestapelt: ${(c.stackedUnits||[]).map(id=>db.units.find(u=>String(u.id)===String(id))).filter(Boolean).map(u=>`${esc(u.opta||u.name)} (${esc(u.type)}, Status ${esc(String(u.status))})`).join(", ")}</div>`:""}</div>
    ${neighborSuggestion?(()=>{const k=NEIGHBOR_LEITSTELLE[neighborSuggestion.district], nm=k==="ostfriesland"?"KRLS Ostfriesland":"GOL", n=callMissingRtw(c), own=ownBestEta(c);
      return `<div style="margin-top:10px"><div style="font-size:12px;color:#1e3a8a;margin-bottom:4px">${own!=null?`RTW aus LK ${esc(neighborSuggestion.district)} wäre schneller (~${neighborSuggestion.eta} min statt ~${own} min)`:`Kein eigener RTW frei – RTW aus LK ${esc(neighborSuggestion.district)} ~${neighborSuggestion.eta} min`}</div>
      <button style="width:100%;border:none;border-radius:9px;padding:12px;font-weight:800;cursor:pointer;background:#1d4ed8;color:#fff" onclick="nbAskRtw('${esc(String(c.id))}','${k}',${n})">📞 ${nm} anfragen${n>1?` – ${n} RTW`:" – RTW"}</button>    </div>`})():neighborUnit?`<div class="suggest-compact" style="margin-top:10px;border-color:#86c98b"><b>🤝 Nachbar-Fahrzeug übernimmt</b><div>${esc(neighborUnit.opta)} (${esc(neighborUnit.homeDistrict)}) – ${esc(statusName(neighborUnit.status))}</div></div>`:""}
@@ -4301,7 +4304,7 @@ function notruf(){
   <div class="card"><h3>Abfrageverlauf</h3>${c.history.length?c.history.map(x=>`<div style="padding:7px 0;border-bottom:1px solid var(--line)"><b>${esc(x.q)}</b><br>${esc(x.a)}</div>`).join(""):"<span class='muted'>Noch keine Antworten.</span>"}</div>
  </section>
  <aside>
-  <div class="card"><h2>🧠 Live-Bewertung</h2><div class="big">${(()=>{const P=callPrio(c);return P?prioBadge(P.lv)+" ":""})()}${esc(c.keyword||"—")}</div>${c.aaoWinner?`<div class="muted" style="font-size:12px;margin-top:4px">AAO: ${esc(c.aaoWinner)}${(c.aaoCombined||[]).length?` · zusätzlich: ${esc(c.aaoCombined.join(", "))}`:""}${(c.aaoMatches||[]).filter(n=>n!==c.aaoWinner&&!(c.aaoCombined||[]).includes(n)).length?` · ebenfalls passend (nicht alarmiert): ${esc(c.aaoMatches.filter(n=>n!==c.aaoWinner&&!(c.aaoCombined||[]).includes(n)).join(", "))}`:""}${(c.aaoExcluded||[]).length?`<br><span style="color:#b91c1c">⛔ ausgeschlossen: ${esc(c.aaoExcluded.join(", "))}</span>`:""}</div>`:""}<p>${c.suggestion||"Antworten fehlen noch."}</p></div>
+  <div class="card"><h2>🧠 Live-Bewertung</h2><div class="big">${(()=>{const P=callPrio(c);return P?prioBadge(P.lv)+" ":""})()}${esc(c.keyword||"—")}</div>${c.aaoWinner?`<div class="muted" style="font-size:12px;margin-top:4px">AAO: ${esc(c.aaoWinner)}${(c.aaoCombined||[]).length?` · zusätzlich: ${esc(c.aaoCombined.join(", "))}`:""}${(c.aaoMatches||[]).filter(n=>n!==c.aaoWinner&&!(c.aaoCombined||[]).includes(n)).length?` · ebenfalls passend (nicht alarmiert): ${esc(c.aaoMatches.filter(n=>n!==c.aaoWinner&&!(c.aaoCombined||[]).includes(n)).join(", "))}`:""}${(c.aaoExcluded||[]).length?`<br><span style="color:#b91c1c">⛔ ausgeschlossen: ${esc(c.aaoExcluded.join(", "))}</span>`:""}</div>`:""}${(()=>{const us=c.alarmTime?callUnits(c):[];return us.length?`<div style="margin-top:8px;font-size:13px"><b>Alarmierte Fahrzeuge</b>${unitStatusListHTML(us)}</div>`:`<p>${c.suggestion||"Antworten fehlen noch."}</p>`})()}</div>
   <div class="card"><h2>🚑 Nächste verfügbare Mittel</h2>${nearest.length?nearest.map(u=>`<div class="row between" style="padding:6px 0;border-bottom:1px solid var(--line)"><span><b>${esc(u.type||"—")}</b><br><small class="muted">${esc(u.opta||u.name||"—")}${geographicRank(u)<999?` · ca. ${estimatedEtaMinutes(u)} min`:``}</small></span><span class="status ${statusClass(u.status)}">${statusName(u.status)}</span></div>`).join(""):`<span class="muted">Keine verfügbaren Mittel</span>`}</div>
  </aside></div>`;
  if(q && q[0]==="location" && !c.callerGpsPending) setTimeout(initNotrufMap,0);
