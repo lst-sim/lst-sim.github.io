@@ -231,7 +231,7 @@ html[data-device="handy"] .fach-grid{grid-template-columns:1fr}
 <header id="topbar">
  <div class="tb-left">
   <span class="tb-brand">🚑 Leitstelle<span>.sim</span></span>
-  <span id="versionTag" class="tb-ver">v6.05</span>
+  <span id="versionTag" class="tb-ver">v6.06</span>
   <span id="syncState"></span>
   <a id="deskTag" href="#" onclick="renameDesk();return false" title="Name dieses Platzes (für „offen an …“) – antippen zum Ändern"></a>
  </div>
@@ -3272,10 +3272,18 @@ function resourcePickerCatsHTML(mode){
  const orgs=[...new Set([...UNIT_CATEGORIES,...(db.units||[]).map(u=>u.org).filter(Boolean)])].filter(o=>(db.units||[]).some(u=>u.org===o&&!u.neighborLoan));
  if(pickerCat!=="quick"&&!orgs.includes(pickerCat))pickerCat="quick";
  const icon=o=>(typeof ORG_ICON!=="undefined"&&ORG_ICON[o])||"🚗";
- const tabs=`<div class="row" style="flex-wrap:wrap;gap:6px;margin:6px 0 10px">${[["quick","⭐ Häufig"],...orgs.map(o=>[o,`${icon(o)} ${o}`])].map(([k,t])=>`<button class="${pickerCat===k?"primary":""}" onclick="setPickerCat(${esc(JSON.stringify(k))},'${mode}')">${esc(t)}</button>`).join("")}</div>`;
+ if(pickerCat==="nb"&&!realEx())pickerCat="quick";
+ const tabs=`<div class="row" style="flex-wrap:wrap;gap:6px;margin:6px 0 10px">${[["quick","⭐ Häufig"],...orgs.map(o=>[o,`${icon(o)} ${o}`]),...(realEx()?[["nb","🤝 Nachbar-LKs (direkt)"]]:[])].map(([k,t])=>`<button class="${pickerCat===k?"primary":""}" onclick="setPickerCat(${esc(JSON.stringify(k))},'${mode}')">${esc(t)}</button>`).join("")}</div>`;
  const dist=u=>u&&isLNA(u)?"Privat-PKW, nicht ortbar":u&&geographicRank(u)<999?`ca. ${estimatedEtaMinutes(u)} min`:"verfügbar";
  const btn=(t,label,org)=>{const u=chooseAvailableByType(t,org);const typeArg=JSON.stringify(t).replace(/"/g,"'");
    return `<button ${u?"":"disabled"} onclick="addResourceType(${typeArg},'${mode}'${org?`,${esc(JSON.stringify(org))}`:""})">${esc(label||(Array.isArray(t)?t.join("/"):t))}${!label&&!Array.isArray(t)&&u&&u.org==="Feuerwehr"&&fwTypeLong(t)?`<span style="display:block;font-size:11px;font-weight:500">${esc(fwTypeLong(t))}</span>`:""}<small style="display:block">${u?`${esc(u.opta||u.name)} · ${dist(u)}<span style="display:block;margin-top:2px">${statusPill(u)}</span>`:"nicht verfügbar"}</small></button>`};
+ if(pickerCat==="nb"){ // v6.06: Realübung – Nachbar-Fahrzeuge ohne Anruf direkt alarmieren
+   const loaned=new Set((db.units||[]).filter(u=>u.neighborLoan).map(u=>String(u.neighborUnitId)));
+   const list=(db.neighborUnits||[]).filter(n=>!loaned.has(String(n.id)));
+   const ds=[...new Set(list.map(n=>n.district||"?"))].sort((a,b)=>a.localeCompare(b,"de"));
+   return tabs+ds.map(d=>`<details style="border:1px solid var(--line);border-radius:10px;padding:6px 10px;margin-bottom:6px"><summary style="cursor:pointer;list-style:none"><b>▸ LK ${esc(d)}</b> <span class="pill">${list.filter(n=>(n.district||"?")===d).length}</span></summary>
+     <div class="answer" style="margin-top:4px">${list.filter(n=>(n.district||"?")===d).map(n=>`<button onclick="realExAddNb('${esc(String(n.id))}','${mode}')" style="padding:6px 10px">${esc(n.opta||n.name)}<small style="display:block">${esc(n.type)} · ${esc(nbWacheName(n))}</small></button>`).join("")}</div></details>`).join("")||`<p class="muted">Keine Nachbar-Fahrzeuge hinterlegt.</p>`;
+ }
  if(pickerCat==="quick")return tabs+`<div class="answer">${QUICK_RESOURCE_TYPES.map(({type:t,label})=>btn(t,label,null)).join("")}</div>`;
  if(pickerCat==="THW"){
    const c=db.currentCall; const assigned=new Set([...(c?.alarmedUnits||[]),...(c?.proposedUnitIds||[])].map(String));
@@ -3296,16 +3304,16 @@ function resourcePickerCatsHTML(mode){
  const types=[...new Set(all.map(u=>u.type).filter(Boolean))].sort((a,b)=>a.localeCompare(b,"de"));
  const ordered=pickerCat==="Rettungsdienst"?ktLast(types.map(t=>({type:t}))).map(x=>x.type):types;
  // Bereits alarmierte Fahrzeuge (diesem Einsatz zugeordnet oder anderweitig im Einsatz) nicht anzeigen
- const busy=u=>assigned.has(String(u.id))||["3","4","7"].includes(String(u.status));
+ const busy=u=>assigned.has(String(u.id))||(!realEx()&&["3","4","7"].includes(String(u.status))); // v6.06: Realübung – jeder Status wählbar
  const orgBar=["DLRG","DRK"].includes(pickerCat)?orgAlarmBarHTML(pickerCat,mode,assigned):"";
  return tabs+orgBar+ordered.map(t=>{
    const us=nearestFirst(all.filter(u=>u.type===t&&!busy(u)));
    if(!us.length)return "";
    const typeArg=JSON.stringify(t).replace(/"/g,"'");
-   const anyFree=us.some(u=>islandReachable(u)&&["1","2","8"].includes(String(u.status))&&!assigned.has(String(u.id)));
+   const anyFree=us.some(u=>(realEx()||islandReachable(u))&&(realEx()||["1","2","8"].includes(String(u.status)))&&!assigned.has(String(u.id)));
    return `<details style="border:1px solid var(--line);border-radius:10px;padding:6px 10px;margin-bottom:6px">
      <summary class="row between" style="flex-wrap:wrap;cursor:pointer;list-style:none"><b>▸ ${esc(t)}${pickerCat==="Feuerwehr"&&fwTypeLong(t)?` <span style="font-weight:500">– ${esc(fwTypeLong(t))}</span>`:""} <span class="pill">${us.length}</span></b><button style="padding:4px 10px;font-size:12px" ${anyFree?"":"disabled"} onclick="event.preventDefault();event.stopPropagation();addResourceType(${typeArg},'${mode}',${esc(JSON.stringify(pickerCat))})">Nächstes freies</button></summary>
-     <div class="answer" style="margin-top:4px">${us.map(u=>{const reach=islandReachable(u);const ok=reach&&["1","2","8"].includes(String(u.status))&&!assigned.has(String(u.id));const abPl=ok&&isAB(u)?wlfPlanFor(u,callDestinationPoint(c,u)||incidentPoint(),c):null;const abBlocked=ok&&isAB(u)&&!abPl;return `<button ${ok&&!abBlocked?"":"disabled"} onclick="addResourceUnitId('${u.id}','${mode}')" style="padding:6px 10px">${esc(u.opta||u.name)}<small style="display:block">${isAB(u)&&ok?(abPl?`🚛 ${esc(abPl.wlf.opta||abPl.wlf.name)}${abPl.busy?` (von Einsatz #${esc(abPl.fromCallId)})`:""} · ca. ${Math.round(abPl.total)} min`:"🚛 kein WLF verfügbar"):""}${isAB(u)&&ok?"<br>":""}${esc(u.location||"")} · ${!reach?(unitOnIsland(u)?"🏝️ nur Insel":"🏝️ nicht auf die Insel"):ok?dist(u):assigned.has(String(u.id))?"bereits im Einsatz":""}<span style="display:block;margin-top:2px">${statusPill(u)}</span></small></button>`}).join("")}</div>
+     <div class="answer" style="margin-top:4px">${us.map(u=>{const reach=realEx()||islandReachable(u);const ok=reach&&(realEx()||["1","2","8"].includes(String(u.status)))&&!assigned.has(String(u.id));const abPl=ok&&isAB(u)?wlfPlanFor(u,callDestinationPoint(c,u)||incidentPoint(),c):null;const abBlocked=ok&&isAB(u)&&!abPl;return `<button ${ok&&!abBlocked?"":"disabled"} onclick="addResourceUnitId('${u.id}','${mode}')" style="padding:6px 10px">${esc(u.opta||u.name)}<small style="display:block">${isAB(u)&&ok?(abPl?`🚛 ${esc(abPl.wlf.opta||abPl.wlf.name)}${abPl.busy?` (von Einsatz #${esc(abPl.fromCallId)})`:""} · ca. ${Math.round(abPl.total)} min`:"🚛 kein WLF verfügbar"):""}${isAB(u)&&ok?"<br>":""}${esc(u.location||"")} · ${!reach?(unitOnIsland(u)?"🏝️ nur Insel":"🏝️ nicht auf die Insel"):ok?dist(u):assigned.has(String(u.id))?"bereits im Einsatz":""}<span style="display:block;margin-top:2px">${statusPill(u)}</span></small></button>`}).join("")}</div>
    </details>`;
  }).join("");
 }
@@ -3371,11 +3379,17 @@ function addResourceType(type,mode="additional",org=null){
  if(!u){toast(`${typeLabel} nicht verfügbar`);showResourcePicker(mode);return}
  addResourceUnits([u],mode);
 }
+function realExAddNb(id,mode="additional"){
+ const nu=(db.neighborUnits||[]).find(n=>String(n.id)===String(id)); if(!nu)return;
+ const u=loanNeighborUnit(nu); u.status="2";
+ addResourceUnits([u],mode);
+}
 function addResourceUnitId(id,mode="additional"){
  const u=db.units.find(x=>String(x.id)===String(id));
  if(notAlarmable(u)){toast("Wachturm – nicht alarmierbar (nur als First Responder im Alarmvorschlag)");return}
- if(u&&!islandReachable(u)){toast(unitOnIsland(u)?"Fahrzeug der Insel Wangerooge – kommt nicht aufs Festland":"Kommt nicht auf die Insel Wangerooge – nur Hubschrauber");return}
- if(!u||!["1","2","8"].includes(String(u.status))){toast("Fahrzeug nicht verfügbar");showResourcePicker(mode);return}
+ if(u&&!realEx()&&!islandReachable(u)){toast(unitOnIsland(u)?"Fahrzeug der Insel Wangerooge – kommt nicht aufs Festland":"Kommt nicht auf die Insel Wangerooge – nur Hubschrauber");return}
+ if(!u||(!realEx()&&!["1","2","8"].includes(String(u.status)))){toast("Fahrzeug nicht verfügbar");showResourcePicker(mode);return}
+ if(realEx()){const other=allOpenCalls().find(c=>c!==db.currentCall&&(c.alarmedUnits||[]).some(x=>String(x)===String(u.id)));if(other){other.alarmedUnits=other.alarmedUnits.filter(x=>String(x)!==String(u.id));(other.history=other.history||[]).push({q:"🎯 Realübung",a:`${u.opta||u.name} in Einsatz #${db.currentCall&&db.currentCall.id} umdisponiert`})}}
  addResourceUnits([u],mode);
 }
 // DLRG/DRK: Vollalarm (nächste Ortsgruppe) und Kreisalarm (alle freien Fahrzeuge im Kreis)
@@ -6628,7 +6642,7 @@ function isManvLike(c){return !!c&&(!!c.manv||/MAN[VIB]/.test(c.keyword||"")||["
 // Alle Patienten eines MANV: Handy-Sichtungen der Einsatzkräfte + simulierte Vorsichtung
 function manvAllPatients(c){
  const out=[];
- Object.values(c.manvCards||{}).forEach(x=>out.push({src:"phone",card:x.cardId||x.card,sk:Number(x.sk),by:x.label||String(x.unitId),at:x.at,hist:x.hist||[]}));
+ Object.entries(c.manvCards||{}).forEach(([key,x])=>out.push({src:x.lst?"lst":"phone",key,card:x.cardId||x.card,sk:Number(x.sk),by:x.label||String(x.unitId),at:x.at,hist:x.hist||[],note:x.note||""}));
  if(c.manvTruth&&c.manvTruth.pats&&(c.manvReports||[]).length){
    const orgl=(c.manvReports||[]).some(r=>r.kind==="orgl"), first=(c.manvReports||[]).find(r=>r.kind==="first");
    c.manvTruth.pats.forEach(p=>{const tr=(c.manvPatients||[]).find(x=>x.pid===p.n), u=tr&&tr.unit?db.units.find(x=>String(x.id)===String(tr.unit)):null;
@@ -6644,18 +6658,70 @@ function manvPage(){
    const P=manvAllPatients(c).filter(x=>!f||x.sk===f).sort((a,b)=>a.sk-b.sk||String(a.card).localeCompare(String(b.card),"de",{numeric:true}));
    const all=manvAllPatients(c), cnt=k=>all.filter(x=>x.sk===k).length;
    const rows=P.map(x=>`<tr style="border-bottom:1px solid var(--line)"><td style="padding:5px 4px;font-weight:800;white-space:nowrap">${esc(String(x.card))}</td><td>${mstartDot(x.sk,15)} <small>${MSTART_COL[x.sk]?MSTART_COL[x.sk][2]:"?"}</small>${x.src==="sim"&&x.vs!==x.sk?` <small class="muted">(Vorsichtung ${MSTART_COL[x.vs][1]})</small>`:""}${(x.hist||[]).length>1?` <small class="muted">(vorher ${x.hist.slice(0,-1).map(h=>MSTART_COL[h]?MSTART_COL[h][1]:h).join(", ")})</small>`:""}</td>
-     <td style="font-size:12px">${x.src==="phone"?`📱 ${esc(x.by)}`:`<span title="Simulierte Lage">🤖 ${esc(x.by||"")}</span>`}${x.at?` <span class="muted">${hhmm(x.at)}</span>`:""}</td>
-     <td style="font-size:12px">${x.p?`${x.p.gender==="W"?"♀":"♂"} ${x.p.age} J. – ${esc(x.p.inj)}`:"<span class='muted'>—</span>"}</td><td style="font-size:12px">${x.unit?esc(x.unit):x.sk===5?"—":x.src==="sim"?esc(manvPlaceLabel(c,x.p.n)||"Schadenstelle"):"<span class='muted'>offen</span>"}</td></tr>`).join("");
+     <td style="font-size:12px">${x.src==="lst"?`🎧 ${esc(x.by)}`:x.src==="phone"?`📱 ${esc(x.by)}`:`<span title="Simulierte Lage">🤖 ${esc(x.by||"")}</span>`}${x.at?` <span class="muted">${hhmm(x.at)}</span>`:""}${x.src==="lst"?`<span style="display:block;margin-top:2px">${[1,2,3,4,5].map(k=>`<button onclick="manvLstSetSk('${esc(String(c.id))}','${esc(x.key)}',${k})" title="${MSTART_COL[k][2]}" style="padding:0 4px;min-height:0;border:${x.sk===k?"2px solid #111":"1px solid var(--line)"};background:none">${mstartDot(k,11)}</button>`).join("")}<button onclick="manvLstDel('${esc(String(c.id))}','${esc(x.key)}')" title="Eintrag löschen" style="padding:0 5px;min-height:0">🗑️</button></span>`:""}</td>
+     <td style="font-size:12px">${x.p?`${x.p.gender==="W"?"♀":"♂"} ${x.p.age} J. – ${esc(x.p.inj)}`:x.note?esc(x.note):"<span class='muted'>—</span>"}</td><td style="font-size:12px">${x.unit?esc(x.unit):x.sk===5?"—":x.src==="sim"?esc(manvPlaceLabel(c,x.p.n)||"Schadenstelle"):"<span class='muted'>offen</span>"}</td></tr>`).join("");
    return `<div class="card"><div class="row between"><h3 style="margin:0">#${esc(String(c.id))} ${esc(c.keyword||"MANV")}</h3><small class="muted">${esc(c.location||"")}</small></div>
     <div style="margin:6px 0;font-weight:800">${[1,2,3,4,5].map(k=>`<span style="margin-right:12px">${mstartDot(k,13)} ${cnt(k)}</span>`).join("")}<small class="muted">${all.length} Patienten gesamt</small></div>
+    ${manvLstFormHTML(c)}
     ${P.length?`<div style="overflow:auto"><table style="width:100%;border-collapse:collapse"><tr style="text-align:left;font-size:12px"><th>Karte</th><th>SK</th><th>Gesichtet von</th><th>Patient</th><th>Ort / Transport</th></tr>${rows}</table></div>`:`<p class="muted">Noch keine Patienten gesichtet${f?" in dieser Kategorie":""}.</p>`}</div>`};
  document.getElementById("app").innerHTML=`<div class="card"><h2 style="margin:0">🚨 MANV – alle Patienten</h2>
-  <p class="muted" style="margin:4px 0 8px">📱 = vom Fahrzeug-Handy gesichtet · 🤖 = simulierte Sichtung. Aktualisiert sich von selbst.</p>
+  <p class="muted" style="margin:4px 0 8px">🎧 = von der Leitstelle eingetragen · 📱 = vom Fahrzeug-Handy gesichtet · 🤖 = simulierte Sichtung. Aktualisiert sich von selbst (nicht während du tippst).</p>
   <div class="row" style="gap:6px;flex-wrap:wrap">${chip(0,"Alle")}${[1,2,3,4,5].map(k=>chip(k,`${mstartDot(k)} ${MSTART_COL[k][1]}`)).join("")}</div></div>
   ${calls.length?calls.map(block).join(""):`<div class="card"><p class="muted">Zurzeit kein MANV.</p></div>`}
   <div class="card">${mstartSchemeHTML()}</div>`;
 }
-setInterval(()=>{try{if(currentPage==="manv"&&!uiLocked&&!isTerminalLink&&!document.getElementById("lstModal"))render("manv")}catch(e){}},3000);
+setInterval(()=>{try{const ae=document.activeElement;if(currentPage==="manv"&&!uiLocked&&!isTerminalLink&&!document.getElementById("lstModal")&&!(ae&&/INPUT|SELECT|TEXTAREA/.test(ae.tagName)&&document.getElementById("app").contains(ae)))render("manv")}catch(e){}},3000);
+// v6.06: Gesichtete Patienten selbst aus der Leitstelle eintragen (z. B. bei einer Realübung nach Funkmeldung)
+const manvLstSk={};
+function manvLstFormHTML(c){
+ const id=esc(String(c.id)), sel=manvLstSk[c.id]||1;
+ const units=callUnits(c).map(u=>u.opta||u.name);
+ return `<details ${window._mlOpen&&window._mlOpen[c.id]?"open":""} ontoggle="(window._mlOpen=window._mlOpen||{})['${id}']=this.open" style="border:2px solid #7c3aed;border-radius:10px;padding:6px 10px;margin:6px 0 10px">
+  <summary style="cursor:pointer;font-weight:800;color:#7c3aed">🎧 Gesichtete selbst eintragen</summary>
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:6px;margin-top:6px">
+   <div><label style="font-size:11px;margin:0">Anhängekarte (leer = automatisch)</label><input id="mlCard_${id}" placeholder="z. B. 0815"></div>
+   <div><label style="font-size:11px;margin:0">Gesichtet von</label><input id="mlBy_${id}" list="mlUnits_${id}" placeholder="LST / Funkrufname"><datalist id="mlUnits_${id}">${units.map(n=>`<option value="${esc(n)}">`).join("")}</datalist></div>
+   <div style="grid-column:1/-1"><label style="font-size:11px;margin:0">Verletzung / Notiz</label><input id="mlNote_${id}" placeholder="z. B. Unterschenkelfraktur rechts" onkeydown="if(event.key==='Enter')manvLstAdd('${id}')"></div>
+  </div>
+  <div class="row" style="gap:6px;margin-top:6px;flex-wrap:wrap;align-items:center">
+   ${[1,2,3,4,5].map(k=>`<button onclick="manvLstSk['${id}']=${k};render('manv')" style="${sel===k?"border:3px solid #111;font-weight:800":""}">${mstartDot(k,13)} ${MSTART_COL[k][1]}</button>`).join("")}
+   <button class="primary" onclick="manvLstAdd('${id}')">＋ Eintragen</button>
+  </div>
+  <div class="row" style="gap:6px;margin-top:6px;flex-wrap:wrap;align-items:center;font-size:12px"><span class="muted">Schnell mehrere (ohne Details):</span>
+   ${[1,2,3,4,5].map(k=>`<button style="font-size:12px;padding:3px 8px" onclick="manvLstBulk('${id}',${k},1)">+1 ${mstartDot(k,11)}</button><button style="font-size:12px;padding:3px 8px" onclick="manvLstBulk('${id}',${k},5)">+5 ${mstartDot(k,11)}</button>`).join("")}</div>
+ </details>`;
+}
+function manvLstNextCard(c){const used=new Set(Object.values(c.manvCards||{}).map(x=>String(x.cardId||x.card)));let n=1;while(used.has("LST-"+String(n).padStart(2,"0")))n++;return "LST-"+String(n).padStart(2,"0")}
+function manvLstPut(c,card,sk,by,note){
+ c.manvCards=c.manvCards||{}; const key="LST#"+card;
+ if(c.manvCards[key]){toast(`Karte ${card} gibt es schon`);return false}
+ c.manvCards[key]={unitId:"LST",label:by||"LST",card,cardId:card,sk,at:new Date().toISOString(),hist:[sk],lst:true,note:note||""};
+ c.manv=true; return true;
+}
+function manvLstAdd(id){
+ const c=allOpenCalls().find(x=>String(x.id)===String(id)); if(!c)return;
+ const g=k=>(document.getElementById(`ml${k}_${id}`)?.value||"").trim();
+ const card=g("Card")||manvLstNextCard(c), sk=manvLstSk[id]||1, by=g("By")||"LST", note=g("Note");
+ if(!manvLstPut(c,card,sk,by,note))return;
+ (c.history=c.history||[]).push({q:`🎧 Sichtung eingetragen (${by})`,a:`Karte ${card}: ${MSTART_COL[sk][2]}${note?` – ${note}`:""}`});
+ save(); toast(`Karte ${card} eingetragen – ${MSTART_COL[sk][1]}`); render("manv");
+ setTimeout(()=>document.getElementById(`mlNote_${id}`)?.focus(),30);
+}
+function manvLstBulk(id,sk,n){
+ const c=allOpenCalls().find(x=>String(x.id)===String(id)); if(!c)return;
+ for(let i=0;i<n;i++)manvLstPut(c,manvLstNextCard(c),sk,"LST","");
+ (c.history=c.history||[]).push({q:"🎧 Sichtung eingetragen (LST)",a:`${n} × ${MSTART_COL[sk][2]}`});
+ save(); render("manv");
+}
+function manvLstSetSk(id,key,sk){
+ const c=allOpenCalls().find(x=>String(x.id)===String(id)); const x=c&&c.manvCards&&c.manvCards[key]; if(!x)return;
+ if(x.sk===sk)return; x.sk=sk; x.hist=(x.hist||[]).concat([sk]); x.at=new Date().toISOString();
+ (c.history=c.history||[]).push({q:"🎧 Nachsichtung (LST)",a:`Karte ${x.cardId||x.card}: jetzt ${MSTART_COL[sk][2]}`}); save(); render("manv");
+}
+function manvLstDel(id,key){
+ const c=allOpenCalls().find(x=>String(x.id)===String(id)); if(!c||!c.manvCards||!c.manvCards[key])return;
+ if(!confirm(`Karte ${c.manvCards[key].cardId} löschen?`))return; delete c.manvCards[key]; save(); render("manv");
+}
 // Fahrzeug-Handy: Karte wählen → Farbe wählen
 let vehicleTriageSel=null, vehicleTriageLocal={};
 function vehicleTriageHTML(local,unit,unitId,dburl,sid,c,mine){
@@ -6739,7 +6805,7 @@ function manvReport(c,u,kind){
 }
 function manvStripHTML(c){
  const R=(c.manvReports||[]).slice(-1)[0]; if(!R&&!isManvCall(c)&&!c.manvCards)return "";
- const PC=Object.values(c.manvCards||{}), pcHTML=PC.length?`<div style="margin-top:3px">📱 Handy-Sichtung: ${[1,2,3,4,5].map(k=>`<span style="margin-right:8px;font-weight:800">${mstartDot(k)} ${PC.filter(x=>Number(x.sk)===k).length}</span>`).join("")}<button onclick="event.stopPropagation();render('manv')" style="font-size:11px;padding:2px 8px">🚨 Alle Patienten</button></div>`:"";
+ const PC=Object.values(c.manvCards||{}), pcHTML=PC.length?`<div style="margin-top:3px">📋 Sichtung (Handy/LST): ${[1,2,3,4,5].map(k=>`<span style="margin-right:8px;font-weight:800">${mstartDot(k)} ${PC.filter(x=>Number(x.sk)===k).length}</span>`).join("")}<button onclick="event.stopPropagation();render('manv')" style="font-size:11px;padding:2px 8px">🚨 Alle Patienten</button></div>`:"";
  const dot=(col,n,t)=>`<span title="${t}" style="display:inline-flex;align-items:center;gap:3px;margin-right:8px;font-weight:800"><span style="width:12px;height:12px;border-radius:50%;background:${col};display:inline-block;border:1px solid #0003"></span>${n}</span>`;
  const br=c.staging?`🅿️ BR: ${esc(c.staging.name)}`:c.brMode==="orgl"?"🅿️ BR: OrgL legt fest …":isManvCall(c)?`<button onclick="event.stopPropagation();lstSetStaging('${esc(String(c.id))}')" style="font-size:11px;padding:2px 8px">🅿️ BR festlegen</button> <button onclick="event.stopPropagation();setBrMode('${esc(String(c.id))}','orgl')" style="font-size:11px;padding:2px 8px">OrgL legt fest</button>`:"";
  const tr=(c.manvPatients||[]), done=tr.filter(p=>p.unit).length;
@@ -7112,6 +7178,7 @@ function ecallArrivalTick(){
 }
 // automatische eCalls (Übung)
 function ecallAutoTick(now){
+ if(realEx())return; // v6.06
  if(IS_MONITOR||!db.ecallAuto)return;
  if(!db.ecallNextAt){db.ecallNextAt=now+(-Math.log(1-Math.random()))*(db.ecallEveryMin||20)*60000;return}
  if(now>=db.ecallNextAt){db.ecallNextAt=0;ecallCreate()}
@@ -10836,6 +10903,7 @@ function ivenaZwangUpdate(prefix,h,fach){
  return msg;
 }
 function ivenaZwangCheck(prefix,h,fach){
+ if(realEx()){const m=(fach&&!hospitalHasFach(h,fach))?`${h?h.name:"Klinik"} hat keine ${fachLabel(fach)}`:ivenaClosedInfo(h,fach);if(m)toast(`ℹ️ Realübung: ${m} – trotzdem zugewiesen`);return {zwang:!!m}} // v6.06
  if(fach&&!hospitalHasFach(h,fach)){toast(`⛔ ${h?h.name:"Diese Klinik"} hat keine ${fachLabel(fach)} – bitte eine Klinik mit dieser Fachrichtung wählen`);return false} // v5.84
  let sPlus=false;try{sPlus=!!ivenaFlagsRead(prefix).flags.s}catch(e){}
  const msg=ivenaClosedInfo(h,fach)||(sPlus?shockClosedInfo(h):null);
@@ -12781,7 +12849,7 @@ async function simGeocode(sim){
 // ─── Zeitplan: mal einer, mal nichts, mal zwei nacheinander, mal zwei gleichzeitig ───────────
 function simSchedule(first){simNextAt=Date.now()+(first?rnd(15,45):rnd(150,480))*1000}
 function simTick(){
- if(!simOn||isTerminalLink)return;
+ if(!simOn||isTerminalLink||realEx())return; // v6.06: Realübung – keine zufälligen Übungsanrufe
  simAiFill();
  const now=Date.now();
  const due=simFollowQueue.filter(x=>now>=x.at); simFollowQueue=simFollowQueue.filter(x=>now<x.at);
@@ -14212,7 +14280,8 @@ const simRenderChat=simRefresh;
 // ─── Kopfleiste: 🔇/🔊 (Text/Stimme), 🎲 Übungsnotrufe an/aus, 🤖 KI ─────────────────────────────
 function simCtlHTML(){
  return `<button onclick="simToggleVoice()" title="${simVoice?"Sprachmodus – antippen für Textmodus":"Textmodus – antippen für Sprachmodus"}" style="font-size:20px;padding:2px 8px;background:none;border:1px solid var(--line);border-radius:8px">${simVoice?"🔊":"🔇"}</button>
-  <button onclick="vehManualToggle()" title="${vehManual()?"Fahrzeuge arbeiten NICHT selbst – Status, Freimeldungen und SDS machst du (oder die Handys). Antippen für automatisch.":"Fahrzeuge arbeiten selbst (Status, Transport, Freimeldung, SDS). Antippen, um alles selbst zu steuern."}" style="font-size:12px;padding:4px 10px;border-radius:8px;font-weight:800;${vehManual()?"background:#f59e0b;color:#fff;border:1px solid #f59e0b":"background:#fff;color:#334155;border:1px solid var(--line)"}">🚑 <span class="simLbl">Fahrzeuge </span>${vehManual()?"MANUELL":"AUTO"}</button>
+  <button onclick="realExToggle()" title="Realübung: parallel zu einer echten Übung – alle Fahrzeuge frei wählbar, keine Übungsanrufe, Fahrzeuge arbeiten nicht selbst. Antippen zum ${realEx()?"Ausschalten":"Einschalten"}." style="font-size:12px;padding:4px 10px;border-radius:8px;font-weight:800;${realEx()?"background:#7c3aed;color:#fff;border:1px solid #7c3aed":"background:#fff;color:#334155;border:1px solid var(--line)"}">🎯 <span class="simLbl">Realübung </span>${realEx()?"AN":"AUS"}</button>
+  <button onclick="${realEx()?"toast('Bei Realübung arbeiten die Fahrzeuge immer manuell')":"vehManualToggle()"}" title="${vehManual()?"Fahrzeuge arbeiten NICHT selbst – Status, Freimeldungen und SDS machst du (oder die Handys). Antippen für automatisch.":"Fahrzeuge arbeiten selbst (Status, Transport, Freimeldung, SDS). Antippen, um alles selbst zu steuern."}" style="font-size:12px;padding:4px 10px;border-radius:8px;font-weight:800;${vehManual()?"background:#f59e0b;color:#fff;border:1px solid #f59e0b":"background:#fff;color:#334155;border:1px solid var(--line)"}">🚑 <span class="simLbl">Fahrzeuge </span>${vehManual()?"MANUELL":"AUTO"}</button>
   <button onclick="simToggleOn()" title="Automatische Übungsnotrufe ${simOn?"ausschalten":"einschalten"}" style="font-size:12px;padding:4px 10px;border-radius:8px;font-weight:800;${simOn?"background:#16a34a;color:#fff;border:1px solid #16a34a":"background:#fff;color:#334155;border:1px solid var(--line)"}">🎲 <span class="simLbl">Übungsnotrufe </span>${simOn?"AN":"AUS"}</button>
   <button onclick="phoneHereToggle()" title="Notrufannahme an diesem Platz (${esc(deskName())}): ${phoneHere?"AN – antippen, damit hier keine Anrufe mehr klingeln":"AUS – hier klingeln keine Anrufe; antippen zum Einschalten"}" style="font-size:12px;padding:4px 8px;border-radius:8px;font-weight:800;${phoneHere?"background:#e0f2fe;color:#075985;border:1px solid #7dd3fc":"background:#fff;color:#94a3b8;border:1px solid var(--line)"}">📞${phoneHere?"":"✕"}</button>
   ${simVoice?`<button onclick="simVoiceDialog()" title="Anrufer-Stimmen und Plattdeutsch" style="font-size:16px;padding:2px 8px;border-radius:8px;background:none;border:1px solid var(--line)">🗣️</button>`:""}
@@ -14220,7 +14289,14 @@ function simCtlHTML(){
   <button onclick="render('protokolle')" title="Anruferprotokolle (nach Tagen) und Lernliste" style="font-size:16px;padding:2px 8px;border-radius:8px;background:none;border:1px solid var(--line)">📼</button>`;
 }
 // v6.04: Fahrzeuge arbeiten nicht selbst – keine automatischen Statuswechsel, Transporte, Freimeldungen oder SDS der Besatzungen
-function vehManual(){return !!(db&&db.vehManual)}
+function vehManual(){return !!(db&&(db.vehManual||db.realEx))}
+// v6.06: Realübung – läuft parallel zu einer echten Übung: keine Übungsanrufe/eCalls, Fahrzeuge arbeiten nicht selbst,
+// alle Fahrzeuge (jeder Status, auch Nachbar-LKs) frei wählbar, IVENA-Sperren nur als Hinweis. Vorschläge bleiben.
+function realEx(){return !!(db&&db.realEx)}
+function realExToggle(){
+ db.realEx=!db.realEx; save(); renderSimCtl(); try{render(currentPage)}catch(e){}
+ toast(db.realEx?"🎯 Realübung AN – du wählst alle Fahrzeuge selbst, keine Übungsanrufe, Fahrzeuge arbeiten nicht selbst":"🎯 Realübung AUS");
+}
 function vehManualToggle(){db.vehManual=!db.vehManual;save();renderSimCtl();toast(db.vehManual?"🚑 Fahrzeuge MANUELL – Status setzt du selbst":"🚑 Fahrzeuge AUTOMATISCH – Besatzungen arbeiten wieder selbst")}
 function phoneHereToggle(){
  phoneHere=!phoneHere; try{localStorage.setItem("lst-phone-here",phoneHere?"1":"0")}catch(e){}

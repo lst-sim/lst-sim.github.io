@@ -1607,6 +1607,15 @@ Version 5.05:
   („a, b“ = a ODER b). Mit „🚑 NA-Indikation“ markierte Knöpfe ziehen weiterhin einen Notarzt.
 - Nur „Unauffällig“ (ohne weitere Befunde) zählt weiter als unauffälliges E (R0 möglich).
 
+Version 6.06:
+- Neuer Schalter oben „🎯 Realübung AN/AUS“ – zum Mitlaufen parallel zu einer echten Übung:
+  - Keine zufälligen Übungsanrufe und keine zufälligen eCalls; selbst vorbereitete Notrufe gehen weiter.
+  - Fahrzeuge arbeiten nicht selbst (wie „Fahrzeuge MANUELL“, inkl. keine simulierte Sichtung).
+  - Alarmvorschlag kommt weiter, aber unter „Fahrzeuge bearbeiten/Nachforderung“ ist jedes Fahrzeug wählbar – egal welcher Status, auch aus einem anderen Einsatz (wird dort herausgenommen) und auch für die Insel.
+  - Neuer Reiter „🤝 Nachbar-LKs (direkt)“: Nachbar-Fahrzeuge ohne Anruf direkt alarmieren.
+  - IVENA: fehlende Fachrichtung oder Abmeldung nur als Hinweis, Zuweisung geht trotzdem.
+- MANV-Seite (alle Modi): „🎧 Gesichtete selbst eintragen“ – Anhängekarte (oder automatisch LST-01 …), gesichtet von (Funkrufname), Verletzung, Sichtungskategorie; dazu „+1/+5“ je Farbe. Einträge der Leitstelle sind mit 🎧 markiert, die Farbe lässt sich nachträglich ändern (Nachsichtung) oder löschen. Die Seite aktualisiert sich nicht mehr, während du tippst.
+
 Version 6.05:
 - „🚑 Fahrzeuge MANUELL“: Beim MANV sichten die Fahrzeuge jetzt auch nicht mehr selbst (keine simulierte Vorsichtung, keine ärztliche Sichtung, kein automatischer Aufbau von Behandlungsplatz/Betreuungsstelle). Sichtungen und Rückmeldungen über die Handys funktionieren weiter.
 
