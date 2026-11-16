@@ -223,6 +223,37 @@ html[data-device="handy"] .fach-grid{grid-template-columns:1fr}
 @media (max-width:1250px){#topbar .tb-btn span{display:none}#topbar .tb-btn{padding:4px 8px}.tb-area button{padding:4px 9px}}
 @media (max-width:860px){#topbar{display:flex;flex-wrap:wrap;justify-content:space-between;row-gap:6px;padding:6px 8px}#topbar #simCtl{order:3;flex:1 0 100%}#topbar #simCtl .simLbl{display:none}}
 @media (max-width:420px){#topbar .tb-right{gap:4px}#topbar .tb-btn{padding:3px 6px}.tb-area button{padding:3px 7px;font-size:11px}#topbar .tb-ver{display:none}}
+/* v6.12: neue Kopfleiste – dunkel, klare Gruppen, keine Überlappung */
+#topbar{display:flex!important;align-items:center;gap:10px;padding:6px 12px;background:linear-gradient(180deg,#0f172a,#1e293b)!important;border-bottom:1px solid #020617;box-shadow:0 2px 10px #0f172a40;color:#e2e8f0;flex-wrap:nowrap;backdrop-filter:none;-webkit-backdrop-filter:none}
+#topbar .tb-left{flex:0 1 auto;gap:8px;flex-wrap:nowrap}
+#topbar #simCtl{flex:1 1 auto;display:flex;justify-content:center;gap:10px;position:static!important;transform:none!important;min-width:0}
+#topbar .tb-right{flex:0 1 auto;gap:6px}
+#topbar .tb-brand{display:flex;align-items:center;gap:7px;color:#fff;font-size:15px}
+#topbar .tb-logo{display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:8px;background:#e30613;font-size:16px;box-shadow:inset 0 -2px 0 #0003}
+#topbar .tb-brand .tb-name{color:#fff}#topbar .tb-name b{color:#f87171;font-weight:900}
+#topbar .tb-ver{background:#ffffff14;border:1px solid #ffffff22;color:#94a3b8;font-weight:700}
+#topbar #deskTag{color:#cbd5e1;background:#ffffff10;border:1px dashed #ffffff40}
+#topbar .tb-group{display:flex;align-items:center;gap:4px;background:#ffffff0d;border:1px solid #ffffff1a;border-radius:12px;padding:3px}
+#topbar .tb-tog{display:inline-flex;align-items:center;gap:6px;border:0;border-radius:9px;background:transparent;color:#cbd5e1;padding:5px 10px;font-size:12px;font-weight:700;min-height:0;box-shadow:none;cursor:pointer;white-space:nowrap}
+#topbar .tb-tog:hover{background:#ffffff14}
+#topbar .tb-tog .st{font-size:10px;font-weight:900;letter-spacing:.4px;padding:1px 6px;border-radius:999px;background:#ffffff1a;color:#94a3b8}
+#topbar .tb-tog.on{background:var(--c);color:#fff;box-shadow:0 0 0 1px #ffffff30 inset,0 2px 8px color-mix(in srgb,var(--c) 55%,transparent)}
+#topbar .tb-tog.on .st{background:#ffffff33;color:#fff}
+#topbar .tb-ico{display:inline-flex;align-items:center;justify-content:center;width:34px;height:30px;border:0;border-radius:9px;background:transparent;font-size:16px;padding:0;min-height:0;box-shadow:none;cursor:pointer}
+#topbar .tb-ico:hover{background:#ffffff1a}
+#topbar .tb-ico.on{background:#0ea5e933}
+#topbar .tb-ico.off{opacity:.55}
+#topbar .tb-btn{background:#ffffff0d;border:1px solid #ffffff1a;color:#e2e8f0}
+#topbar .tb-btn:hover{background:#ffffff1f}
+#topbar .seg{background:#ffffff0d;border-color:#ffffff1a}
+#topbar .seg button{color:#cbd5e1}
+#topbar .seg button.on{background:#fff;color:#0f172a}
+#topbar .tb-clock{font-variant-numeric:tabular-nums;font-weight:900;font-size:16px;color:#fff;padding:2px 10px;border-radius:9px;background:#ffffff10;border:1px solid #ffffff1a;letter-spacing:.5px}
+#topbar #syncState{color:#cbd5e1}
+@media (max-width:1320px){#topbar .tb-clock{display:none}}
+@media (max-width:1220px){#topbar .tb-tog .lbl{display:none}#topbar .tb-tog{padding:5px 8px}#topbar .tb-name{display:none}}
+@media (max-width:900px){#topbar{flex-wrap:wrap!important;row-gap:6px}#topbar #simCtl{order:3;flex:1 0 100%}}
+@media (max-width:420px){#topbar .tb-ico{width:30px}#topbar .tb-tog{padding:4px 6px}}
 
 </style>
 <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
@@ -230,8 +261,8 @@ html[data-device="handy"] .fach-grid{grid-template-columns:1fr}
 <body>
 <header id="topbar">
  <div class="tb-left">
-  <span class="tb-brand">🚑 Leitstelle<span>.sim</span></span>
-  <span id="versionTag" class="tb-ver">v6.11</span>
+  <span class="tb-brand"><span class="tb-logo">🚑</span><span class="tb-name">Leitstelle<b>.sim</b></span></span>
+  <span id="versionTag" class="tb-ver">v6.12</span>
   <span id="syncState"></span>
   <a id="deskTag" href="#" onclick="renameDesk();return false" title="Name dieses Platzes (für „offen an …“) – antippen zum Ändern"></a>
  </div>
@@ -242,6 +273,7 @@ html[data-device="handy"] .fach-grid{grid-template-columns:1fr}
   <a id="monitorLink" href="#" onclick="showMonitorQR();return false" class="tb-btn" title="Monitor hinzufügen">📺 <span>Monitor</span></a>
   <a id="deviceSwitchLink" href="#" onclick="switchViewLink();return false" class="tb-btn" title="Ansicht wechseln (Tablet/Handy)">📱 <span>Ansicht</span></a>
   <a href="#" onclick="localStorage.removeItem('dlrg-jet-scenario');location.reload();return false" class="tb-btn" title="Szenario wechseln">🔀 <span>Szenario</span></a>
+  <span id="tbClock" class="tb-clock" title="Uhrzeit"></span>
  </div>
 </header>
 <div id="callTimerBar" style="position:fixed;top:0;left:0;right:0;z-index:1000"></div>
@@ -14628,15 +14660,21 @@ function simRefresh(){
 const simRenderChat=simRefresh;
 
 // ─── Kopfleiste: 🔇/🔊 (Text/Stimme), 🎲 Übungsnotrufe an/aus, 🤖 KI ─────────────────────────────
-function simCtlHTML(){
- return `<button onclick="simToggleVoice()" title="${simVoice?"Sprachmodus – antippen für Textmodus":"Textmodus – antippen für Sprachmodus"}" style="font-size:20px;padding:2px 8px;background:none;border:1px solid var(--line);border-radius:8px">${simVoice?"🔊":"🔇"}</button>
-  <button onclick="realExToggle()" title="Realübung: parallel zu einer echten Übung – alle Fahrzeuge frei wählbar, keine Übungsanrufe, Fahrzeuge arbeiten nicht selbst. Antippen zum ${realEx()?"Ausschalten":"Einschalten"}." style="font-size:12px;padding:4px 10px;border-radius:8px;font-weight:800;${realEx()?"background:#7c3aed;color:#fff;border:1px solid #7c3aed":"background:#fff;color:#334155;border:1px solid var(--line)"}">🎯 <span class="simLbl">Realübung </span>${realEx()?"AN":"AUS"}</button>
-  <button onclick="${realEx()?"toast('Bei Realübung arbeiten die Fahrzeuge immer manuell')":"vehManualToggle()"}" title="${vehManual()?"Fahrzeuge arbeiten NICHT selbst – Status, Freimeldungen und SDS machst du (oder die Handys). Antippen für automatisch.":"Fahrzeuge arbeiten selbst (Status, Transport, Freimeldung, SDS). Antippen, um alles selbst zu steuern."}" style="font-size:12px;padding:4px 10px;border-radius:8px;font-weight:800;${vehManual()?"background:#f59e0b;color:#fff;border:1px solid #f59e0b":"background:#fff;color:#334155;border:1px solid var(--line)"}">🚑 <span class="simLbl">Fahrzeuge </span>${vehManual()?"MANUELL":"AUTO"}</button>
-  <button onclick="simToggleOn()" title="Automatische Übungsnotrufe ${simOn?"ausschalten":"einschalten"}" style="font-size:12px;padding:4px 10px;border-radius:8px;font-weight:800;${simOn?"background:#16a34a;color:#fff;border:1px solid #16a34a":"background:#fff;color:#334155;border:1px solid var(--line)"}">🎲 <span class="simLbl">Übungsnotrufe </span>${simOn?"AN":"AUS"}</button>
-  <button onclick="phoneHereToggle()" title="Notrufannahme an diesem Platz (${esc(deskName())}): ${phoneHere?"AN – antippen, damit hier keine Anrufe mehr klingeln":"AUS – hier klingeln keine Anrufe; antippen zum Einschalten"}" style="font-size:12px;padding:4px 8px;border-radius:8px;font-weight:800;${phoneHere?"background:#e0f2fe;color:#075985;border:1px solid #7dd3fc":"background:#fff;color:#94a3b8;border:1px solid var(--line)"}">📞${phoneHere?"":"✕"}</button>
-  ${simVoice?`<button onclick="simVoiceDialog()" title="Anrufer-Stimmen und Plattdeutsch" style="font-size:16px;padding:2px 8px;border-radius:8px;background:none;border:1px solid var(--line)">🗣️</button>`:""}
-  <button onclick="simPrepDialog()" title="Eigenen Notruf vorbereiten (Parameter festlegen, Anrufer spielt ihn)" style="font-size:16px;padding:2px 8px;border-radius:8px;background:none;border:1px solid var(--line)">📝</button>
-  <button onclick="render('protokolle')" title="Anruferprotokolle (nach Tagen) und Lernliste" style="font-size:16px;padding:2px 8px;border-radius:8px;background:none;border:1px solid var(--line)">📼</button>`;
+function simCtlHTML(){ // v6.12: neue Kopfleiste – Modus-Schalter als Gruppe, Werkzeuge als Symbolknöpfe
+ const tog=(on,col,ic,lbl,st,onclick,title)=>`<button class="tb-tog${on?" on":""}" style="--c:${col}" onclick="${onclick}" title="${esc(title)}"><span class="ic">${ic}</span><span class="lbl">${lbl}</span><span class="st">${st}</span></button>`;
+ const ico=(ic,onclick,title,extra="")=>`<button class="tb-ico${extra}" onclick="${onclick}" title="${esc(title)}">${ic}</button>`;
+ return `<div class="tb-group tb-modes">
+   ${tog(simOn,"#16a34a","🎲","Notrufe",simOn?"AN":"AUS","simToggleOn()",`Automatische Übungsnotrufe ${simOn?"ausschalten":"einschalten"}`)}
+   ${tog(realEx(),"#7c3aed","🎯","Realübung",realEx()?"AN":"AUS","realExToggle()",`Realübung: parallel zu einer echten Übung – alle Fahrzeuge frei wählbar, keine Übungsanrufe, Fahrzeuge arbeiten nicht selbst. Antippen zum ${realEx()?"Ausschalten":"Einschalten"}.`)}
+   ${tog(vehManual(),"#ea580c","🚑","Fahrzeuge",vehManual()?"MANUELL":"AUTO",realEx()?"toast('Bei Realübung arbeiten die Fahrzeuge immer manuell')":"vehManualToggle()",vehManual()?"Fahrzeuge arbeiten NICHT selbst – Status, Freimeldungen und SDS machst du (oder die Handys). Antippen für automatisch.":"Fahrzeuge arbeiten selbst (Status, Transport, Freimeldung, SDS). Antippen, um alles selbst zu steuern.")}
+  </div>
+  <div class="tb-group tb-tools">
+   ${ico(phoneHere?"📞":"📵","phoneHereToggle()",`Notrufannahme an diesem Platz (${deskName()}): ${phoneHere?"AN – antippen, damit hier keine Anrufe mehr klingeln":"AUS – hier klingeln keine Anrufe; antippen zum Einschalten"}`,phoneHere?" on":" off")}
+   ${ico(simVoice?"🔊":"🔇","simToggleVoice()",simVoice?"Sprachmodus – antippen für Textmodus":"Textmodus – antippen für Sprachmodus",simVoice?" on":"")}
+   ${simVoice?ico("🗣️","simVoiceDialog()","Anrufer-Stimmen und Plattdeutsch"):""}
+   ${ico("📝","simPrepDialog()","Eigenen Notruf vorbereiten (Parameter festlegen, Anrufer spielt ihn)")}
+   ${ico("📼","render('protokolle')","Anruferprotokolle (nach Tagen) und Lernliste")}
+  </div>`;
 }
 // v6.04: Fahrzeuge arbeiten nicht selbst – keine automatischen Statuswechsel, Transporte, Freimeldungen oder SDS der Besatzungen
 function vehManual(){return !!(db&&(db.vehManual||db.realEx))}
@@ -14662,6 +14700,7 @@ function renameDesk(){
  if(db.currentCall&&db.currentCall.deskId===DEVICE_ID){db.currentCall.deskName=deskName();save()}
  renderSimCtl();
 }
+setInterval(()=>{const el=document.getElementById("tbClock");if(el)el.textContent=new Date().toLocaleTimeString("de-DE",{hour:"2-digit",minute:"2-digit",second:"2-digit"})},1000); // v6.12: Uhr in der Kopfleiste
 function renderSimCtl(){
  areaSelSync(); const dt=document.getElementById("deskTag"); if(dt)dt.textContent=(db.cloud?.enabled&&!isTerminalLink)?"🎧 "+deskName():"";
  const el=document.getElementById("simCtl");if(!el)return;

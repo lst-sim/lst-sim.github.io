@@ -1607,6 +1607,10 @@ Version 5.05:
   („a, b“ = a ODER b). Mit „🚑 NA-Indikation“ markierte Knöpfe ziehen weiterhin einen Notarzt.
 - Nur „Unauffällig“ (ohne weitere Befunde) zählt weiter als unauffälliges E (R0 möglich).
 
+Version 6.12:
+- Kopfleiste neu gestaltet: dunkle Leiste im Leitstellen-Stil. Links Logo und Version, Mitte die drei Modus-Schalter (Notrufe, Realübung, Fahrzeuge) als Gruppe – eingeschaltet farbig hinterlegt mit AN/MANUELL – daneben die Werkzeuge (Notrufannahme 📞/📵, Stimme, 🗣️, 📝, 📼). Rechts Friesland/Wilhelmshaven, Monitor, Ansicht, Szenario und eine Uhr mit Sekunden.
+- Auf kleineren Bildschirmen werden zuerst die Uhr, dann die Beschriftungen ausgeblendet; nichts überlappt mehr (vorher lag bei ~1000 px die Bereichsauswahl über den Knöpfen).
+
 Version 6.11:
 - Abfragefeld „Rückrufnummer“ nimmt nur noch eine Telefonnummer an: Buchstaben lassen sich nicht eintippen, erlaubt sind Ziffern, Leerzeichen, +, / und -. Die Nummer muss mit 0 oder + beginnen und 6–15 Ziffern haben, sonst kommt ein Hinweis. Daneben „Angezeigte Nummer übernehmen“ und „Nicht erhalten“.
 - Gilt auch für eine eigene Frage mit „Rückruf“ im Namen.
