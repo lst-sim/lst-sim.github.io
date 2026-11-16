@@ -263,7 +263,7 @@ html[data-device="handy"] .fach-grid{grid-template-columns:1fr}
 <header id="topbar">
  <div class="tb-left">
   <span class="tb-brand"><span class="tb-logo">🚑</span><span class="tb-name">Leitstelle<b>.sim</b></span></span>
-  <span id="versionTag" class="tb-ver">v6.14</span>
+  <span id="versionTag" class="tb-ver">v6.15</span>
   <span id="syncState"></span>
   <a id="deskTag" href="#" onclick="renameDesk();return false" title="Name dieses Platzes (für „offen an …“) – antippen zum Ändern"></a>
  </div>
@@ -644,12 +644,12 @@ const DEFAULTS_FRI_WHV={
   {"id":28,"name":"MANI – Massenanfall von Infizierten/Erkrankten (v5.66)","keyword":"MANI","rules":{"event":"MANI"},"units":[{"type":"RTW","n":2,"org":"Rettungsdienst"},{"type":"KTW","n":2,"org":"Rettungsdienst"},{"type":"NEF","n":1,"org":"Rettungsdienst"},{"type":"OrgL","n":1,"org":"Rettungsdienst"},{"type":"LNA","n":1,"org":"Rettungsdienst"},{"type":"ELW1","n":1,"org":"DRK"},{"type":"MTW","n":1,"org":"DRK"}]},
   {"id":29,"name":"MANB – Massenanfall von Betroffenen (v5.66)","keyword":"MANB","rules":{"event":"MANB"},"units":[{"type":"RTW","n":1,"org":"Rettungsdienst"},{"type":"NEF","n":1,"org":"Rettungsdienst"},{"type":"OrgL","n":1,"org":"Rettungsdienst"},{"type":"LNA","n":1,"org":"Rettungsdienst"},{"type":"ELW","n":1,"org":"Feuerwehr"},{"type":"ELW1","n":1,"org":"DRK"},{"type":"GW-Betreuung","n":1,"org":"DRK"},{"type":"MTW","n":2,"org":"DRK"}]},
   // v6.08: Abfrage über Leitsymptom (ProQA-ähnlich) – Fahrzeuge nach Dringlichkeit, Notarzt nur bei D/E
-  {"id":30,"name":"Leitsymptom – Stufe E (Atem-/Kreislaufstillstand)","keyword":"R1N1_Stufe E","topic":"Rettungsdienst","rules":{"prio":"E"},"units":[{"type":"RTW","n":1,"org":"Rettungsdienst"},{"type":"NEF","n":1,"org":"Rettungsdienst"}]},
-  {"id":31,"name":"Leitsymptom – Stufe D (lebensbedrohlich)","keyword":"R1N1_Stufe D","topic":"Rettungsdienst","rules":{"prio":"D"},"units":[{"type":"RTW","n":1,"org":"Rettungsdienst"},{"type":"NEF","n":1,"org":"Rettungsdienst"}]},
-  {"id":32,"name":"Leitsymptom – Stufe C (potenziell ernst, ohne Notarzt)","keyword":"R1_Stufe C","topic":"Rettungsdienst","rules":{"prio":"C"},"units":[{"type":"RTW","n":1,"org":"Rettungsdienst"}]},
-  {"id":33,"name":"Leitsymptom – Stufe B (dringlich abklären)","keyword":"R1_Stufe B","topic":"Rettungsdienst","rules":{"prio":"B"},"units":[{"type":"RTW","n":1,"org":"Rettungsdienst"}]},
-  {"id":34,"name":"Leitsymptom – Stufe A (nicht dringlich, ohne Sonderrechte)","keyword":"R0_Stufe A","topic":"Rettungsdienst","rules":{"prio":"A"},"units":[{"type":"NKTW","n":1,"org":"Rettungsdienst"}]},
-  {"id":35,"name":"Leitsymptom – Schlaganfall (Stroke, ohne Notarzt)","keyword":"R1_Stroke","topic":"Rettungsdienst","rules":{"leit":"Schlaganfall-Zeichen"},"units":[{"type":"RTW","n":1,"org":"Rettungsdienst"}]},
+  {"id":30,"name":"R1N1 – Leitsymptom Stufe E (Atem-/Kreislaufstillstand)","keyword":"R1N1","topic":"Rettungsdienst","rules":{"prio":"E"},"units":[{"type":"RTW","n":1,"org":"Rettungsdienst"},{"type":"NEF","n":1,"org":"Rettungsdienst"}]},
+  {"id":31,"name":"R1N1 – Leitsymptom Stufe D (lebensbedrohlich)","keyword":"R1N1","topic":"Rettungsdienst","rules":{"prio":"D"},"units":[{"type":"RTW","n":1,"org":"Rettungsdienst"},{"type":"NEF","n":1,"org":"Rettungsdienst"}]},
+  {"id":32,"name":"R1 – Leitsymptom Stufe C (potenziell ernst)","keyword":"R1","topic":"Rettungsdienst","rules":{"prio":"C"},"units":[{"type":"RTW","n":1,"org":"Rettungsdienst"}]},
+  {"id":33,"name":"R1 – Leitsymptom Stufe B (dringlich abklären)","keyword":"R1","topic":"Rettungsdienst","rules":{"prio":"B"},"units":[{"type":"RTW","n":1,"org":"Rettungsdienst"}]},
+  {"id":34,"name":"R0 – Leitsymptom Stufe A (nicht dringlich)","keyword":"R0","topic":"Rettungsdienst","rules":{"prio":"A"},"units":[{"type":"NKTW","n":1,"org":"Rettungsdienst"}]},
+  {"id":35,"name":"R1 – Leitsymptom Schlaganfall (Stroke)","keyword":"R1_Stroke","topic":"Rettungsdienst","rules":{"leit":"Schlaganfall-Zeichen"},"units":[{"type":"RTW","n":1,"org":"Rettungsdienst"}]},
   {"id":10,"name":"Rettungsdienst – RD_X kritische Blutung","keyword":"R1N1_Trauma schwer","rules":{"x_massive":"Ja"},"units":[{"type":"RTW","n":1,"org":"Rettungsdienst"},{"type":"NEF","n":1,"org":"Rettungsdienst"}]},
   {"id":11,"name":"Rettungsdienst – RD_B Atemstillstand","keyword":"R1N1_Reanimation","rules":{"b_breath":"Keine normale Atmung"},"units":[{"type":"RTW","n":1,"org":"Rettungsdienst"},{"type":"NEF","n":1,"org":"Rettungsdienst"}]},
   {"id":12,"name":"Rettungsdienst – RD_C relevante Blutung","keyword":"R1N1_Med. Notfall schwer","rules":{"c_circ":"Relevante Blutung"},"units":[{"type":"RTW","n":1,"org":"Rettungsdienst"},{"type":"NEF","n":1,"org":"Rettungsdienst"}]},
@@ -1163,12 +1163,17 @@ db.units=db.units.filter(u=>!RETIRED_UNIT_OPTAS.includes(u.opta));
 // v5.74: läuft bei jedem Start UND nach dem Laden eines gespeicherten Stands (Cloud/Datei), damit ältere
 // gespeicherte Stände nicht wieder „OrgL/LNA“ einführen oder doppelte OrgL-Fahrzeuge entstehen.
 // v6.01: RTW/NEF/KTW der BF Wilhelmshaven gelten als Rettungsdienst (auch wenn sie in gespeicherten Daten als Feuerwehr stehen)
+function proqaAaoMigrate(){ // v6.15: alte Stichworte der Leitsymptom-AAOs auf R1N1/R1/R0 umstellen (nur wenn unverändert)
+ const M={"R1N1_Stufe E":"R1N1","R1N1_Stufe D":"R1N1","R1_Stufe C":"R1","R1_Stufe B":"R1","R0_Stufe A":"R0"};let ch=0;
+ (db.aao||[]).forEach(a=>{if(a&&M[a.keyword]){a.keyword=M[a.keyword];ch++}if(a&&/^Leitsymptom – /.test(a.name||"")){const P={30:"R1N1",31:"R1N1",32:"R1",33:"R1",34:"R0",35:"R1"}[a.id]||"";if(P){a.name=`${P} – ${a.name}`;ch++}}});
+ return ch;
+}
 function whvRdOrgMigrate(){
  let ch=0; const RDT=/^(RTW|NEF|KTW|NKTW|NAW|ITW|SRTW)$/;
  (db.units||[]).forEach(u=>{if(u&&u.org!=="Rettungsdienst"&&RDT.test(String(u.type||""))&&(/Wilhelmshaven/i.test(String(u.opta||"")+" "+String(u.location||""))||/^WHV-/.test(String(u.name||"")))){u.org="Rettungsdienst";ch++}});
  return ch;
 }
-function lnaSplitMigrate(){ try{if(whvRdOrgMigrate())save()}catch(e){}
+function lnaSplitMigrate(){ try{if(whvRdOrgMigrate()+proqaAaoMigrate())save()}catch(e){}
  let ch=false;
  (db.units||[]).forEach(u=>{
    const nm=String(u.opta||u.name||"");
@@ -3106,7 +3111,8 @@ function openCallEdit(id){
  const c=activateCallById(id); if(!c){toast("Einsatz nicht gefunden");return}
  uiLocked=true;
  const QS=callQs(c);
- const rows=QS.filter(([k])=>k in (c.answers||{})||(k==="location"&&c.location)).map(([k,label,type])=>{
+ const LEITK=["leit","leitQ","leitLate","leitQLate"];
+ const rows=QS.filter(([k])=>!LEITK.includes(k)&&(k in (c.answers||{})||(k==="location"&&c.location))).map(([k,label,type])=>{
    const cur=k==="location"?(c.location||c.answers.location||""):String(ansText(c,k)??"");
    const opts=type==="custom"?(qsCustom(k)?qsCustomOptions(qsCustom(k)):null):(QS_ANS_EDIT[k]&&QS_ANS_EDIT[k]!=="equick"&&qsAnswers(k))?qsAnswerList(k).map(a=>a.label):CALL_EDIT_OPTIONS[type]||null;
    let ctl;
@@ -3119,12 +3125,47 @@ function openCallEdit(id){
  document.getElementById("app").innerHTML=`<div class="card call">
   <div class="row between"><div><h2>📝 Notruf #${esc(c.id)} ändern</h2><div class="muted">${esc(c.keyword||"—")} · ${esc(c.location||"Ort unbekannt")}</div></div><button onclick="uiLocked=false;render('leitstelle')">Abbrechen</button></div>
   <p class="muted">Jeden Abfragepunkt nachträglich ändern. Danach wird das Stichwort neu bewertet${c.alarmTime?" und du kannst im selben Schritt die Rettungsmittel anpassen und den Alarm erneut an alle Fahrzeuge senden":""}.${c.location?" Bei geändertem Einsatzort bleibt die Kartenposition unverändert.":""}</p>
+  ${ceLeitInit(c)}
   ${rows||`<p class="muted">Noch keine Antworten.</p>`}
   <div class="row" style="margin-top:14px;justify-content:flex-end">
    <button onclick="uiLocked=false;render('leitstelle')">Abbrechen</button>
    <button class="primary" onclick="saveCallEdit()">${c.alarmTime?"➡️ Übernehmen & Rettungsmittel prüfen":"✅ Übernehmen"}</button>
   </div>
  </div>`;
+}
+// v6.15: Leitsymptom + Schlüsselfragen beim „Notruf ändern“ (z. B. bei erneutem Anruf) vernünftig ändern
+let ceLeit=null;
+function ceLeitInit(c){
+ const a=c.answers||{};
+ const med=a.event==="Medizinischer Notfall"||a.callType==="116117"||c.kvd||leitOf(leitKey(c));
+ if(!med||c.kt){ceLeit=null;return ""}
+ const field=leitOf(a.leit)?"leit":"leitLate";
+ const L=leitOf(leitKey(c));
+ ceLeit={field,key:L?L.k:null,ans:{...(c.leitAns||{})},orig:JSON.stringify([L?L.k:null,c.leitAns||{}])};
+ return `<div style="padding:8px 0;border-bottom:1px solid var(--line)"><label style="margin:0 0 4px">🩺 Leitsymptom & Schlüsselfragen</label><div id="ceLeitBox">${ceLeitBoxHTML(c)}</div></div>`;
+}
+function ceLeitBoxHTML(c){
+ if(!ceLeit)return "";
+ const L=leitOf(ceLeit.key);
+ const tmp={...c,answers:{...c.answers,[ceLeit.field]:L?L.l:(c.answers[ceLeit.field]||"")},leitAns:ceLeit.ans};
+ if(ceLeit.field==="leitLate"&&L)tmp.answers.leit=c.answers.leit==="später"?"später":c.answers.leit;
+ const P=L?callPrio(tmp):null, P0=callPrio(c);
+ return `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:5px">${LEIT.map(x=>`<button type="button" onclick="ceLeitPick('${x.k}')" style="text-align:left;font-size:13px;padding:5px 8px;${x.k===ceLeit.key?"background:#1d4ed8;color:#fff;border-color:#1d4ed8":""}">${x.ic} ${esc(x.l)}</button>`).join("")}</div>
+  ${L?L.q.map(([qk,qt,opts])=>`<div style="margin:8px 0 2px;font-weight:700;font-size:13px">„${esc(qt)}“</div><div class="answer">${opts.map(([v,lv])=>`<button type="button" onclick="ceLeitAns('${qk}',this.dataset.v)" data-v="${esc(v)}" class="${ceLeit.ans[qk]===v?"primary":""}" style="font-size:13px;padding:5px 9px">${esc(v)}${lv?` ${prioBadge(lv,1)}`:""}</button>`).join("")}</div>`).join(""):""}
+  ${P?`<div style="margin-top:8px;font-size:13px">Dringlichkeit: ${P0?`${prioBadge(P0.lv,1)} → `:""}${prioBadge(P.lv)} <span class="muted">${esc(PRIO_INFO[P.lv][1])}</span></div>`:""}`;
+}
+function ceLeitPick(k){if(!ceLeit)return;if(ceLeit.key!==k){ceLeit.key=k;ceLeit.ans={}}const b=document.getElementById("ceLeitBox");if(b)b.innerHTML=ceLeitBoxHTML(db.currentCall)}
+function ceLeitAns(qk,v){if(!ceLeit)return;ceLeit.ans[qk]=v;const b=document.getElementById("ceLeitBox");if(b)b.innerHTML=ceLeitBoxHTML(db.currentCall)}
+function ceLeitApply(c){
+ if(!ceLeit||!ceLeit.key)return null;
+ if(JSON.stringify([ceLeit.key,ceLeit.ans])===ceLeit.orig)return null;
+ const L=leitOf(ceLeit.key), oldL=leitOf(leitKey(c)), P0=callPrio(c);
+ const ans={}; L.q.forEach(([qk])=>ans[qk]=ceLeit.ans[qk]||"unbekannt");
+ c.answers[ceLeit.field]=L.l; c.leitAns=ans;
+ c.answers[ceLeit.field==="leit"?"leitQ":"leitQLate"]=L.q.map(([qk,qt])=>`${qt.replace(/\?.*$/,"?")} ${ans[qk]}`).join(" · ");
+ if(ceLeit.field==="leitLate"&&c.answers.leit!=="später"&&!leitOf(c.answers.leit))c.answers.leit="später";
+ const P=callPrio(c);
+ return `Leitsymptom: ${oldL?oldL.l:"—"} → ${L.l}${P?` (Stufe ${P0?P0.lv+" → ":""}${P.lv})`:""}`;
 }
 function ceDSync(box){
  if(box.checked&&D_SOLO.has(box.value))document.querySelectorAll(".ceDBox").forEach(b=>{if(b!==box)b.checked=false});
@@ -3135,6 +3176,7 @@ function saveCallEdit(){
  const c=db.currentCall; if(!c)return;
  const QS=callQs(c), lab=k=>(QS.find(q=>q[0]===k)||[k,k])[1];
  const changes=[];
+ {const lc=ceLeitApply(c);if(lc)changes.push(lc)} // v6.15
  document.querySelectorAll(".ceField").forEach(el=>{
    const k=el.dataset.k, v=String(el.value??"").trim();
    const old=k==="location"?(c.location||c.answers.location||""):String(ansText(c,k)??"");
@@ -3812,89 +3854,115 @@ const PRIO_INFO={"Ω":["#64748b","kein Rettungsdienst nötig (Beratung / KV-Dien
 function prioMax(a,b){return PRIO_ORDER.indexOf(b)>PRIO_ORDER.indexOf(a)?b:a}
 // [Schlüssel, Frage, [[Antwort, Stufe|null], …]]
 const LEIT=[
- {k:"atemnot",ic:"🫁",l:"Atemnot",base:"C",q:[
+ {k:"atemnot",kw:"Atemnot",ic:"🫁",l:"Atemnot",base:"C",q:[
    ["sprechen","Kann die Person in ganzen Sätzen sprechen?",[["Ja",null],["Nur einzelne Worte","D"],["Gar nicht","E"]]],
    ["farbe","Wie sehen Gesicht und Lippen aus?",[["Normal",null],["Blass / grau","C"],["Bläulich","D"]]],
    ["ausloeser","Gab es einen Auslöser?",[["Keiner bekannt",null],["Allergie / Insektenstich","D"],["Etwas verschluckt","D"],["Bekanntes Asthma / COPD",null]]]],
   instr:["atemnot","tuer","medis"]},
- {k:"brust",ic:"💔",l:"Brustschmerz",base:"C",q:[
+ {k:"brust",kw:"Brustschmerz",ic:"💔",l:"Brustschmerz",base:"C",q:[
    ["ausstrahlung","Strahlt der Schmerz aus (Arm, Kiefer, Rücken, Oberbauch)?",[["Nein",null],["Ja","C"],["Unklar",null]]],
    ["schweiss","Ist die Person kaltschweißig, blass oder ist ihr übel?",[["Nein",null],["Ja","D"]]],
    ["dauer","Wie lange besteht der Schmerz?",[["Unter 20 Minuten",null],["Über 20 Minuten","C"],["Kommt und geht",null]]],
    ["herz","Ist eine Herzerkrankung bekannt?",[["Nein",null],["Ja","C"],["Unbekannt",null]]]],
   instr:["brust","tuer","medis"]},
- {k:"schlag",ic:"🧠",l:"Schlaganfall-Zeichen",base:"C",q:[
+ {k:"schlag",kw:"Stroke",ic:"🧠",l:"Schlaganfall-Zeichen",base:"C",q:[
    ["fast","Was ist aufgefallen? (Gesicht hängt, Arm schwach, Sprache verwaschen)",[["Eins davon","C"],["Mehrere","D"],["Unsicher","C"]]],
    ["beginn","Seit wann genau?",[["Unter 4 Stunden","D"],["4–24 Stunden","C"],["Unbekannt / beim Aufwachen bemerkt","C"]]],
    ["blutv","Nimmt die Person Blutverdünner?",[["Nein",null],["Ja","C"],["Unbekannt",null]]]],
   instr:["schlag","tuer","medis"]},
- {k:"kollaps",ic:"😵",l:"Kollaps / Bewusstlosigkeit",base:"C",q:[
+ {k:"kollaps",kw:"Bewusstseinsstörung",ic:"😵",l:"Kollaps / Bewusstlosigkeit",base:"C",q:[
    ["wach","Ist die Person jetzt wieder wach?",[["Ja, wieder wach",null],["Nein","D"]]],
    ["atmung","Atmet die Person normal?",[["Ja",null],["Nein / Schnappatmung","E"],["Unsicher","D"]]],
    ["ursache","Gibt es einen Hinweis auf die Ursache?",[["Keiner",null],["Diabetes bekannt","C"],["Sturz auf den Kopf","C"],["Brustschmerz vorher","D"]]]],
   instr:["seite","tuer"]},
- {k:"krampf",ic:"⚡",l:"Krampfanfall",base:"C",q:[
+ {k:"krampf",kw:"Krampfanfall",ic:"⚡",l:"Krampfanfall",base:"C",q:[
    ["noch","Krampft die Person noch?",[["Nein, vorbei",null],["Ja, unter 5 Minuten","C"],["Ja, über 5 Minuten","D"]]],
    ["bekannt","Ist eine Epilepsie bekannt?",[["Ja","B"],["Nein, erstmals","C"],["Unbekannt",null]]],
    ["besonders","Besonderheiten?",[["Keine",null],["Schwanger","D"],["Kind mit Fieber","C"],["Kopfverletzung","D"]]]],
   instr:["krampf","seite","tuer"]},
- {k:"sturz",ic:"🤕",l:"Sturz / Verletzung",base:"A",q:[
+ {k:"sturz",kw:"Sturz",ic:"🤕",l:"Sturz / Verletzung",base:"A",q:[
    ["hoehe","Aus welcher Höhe?",[["Aus dem Stand",null],["Treppe / bis 3 m","B"],["Über 3 m","D"]]],
    ["kopf","Kopf angeschlagen oder kurz bewusstlos?",[["Nein",null],["Ja","C"]]],
    ["aufstehen","Kann die Person aufstehen bzw. sich bewegen?",[["Ja",null],["Nein","B"]]],
    ["blutv","Blutverdünner?",[["Nein",null],["Ja","C"],["Unbekannt",null]]]],
   instr:["sturz","blutung","tuer"]},
- {k:"blutung",ic:"🩸",l:"Blutung",base:"B",q:[
+ {k:"blutung",kw:"Blutung",ic:"🩸",l:"Blutung",base:"B",q:[
    ["stark","Wie stark blutet es?",[["Leicht",null],["Stark","C"],["Spritzend / hört nicht auf","D"]]],
    ["stelle","Wo blutet es?",[["Arm / Bein",null],["Kopf / Gesicht","B"],["Rumpf / Bauch","D"],["Mund / Erbrechen von Blut","D"]]],
    ["blutv","Blutverdünner?",[["Nein",null],["Ja","C"],["Unbekannt",null]]]],
   instr:["blutung","tuer"]},
- {k:"bauch",ic:"🤢",l:"Bauchschmerz",base:"A",q:[
+ {k:"bauch",kw:"Bauchschmerz",ic:"🤢",l:"Bauchschmerz",base:"A",q:[
    ["staerke","Wie stark und wie plötzlich?",[["Langsam stärker",null],["Plötzlich sehr stark","C"]]],
    ["blut","Blut erbrochen oder schwarzer Stuhl?",[["Nein",null],["Ja","D"]]],
    ["schwanger","Könnte die Patientin schwanger sein?",[["Nein / entfällt",null],["Ja","C"]]],
    ["kreislauf","Blass, kaltschweißig, schwindelig?",[["Nein",null],["Ja","C"]]]],
   instr:["bauch","tuer","medis"]},
- {k:"allergie",ic:"🐝",l:"Allergische Reaktion",base:"B",q:[
+ {k:"allergie",kw:"Allergie",ic:"🐝",l:"Allergische Reaktion",base:"B",q:[
    ["atem","Atemnot oder Engegefühl im Hals?",[["Nein",null],["Ja","D"]]],
    ["schwellung","Schwellung von Gesicht, Lippen oder Zunge?",[["Nein",null],["Ja","D"]]],
    ["set","Ist ein Notfallset (Adrenalin-Pen) vorhanden?",[["Nein",null],["Ja",null]]]],
   instr:["allergie","atemnot","tuer"]},
- {k:"zucker",ic:"🍬",l:"Diabetes / Unterzucker",base:"B",q:[
+ {k:"zucker",kw:"Hypoglykämie",ic:"🍬",l:"Diabetes / Unterzucker",base:"B",q:[
    ["wach","Ist die Person ansprechbar?",[["Ja",null],["Verwirrt / schläfrig","C"],["Nein","D"]]],
    ["wert","Ist ein Zuckerwert bekannt?",[["Nein",null],["Niedrig","C"],["Hoch",null]]],
    ["schlucken","Kann die Person sicher schlucken?",[["Ja",null],["Nein","C"]]]],
   instr:["zucker","seite","tuer"]},
- {k:"gift",ic:"☠️",l:"Vergiftung / Drogen / Alkohol",base:"B",q:[
+ {k:"gift",kw:"Intoxikation",ic:"☠️",l:"Vergiftung / Drogen / Alkohol",base:"B",q:[
    ["wach","Ist die Person ansprechbar?",[["Ja",null],["Schläfrig","C"],["Nein","D"]]],
    ["was","Ist bekannt, was genommen wurde?",[["Ja",null],["Nein",null]]],
    ["absicht","War es Absicht?",[["Nein / Versehen",null],["Ja","C"],["Unklar",null]]]],
   instr:["gift","seite","tuer"]},
- {k:"psych",ic:"🧠",l:"Psychischer Ausnahmezustand",base:"B",q:[
+ {k:"psych",kw:"Psych. Ausnahmezustand",ic:"🧠",l:"Psychischer Ausnahmezustand",base:"B",q:[
    ["gefahr","Gefährdet sich die Person selbst oder andere?",[["Nein",null],["Sich selbst","C"],["Andere","C"]]],
    ["waffe","Gibt es Waffen oder gefährliche Gegenstände?",[["Nein",null],["Ja","D"],["Unbekannt",null]]],
    ["verletzt","Ist die Person verletzt?",[["Nein",null],["Ja","C"]]]],
   instr:["psych","tuer"]},
- {k:"geburt",ic:"🤰",l:"Schwangerschaft / Geburt",base:"B",q:[
+ {k:"geburt",kw:"Geburt",ic:"🤰",l:"Schwangerschaft / Geburt",base:"B",q:[
    ["woche","Welche Schwangerschaftswoche?",[["Ab 37",null],["Unter 37","C"],["Unbekannt",null]]],
    ["wehen","Wie häufig kommen die Wehen?",[["Seltener als alle 5 Min.",null],["Alle 2–5 Min.","C"],["Pressdrang / Kopf sichtbar","D"]]],
    ["blutung","Starke Blutung?",[["Nein",null],["Ja","D"]]]],
   instr:["geburt","tuer"]},
- {k:"kind",ic:"🧒",l:"Kind krank / Fieber",base:"B",q:[
+ {k:"kind",kw:"Kind krank",ic:"🧒",l:"Kind krank / Fieber",base:"B",q:[
    ["zustand","Wie wirkt das Kind?",[["Spielt / ist wach",null],["Schlapp, trinkt nicht","C"],["Kaum wach zu bekommen","D"]]],
    ["haut","Flecken auf der Haut, die beim Draufdrücken nicht verschwinden?",[["Nein",null],["Ja","D"]]],
    ["atmung","Pfeifendes oder bellendes Atemgeräusch, Atemnot?",[["Nein",null],["Ja","C"]]]],
   instr:["kind","tuer"]},
- {k:"verbrennung",ic:"🔥",l:"Verbrennung / Verbrühung",base:"B",q:[
+ {k:"verbrennung",kw:"Verbrennung",ic:"🔥",l:"Verbrennung / Verbrühung",base:"B",q:[
    ["flaeche","Wie groß ist die verbrannte Fläche?",[["Handfläche oder kleiner",null],["Größer","C"],["Sehr großflächig","D"]]],
    ["gesicht","Gesicht, Hals oder Rauch eingeatmet?",[["Nein",null],["Ja","D"]]],
    ["strom","Durch Strom?",[["Nein",null],["Ja","C"]]]],
   instr:["verbrennung","tuer"]},
- {k:"ersticken",ic:"🥩",l:"Verschluckt / Ersticken",base:"D",q:[
+ {k:"ersticken",kw:"Bolus",ic:"🥩",l:"Verschluckt / Ersticken",base:"D",q:[
    ["husten","Kann die Person kräftig husten?",[["Ja","B"],["Nein / kaum","E"]]],
    ["alter","Alter?",[["Erwachsener / Kind",null],["Säugling (unter 1 Jahr)",null]]]],
   instr:["ersticken","tuer"]},
- {k:"unklar",ic:"❔",l:"Unklare Erkrankung / Schwäche",base:"A",q:[
+ // v6.15: Leitsymptome, die oft beim KV-Dienst landen (gemeinsame Abfrage 112/116117)
+ {k:"infekt",kw:"Infekt",ic:"🤒",l:"Fieber / Infekt (Erwachsene)",base:"A",kv:true,q:[
+   ["atem","Atemnot oder Schmerzen beim Atmen?",[["Nein",null],["Ja","C"]]],
+   ["zustand","Wie wirkt die Person?",[["Normal ansprechbar",null],["Sehr schlapp / verwirrt","C"]]],
+   ["mobil","Kann die Person selbst zur Praxis kommen?",[["Ja","Ω"],["Nein (bettlägerig)",null]]]],
+  instr:["tuer","medis"]},
+ {k:"ruecken",kw:"Rückenschmerz",ic:"🦴",l:"Rückenschmerz",base:"A",kv:true,q:[
+   ["warn","Taubheit, Lähmung oder Probleme beim Wasserlassen/Stuhlgang?",[["Nein",null],["Ja","C"]]],
+   ["unfall","Nach Sturz oder Unfall?",[["Nein",null],["Ja","B"]]],
+   ["mobil","Kann sich die Person bewegen / zur Praxis kommen?",[["Ja","Ω"],["Nein",null]]]],
+  instr:["tuer","medis"]},
+ {k:"harn",kw:"Harnwegsbeschwerden",ic:"🚽",l:"Harnwegsbeschwerden",base:"Ω",kv:true,q:[
+   ["fieber","Fieber oder Flankenschmerzen?",[["Nein",null],["Ja","A"]]],
+   ["verhalt","Kann seit Stunden kein Wasser lassen (Bauch prall)?",[["Nein",null],["Ja","B"]]]],
+  instr:["medis"]},
+ {k:"pflege",kw:"Pflegeproblem",ic:"🩹",l:"Katheter / Pflegeproblem",base:"A",kv:true,q:[
+   ["stabil","Ist die Person ansonsten wie immer?",[["Ja",null],["Nein, deutlich schlechter","C"]]],
+   ["fieber","Fieber?",[["Nein",null],["Ja","B"]]]],
+  instr:["tuer","medis"]},
+ {k:"rezept",kw:"Rezept",ic:"💊",l:"Rezept / Medikament",base:"Ω",kv:true,q:[
+   ["beschw","Hat die Person akute Beschwerden?",[["Nein",null],["Ja","A"]]]],
+  instr:["medis"]},
+ {k:"tod",kw:"Todesfall",ic:"⚱️",l:"Todesfall (erwartet)",base:"Ω",kv:true,q:[
+   ["erwartet","War der Tod erwartet (schwere Erkrankung, palliativ)?",[["Ja",null],["Nein / unklar","E"]]],
+   ["zeichen","Gibt es sichere Todeszeichen (Leichenflecken, Starre)?",[["Ja",null],["Nein / unsicher","E"]]]],
+  instr:[]},
+ {k:"unklar",kw:"Med. Notfall",ic:"❔",l:"Unklare Erkrankung / Schwäche",base:"A",q:[
    ["ploetzlich","Plötzlich aufgetreten?",[["Nein, schleichend",null],["Ja","B"]]],
    ["fieber","Fieber oder Infekt?",[["Nein",null],["Ja",null]]],
    ["alleine","Ist die Person allein / hilflos?",[["Nein",null],["Ja","B"]]]],
@@ -3931,12 +3999,13 @@ CALL_EDIT_OPTIONS.leit=LEIT.map(x=>x.l);
 function callPrio(c){
  if(!c||c.kt)return null;
  const a=c.answers||{};
- if(a.callType==="116117"||c.kvd)return c.kvChoice&&!["hausbesuch","leichenschau"].includes(c.kvChoice)?"Ω":null;
+ if((a.callType==="116117"||c.kvd)&&!leitOf(leitKey(c)))return null; // v6.15: gemeinsame Abfrage – mit Leitsymptom normal bewerten
  let p=null; const why=[];
  const up=(lv,txt)=>{if(!lv)return;const n=p?prioMax(p,lv):lv;if(n!==p||!p){why.push(txt)}p=n};
  if(a.event==="Reanimation")up("E","Reanimation");
  const L=leitOf(leitKey(c));
- if(L){up(L.base,`Leitsymptom ${L.l}`);for(const [qk,qt,opts] of L.q){const v=(c.leitAns||{})[qk];const o=opts.find(x=>x[0]===v);if(o&&o[1])up(o[1],`${qt.replace(/\s*[?(].*$/,"")}: ${v}`)}}
+ let lower=false;
+ if(L){up(L.base,`Leitsymptom ${L.l}`);for(const [qk,qt,opts] of L.q){const v=(c.leitAns||{})[qk];const o=opts.find(x=>x[0]===v);if(o&&o[1]){if(o[1]==="Ω")lower=true;else up(o[1],`${qt.replace(/\s*[?(].*$/,"")}: ${v}`)}}}
  if(a.x_massive==="Ja")up("D","kritische Blutung");
  if(a.a_airway==="Verlegt")up("D","Atemweg verlegt");
  if(a.b_breath==="Keine normale Atmung")up("E","keine normale Atmung");
@@ -3946,6 +4015,7 @@ function callPrio(c){
  if(/Bewusstlos/.test(d))up(a.b_breath==="Keine normale Atmung"?"E":"D","bewusstlos");
  else if(/Bewusstseinsgetrübt|Krampfanfall|Neurologisch/.test(d))up("C","Bewusstsein / Neurologie");
  if(!p&&a.event==="Medizinischer Notfall"&&needsXABCDE(c)&&a.b_breath)p="A";
+ if(lower&&p&&PRIO_ORDER.indexOf(p)<=1){p="Ω";why.push("kann selbst in die Praxis")} // v6.15
  return p?{lv:p,why}:null;
 }
 function prioBadge(lv,small){const i=PRIO_INFO[lv]||["#64748b",""];return `<span title="Dringlichkeit ${lv}: ${i[1]}" style="display:inline-block;background:${i[0]};color:#fff;border-radius:6px;padding:${small?"0 6px":"2px 10px"};font-weight:900;font-size:${small?"11px":"15px"}">${lv}</span>`}
@@ -3987,8 +4057,8 @@ function leitQSubmit(id){
  answer(id,L.q.map(([qk,qt])=>`${qt.replace(/\?.*$/,"?")} ${c.leitAns[qk]}`).join(" · "));
 }
 // Übungs-Check: passendes Leitsymptom aus dem Fall erraten
-const LEIT_GUESS=[["ersticken",/verschluck|erstick|bekommt keine luft.*(essen|bonbon)/],["geburt",/wehen|geburt|schwanger|fruchtblase|ssw/],["schlag",/schlaganfall|hängt|verwaschen|lähmung|fazialis|sprachstör/],["brust",/brust|herz|acs|infarkt|angina/],["krampf",/krampf|epilep/],["allergie",/allerg|anaphyl|wespe|biene|quaddel|schwellung/],["zucker",/zucker|hypoglyk|diabet/],["gift",/vergift|tablett|alkohol|drogen|intox|überdosis/],["psych",/suizid|psych|verwirrt.*aggress|droht/],["verbrennung",/verbrenn|verbrüh/],["atemnot",/atemnot|luftnot|asthma|copd|atmet schwer/],["blutung",/blut(et|ung)|nasenbluten/],["kind",/fieber.*kind|kind.*fieber|pseudokrupp|krupp/],["bauch",/bauch|kolik|erbrech|übel/],["sturz",/sturz|gestürzt|fraktur|gefallen|verletz/],["kollaps",/bewusstlos|kollab|ohnmacht|synkope/]];
-function leitGuess(c){const d=c.sim&&c.sim.d;if(!d)return null;const t=[d.event,(d.f||{}).e,d.hist].join(" ").toLowerCase();const g=LEIT_GUESS.find(([,re])=>re.test(t));return g?g[0]:"unklar"}
+const LEIT_GUESS=[["ersticken",/verschluck|erstick|bekommt keine luft.*(essen|bonbon)/],["geburt",/wehen|geburt|schwanger|fruchtblase|ssw/],["schlag",/schlaganfall|hängt|verwaschen|lähmung|fazialis|sprachstör/],["brust",/brust|herz|acs|infarkt|angina/],["krampf",/krampf|epilep/],["allergie",/allerg|anaphyl|wespe|biene|quaddel|schwellung/],["zucker",/zucker|hypoglyk|diabet/],["gift",/vergift|tablett|alkohol|drogen|intox|überdosis/],["psych",/suizid|psych|verwirrt.*aggress|droht/],["verbrennung",/verbrenn|verbrüh/],["atemnot",/atemnot|luftnot|asthma|copd|atmet schwer/],["blutung",/blut(et|ung)|nasenbluten/],["kind",/fieber.*kind|kind.*fieber|pseudokrupp|krupp/],["bauch",/bauch|kolik|erbrech|übel/],["sturz",/sturz|gestürzt|fraktur|gefallen|verletz/],["kollaps",/bewusstlos|kollab|ohnmacht|synkope/],["tod",/eingeschlafen|verstorben|palliativ|erwarteter tod/],["rezept",/rezept|tabletten ausgegangen/],["pflege",/katheter/],["harn",/wasserlassen|blasenentz/],["ruecken",/rücken|hexenschuss|lumbago/],["infekt",/fieber|husten|infekt|bronchitis/]];
+function leitGuess(c){const d=c.sim&&c.sim.d;if(!d)return null;const t=[d.event,(d.f||{}).e,d.hist].join(" ").toLowerCase();if(/palliativ|eingeschlafen|erwarteter tod/.test(t))return "tod";if(d.kv&&/katheter/.test(t))return "pflege";const g=LEIT_GUESS.find(([,re])=>re.test(t));return g?g[0]:"unklar"}
 
 const QS_BASE=[
  ["callType","☎️ Über welche Nummer ist der Anruf eingegangen?","calltype"],
@@ -4645,7 +4715,7 @@ function phoneQHTML(id,label,c){
 }
 function questionHTML(q){
  const [id,label,type]=q;
- if(qsIsHidden(db.currentCall,id)&&!(id!=="callType"&&db.currentCall?.answers?.callType&&db.currentCall.answers.callType!=="112")&&!(db.currentCall?.answers?.callType==="116117"&&["location","event","callback"].includes(id))){setTimeout(()=>answer(id,"nicht erhoben",true),0);return `<span class="muted">Ausgeblendete Frage – wird übersprungen …</span>`}
+ if(qsIsHidden(db.currentCall,id)&&!(id!=="callType"&&db.currentCall?.answers?.callType&&db.currentCall.answers.callType!=="112")&&!(db.currentCall?.answers?.callType==="116117"&&["location","event","callback","leit","leitQ"].includes(id))){setTimeout(()=>answer(id,"nicht erhoben",true),0);return `<span class="muted">Ausgeblendete Frage – wird übersprungen …</span>`}
  if(type==="ktType")return `<label>${label}</label><div class="answer">${["KT-Entlassung","KT-Verlegung","KT-Einweisung"].map(v=>`<button onclick="answer('ktType','${v}')">🚑 ${v}</button>`).join("")}</div>`;
  const c=db.currentCall, e=c?.answers?.event||"";
  const fire=e==="Feuer / Rauchentwicklung";
@@ -4659,7 +4729,7 @@ function questionHTML(q){
 
  // Kein 112-Notruf: Rest der Abfrage entfällt komplett, es wird nur weitergeleitet.
  const callType=c?.answers?.callType;
- if(id!=="callType" && callType==="116117" && !["location","event","callback"].includes(id))
+ if(id!=="callType" && callType==="116117" && !["location","event","callback","leit","leitQ"].includes(id))
    return skip("entfällt – KV-Dienst"); // v5.97
  if(id!=="callType" && callType && callType!=="112" && callType!=="116117")
    return skip("entfällt – Weiterleitung");
@@ -4670,7 +4740,7 @@ function questionHTML(q){
    if(own)return skip("eigene Frage");
    return phoneQHTML(id,label,c);
  }
- if(type==="leit"){if(e!=="Medizinischer Notfall"||isManv(c))return skip("nicht zutreffend");return leitHTML(id,label)} // v6.07
+ if(type==="leit"){if((e!=="Medizinischer Notfall"&&c.answers.callType!=="116117")||isManv(c))return skip("nicht zutreffend");return leitHTML(id,label)} // v6.07 (+116117)
  if(["leitLate","leitQLate"].includes(type)&&(e!=="Medizinischer Notfall"||isManv(c)))return skip("nicht zutreffend");
  if(type==="leitQ"){if(!leitOf(c.answers.leit))return skip(c.answers.leit==="später"?"nach X-ABCDE":"nicht zutreffend");return leitQHTML(id,c)}
  if(type==="leitLate"){if(c.answers.leit!=="später")return skip(leitOf(c.answers.leit)?"bereits erhoben":"nicht zutreffend");return leitHTML(id,label,true)} // v6.08
@@ -5183,8 +5253,11 @@ function evaluate0(){
  } else if(e==="Medizinischer Notfall"&&leitPath(c)&&callPrio(c)){
    // v6.08: Abfrage über Leitsymptom – AAO nach Dringlichkeit (Notarzt nur bei D/E), Schlaganfall eigene AAO
    const P=callPrio(c), L=leitOf(leitKey(c));
-   const id=L&&L.k==="schlag"&&["C","D"].includes(P.lv)?35:{E:30,D:31,C:32,B:33,A:34}[P.lv]||32;
-   keyword=`${kw(id,`Stufe ${P.lv}`)} · ${L?L.l:""}`; kwMap[id]=keyword;
+   const id=L&&L.k==="schlag"&&["C","D"].includes(P.lv)?35:(P.lv==="E"&&L&&L.k==="kollaps")?5:{E:30,D:31,C:32,B:33,A:34,"Ω":34}[P.lv]||32;
+   // v6.15: Stichwort im eigenen Schema – Präfix aus der AAO (R1N1/R1/R0) + Leitsymptom, Zusatz nach Stufe
+   const pre=String(kw(id,P.lv==="A"?"R0":["D","E"].includes(P.lv)?"R1N1":"R1")).replace(/_.*$/,"");
+   const nm=L?L.kw:"Med. Notfall", suf={E:" kritisch",D:" schwer",A:" leicht"}[P.lv]||"";
+   keyword=id===35&&/_/.test(kw(35,"R1_Stroke"))?kw(35,"R1_Stroke"):id===5?kw(5,"R1N1_Reanimation"):`${pre}_${nm}${suf}`; kwMap[id]=keyword;
    addAao(id);
    if(P.lv==="A"){sr=false;c.rZero=true}
  } else if(e==="Medizinischer Notfall"){
@@ -13026,16 +13099,29 @@ function kvPanelHTML(c){
  const isKv=c.answers&&c.answers.callType==="116117"||c.kvd;
  if(!isKv){
    if(c.alarmTime||!c.answers||c.answers.callType!=="112")return "";
-   return `<div class="card" style="border-left:6px solid ${KV_COLOR};padding:10px 14px"><div class="row between" style="gap:8px;flex-wrap:wrap"><span style="font-size:13px">Kein Notfall? Anruf an den ärztlichen Bereitschaftsdienst übergeben.</span><button onclick="kvTakeOver('${esc(String(c.id))}')" style="border-color:${KV_COLOR};color:${KV_COLOR}">🩺 An KV-Dienst übergeben</button></div></div>`;
+   const R=kvRecommend(c), fit=R&&R.k!=="rd";
+   return `<div class="card" style="border-left:6px solid ${KV_COLOR};padding:10px 14px;${fit?"background:#f0fdfa":""}"><div class="row between" style="gap:8px;flex-wrap:wrap"><span style="font-size:13px">${fit?`<b style="color:${KV_COLOR}">🩺 Abfrage ergibt ${esc(R.why)} – der KV-Dienst wäre passend.</b>`:"Kein Notfall? Anruf an den ärztlichen Bereitschaftsdienst übergeben."}</span><button onclick="kvTakeOver('${esc(String(c.id))}')" style="border-color:${KV_COLOR};color:${KV_COLOR}">🩺 An KV-Dienst übergeben</button></div></div>`;
  }
- const duty=kvOnDuty(), free=kvUnits().filter(u=>["1","2"].includes(String(u.status))).length;
+ const duty=kvOnDuty(), free=kvUnits().filter(u=>["1","2"].includes(String(u.status))).length, R=kvRecommend(c);
  return `<div class="card" style="border:2px solid ${KV_COLOR};background:#f0fdfa">
   <div class="row between" style="gap:8px;flex-wrap:wrap"><h2 style="margin:0;color:${KV_COLOR}">🩺 116 117 – KV-Dienst</h2>
    <span style="font-size:12px"><b style="color:${duty?"#15803d":"#b91c1c"}">${duty?"● Bereitschaftsdienst im Dienst":"● außerhalb der Dienstzeit (→ Hausarzt)"}</b> · ÄBD frei: <b>${free}</b></span></div>
   <div style="font-size:12px;margin:4px 0 8px">${KV_PRAXEN.map(P=>{const o=P.open(new Date()),near=P===kvNearestPraxis(c);return `<div class="${near?"":"muted"}">${near?"📍 <b>":""}${esc(P.n)}${near?"</b> (am nächsten)":""} – ${esc(P.addr)} · ${o===null?"⚪ Zeiten unbekannt":o?"<b style='color:#15803d'>🟢 jetzt geöffnet</b>":"🔴 geschlossen"}${P.unsure?"":` <span class="muted">(${esc(P.hours)})</span>`}</div>`}).join("")}</div>
-  <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:6px">${KV_CHOICES.map(([k,l,d])=>`<button onclick="kvDecide('${esc(String(c.id))}','${k}')" title="${esc(d)}" style="text-align:left;${c.kvChoice===k?`background:${KV_COLOR};color:#fff;border-color:${KV_COLOR}`:""}">${l}</button>`).join("")}</div>
+  ${R?`<div style="margin:0 0 8px;padding:6px 10px;border-radius:8px;font-size:13px;background:${R.k==="rd"?"#fee2e2":"#ccfbf1"}"><b>${R.k==="rd"?"⚠️":"⭐"} Empfehlung aus der Abfrage:</b> ${esc((KV_CHOICES.find(x=>x[0]===R.k)||[,R.k])[1])} – ${esc(R.why)}</div>`:`<div class="muted" style="font-size:12px;margin:0 0 8px">Tipp: Leitsymptom abfragen – dann kommt hier eine Empfehlung (gleiche Abfrage wie beim Notruf 112).</div>`}
+  <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:6px">${KV_CHOICES.map(([k,l,d])=>`<button onclick="kvDecide('${esc(String(c.id))}','${k}')" title="${esc(d)}" style="text-align:left;${c.kvChoice===k?`background:${KV_COLOR};color:#fff;border-color:${KV_COLOR}`:R&&R.k===k?`border:2px solid ${R.k==="rd"?"#dc2626":KV_COLOR};font-weight:800`:""}">${l}${R&&R.k===k?" ⭐":""}</button>`).join("")}</div>
   ${c.kvChoice==="hausbesuch"||c.kvChoice==="leichenschau"?`<div class="muted" style="font-size:12px;margin-top:6px">Vorschlag steht rechts – zum Alarmieren wie gewohnt „Alarmieren“ drücken.</div>`:""}
  </div>`;
+}
+// v6.15: Empfehlung aus der gemeinsamen Abfrage (Leitsymptom + Dringlichkeit)
+function kvRecommend(c){
+ const P=callPrio(c), L=leitOf(leitKey(c)); if(!P)return null;
+ const i=PRIO_ORDER.indexOf(P.lv);
+ if(i>=2)return {k:"rd",why:`Stufe ${P.lv} (${PRIO_INFO[P.lv][1]}) – Rettungsdienst`};
+ if(L&&L.k==="tod")return {k:"leichenschau",why:"erwarteter Tod mit sicheren Todeszeichen"};
+ if(P.lv==="A")return {k:"hausbesuch",why:"Stufe A – nicht dringlich, Patient kommt nicht selbst in die Praxis"};
+ if(L&&L.k==="rezept")return {k:"apotheke",why:"Stufe Ω – Rezept/Medikament"};
+ const pr=KV_PRAXEN.some(x=>x.open(new Date()));
+ return {k:pr?"praxis":"beratung",why:`Stufe Ω – kein Hausbesuch nötig${pr?", Praxis geöffnet":""}`};
 }
 function kvTakeOver(id){
  const c=[db.currentCall,...(db.activeCalls||[])].find(x=>x&&String(x.id)===String(id)); if(!c)return;
@@ -13060,11 +13146,12 @@ function kvDecide(id,choice){
  if(choice==="rd"){
    c.kvd=false; c.kvChoice=null;
    // v6.02: Rettungsdienst-Abfrage komplett neu durchgehen – nur Rufnummer und Einsatzort bleiben stehen
-   const keep=new Set(["callType","location"]), drop=new Set(Object.keys(c.answers||{}).filter(k=>!keep.has(k)));
+   const keep=new Set(["callType","location","callback","event","leit","leitQ"]), drop=new Set(Object.keys(c.answers||{}).filter(k=>!keep.has(k)));
    drop.forEach(k=>{delete c.answers[k];if(c.answerLabels)delete c.answerLabels[k]});
    c.history=c.history.filter(h=>!(h.id&&drop.has(h.id)));
-   if(drop.has("count"))c.count=""; delete c.leitAns; delete c.instrDone;
-   c.answers.callType="112"; c.history.push({q:"🚑 Hochgestuft",a:"Kein Fall für den KV-Dienst – Notrufabfrage 112 wird neu durchgegangen"});
+   if(drop.has("count"))c.count=""; if(!leitOf(c.answers.leit)){delete c.leitAns;delete c.instrDone}
+   c.answers.callType="112"; c.history.push({q:"🚑 Hochgestuft",a:leitOf(c.answers.leit)?"Kein Fall für den KV-Dienst – Leitsymptom-Abfrage wird übernommen, restliche 112-Abfrage folgt":"Kein Fall für den KV-Dienst – Notrufabfrage 112 wird neu durchgegangen"});
+   if(!c.answers.event)delete c.answers.event;
    if(c.sim&&c.sim.d&&c.sim.d.kv){c.history.push({q:"🎓 Übungs-Check",a:fb});toast(fb)}
    if(c===db.currentCall)evaluate(); save(); render("notruf"); return;
  }

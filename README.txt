@@ -1607,6 +1607,13 @@ Version 5.05:
   („a, b“ = a ODER b). Mit „🚑 NA-Indikation“ markierte Knöpfe ziehen weiterhin einen Notarzt.
 - Nur „Unauffällig“ (ohne weitere Befunde) zählt weiter als unauffälliges E (R0 möglich).
 
+Version 6.15:
+- Stichworte der Leitsymptom-Abfrage im eigenen Schema: Stufe D → „R1N1_<Leitsymptom> schwer“ (RTW+NEF), Stufe E → „R1N1_<Leitsymptom> kritisch“ bzw. bei Kollaps ohne normale Atmung „R1N1_Reanimation“ (Reanimations-AAO), Stufe C/B → „R1_<Leitsymptom>“ (RTW), Stufe A → „R0_<Leitsymptom> leicht“ (NKTW), Schlaganfall → „R1_Stroke“. Das Präfix (R1N1/R1/R0) kommt aus der jeweiligen AAO und kann dort geändert werden; alte Stichworte „…_Stufe X“ werden automatisch umgestellt.
+- „📝 Notruf ändern“ (auch automatisch beim erneuten Anruf nach „Zu Einsatz übernehmen“): eigener Bereich „🩺 Leitsymptom & Schlüsselfragen“ mit allen Leitsymptomen und den Schlüsselfragen zum Antippen und Vorschau der Dringlichkeit (z. B. C → D). Beim Übernehmen wird neu bewertet, bei alarmierten Einsätzen können direkt Fahrzeuge nachgefordert werden.
+- KV-Dienst und 112 mit einer gemeinsamen Abfrage: Auch bei 116 117 werden Leitsymptom und Schlüsselfragen abgefragt. Neue Leitsymptome für typische KV-Fälle: Fieber/Infekt, Rückenschmerz, Harnwegsbeschwerden, Katheter/Pflegeproblem, Rezept/Medikament, Todesfall (erwartet). Neue Stufe Ω, wenn der Patient selbst in die Praxis kann.
+- Aus der Abfrage kommt eine Empfehlung: Stufe B und höher → Rettungsdienst, A → Hausbesuch ÄBD, Ω → Praxis/Beratung/Apotheke, erwarteter Tod → Leichenschau. Im KV-Feld ist die Empfehlung mit ⭐ markiert; bei 112-Anrufen mit Stufe A/Ω erscheint „KV-Dienst wäre passend“.
+- Wechsel 116 117 → Rettungsdienst übernimmt jetzt Ort, Rückrufnummer, Ereignis und Leitsymptom; nur der Rest der 112-Abfrage folgt.
+
 Version 6.14:
 - Kopfleiste wieder weiß und sachlicher (Büro-Stil): graue Rahmen, kantigere Knöpfe, die Modus-Schalter als zusammenhängende Schaltfläche. Eingeschaltete Modi erkennt man an einem farbigen Unterstrich und einem farbigen AN/MANUELL-Schild.
 
