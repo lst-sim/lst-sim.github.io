@@ -231,7 +231,7 @@ html[data-device="handy"] .fach-grid{grid-template-columns:1fr}
 <header id="topbar">
  <div class="tb-left">
   <span class="tb-brand">🚑 Leitstelle<span>.sim</span></span>
-  <span id="versionTag" class="tb-ver">v6.08</span>
+  <span id="versionTag" class="tb-ver">v6.09</span>
   <span id="syncState"></span>
   <a id="deskTag" href="#" onclick="renameDesk();return false" title="Name dieses Platzes (für „offen an …“) – antippen zum Ändern"></a>
  </div>
@@ -3957,6 +3957,7 @@ function leitGuess(c){const d=c.sim&&c.sim.d;if(!d)return null;const t=[d.event,
 const QS_BASE=[
  ["callType","☎️ Über welche Nummer ist der Anruf eingegangen?","calltype"],
  ["location","📍 Wo genau ist der Notfallort?","text"],
+ ["callback","📞 Rückrufnummer","phone"],
  ["event","❓ Was ist passiert?","event112"],
  ["leit","🩺 Leitsymptom – worum geht es hauptsächlich?","leit"],
  ["leitQ","🩺 Schlüsselfragen zum Leitsymptom","leitQ"],
@@ -3989,6 +3990,7 @@ const QS_BASE=[
 const KT_QS=[
  ["ktType","🚑 Welche Art Krankentransport?","ktType"],
  ["location","📍 Abholort – wo wird der Patient abgeholt?","text"],
+ ["callback","📞 Rückrufnummer","phone"],
  ["freeText","📝 Freitext – weitere Angaben (Ziel, Uhrzeit, Besonderheiten …)","textarea"]
 ];
 // ─── Notrufabfrage bearbeiten (v4.88) ─────────────────────────────────────────────────────────
@@ -4593,7 +4595,7 @@ function qsPrefill(id){
 }
 function questionHTML(q){
  const [id,label,type]=q;
- if(qsIsHidden(db.currentCall,id)&&!(id!=="callType"&&db.currentCall?.answers?.callType&&db.currentCall.answers.callType!=="112")&&!(db.currentCall?.answers?.callType==="116117"&&["location","event"].includes(id))){setTimeout(()=>answer(id,"nicht erhoben",true),0);return `<span class="muted">Ausgeblendete Frage – wird übersprungen …</span>`}
+ if(qsIsHidden(db.currentCall,id)&&!(id!=="callType"&&db.currentCall?.answers?.callType&&db.currentCall.answers.callType!=="112")&&!(db.currentCall?.answers?.callType==="116117"&&["location","event","callback"].includes(id))){setTimeout(()=>answer(id,"nicht erhoben",true),0);return `<span class="muted">Ausgeblendete Frage – wird übersprungen …</span>`}
  if(type==="ktType")return `<label>${label}</label><div class="answer">${["KT-Entlassung","KT-Verlegung","KT-Einweisung"].map(v=>`<button onclick="answer('ktType','${v}')">🚑 ${v}</button>`).join("")}</div>`;
  const c=db.currentCall, e=c?.answers?.event||"";
  const fire=e==="Feuer / Rauchentwicklung";
@@ -4607,11 +4609,19 @@ function questionHTML(q){
 
  // Kein 112-Notruf: Rest der Abfrage entfällt komplett, es wird nur weitergeleitet.
  const callType=c?.answers?.callType;
- if(id!=="callType" && callType==="116117" && !["location","event"].includes(id))
+ if(id!=="callType" && callType==="116117" && !["location","event","callback"].includes(id))
    return skip("entfällt – KV-Dienst"); // v5.97
  if(id!=="callType" && callType && callType!=="112" && callType!=="116117")
    return skip("entfällt – Weiterleitung");
  if(type==="custom")return qsCustomHTML(q,c);
+ if(type==="phone"){ // v6.09: Rückrufnummer – angezeigte Nummer (falls nicht unterdrückt) übernehmen oder erfragen
+   const own=((db.qsConfig||{})[c.kt?"kt":"112"]?.custom||[]).find(x=>/r(ü|ue)ckruf/i.test(x.label||""));
+   if(own)return skip("eigene Frage");
+   const S=c.sim, ani=S?(S.hidden?null:S.phone):(c.callerNumber&&/\d{5,}/.test(String(c.callerNumber))?c.callerNumber:null);
+   return `<label>${label}</label>
+    <div style="margin:4px 0 8px;padding:6px 10px;border-radius:8px;background:${ani?"#f0fdf4":"#fef3c7"};font-size:13px">📟 ${ani?`Angezeigte Nummer: <b>${esc(ani)}</b> <button style="padding:2px 10px;margin-left:6px" onclick="answer('callback','${esc(ani)}')">Übernehmen</button>`:"Rufnummer unterdrückt – bitte beim Anrufer erfragen."}</div>
+    <div class="row"><input id="ans" inputmode="tel" placeholder="z. B. 0151 2345678" style="flex:1" onkeydown="if(event.key==='Enter'&&this.value.trim())answer('callback',this.value.trim())"><button class="primary" onclick="const v=document.getElementById('ans').value.trim();if(v)answer('callback',v)">OK</button><button onclick="answer('callback','nicht erhalten')">Nicht erhalten</button></div>`;
+ }
  if(type==="leit"){if(e!=="Medizinischer Notfall"||isManv(c))return skip("nicht zutreffend");return leitHTML(id,label)} // v6.07
  if(["leitLate","leitQLate"].includes(type)&&(e!=="Medizinischer Notfall"||isManv(c)))return skip("nicht zutreffend");
  if(type==="leitQ"){if(!leitOf(c.answers.leit))return skip(c.answers.leit==="später"?"nach X-ABCDE":"nicht zutreffend");return leitQHTML(id,c)}
@@ -5503,6 +5513,7 @@ function buildMeldertext(c, nafoReason=""){
   if(c.answers?.fireKind&&c.answers.fireKind!=="nicht zutreffend")txt+=`\nFeuer: ${c.answers.fireKind} · Objekt: ${c.answers.fireObject||"k.A."}`;
   if(String(c.answers?.freeText||"").trim())txt+=`\nNotruf-Freitext: ${c.answers.freeText}`;
   if(c.alarmFreeText)txt+=`\nAlarmierungs-Freitext: ${c.alarmFreeText}`;
+  if(c.answers&&c.answers.callback&&/\d/.test(c.answers.callback))txt+=`\nRückrufnummer: ${c.answers.callback}`; // v6.09
   {const P=callPrio(c),L=leitOf(leitKey(c));if(P||L)txt+=`\n${L?`Leitsymptom: ${L.l}`:""}${P&&L?" · ":""}${P?`Dringlichkeit ${P.lv} (${PRIO_INFO[P.lv][1]})`:""}`} // v6.07
   if(c.giz&&c.giz.done&&String(c.giz.rec||"").trim())txt+=`\nGiftnotruf (GIZ): ${c.giz.subst?c.giz.subst+" – ":""}${c.giz.rec}`;
   if(mittel) txt+=`\nWeitere Rettungsmittel: ${mittel}`;
@@ -13133,7 +13144,7 @@ function simMakeCall0(){
  // Boot in Not: Einsatzort ist draußen auf dem Wasser, nicht am Strand (v5.16)
  if(cs.id==="boat"){loc.text=loc.text.replace(/^am (Bade|Haupt)?(s|S)trand/,"vor dem Strand").replace(/^am /,"vor dem ").replace(/,.*$/,"")+", etwa 300 Meter draußen auf dem Wasser";loc.addr=loc.text}
  const id="sim"+Date.now().toString(36)+Math.floor(Math.random()*1000);
- const sim={id,caseId:cs.id,num:cs.num,kt:!!cs.kt,loc,d,phone:"01"+pick(["51","52","60","70","76"])+" "+rint(1000000,9999999),log:[],lastAt:0,spontIdx:0,created:Date.now()};
+ const sim={id,caseId:cs.id,num:cs.num,kt:!!cs.kt,loc,d,phone:"01"+pick(["51","52","60","70","76"])+" "+rint(1000000,9999999),hidden:Math.random()<0.15,log:[],lastAt:0,spontIdx:0,created:Date.now()};
  if(loc.geo)simGeocode(sim); if(loc.custom)simReverse(sim);
  return sim;
 }

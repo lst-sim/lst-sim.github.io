@@ -1607,6 +1607,10 @@ Version 5.05:
   („a, b“ = a ODER b). Mit „🚑 NA-Indikation“ markierte Knöpfe ziehen weiterhin einen Notarzt.
 - Nur „Unauffällig“ (ohne weitere Befunde) zählt weiter als unauffälliges E (R0 möglich).
 
+Version 6.09:
+- Neue Frage „📞 Rückrufnummer“ direkt nach dem Einsatzort (auch bei 116 117 und Krankentransport). Die angezeigte Nummer kann per Knopf übernommen werden; bei ca. 15 % der Übungsanrufe ist sie unterdrückt und muss erfragt werden – der Anrufer nennt sie auf Nachfrage. Daneben „Nicht erhalten“.
+- Die Rückrufnummer steht im Alarmtext. Gibt es schon eine eigene Frage mit „Rückruf“ im Namen, wird die neue übersprungen.
+
 Version 6.08:
 - Leitsymptom und X-ABCDE kombiniert: Bei „Medizinischer Notfall“ wählt man entweder ein Leitsymptom (dann Schlüsselfragen, X-ABCDE entfällt) oder „Lieber mit X-ABCDE abfragen“ (dann X-ABCDE wie bisher, danach optional das Leitsymptom mit Schlüsselfragen).
 - Neue AAOs für die Leitsymptom-Abfrage (AAO-Seite, Rettungsdienst, bearbeitbar): Stufe E und D → RTW + NEF; Stufe C und B → RTW mit Sonderrechten ohne Notarzt; Stufe A → NKTW ohne Sonderrechte; Schlaganfall (C/D) → RTW ohne Notarzt (Stroke). „Dringlichkeit“ und „Leitsymptom“ sind auch als Bedingung in eigenen AAOs wählbar. Der X-ABCDE-Weg bleibt unverändert.
