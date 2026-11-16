@@ -1607,6 +1607,9 @@ Version 5.05:
   („a, b“ = a ODER b). Mit „🚑 NA-Indikation“ markierte Knöpfe ziehen weiterhin einen Notarzt.
 - Nur „Unauffällig“ (ohne weitere Befunde) zählt weiter als unauffälliges E (R0 möglich).
 
+Version 6.10:
+- Rückrufnummer: Fragt man danach, nennt der Anrufer ausschließlich seine Telefonnummer (kein weiterer Text, auch nicht bei kombinierten Fragen). Mit Stimme wird die Nummer Ziffer für Ziffer gesprochen.
+
 Version 6.09:
 - Neue Frage „📞 Rückrufnummer“ direkt nach dem Einsatzort (auch bei 116 117 und Krankentransport). Die angezeigte Nummer kann per Knopf übernommen werden; bei ca. 15 % der Übungsanrufe ist sie unterdrückt und muss erfragt werden – der Anrufer nennt sie auf Nachfrage. Daneben „Nicht erhalten“.
 - Die Rückrufnummer steht im Alarmtext. Gibt es schon eine eigene Frage mit „Rückruf“ im Namen, wird die neue übersprungen.

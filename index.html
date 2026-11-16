@@ -231,7 +231,7 @@ html[data-device="handy"] .fach-grid{grid-template-columns:1fr}
 <header id="topbar">
  <div class="tb-left">
   <span class="tb-brand">🚑 Leitstelle<span>.sim</span></span>
-  <span id="versionTag" class="tb-ver">v6.09</span>
+  <span id="versionTag" class="tb-ver">v6.10</span>
   <span id="syncState"></span>
   <a id="deskTag" href="#" onclick="renameDesk();return false" title="Name dieses Platzes (für „offen an …“) – antippen zum Ändern"></a>
  </div>
@@ -13892,6 +13892,7 @@ function simAnswerFor(c,text){
  const me=!!d.isSelf||s.speaker==="patient";
  const [He,he]=simHe(s), age=d.age, him=he==="sie"?"sie":"ihn";
  const panic=d.panic?pick(["Bitte schnell! ","Oh Gott… ","",""]):"";
+ if(ints.includes("phone"))return s.phone+"."; // v6.10: Rückrufnummer – ausschließlich die Telefonnummer
  for(const k of ints){
    if(out.length>=2)break;
    switch(k){
@@ -14461,6 +14462,7 @@ function simSpeak(c,text){
    if(p.vp==null){p.vp=1+(simHash(p.first+"p")%17-8)/100;p.vr=1+(simHash(p.last+"r")%15-7)/100}
    let pitch=p.vp+(v&&!p.vGenderOk?(fem?0.18:-0.22):0)+(age>=72?-0.07:age<16?0.25:0)+e*0.06;
    let rate=p.vr+(age>=75?-0.12:age>=65?-0.06:0)+e*0.08+(pl>=2?-0.03:0);
+   text=String(text).replace(/\b0\d{2,4}[ \/-]?\d{4,8}\b/g,m=>m.replace(/\D/g,"").split("").join(" ")); // v6.10: Telefonnummer Ziffer für Ziffer sprechen
    const parts=simSpeakParts(c,text,e,pl,age);
    parts.forEach((t,i)=>{
      const u=new SpeechSynthesisUtterance(t); u.lang="de-DE"; if(v)u.voice=v;
