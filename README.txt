@@ -1607,6 +1607,9 @@ Version 5.05:
   („a, b“ = a ODER b). Mit „🚑 NA-Indikation“ markierte Knöpfe ziehen weiterhin einen Notarzt.
 - Nur „Unauffällig“ (ohne weitere Befunde) zählt weiter als unauffälliges E (R0 möglich).
 
+Version 6.14:
+- Kopfleiste wieder weiß und sachlicher (Büro-Stil): graue Rahmen, kantigere Knöpfe, die Modus-Schalter als zusammenhängende Schaltfläche. Eingeschaltete Modi erkennt man an einem farbigen Unterstrich und einem farbigen AN/MANUELL-Schild.
+
 Version 6.13:
 - Einsatzansicht: Bei alarmierten Einsätzen stehen jetzt alle Fahrzeuge einzeln mit ihrem aktuellen Status klein dahinter (z. B. „Florian … 01/83-01 (RTW) 3 · Einsatz übernommen“), farbig wie die Statusfarben. Gilt für die aufgeklappte Einsatzkarte in der Leitstelle und für „Live-Bewertung“ beim geöffneten Einsatz.
 
