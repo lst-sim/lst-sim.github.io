@@ -263,7 +263,7 @@ html[data-device="handy"] .fach-grid{grid-template-columns:1fr}
 <header id="topbar">
  <div class="tb-left">
   <span class="tb-brand"><span class="tb-logo">🚑</span><span class="tb-name">Leitstelle<b>.sim</b></span></span>
-  <span id="versionTag" class="tb-ver">v6.15</span>
+  <span id="versionTag" class="tb-ver">v6.16</span>
   <span id="syncState"></span>
   <a id="deskTag" href="#" onclick="renameDesk();return false" title="Name dieses Platzes (für „offen an …“) – antippen zum Ändern"></a>
  </div>
@@ -649,6 +649,8 @@ const DEFAULTS_FRI_WHV={
   {"id":32,"name":"R1 – Leitsymptom Stufe C (potenziell ernst)","keyword":"R1","topic":"Rettungsdienst","rules":{"prio":"C"},"units":[{"type":"RTW","n":1,"org":"Rettungsdienst"}]},
   {"id":33,"name":"R1 – Leitsymptom Stufe B (dringlich abklären)","keyword":"R1","topic":"Rettungsdienst","rules":{"prio":"B"},"units":[{"type":"RTW","n":1,"org":"Rettungsdienst"}]},
   {"id":34,"name":"R0 – Leitsymptom Stufe A (nicht dringlich)","keyword":"R0","topic":"Rettungsdienst","rules":{"prio":"A"},"units":[{"type":"NKTW","n":1,"org":"Rettungsdienst"}]},
+  {"id":36,"name":"KTW – Leitsymptom: Krankentransport (Ergebnis der Abfrage)","keyword":"KTW","topic":"Rettungsdienst","rules":{"dispo":"KTW"},"units":[{"type":"KTW","n":1,"org":"Rettungsdienst"}]},
+  {"id":37,"name":"KV – Leitsymptom: ÄBD-Hausbesuch (Ergebnis der Abfrage)","keyword":"KV","topic":"Rettungsdienst","rules":{"dispo":"KV-Hausbesuch"},"units":[{"type":"ÄBD","n":1,"org":"KV-Dienst"}]},
   {"id":35,"name":"R1 – Leitsymptom Schlaganfall (Stroke)","keyword":"R1_Stroke","topic":"Rettungsdienst","rules":{"leit":"Schlaganfall-Zeichen"},"units":[{"type":"RTW","n":1,"org":"Rettungsdienst"}]},
   {"id":10,"name":"Rettungsdienst – RD_X kritische Blutung","keyword":"R1N1_Trauma schwer","rules":{"x_massive":"Ja"},"units":[{"type":"RTW","n":1,"org":"Rettungsdienst"},{"type":"NEF","n":1,"org":"Rettungsdienst"}]},
   {"id":11,"name":"Rettungsdienst – RD_B Atemstillstand","keyword":"R1N1_Reanimation","rules":{"b_breath":"Keine normale Atmung"},"units":[{"type":"RTW","n":1,"org":"Rettungsdienst"},{"type":"NEF","n":1,"org":"Rettungsdienst"}]},
@@ -4067,6 +4069,7 @@ const QS_BASE=[
  ["event","❓ Was ist passiert?","event112"],
  ["leit","🩺 Leitsymptom – worum geht es hauptsächlich?","leit"],
  ["leitQ","🩺 Schlüsselfragen zum Leitsymptom","leitQ"],
+ ["dispo","🧭 Ergebnis – wie geht es weiter?","dispo"],
  ["fireKind","🔥 Was ist zu sehen – und was brennt?","fireDetail"],
  ["count","👥 Wie viele Personen/Tiere sind betroffen?","count"],
  ["trapped","🚗 Wie viele Personen sind eingeklemmt oder eingeschlossen?","ynTech"],
@@ -4715,7 +4718,7 @@ function phoneQHTML(id,label,c){
 }
 function questionHTML(q){
  const [id,label,type]=q;
- if(qsIsHidden(db.currentCall,id)&&!(id!=="callType"&&db.currentCall?.answers?.callType&&db.currentCall.answers.callType!=="112")&&!(db.currentCall?.answers?.callType==="116117"&&["location","event","callback","leit","leitQ"].includes(id))){setTimeout(()=>answer(id,"nicht erhoben",true),0);return `<span class="muted">Ausgeblendete Frage – wird übersprungen …</span>`}
+ if(qsIsHidden(db.currentCall,id)&&!(id!=="callType"&&db.currentCall?.answers?.callType&&db.currentCall.answers.callType!=="112")){setTimeout(()=>answer(id,"nicht erhoben",true),0);return `<span class="muted">Ausgeblendete Frage – wird übersprungen …</span>`}
  if(type==="ktType")return `<label>${label}</label><div class="answer">${["KT-Entlassung","KT-Verlegung","KT-Einweisung"].map(v=>`<button onclick="answer('ktType','${v}')">🚑 ${v}</button>`).join("")}</div>`;
  const c=db.currentCall, e=c?.answers?.event||"";
  const fire=e==="Feuer / Rauchentwicklung";
@@ -4729,8 +4732,7 @@ function questionHTML(q){
 
  // Kein 112-Notruf: Rest der Abfrage entfällt komplett, es wird nur weitergeleitet.
  const callType=c?.answers?.callType;
- if(id!=="callType" && callType==="116117" && !["location","event","callback","leit","leitQ"].includes(id))
-   return skip("entfällt – KV-Dienst"); // v5.97
+ // v6.16: 116 117 läuft durch dieselbe Abfrage wie 112 (Ergebnis kann RD, KTW oder KV-Dienst sein)
  if(id!=="callType" && callType && callType!=="112" && callType!=="116117")
    return skip("entfällt – Weiterleitung");
  if(type==="custom"&&/r(ü|ue)ckruf/i.test(String(label)))return phoneQHTML(id,label,c); // v6.11: eigene Rückruf-Frage → nur Telefonnummer
@@ -4743,6 +4745,11 @@ function questionHTML(q){
  if(type==="leit"){if((e!=="Medizinischer Notfall"&&c.answers.callType!=="116117")||isManv(c))return skip("nicht zutreffend");return leitHTML(id,label)} // v6.07 (+116117)
  if(["leitLate","leitQLate"].includes(type)&&(e!=="Medizinischer Notfall"||isManv(c)))return skip("nicht zutreffend");
  if(type==="leitQ"){if(!leitOf(c.answers.leit))return skip(c.answers.leit==="später"?"nach X-ABCDE":"nicht zutreffend");return leitQHTML(id,c)}
+ if(type==="dispo"){ // v6.16: Ergebnis der gemeinsamen Abfrage
+   if(!leitPath(c))return skip("nicht zutreffend");
+   const P=callPrio(c); if(!P||PRIO_ORDER.indexOf(P.lv)>=2)return skip("Rettungsdienst");
+   return dispoHTML(id,label,c);
+ }
  if(type==="leitLate"){if(c.answers.leit!=="später")return skip(leitOf(c.answers.leit)?"bereits erhoben":"nicht zutreffend");return leitHTML(id,label,true)} // v6.08
  if(type==="leitQLate"){const due=c.answers.leit==="später"&&leitOf(c.answers.leitLate);if(!due)return skip(leitOf(c.answers.leit)?"bereits erhoben":"nicht zutreffend");return leitQHTML(id,c,true)}
  if(leitPath(c)&&["x_massive","a_airway","b_breath","c_circ","d_disability","e_exposure","psy"].includes(id))return skip("entfällt – Abfrage über Leitsymptom"); // v6.08
@@ -5149,8 +5156,9 @@ function evaluate(){
 function evaluate0(){
  const c=db.currentCall, a=c.answers, e=a.event||"";
 
- if(a.callType==="116117"||c.kvd){kvEvaluate(c);return} // v5.97: KV-Dienst disponieren
- if(a.callType && a.callType!=="112"){
+ if(c.kvd&&!leitPath(c)){kvEvaluate(c);return} // v5.97: KV-Dienst (alte Übergabe ohne Leitsymptom)
+ if(a.callType==="116117"&&!leitPath(c)&&!a.event){kvEvaluate(c);return}
+ if(a.callType && a.callType!=="112" && a.callType!=="116117"){ // v6.16: 116 117 wird wie 112 bewertet
    const target=a.callType==="110"?"die Polizei (110)":"den Ärztlichen Bereitschaftsdienst (116 117)";
    c.keyword=a.callType==="110"?"WEITERLEITUNG – An 110":"WEITERLEITUNG – An 116 117";
    c.suggestion=`Kein Einsatz der Rettungsleitstelle. Anrufer wurde an ${target} verwiesen/weitergeleitet.`;
@@ -5258,8 +5266,17 @@ function evaluate0(){
    const pre=String(kw(id,P.lv==="A"?"R0":["D","E"].includes(P.lv)?"R1N1":"R1")).replace(/_.*$/,"");
    const nm=L?L.kw:"Med. Notfall", suf={E:" kritisch",D:" schwer",A:" leicht"}[P.lv]||"";
    keyword=id===35&&/_/.test(kw(35,"R1_Stroke"))?kw(35,"R1_Stroke"):id===5?kw(5,"R1N1_Reanimation"):`${pre}_${nm}${suf}`; kwMap[id]=keyword;
+   const dp=a.dispo;
+   if(dp==="KV-Hausbesuch"||dp==="Leichenschau"){ // v6.16: Ergebnis KV-Dienst
+     c.kvChoice=dp==="Leichenschau"?"leichenschau":"hausbesuch"; kvEvaluate(c);
+     c.keyword=`${String(kw(37,"KV")).replace(/_.*$/,"")}_${dp==="Leichenschau"?"Leichenschau":L?L.kw:"Hausbesuch"}`; c.aaoWinner=aaoEntry(37)?.name||"KV"; return;
+   }
+   if(["Praxis","Beratung","Apotheke"].includes(dp)){c.kvChoice=dp.toLowerCase();kvEvaluate(c);c.keyword=`KV_${dp==="Praxis"?"Bereitschaftsdienstpraxis":dp==="Beratung"?"Telefonische Beratung":"Notdienst-Apotheke"}`;return}
+   if(dp==="KTW"){keyword=`${String(kw(36,"KTW")).replace(/_.*$/,"")}_${L?L.kw:"Transport"}`;kwMap[36]=keyword;addAao(36);sr=false;c.rZero=true}
+   else{
    addAao(id);
-   if(P.lv==="A"){sr=false;c.rZero=true}
+   if(P.lv==="A"||P.lv==="Ω"){sr=false;c.rZero=true}
+   }
  } else if(e==="Medizinischer Notfall"){
    keyword=kw(4,"MEDIZINISCHER NOTFALL R1");
    addAao(4);
@@ -10328,7 +10345,7 @@ const AAO_RULE_FIELDS={
  locationIsWater:{label:"Einsatzort auf dem Wasser",values:["ja","nein"]},
  freeText:{label:"Freitext enthält",free:true,placeholder:"Stichwort(e), mehrere mit Komma = eins davon"}
 };
-const LINKED_AAO_IDS=new Set(["30","31","32","33","34","35","26","27","28","29","22","23","24","25","1","2","3","4","5","6","7","8","9","10","11","12","13","14","15","16","17","18","19","20","21"]);
+const LINKED_AAO_IDS=new Set(["30","31","32","33","34","35","36","37","26","27","28","29","22","23","24","25","1","2","3","4","5","6","7","8","9","10","11","12","13","14","15","16","17","18","19","20","21"]);
 // "Vollalarm DLRG" / "Vollalarm DRK": alle freien Fahrzeuge der NÄCHSTEN Ortsgruppe (Standort mit
 // der kürzesten Entfernung zum Einsatzort, mit mindestens einem freien, erreichbaren Fahrzeug).
 // Ältere AAOs mit "Vollalarm DLRG <Ort>" funktionieren weiter (feste Ortsgruppe).
@@ -12838,7 +12855,7 @@ function simAaoCheck(c){
  const miss=Object.entries(so.types||{}).filter(([t,n])=>(ist[t]||0)<n).map(([t,n])=>`${t}${n-(ist[t]||0)>1?" ×"+(n-(ist[t]||0)):""}`);
  const more=Object.entries(ist).filter(([t,n])=>n>((so.types||{})[t]||0)).map(([t])=>t);
  let a=`AAO-Soll laut Anruferangaben: ${simSollText(so)}`;
- if(leitPath(c)){const P=callPrio(c);c.history=c.history||[];c.history.push({q:"🎓 Übungs-Check",a:`Abfrage über Leitsymptom (Dringlichkeit ${P?P.lv:"?"}). Zum Vergleich – nach X-ABCDE wäre es: ${simSollText(so)}.${(()=>{const g=leitGuess(c),ch=leitKey(c);return g&&g!=="unklar"&&leitOf(ch)&&leitOf(ch).k!==g?` ℹ️ Passender wäre eher „${leitOf(g).l}“.`:""})()}`});toast("Übungs-Check im Verlauf");return}
+ if(leitPath(c)){const P=callPrio(c);c.history=c.history||[];if(c.sim&&c.sim.d&&c.sim.d.kv){const f=kvFeedback(c,DISPO_KV[c.answers.dispo]||"rd");c.history.push({q:"🎓 Übungs-Check KV/RD",a:f});toast(f);return}c.history.push({q:"🎓 Übungs-Check",a:`Abfrage über Leitsymptom (Dringlichkeit ${P?P.lv:"?"}). Zum Vergleich – nach X-ABCDE wäre es: ${simSollText(so)}.${(()=>{const g=leitGuess(c),ch=leitKey(c);return g&&g!=="unklar"&&leitOf(ch)&&leitOf(ch).k!==g?` ℹ️ Passender wäre eher „${leitOf(g).l}“.`:""})()}`});toast("Übungs-Check im Verlauf");return}
  a+=miss.length?` · ⚠️ fehlt: ${miss.join(", ")}`:" · ✅ alle Soll-Fahrzeuge alarmiert";
  if(more.length)a+=` · zusätzlich: ${more.join(", ")}`;
  if(s.d.phoneOnly)a+=" · ℹ️ Dieser Anruf wäre auch telefonisch zu erledigen gewesen (Beratung/Weiterleitung).";
@@ -13096,7 +13113,8 @@ function kvEvaluate(c){
 }
 function kvPanelHTML(c){
  if(!c||c.kt)return "";
- const isKv=c.answers&&c.answers.callType==="116117"||c.kvd;
+ const isKv=c.kvd&&!leitPath(c);
+ if(leitPath(c)||(c.answers&&c.answers.callType==="116117"))return dispoDonePanel(c); // v6.16
  if(!isKv){
    if(c.alarmTime||!c.answers||c.answers.callType!=="112")return "";
    const R=kvRecommend(c), fit=R&&R.k!=="rd";
@@ -13122,6 +13140,29 @@ function kvRecommend(c){
  if(L&&L.k==="rezept")return {k:"apotheke",why:"Stufe Ω – Rezept/Medikament"};
  const pr=KV_PRAXEN.some(x=>x.open(new Date()));
  return {k:pr?"praxis":"beratung",why:`Stufe Ω – kein Hausbesuch nötig${pr?", Praxis geöffnet":""}`};
+}
+const DISPO_OPTS=[["Rettungsdienst","🚑 Rettungsdienst (R0)","RTW/NKTW ohne Sonderrechte"],["KV-Hausbesuch","🩺 KV-Dienst: Hausbesuch","ÄBD fährt zum Patienten"],["KTW","🚐 Krankentransport (KTW)","Transport ins Krankenhaus, nicht dringlich"],["Praxis","🏥 Bereitschaftsdienstpraxis","Patient kommt selbst"],["Beratung","📞 Telefonische Beratung","ggf. morgen Hausarzt"],["Apotheke","💊 Notdienst-Apotheke","Rezept/Medikament"],["Leichenschau","⚱️ Leichenschau (KV-Dienst)","erwarteter Tod"]];
+function dispoRecommend(c){
+ const P=callPrio(c), L=leitOf(leitKey(c)); if(!P)return null;
+ if(PRIO_ORDER.indexOf(P.lv)>=2)return "Rettungsdienst";
+ if(L&&L.k==="tod")return "Leichenschau";
+ if(P.lv==="A")return L&&L.kv?(kvOnDuty()?"KV-Hausbesuch":"Rettungsdienst"):"KTW";
+ if(L&&L.k==="rezept")return "Apotheke";
+ return KV_PRAXEN.some(x=>x.open(new Date()))?"Praxis":(kvOnDuty()?"Beratung":"Beratung");
+}
+function dispoHTML(id,label,c){
+ const R=dispoRecommend(c), P=callPrio(c), duty=kvOnDuty(), pr=KV_PRAXEN.filter(x=>x.open(new Date()));
+ return `<label>${label}</label>
+  <div class="muted" style="font-size:12px;margin:2px 0 8px">Dringlichkeit ${P?prioBadge(P.lv,1):""} · KV-Dienst ${duty?"<b style='color:#15803d'>im Dienst</b>":"<b style='color:#b91c1c'>außerhalb der Dienstzeit</b>"} · Praxis ${pr.length?`<b style="color:#15803d">offen</b> (${esc(pr.map(x=>x.n.replace("Bereitschaftsdienstpraxis ","")).join(", "))})`:"geschlossen"}</div>
+  <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:6px">${DISPO_OPTS.map(([v,l,d])=>`<button onclick="answer('${id}','${v}')" title="${esc(d)}" style="text-align:left;${R===v?"border:2px solid #0d9488;font-weight:800;background:#f0fdfa":""}">${l}${R===v?" ⭐":""}<small style="display:block;font-weight:400" class="muted">${esc(d)}</small></button>`).join("")}</div>
+  ${R?`<p class="muted" style="font-size:12px;margin:6px 0 0">⭐ = Empfehlung aus Leitsymptom und Dringlichkeit</p>`:""}`;
+}
+const DISPO_KV={"KV-Hausbesuch":"hausbesuch","Leichenschau":"leichenschau","Praxis":"praxis","Beratung":"beratung","Apotheke":"apotheke","KTW":"rd","Rettungsdienst":"rd"};
+// Abschluss ohne Fahrzeug (Praxis, Beratung, Apotheke)
+function dispoDonePanel(c){
+ const dp=c.answers&&c.answers.dispo; if(!["Praxis","Beratung","Apotheke"].includes(dp)||c.alarmTime)return "";
+ const P=kvNearestPraxis(c);
+ return `<div class="card" style="border:2px solid ${KV_COLOR};background:#f0fdfa"><div class="row between" style="gap:8px;flex-wrap:wrap"><span><b style="color:${KV_COLOR}">🩺 Ergebnis: ${esc((DISPO_OPTS.find(x=>x[0]===dp)||[,dp])[1])}</b>${dp==="Praxis"?`<br><span style="font-size:13px">${esc(P.n)} – ${esc(P.addr)}${P.open(new Date())===false?" (gerade geschlossen)":""}</span>`:""}</span><button class="primary" style="background:${KV_COLOR};border-color:${KV_COLOR}" onclick="kvDecide('${esc(String(c.id))}','${DISPO_KV[dp]}')">✔ Anruf abschließen</button></div></div>`;
 }
 function kvTakeOver(id){
  const c=[db.currentCall,...(db.activeCalls||[])].find(x=>x&&String(x.id)===String(id)); if(!c)return;

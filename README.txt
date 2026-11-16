@@ -1607,6 +1607,13 @@ Version 5.05:
   („a, b“ = a ODER b). Mit „🚑 NA-Indikation“ markierte Knöpfe ziehen weiterhin einen Notarzt.
 - Nur „Unauffällig“ (ohne weitere Befunde) zählt weiter als unauffälliges E (R0 möglich).
 
+Version 6.16 – eine gemeinsame Abfrage für 112, 116 117 und KTW:
+- 116 117-Anrufe laufen jetzt durch genau dieselbe Abfrage wie 112 (kein eigenes KV-Feld mehr).
+- Nach Leitsymptom und Schlüsselfragen kommt bei Dringlichkeit A oder Ω die Frage „🧭 Ergebnis – wie geht es weiter?“: Rettungsdienst (R0), KV-Dienst Hausbesuch, Krankentransport (KTW), Bereitschaftsdienstpraxis, telefonische Beratung, Notdienst-Apotheke oder Leichenschau. Die Empfehlung aus Leitsymptom und Dringlichkeit ist mit ⭐ markiert; KV-Dienstzeit und offene Praxen stehen dabei. Ab Stufe B geht es automatisch zum Rettungsdienst.
+- Ergebnis KV-Hausbesuch/Leichenschau → ÄBD-Fahrzeug im Alarmvorschlag (Stichwort z. B. „KV_Infekt“, „KV_Leichenschau“), KTW → KTW ohne Sonderrechte („KTW_Sturz“). Dafür zwei neue AAOs (KTW, KV) auf der AAO-Seite. Praxis/Beratung/Apotheke → „✔ Anruf abschließen“ ohne Fahrzeug.
+- Übungs-Check bei 116 117-Fällen bewertet das gewählte Ergebnis.
+- Der Krankentransport-Anruf über 19222 bleibt eine eigene Buchungsmaske (Abholort, Ziel, Termin usw.).
+
 Version 6.15:
 - Stichworte der Leitsymptom-Abfrage im eigenen Schema: Stufe D → „R1N1_<Leitsymptom> schwer“ (RTW+NEF), Stufe E → „R1N1_<Leitsymptom> kritisch“ bzw. bei Kollaps ohne normale Atmung „R1N1_Reanimation“ (Reanimations-AAO), Stufe C/B → „R1_<Leitsymptom>“ (RTW), Stufe A → „R0_<Leitsymptom> leicht“ (NKTW), Schlaganfall → „R1_Stroke“. Das Präfix (R1N1/R1/R0) kommt aus der jeweiligen AAO und kann dort geändert werden; alte Stichworte „…_Stufe X“ werden automatisch umgestellt.
 - „📝 Notruf ändern“ (auch automatisch beim erneuten Anruf nach „Zu Einsatz übernehmen“): eigener Bereich „🩺 Leitsymptom & Schlüsselfragen“ mit allen Leitsymptomen und den Schlüsselfragen zum Antippen und Vorschau der Dringlichkeit (z. B. C → D). Beim Übernehmen wird neu bewertet, bei alarmierten Einsätzen können direkt Fahrzeuge nachgefordert werden.
