@@ -231,7 +231,7 @@ html[data-device="handy"] .fach-grid{grid-template-columns:1fr}
 <header id="topbar">
  <div class="tb-left">
   <span class="tb-brand">🚑 Leitstelle<span>.sim</span></span>
-  <span id="versionTag" class="tb-ver">v6.07</span>
+  <span id="versionTag" class="tb-ver">v6.08</span>
   <span id="syncState"></span>
   <a id="deskTag" href="#" onclick="renameDesk();return false" title="Name dieses Platzes (für „offen an …“) – antippen zum Ändern"></a>
  </div>
@@ -610,6 +610,13 @@ const DEFAULTS_FRI_WHV={
   {"id":27,"name":"Polizeilage – Gewalt/Amok (RD im Bereitstellungsraum, v5.66)","keyword":"POL","rules":{"event":"Polizeilage"},"units":[{"type":"RTW","n":1,"org":"Rettungsdienst"},{"type":"NEF","n":1,"org":"Rettungsdienst"}]},
   {"id":28,"name":"MANI – Massenanfall von Infizierten/Erkrankten (v5.66)","keyword":"MANI","rules":{"event":"MANI"},"units":[{"type":"RTW","n":2,"org":"Rettungsdienst"},{"type":"KTW","n":2,"org":"Rettungsdienst"},{"type":"NEF","n":1,"org":"Rettungsdienst"},{"type":"OrgL","n":1,"org":"Rettungsdienst"},{"type":"LNA","n":1,"org":"Rettungsdienst"},{"type":"ELW1","n":1,"org":"DRK"},{"type":"MTW","n":1,"org":"DRK"}]},
   {"id":29,"name":"MANB – Massenanfall von Betroffenen (v5.66)","keyword":"MANB","rules":{"event":"MANB"},"units":[{"type":"RTW","n":1,"org":"Rettungsdienst"},{"type":"NEF","n":1,"org":"Rettungsdienst"},{"type":"OrgL","n":1,"org":"Rettungsdienst"},{"type":"LNA","n":1,"org":"Rettungsdienst"},{"type":"ELW","n":1,"org":"Feuerwehr"},{"type":"ELW1","n":1,"org":"DRK"},{"type":"GW-Betreuung","n":1,"org":"DRK"},{"type":"MTW","n":2,"org":"DRK"}]},
+  // v6.08: Abfrage über Leitsymptom (ProQA-ähnlich) – Fahrzeuge nach Dringlichkeit, Notarzt nur bei D/E
+  {"id":30,"name":"Leitsymptom – Stufe E (Atem-/Kreislaufstillstand)","keyword":"R1N1_Stufe E","topic":"Rettungsdienst","rules":{"prio":"E"},"units":[{"type":"RTW","n":1,"org":"Rettungsdienst"},{"type":"NEF","n":1,"org":"Rettungsdienst"}]},
+  {"id":31,"name":"Leitsymptom – Stufe D (lebensbedrohlich)","keyword":"R1N1_Stufe D","topic":"Rettungsdienst","rules":{"prio":"D"},"units":[{"type":"RTW","n":1,"org":"Rettungsdienst"},{"type":"NEF","n":1,"org":"Rettungsdienst"}]},
+  {"id":32,"name":"Leitsymptom – Stufe C (potenziell ernst, ohne Notarzt)","keyword":"R1_Stufe C","topic":"Rettungsdienst","rules":{"prio":"C"},"units":[{"type":"RTW","n":1,"org":"Rettungsdienst"}]},
+  {"id":33,"name":"Leitsymptom – Stufe B (dringlich abklären)","keyword":"R1_Stufe B","topic":"Rettungsdienst","rules":{"prio":"B"},"units":[{"type":"RTW","n":1,"org":"Rettungsdienst"}]},
+  {"id":34,"name":"Leitsymptom – Stufe A (nicht dringlich, ohne Sonderrechte)","keyword":"R0_Stufe A","topic":"Rettungsdienst","rules":{"prio":"A"},"units":[{"type":"NKTW","n":1,"org":"Rettungsdienst"}]},
+  {"id":35,"name":"Leitsymptom – Schlaganfall (Stroke, ohne Notarzt)","keyword":"R1_Stroke","topic":"Rettungsdienst","rules":{"leit":"Schlaganfall-Zeichen"},"units":[{"type":"RTW","n":1,"org":"Rettungsdienst"}]},
   {"id":10,"name":"Rettungsdienst – RD_X kritische Blutung","keyword":"R1N1_Trauma schwer","rules":{"x_massive":"Ja"},"units":[{"type":"RTW","n":1,"org":"Rettungsdienst"},{"type":"NEF","n":1,"org":"Rettungsdienst"}]},
   {"id":11,"name":"Rettungsdienst – RD_B Atemstillstand","keyword":"R1N1_Reanimation","rules":{"b_breath":"Keine normale Atmung"},"units":[{"type":"RTW","n":1,"org":"Rettungsdienst"},{"type":"NEF","n":1,"org":"Rettungsdienst"}]},
   {"id":12,"name":"Rettungsdienst – RD_C relevante Blutung","keyword":"R1N1_Med. Notfall schwer","rules":{"c_circ":"Relevante Blutung"},"units":[{"type":"RTW","n":1,"org":"Rettungsdienst"},{"type":"NEF","n":1,"org":"Rettungsdienst"}]},
@@ -3879,6 +3886,10 @@ const LEIT_INSTR={
  ersticken:["🥩 Ersticken","Kann die Person nicht mehr husten: Oberkörper nach vorne beugen und bis zu 5 kräftige Schläge zwischen die Schulterblätter geben. Hilft das nicht: bis zu 5 Oberbauchstöße (von hinten umfassen, Faust unter das Brustbein, kräftig nach innen-oben ziehen). Abwechselnd wiederholen. Bei Säuglingen statt Oberbauchstößen 5 Stöße auf die Brust mit zwei Fingern."]
 };
 function leitOf(k){return LEIT.find(x=>x.k===k||x.l===k)}
+// v6.08: Leitsymptom-Weg (vor X-ABCDE gewählt) – dann entfällt X-ABCDE, die AAO richtet sich nach der Dringlichkeit
+function leitPath(c){const a=(c&&c.answers)||{};return !!leitOf(a.leit)}
+// v6.08: Leitsymptom vor oder nach X-ABCDE – gültig ist, was gewählt wurde
+function leitKey(c){const a=(c&&c.answers)||{};return leitOf(a.leit)?a.leit:(leitOf(a.leitLate)?a.leitLate:null)}
 CALL_EDIT_OPTIONS.leit=LEIT.map(x=>x.l);
 // Dringlichkeit aus Leitsymptom, Schlüsselfragen und X-ABCDE
 function callPrio(c){
@@ -3888,7 +3899,7 @@ function callPrio(c){
  let p=null; const why=[];
  const up=(lv,txt)=>{if(!lv)return;const n=p?prioMax(p,lv):lv;if(n!==p||!p){why.push(txt)}p=n};
  if(a.event==="Reanimation")up("E","Reanimation");
- const L=leitOf(a.leit);
+ const L=leitOf(leitKey(c));
  if(L){up(L.base,`Leitsymptom ${L.l}`);for(const [qk,qt,opts] of L.q){const v=(c.leitAns||{})[qk];const o=opts.find(x=>x[0]===v);if(o&&o[1])up(o[1],`${qt.replace(/\s*[?(].*$/,"")}: ${v}`)}}
  if(a.x_massive==="Ja")up("D","kritische Blutung");
  if(a.a_airway==="Verlegt")up("D","Atemweg verlegt");
@@ -3904,7 +3915,7 @@ function callPrio(c){
 function prioBadge(lv,small){const i=PRIO_INFO[lv]||["#64748b",""];return `<span title="Dringlichkeit ${lv}: ${i[1]}" style="display:inline-block;background:${i[0]};color:#fff;border-radius:6px;padding:${small?"0 6px":"2px 10px"};font-weight:900;font-size:${small?"11px":"15px"}">${lv}</span>`}
 function leitPanelHTML(c){
  if(!c||c.kt)return "";
- const P=callPrio(c), L=leitOf((c.answers||{}).leit);
+ const P=callPrio(c), L=leitOf(leitKey(c));
  const inst=[...new Set([...(L?L.instr:[]),...(/Bewusstlos/.test(String(c.answers&&c.answers.d_disability||""))&&c.answers.b_breath!=="Keine normale Atmung"?["seite"]:[]),...(c.answers&&c.answers.x_massive==="Ja"?["blutung"]:[])])];
  if(!P&&!inst.length)return "";
  const done=new Set(c.instrDone||[]);
@@ -3922,19 +3933,20 @@ function leitInstrDone(id,k){
  c.instrDone=[...S]; save(); render(currentPage);
 }
 // Abfrage-Masken
-function leitHTML(id,label){
- return `<label>${label}</label><div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:6px">${LEIT.map(L=>`<button onclick="answer('${id}','${esc(L.l)}')" style="text-align:left">${L.ic} ${esc(L.l)}</button>`).join("")}</div>`;
+function leitHTML(id,label,late){
+ return `<label>${label}</label><div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:6px">${LEIT.map(L=>`<button onclick="answer('${id}','${esc(L.l)}')" style="text-align:left">${L.ic} ${esc(L.l)}</button>`).join("")}</div>
+  <div class="row" style="margin-top:10px;gap:8px;flex-wrap:wrap">${late?`<button onclick="answer('${id}','keins')">Kein Leitsymptom</button>`:`<button style="border-color:#2563eb;color:#1d4ed8;font-weight:800" onclick="answer('${id}','später')">➡️ Lieber mit X-ABCDE abfragen (Leitsymptom optional danach)</button><span class="muted" style="font-size:12px;align-self:center">Mit Leitsymptom entfällt X-ABCDE.</span>`}</div>`;
 }
 let leitSel={};
-function leitQHTML(id,c){
- const L=leitOf(c.answers.leit); if(!L)return "";
+function leitQHTML(id,c,late){
+ const L=leitOf(leitKey(c)); if(!L)return "";
  leitSel={...(c.leitAns||{})};
  return `<label>${L.ic} Schlüsselfragen: ${esc(L.l)}</label>${L.q.map(([qk,qt,opts])=>`<div style="margin:8px 0 2px;font-weight:700">„${esc(qt)}“</div><div class="answer">${opts.map(([v,lv])=>`<button data-lq="${qk}" data-v="${esc(v)}" class="${leitSel[qk]===v?"primary":""}" onclick="leitPick('${qk}',this)">${esc(v)}${lv?` ${prioBadge(lv,1)}`:""}</button>`).join("")}</div>`).join("")}
-  <div class="row" style="margin-top:12px"><button class="primary" onclick="leitQSubmit('${id}')">✔ Weiter</button><span class="muted" style="font-size:12px">Nicht Beantwortetes wird als „unbekannt“ übernommen. Die Buchstaben zeigen, welche Antwort die Dringlichkeit anhebt.</span></div>`;
+  <div class="row" style="margin-top:12px;gap:8px;flex-wrap:wrap"><button class="primary" onclick="leitQSubmit('${id}')">✔ Weiter</button><span class="muted" style="font-size:12px">Nicht Beantwortetes wird als „unbekannt“ übernommen. Die Buchstaben zeigen, welche Antwort die Dringlichkeit anhebt.</span></div>`;
 }
 function leitPick(qk,btn){leitSel[qk]=btn.dataset.v;document.querySelectorAll(`[data-lq="${qk}"]`).forEach(b=>b.classList.toggle("primary",b===btn))}
 function leitQSubmit(id){
- const c=db.currentCall; if(!c)return; const L=leitOf(c.answers.leit); if(!L)return;
+ const c=db.currentCall; if(!c)return; const L=leitOf(leitKey(c)); if(!L)return;
  c.leitAns={}; L.q.forEach(([qk])=>c.leitAns[qk]=leitSel[qk]||"unbekannt");
  answer(id,L.q.map(([qk,qt])=>`${qt.replace(/\?.*$/,"?")} ${c.leitAns[qk]}`).join(" · "));
 }
@@ -3965,6 +3977,8 @@ const QS_BASE=[
  ["d_disability","D – Wie ist der neurologische Zustand / das Bewusstsein?","xdisability"],
  ["e_exposure","E – Weitere Verletzungen, Erkrankungszeichen oder Umgebungseinflüsse?","textarea"],
  ["psy","🧠 Psy Problem?","ynPsy"],
+ ["leitLate","🩺 Leitsymptom – worum geht es hauptsächlich?","leitLate"],
+ ["leitQLate","🩺 Schlüsselfragen zum Leitsymptom","leitQLate"],
  ["patientName","👤 Name der betroffenen Person (falls bekannt)","text"],
  ["patientAge","🎂 Alter der betroffenen Person","count"],
  ["patientGender","⚧ Geschlecht der betroffenen Person","gender"],
@@ -4599,7 +4613,11 @@ function questionHTML(q){
    return skip("entfällt – Weiterleitung");
  if(type==="custom")return qsCustomHTML(q,c);
  if(type==="leit"){if(e!=="Medizinischer Notfall"||isManv(c))return skip("nicht zutreffend");return leitHTML(id,label)} // v6.07
- if(type==="leitQ"){if(!leitOf(c.answers.leit))return skip("nicht zutreffend");return leitQHTML(id,c)}
+ if(["leitLate","leitQLate"].includes(type)&&(e!=="Medizinischer Notfall"||isManv(c)))return skip("nicht zutreffend");
+ if(type==="leitQ"){if(!leitOf(c.answers.leit))return skip(c.answers.leit==="später"?"nach X-ABCDE":"nicht zutreffend");return leitQHTML(id,c)}
+ if(type==="leitLate"){if(c.answers.leit!=="später")return skip(leitOf(c.answers.leit)?"bereits erhoben":"nicht zutreffend");return leitHTML(id,label,true)} // v6.08
+ if(type==="leitQLate"){const due=c.answers.leit==="später"&&leitOf(c.answers.leitLate);if(!due)return skip(leitOf(c.answers.leit)?"bereits erhoben":"nicht zutreffend");return leitQHTML(id,c,true)}
+ if(leitPath(c)&&["x_massive","a_airway","b_breath","c_circ","d_disability","e_exposure","psy"].includes(id))return skip("entfällt – Abfrage über Leitsymptom"); // v6.08
  if(!c?.kt&&qsMaskOf(id))return qsMaskHTML(c,qsMaskOf(id));
 
  if(type==="calltype") return `<label>${label}</label><div class="answer">
@@ -5104,6 +5122,13 @@ function evaluate0(){
  } else if(e==="Technische Hilfeleistung"){
    keyword=kw(21,"TH");
    addAao(21);
+ } else if(e==="Medizinischer Notfall"&&leitPath(c)&&callPrio(c)){
+   // v6.08: Abfrage über Leitsymptom – AAO nach Dringlichkeit (Notarzt nur bei D/E), Schlaganfall eigene AAO
+   const P=callPrio(c), L=leitOf(leitKey(c));
+   const id=L&&L.k==="schlag"&&["C","D"].includes(P.lv)?35:{E:30,D:31,C:32,B:33,A:34}[P.lv]||32;
+   keyword=`${kw(id,`Stufe ${P.lv}`)} · ${L?L.l:""}`; kwMap[id]=keyword;
+   addAao(id);
+   if(P.lv==="A"){sr=false;c.rZero=true}
  } else if(e==="Medizinischer Notfall"){
    keyword=kw(4,"MEDIZINISCHER NOTFALL R1");
    addAao(4);
@@ -5132,7 +5157,7 @@ function evaluate0(){
  // XABCDE-Ergebnis kann den Rettungsdienst-Anteil der Alarmierung verschärfen und
  // liefert ein eigenes, spezifischeres Meldestichwort – unabhängig vom Grundereignis
  // (Wasser, VU, Feuer mit Personengefährdung, …), sofern XABCDE erhoben wurde.
- if(needsXABCDE(c)){
+ if(needsXABCDE(c)&&!leitPath(c)){ // v6.08: beim Leitsymptom-Weg entfällt X-ABCDE
    // Bei Reanimation ist RTW+NEF(+NKTW als First Responder) bereits über den Grundstichwort-
    // Zweig alarmiert. Die XABCDE-Verschärfung darf hier keine weiteren/doppelten RTW/NEF
    // nachlegen (führte zuvor dazu, dass z. B. 2× NEF disponiert wurden) – sie liefert für
@@ -5478,7 +5503,7 @@ function buildMeldertext(c, nafoReason=""){
   if(c.answers?.fireKind&&c.answers.fireKind!=="nicht zutreffend")txt+=`\nFeuer: ${c.answers.fireKind} · Objekt: ${c.answers.fireObject||"k.A."}`;
   if(String(c.answers?.freeText||"").trim())txt+=`\nNotruf-Freitext: ${c.answers.freeText}`;
   if(c.alarmFreeText)txt+=`\nAlarmierungs-Freitext: ${c.alarmFreeText}`;
-  {const P=callPrio(c),L=leitOf(c.answers&&c.answers.leit);if(P||L)txt+=`\n${L?`Leitsymptom: ${L.l}`:""}${P&&L?" · ":""}${P?`Dringlichkeit ${P.lv} (${PRIO_INFO[P.lv][1]})`:""}`} // v6.07
+  {const P=callPrio(c),L=leitOf(leitKey(c));if(P||L)txt+=`\n${L?`Leitsymptom: ${L.l}`:""}${P&&L?" · ":""}${P?`Dringlichkeit ${P.lv} (${PRIO_INFO[P.lv][1]})`:""}`} // v6.07
   if(c.giz&&c.giz.done&&String(c.giz.rec||"").trim())txt+=`\nGiftnotruf (GIZ): ${c.giz.subst?c.giz.subst+" – ":""}${c.giz.rec}`;
   if(mittel) txt+=`\nWeitere Rettungsmittel: ${mittel}`;
   txt+=`\nAnfahrt: entsprechend AAO`;
@@ -5683,6 +5708,7 @@ const CREW_RMI=[
  [/harnverhalt/,"713"],
  [/akute augenerkrankung|rotes schmerzhaftes auge/,"721"],
  [/tonsillektomie|mandel-op|nachblutung/,"732"],
+ [/aortendissektion|dissektion/,"299"],[/bauchaortenaneurysma|aneurysma/,"291"],[/lungenembolie/,"348"],[/pneumothorax/,"318"],[/subarachnoidal/,"421"],[/meningitis/,"371"],[/sepsis/,"373"],[/gi-blutung|kaffeesatz|teerstuhl/,"351"],[/bradykardie/,"342"],[/tachykardie/,"343"],[/ketoazidose|hyperglyk/,"392"],[/status epilepticus|anhaltender krampf/,"411"],[/hitzschlag/,"286"],[/stromunfall|strommarke/,"344"],[/bolusaspiration/,"314"],[/hypertensive krise/,"345"],[/lungenödem/,"347"],[/gefäßverschluss/,"292"],[/exsikkose/,"326"], // v6.08
  [/co-melder|kohlenmonoxid|co-vergiftung|co-hb/,"370"],
  [/reanim|herzstillstand|keine normale atmung.*bewusstlos/,"132"],
  [/brust|herzinfarkt|druck auf der brust|engegefühl|ausstrahl/,"331"],
@@ -10148,6 +10174,8 @@ function setStatusFromSelect(id,status){
 const AAO_RULE_FIELDS={
  event:{label:"Was ist passiert?",values:["Medizinischer Notfall","Reanimation","Feuer / Rauchentwicklung","Verkehrsunfall","Technische Hilfeleistung","Person im Wasser","Vermisste Person","Evakuierung","Polizeilage","MANI","MANB","Sonstiger Notfall"]},
  count:{label:"Anzahl Betroffene",free:true,placeholder:"z. B. >3, 2, <=5"},
+ prio:{label:"Dringlichkeit (Leitsymptom-Abfrage)",values:["Ω","A","B","C","D","E"]},
+ leit:{label:"Leitsymptom",values:["Atemnot","Brustschmerz","Schlaganfall-Zeichen","Kollaps / Bewusstlosigkeit","Krampfanfall","Sturz / Verletzung","Blutung","Bauchschmerz","Allergische Reaktion","Diabetes / Unterzucker","Vergiftung / Drogen / Alkohol","Psychischer Ausnahmezustand","Schwangerschaft / Geburt","Kind krank / Fieber","Verbrennung / Verbrühung","Verschluckt / Ersticken","Unklare Erkrankung / Schwäche"]},
  patients:{label:"Anzahl Patienten (inkl. Angabe bei X)",free:true,placeholder:"z. B. 2, >1, <=3"},
  waterState:{label:"Person im Wasser – Zustand",values:["Lebenszeichen","Vermisst","Bergung"]},
  trapped:{label:"Anzahl eingeklemmt/eingeschlossen",free:true,placeholder:"z. B. >0, 2, >=3 (oder ja/nein)"},
@@ -10168,7 +10196,7 @@ const AAO_RULE_FIELDS={
  locationIsWater:{label:"Einsatzort auf dem Wasser",values:["ja","nein"]},
  freeText:{label:"Freitext enthält",free:true,placeholder:"Stichwort(e), mehrere mit Komma = eins davon"}
 };
-const LINKED_AAO_IDS=new Set(["26","27","28","29","22","23","24","25","1","2","3","4","5","6","7","8","9","10","11","12","13","14","15","16","17","18","19","20","21"]);
+const LINKED_AAO_IDS=new Set(["30","31","32","33","34","35","26","27","28","29","22","23","24","25","1","2","3","4","5","6","7","8","9","10","11","12","13","14","15","16","17","18","19","20","21"]);
 // "Vollalarm DLRG" / "Vollalarm DRK": alle freien Fahrzeuge der NÄCHSTEN Ortsgruppe (Standort mit
 // der kürzesten Entfernung zum Einsatzort, mit mindestens einem freien, erreichbaren Fahrzeug).
 // Ältere AAOs mit "Vollalarm DLRG <Ort>" funktionieren weiter (feste Ortsgruppe).
@@ -10525,6 +10553,7 @@ function aaoRuleMatches(val,rule,key){
 function customAaoMatches(c){
  const a={...(c?.answers||{}),count:c?.answers?.count??c?.count,locationIsWater:c?.locationIsWater?"ja":"nein"};
  a.patients=String(patientCount(c?.answers||{})); // v5.10: Patientenzahl als AAO-Bedingung
+ try{const P=callPrio(c);if(P)a.prio=P.lv;const L=leitOf(leitKey(c));if(L)a.leit=L.l}catch(e){} // v6.08: Dringlichkeit/Leitsymptom als AAO-Bedingung
  // UND-Bedingungen (rules) müssen alle passen; von den Entweder-oder-Bedingungen (orRules) mindestens eine.
  const lb=c?.answerLabels||{}, m=(k,v)=>aaoRuleMatches(a[k],v,k)||(lb[k]!=null&&aaoRuleMatches(lb[k],v,k));
  return (db.aao||[]).filter(x=>{
@@ -12080,6 +12109,105 @@ const SIM_CASES=[
    f:{count:"1",x:"Nein",a:"Frei",b:"Normal",c:"Unauffällig",d:"Bewusstseinsgetrübt",e:"Fieberkrampf, Kleinkind, jetzt schläfrig, Fieber 39,5",psy:"Nein",danger:"nein"},
    onset:"Vor drei Minuten, der Krampf hat vielleicht eine Minute gedauert.",hist:"Das hatte sie noch nie. Sonst gesund.",
    extra:["Jetzt macht das Kind die Augen wieder auf.","Soll ich ihr das Fieberzäpfchen geben?"]}}},
+ // ── v6.08: weitere, seltenere Krankheitsbilder ─────────────────────────────────────────────
+ {id:"dissektion",w:0.7,num:"112",loc:"home",mk:()=>{const p=simPerson("m"),age=rint(55,78);return {rel:"mein Mann",caller:simPerson("w"),patient:p,age,
+   open:["Hallo, mein Mann hat ganz plötzlich furchtbare Schmerzen im Rücken und in der Brust!"],
+   event:"Er saß ganz normal auf dem Sofa, und auf einmal hat er gesagt, es reißt ihm was zwischen den Schulterblättern. Jetzt zieht es in den Bauch runter. Er ist ganz blass.",
+   f:{count:"1",x:"Nein",a:"Frei",b:"Normal",c:"Auffällig",d:"Wach / orientiert",e:"plötzlicher reißender Schmerz zwischen den Schulterblättern, wandert Richtung Bauch, blass (V. a. Aortendissektion)",psy:"Nein",danger:"nein"},
+   onset:"Vor einer Viertelstunde, ganz plötzlich, von jetzt auf gleich.",hist:"Er hat schon lange hohen Blutdruck, nimmt die Tabletten aber nicht immer.",
+   extra:["Er sagt, so einen Schmerz hatte er noch nie.","Sein linker Arm fühlt sich kälter an als der rechte.","Soll ich ihm eine Schmerztablette geben?"]}}},
+ {id:"baa_ruptur",w:0.5,num:"112",loc:"home",mk:()=>{const p=simPerson("m"),age=rint(68,86);return {rel:"mein Mann",caller:simPerson("w"),patient:p,age,
+   open:["Mein Mann ist umgekippt, er hat ganz schlimme Bauchschmerzen!"],
+   event:"Er hatte auf einmal heftige Schmerzen im Bauch und im Rücken und ist dann im Flur zusammengesackt. Jetzt liegt er da, ist schweißnass und ganz grau.",
+   f:{count:"1",x:"Nein",a:"Frei",b:"Auffällig",c:"Schockzeichen",d:"Bewusstseinsgetrübt",e:"plötzlicher Bauch- und Rückenschmerz, Kollaps, kaltschweißig (V. a. rupturiertes Bauchaortenaneurysma)",psy:"Nein",danger:"nein"},
+   onset:"Vor zehn Minuten.",hist:"Die haben bei ihm mal eine Erweiterung an der Bauchschlagader gefunden, das sollte beobachtet werden.",
+   extra:["Er antwortet nur noch ganz leise.","Er ist ganz kalt an den Händen."]}}},
+ {id:"lungenembolie",w:0.8,num:"112",loc:"home",mk:()=>{const p=simPerson("w"),age=rint(28,70);return {rel:"ich selbst",caller:p,patient:p,age,
+   open:["Hallo… ich bekomme ganz schlecht Luft, das kam ganz plötzlich."],
+   event:"Ich bin vorhin aufgestanden und hatte auf einmal keine Luft mehr. Beim Einatmen sticht es in der Brust und mein Herz rast. Meine rechte Wade ist seit ein paar Tagen dick.",
+   f:{count:"1",x:"Nein",a:"Frei",b:"Auffällig",c:"Auffällig",d:"Wach / orientiert",e:"plötzliche Atemnot, atemabhängiger Brustschmerz, Herzrasen, geschwollene Wade (V. a. Lungenembolie)",psy:"Nein",danger:"nein"},
+   onset:"Vor einer halben Stunde, ganz plötzlich.",hist:pick(["Ich bin vor einer Woche am Knie operiert worden.","Ich bin letzte Woche zwölf Stunden geflogen.","Ich nehme die Pille und rauche."]),
+   extra:["Ich muss nach jedem Satz Luft holen.","Mir ist ganz schwindelig."]}}},
+ {id:"pneumothorax",w:0.6,num:"112",loc:"home",mk:()=>{const p=simPerson("m"),age=rint(18,30);return {rel:"ich selbst",caller:p,patient:p,age,
+   open:["Hallo, ich hab auf einmal so einen stechenden Schmerz in der Brust und krieg schlecht Luft."],
+   event:"Ich saß am Schreibtisch, dann hat es plötzlich rechts in der Brust gestochen. Seitdem bekomme ich schlechter Luft, beim tiefen Einatmen tut es weh.",
+   f:{count:"1",x:"Nein",a:"Frei",b:"Auffällig",c:"Unauffällig",d:"Wach / orientiert",e:"plötzlicher stechender Brustschmerz rechts, Luftnot, junger schlanker Mann (V. a. Spontanpneumothorax)",psy:"Nein",danger:"nein"},
+   onset:"Vor einer Stunde.",hist:"Eigentlich bin ich gesund. Ich rauche ein bisschen.",extra:["Ich bin ziemlich groß und dünn, falls das wichtig ist."]}}},
+ {id:"sab",w:0.6,num:"112",loc:"home",mk:()=>{const p=simPerson("w"),age=rint(35,62);return {rel:"meine Frau",caller:simPerson("m"),patient:p,age,
+   open:["Meine Frau hat auf einmal ganz schlimme Kopfschmerzen, so schlimm wie noch nie!"],
+   event:"Sie hat beim Sport auf einmal geschrien, es hat wie ein Schlag im Kopf geknallt. Jetzt hat sie sich übergeben, der Nacken ist steif und sie ist ganz benommen.",
+   f:{count:"1",x:"Nein",a:"Frei",b:"Normal",c:"Unauffällig",d:"Bewusstseinsgetrübt",e:"schlagartiger vernichtender Kopfschmerz, Erbrechen, Nackensteife, benommen (V. a. Subarachnoidalblutung)",psy:"Nein",danger:"nein"},
+   onset:"Vor zwanzig Minuten, von einer Sekunde auf die andere.",hist:"Sie hat nie Kopfschmerzen, sie ist total gesund.",extra:["Sie will das Licht aus haben.","Sie antwortet immer langsamer."]}}},
+ {id:"meningitis",w:0.4,num:"112",loc:"home",mk:()=>{const p=simPerson(),age=rint(18,23);return {rel:p.g==="m"?"mein Mitbewohner":"meine Mitbewohnerin",caller:simPerson(),patient:p,age,
+   open:["Hallo, meinem Mitbewohner geht es richtig schlecht, hohes Fieber und so komische Flecken!"],
+   event:"Seit heute Mittag hohes Fieber, über 40 Grad, starke Kopfschmerzen, der Nacken ist ganz steif und er verträgt kein Licht. Jetzt hat er dunkelrote Punkte an den Beinen, die gehen beim Drücken nicht weg. Er ist total verwirrt.",
+   f:{count:"1",x:"Nein",a:"Frei",b:"Auffällig",c:"Auffällig",d:"Bewusstseinsgetrübt",e:"hohes Fieber, Nackensteife, Lichtscheu, nicht wegdrückbare Flecken an den Beinen, verwirrt (V. a. Meningitis/Sepsis)",psy:"Nein",danger:"nein"},
+   onset:"Seit heute Mittag, es wird immer schlimmer.",hist:"Sonst ist er gesund.",extra:["Ich hab selber auch ein bisschen Halsschmerzen… ist das ansteckend?"]}}},
+ {id:"urosepsis",w:0.7,num:"112",loc:"home",locPrefix:"im Seniorenpflegeheim, ",mk:()=>{const c=simPerson("w"),p=simPerson("w"),age=rint(80,94);return {rel:"eine Bewohnerin",caller:c,patient:p,age,staff:true,
+   open:[`${c.first} ${c.last}, Pflegeheim – eine Bewohnerin hat hohes Fieber und ist ganz verwirrt.`],
+   event:"Sie hat 39,8 Fieber, atmet schnell und ist viel verwirrter als sonst. Seit zwei Tagen hat sie einen Harnwegsinfekt. Der Blutdruck ist 85 zu 50.",
+   f:{count:"1",x:"Nein",a:"Frei",b:"Auffällig",c:"Auffällig",d:"Bewusstseinsgetrübt",e:"Fieber 39,8, schnelle Atmung, Blutdruck niedrig, akute Verwirrtheit, Harnwegsinfekt (V. a. Urosepsis)",psy:"Nein",danger:"nein"},
+   onset:"Seit heute Nachmittag deutlich schlechter.",hist:"Demenz leicht, Diabetes, Dauerkatheter.",extra:["Die Hausärztin hat ihr gestern ein Antibiotikum aufgeschrieben."]}}},
+ {id:"gi_blutung",w:0.7,num:"112",loc:"home",mk:()=>{const p=simPerson("m"),age=rint(55,82);return {rel:"mein Mann",caller:simPerson("w"),patient:p,age,
+   open:["Mein Mann hat Blut erbrochen!"],
+   event:"Er hat sich eben übergeben, das sah aus wie Kaffeesatz, und vorhin war der Stuhlgang ganz schwarz. Jetzt ist ihm schwindelig und er ist ganz blass.",
+   f:{count:"1",x:"Nein",a:"Frei",b:"Normal",c:"Auffällig",d:"Wach / orientiert",e:"Erbrechen von kaffeesatzartigem Blut, schwarzer Stuhl (Teerstuhl), Schwindel, blass (V. a. obere GI-Blutung)",psy:"Nein",danger:"nein"},
+   onset:"Seit heute Morgen ging es ihm nicht gut, das Erbrechen war eben.",hist:"Er nimmt Blutverdünner und hatte mal ein Magengeschwür.",extra:["Wenn er aufsteht, wird ihm schwarz vor Augen."]}}},
+ {id:"tachykardie",w:0.7,num:"112",loc:"home",mk:()=>{const p=simPerson("w"),age=rint(25,65);return {rel:"ich selbst",caller:p,patient:p,age,
+   open:["Hallo, mein Herz rast total, ich hab Angst!"],
+   event:"Vor einer halben Stunde fing es auf einmal an, das Herz schlägt ganz schnell, bestimmt über 180. Mir ist schwindelig und ein bisschen eng in der Brust.",
+   f:{count:"1",x:"Nein",a:"Frei",b:"Normal",c:"Auffällig",d:"Wach / orientiert",e:"plötzliches Herzrasen über 180/min, Schwindel, Engegefühl (Tachykardie)",psy:"Nein",danger:"nein"},
+   onset:"Vor einer halben Stunde, schlagartig.",hist:"Das hatte ich schon zweimal, das ging dann von allein weg.",extra:["Meine Uhr zeigt 186."]}}},
+ {id:"bradykardie",w:0.6,num:"112",loc:"home",mk:()=>{const p=simPerson("m"),age=rint(75,92);return {rel:"mein Vater",caller:simPerson(),patient:p,age,
+   open:["Mein Vater ist umgekippt, jetzt ist er wieder wach, aber ganz komisch."],
+   event:"Er ist in der Küche einfach umgefallen, war kurz weg. Jetzt ist er wieder da, aber ganz blass und schwindelig. Der Puls ist ganz langsam, ich zähl so 35.",
+   f:{count:"1",x:"Nein",a:"Frei",b:"Normal",c:"Auffällig",d:"Wach / orientiert",e:"Synkope, sehr langsamer Puls um 35/min, Schwindel (V. a. Bradykardie)",psy:"Nein",danger:"nein"},
+   onset:"Eben gerade.",hist:"Er nimmt Betablocker und was fürs Herz.",extra:["Er will nicht ins Krankenhaus."]}}},
+ {id:"ketoazidose",w:0.4,num:"112",loc:"home",mk:()=>{const p=simPerson(),age=rint(18,28);return {rel:p.g==="m"?"mein Freund":"meine Freundin",caller:simPerson(),patient:p,age,
+   open:["Hallo, meinem Freund geht es total schlecht, er ist Diabetiker."],
+   event:"Er hat seit zwei Tagen Magen-Darm, hat kaum gegessen und deshalb wenig Insulin gespritzt. Jetzt hat er riesigen Durst, erbricht, atmet ganz tief und schnell und ist total schläfrig. Es riecht so nach Nagellack.",
+   f:{count:"1",x:"Nein",a:"Frei",b:"Auffällig",c:"Auffällig",d:"Bewusstseinsgetrübt",e:"Typ-1-Diabetiker, starker Durst, Erbrechen, tiefe schnelle Atmung, Azetongeruch (V. a. diabetische Ketoazidose)",psy:"Nein",danger:"nein"},
+   onset:"Seit heute Abend viel schlechter.",hist:"Typ-1-Diabetes seit der Kindheit.",extra:["Das Messgerät zeigt nur noch HI an."]}}},
+ {id:"status_epilepticus",w:0.5,num:"112",loc:"home",mk:()=>{const p=simPerson("m"),age=rint(25,55);return {rel:"mein Mann",caller:simPerson("w"),patient:p,age,
+   open:["Mein Mann krampft und hört nicht mehr auf!"],
+   event:"Er hat einen Anfall, das geht jetzt schon über fünf Minuten, er zuckt am ganzen Körper und ist blau um die Lippen.",
+   f:{count:"1",x:"Nein",a:"Gefährdet",b:"Auffällig",c:"Unauffällig",d:"Krampfanfall",e:"anhaltender Krampfanfall über 5 Minuten, Zyanose (Status epilepticus)",psy:"Nein",danger:"nein"},
+   onset:"Seit fünf, sechs Minuten.",hist:"Er hat Epilepsie, hat aber seine Tabletten vergessen.",extra:["Er hat sich auf die Zunge gebissen, da ist Blut."]}}},
+ {id:"hitzschlag",w:0.4,num:"112",loc:"road",mk:()=>{const p=simPerson("m"),age=rint(20,55);return {rel:"ein Kollege",caller:simPerson("m"),patient:p,age,passerby:false,
+   open:["Hallo, mein Kollege ist umgekippt, der hat den ganzen Tag in der Sonne gearbeitet!"],
+   event:"Wir arbeiten hier draußen, er ist ganz rot im Gesicht, die Haut ist glühend heiß und trocken. Er redet wirres Zeug und kann nicht mehr stehen.",
+   f:{count:"1",x:"Nein",a:"Frei",b:"Auffällig",c:"Auffällig",d:"Bewusstseinsgetrübt",e:"heiße, trockene, rote Haut, Verwirrtheit nach Arbeit in praller Sonne (V. a. Hitzschlag)",psy:"Nein",danger:"nein"},
+   onset:"Seit einer Viertelstunde wird es immer schlimmer.",hist:"Er ist eigentlich fit.",extra:["Wir haben ihn in den Schatten gezogen."]}}},
+ {id:"stromunfall",w:0.4,num:"112",loc:"home",mk:()=>{const p=simPerson("m"),age=rint(25,55);return {rel:"ich selbst",caller:p,patient:p,age,
+   open:["Hallo, ich hab einen Stromschlag bekommen."],
+   event:"Ich hab an einer Steckdose gearbeitet und einen Schlag bekommen, normale 230 Volt. An der Hand ist so ein kleiner verbrannter Punkt und mein Herz stolpert irgendwie.",
+   f:{count:"1",x:"Nein",a:"Frei",b:"Normal",c:"Auffällig",d:"Wach / orientiert",e:"Stromunfall 230 Volt, Strommarke an der Hand, Herzstolpern",psy:"Nein",danger:"nein"},
+   onset:"Vor zehn Minuten.",hist:"Sonst gesund.",extra:["Die Sicherung ist jetzt raus."]}}},
+ {id:"bolus",w:0.5,num:"112",loc:"home",mk:()=>{const p=simPerson("m"),age=rint(70,90);return {rel:"mein Mann",caller:simPerson("w"),patient:p,age,
+   open:["Mein Mann hat sich verschluckt, er kriegt keine Luft!"],
+   event:"Wir essen gerade, er hat ein Stück Fleisch verschluckt. Er hustet nur noch ganz schwach, wird rot und dann blau im Gesicht.",
+   f:{count:"1",x:"Nein",a:"Verlegt",b:"Auffällig",c:"Auffällig",d:"Wach / orientiert",e:"Bolusaspiration beim Essen, hustet nur schwach, zunehmende Luftnot",psy:"Nein",danger:"nein"},
+   onset:"Gerade eben.",hist:"Er hat nach einem Schlaganfall Schluckprobleme.",extra:["Ich hab ihm schon auf den Rücken geklopft!"]}}},
+ {id:"hypertensiv",w:0.6,num:"112",loc:"home",mk:()=>{const p=simPerson("w"),age=rint(58,82);return {rel:"ich selbst",caller:p,patient:p,age,
+   open:["Hallo, mein Blutdruck ist ganz hoch und ich hab Kopfschmerzen."],
+   event:"Ich hab gerade gemessen, 230 zu 120. Ich habe starke Kopfschmerzen, mir ist übel und ich sehe etwas verschwommen. Jetzt hab ich auch noch Nasenbluten.",
+   f:{count:"1",x:"Nein",a:"Frei",b:"Normal",c:"Auffällig",d:"Wach / orientiert",e:"Blutdruck 230 zu 120, Kopfschmerz, Sehstörung, Nasenbluten (hypertensive Krise/Notfall)",psy:"Nein",danger:"nein"},
+   onset:"Seit einer Stunde.",hist:"Ich hab Bluthochdruck, hab heute die Tablette vergessen.",extra:["Arme und Beine kann ich normal bewegen."]}}},
+ {id:"lungenoedem",w:0.6,num:"112",loc:"home",mk:()=>{const p=simPerson("m"),age=rint(74,92);return {rel:"mein Mann",caller:simPerson("w"),patient:p,age,
+   open:["Mein Mann kriegt keine Luft, er muss im Bett sitzen!"],
+   event:"Er ist nachts aufgewacht und kriegt keine Luft. Es brodelt richtig beim Atmen, er muss aufrecht sitzen. Die Beine sind seit Tagen dick.",
+   f:{count:"1",x:"Nein",a:"Frei",b:"Auffällig",c:"Auffällig",d:"Wach / orientiert",e:"nächtliche Atemnot, brodelnde rasselnde Atmung, muss sitzen, Beinödeme (V. a. kardiales Lungenödem)",psy:"Nein",danger:"nein"},
+   onset:"Seit einer halben Stunde.",hist:"Er hat ein schwaches Herz, nimmt Wassertabletten.",extra:["Er hustet so schaumig."]}}},
+ {id:"beinischaemie",w:0.4,num:"112",loc:"home",mk:()=>{const p=simPerson("m"),age=rint(62,84);return {rel:"ich selbst",caller:p,patient:p,age,
+   open:["Hallo, mein Bein ist auf einmal ganz kalt und tut furchtbar weh."],
+   event:"Vor einer Stunde fing es plötzlich an, das linke Bein ist kalt, ganz weiß und kribbelt. Ich kann die Zehen kaum bewegen.",
+   f:{count:"1",x:"Nein",a:"Frei",b:"Normal",c:"Unauffällig",d:"Wach / orientiert",e:"plötzlich kaltes, blasses, schmerzhaftes Bein links, Gefühlsstörung (V. a. akuter Gefäßverschluss)",psy:"Nein",danger:"nein"},
+   onset:"Vor einer Stunde, ganz plötzlich.",hist:"Ich habe Vorhofflimmern.",extra:["Am Fuß fühle ich keinen Puls."]}}},
+ {id:"exsikkose",w:0.6,num:"112",loc:"home",mk:()=>{const p=simPerson("w"),age=rint(82,96);return {rel:"meine Oma",caller:simPerson(),patient:p,age,
+   open:["Meine Oma ist ganz schwach und durcheinander."],
+   event:"Sie hat die letzten Tage kaum getrunken, es war so warm. Jetzt ist sie total schwach, die Zunge ist ganz trocken und sie weiß nicht, welcher Tag ist.",
+   f:{count:"1",x:"Nein",a:"Frei",b:"Normal",c:"Auffällig",d:"Bewusstseinsgetrübt",e:"stark ausgetrocknet, trockene Zunge, Schwäche, akute Verwirrtheit (V. a. Exsikkose)",psy:"Nein",danger:"nein"},
+   onset:"Seit zwei, drei Tagen schleichend.",hist:"Sie nimmt Wassertabletten.",extra:["Sie war seit gestern nicht mehr auf Toilette."]}}},
  {id:"uro_kolik",w:1.0,num:"112",loc:"home",mk:()=>{const p=simPerson("m"),age=rint(30,60);return {rel:"ich selbst",caller:p,patient:p,age,
    open:["Hallo, ich hab so wahnsinnige Schmerzen in der Flanke, ich halt das nicht mehr aus."],
    event:"Seit einer Stunde habe ich ganz heftige, wellenartige Schmerzen links in der Flanke, die bis in die Leiste ziehen. Ich kann nicht still sitzen, mir ist übel.",
@@ -12578,13 +12706,14 @@ function simAaoCheck(c){
  const miss=Object.entries(so.types||{}).filter(([t,n])=>(ist[t]||0)<n).map(([t,n])=>`${t}${n-(ist[t]||0)>1?" ×"+(n-(ist[t]||0)):""}`);
  const more=Object.entries(ist).filter(([t,n])=>n>((so.types||{})[t]||0)).map(([t])=>t);
  let a=`AAO-Soll laut Anruferangaben: ${simSollText(so)}`;
+ if(leitPath(c)){const P=callPrio(c);c.history=c.history||[];c.history.push({q:"🎓 Übungs-Check",a:`Abfrage über Leitsymptom (Dringlichkeit ${P?P.lv:"?"}). Zum Vergleich – nach X-ABCDE wäre es: ${simSollText(so)}.${(()=>{const g=leitGuess(c),ch=leitKey(c);return g&&g!=="unklar"&&leitOf(ch)&&leitOf(ch).k!==g?` ℹ️ Passender wäre eher „${leitOf(g).l}“.`:""})()}`});toast("Übungs-Check im Verlauf");return}
  a+=miss.length?` · ⚠️ fehlt: ${miss.join(", ")}`:" · ✅ alle Soll-Fahrzeuge alarmiert";
  if(more.length)a+=` · zusätzlich: ${more.join(", ")}`;
  if(s.d.phoneOnly)a+=" · ℹ️ Dieser Anruf wäre auch telefonisch zu erledigen gewesen (Beratung/Weiterleitung).";
  if(s.d.srtw)a+=` · ℹ️ Patient ca. ${s.d.weightKg} kg: zusätzlich SRTW über die Nachbar-Leitstelle anfragen (GOL: Akkon Oldenburg 50/89-01 · KRLS Ostfriesland: Akkon Wittmund 81/89-01, ehrenamtlich).`;
  if(s.d.co)a+=" · ℹ️ CO-Vergiftung: Feuerwehr zur Messung/Belüftung mitalarmieren. Bei schwerer Vergiftung Druckkammer (HBO): Transport mit RTH (oder KTH Northern 06, dann fliegt der NEF-Notarzt mit) – nächste 24-h-Kammer Kronshagen bei Kiel, vorher anrufen.";
  if(s.d.inkubator)a+=" · ℹ️ Inkubatortransport: Baby-NAW „Felix“ (Florian Oldenburg 02/86-01) über die GOL anfragen.";
- {const g=leitGuess(c),ch=c.answers&&c.answers.leit;if(g&&ch&&leitOf(ch)&&leitOf(ch).k!==g&&g!=="unklar")a+=` · ℹ️ Leitsymptom: gewählt „${leitOf(ch).l}“, passender wäre eher „${leitOf(g).l}“`;const P=callPrio(c);if(P)a+=` · Dringlichkeit ${P.lv}`} // v6.07
+ {const g=leitGuess(c),ch=leitKey(c);if(g&&ch&&leitOf(ch)&&leitOf(ch).k!==g&&g!=="unklar")a+=` · ℹ️ Leitsymptom: gewählt „${leitOf(ch).l}“, passender wäre eher „${leitOf(g).l}“`;const P=callPrio(c);if(P)a+=` · Dringlichkeit ${P.lv}`} // v6.07
  c.history=c.history||[]; c.history.push({q:"🎓 Übungs-Check AAO",a});
  toast(miss.length?`AAO-Check: es fehlt ${miss.join(", ")}`:"AAO-Check: passt ✅");
 }

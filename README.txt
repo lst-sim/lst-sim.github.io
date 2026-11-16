@@ -1607,6 +1607,12 @@ Version 5.05:
   („a, b“ = a ODER b). Mit „🚑 NA-Indikation“ markierte Knöpfe ziehen weiterhin einen Notarzt.
 - Nur „Unauffällig“ (ohne weitere Befunde) zählt weiter als unauffälliges E (R0 möglich).
 
+Version 6.08:
+- Leitsymptom und X-ABCDE kombiniert: Bei „Medizinischer Notfall“ wählt man entweder ein Leitsymptom (dann Schlüsselfragen, X-ABCDE entfällt) oder „Lieber mit X-ABCDE abfragen“ (dann X-ABCDE wie bisher, danach optional das Leitsymptom mit Schlüsselfragen).
+- Neue AAOs für die Leitsymptom-Abfrage (AAO-Seite, Rettungsdienst, bearbeitbar): Stufe E und D → RTW + NEF; Stufe C und B → RTW mit Sonderrechten ohne Notarzt; Stufe A → NKTW ohne Sonderrechte; Schlaganfall (C/D) → RTW ohne Notarzt (Stroke). „Dringlichkeit“ und „Leitsymptom“ sind auch als Bedingung in eigenen AAOs wählbar. Der X-ABCDE-Weg bleibt unverändert.
+- Übungs-Check beim Leitsymptom-Weg: zeigt zum Vergleich das X-ABCDE-Soll (nur Info).
+- 19 neue Übungsanrufe: Aortendissektion, rupturiertes Bauchaortenaneurysma, Lungenembolie, Spontanpneumothorax, Subarachnoidalblutung, Meningitis, Urosepsis, obere GI-Blutung, Tachykardie, Bradykardie mit Synkope, diabetische Ketoazidose, Status epilepticus, Hitzschlag, Stromunfall, Bolusaspiration, hypertensive Krise, Lungenödem, akuter Beinarterienverschluss, Exsikkose – jeweils mit passender IVENA-Kennung (RMI). Für V. a. Dissektion ist 299 (gefäßchirurgischer Notfall, sonstiger) hinterlegt, da 293 nur für bestätigte Dissektionen gilt.
+
 Version 6.07 (ProQA-ähnliche Ergänzungen A, B, D – eigene, vereinfachte Inhalte, keine ProQA-Texte/-Codes):
 - A Leitsymptom: Bei „Medizinischer Notfall“ folgt jetzt „🩺 Leitsymptom“ (17 Auswahlen, z. B. Atemnot, Brustschmerz, Schlaganfall-Zeichen, Krampfanfall, Sturz, Blutung, Allergie, Geburt, Kind krank, Ersticken) und danach 2–4 Schlüsselfragen dazu zum Vorlesen. Die X-ABCDE-Abfrage bleibt danach unverändert.
 - B Dringlichkeit: Stufe Ω–E (Ω kein RD nötig · A nicht dringlich · B dringlich abklären · C potenziell ernst · D lebensbedrohlich · E Atem-/Kreislaufstillstand) aus Leitsymptom, Schlüsselfragen und X-ABCDE. Anzeige in der Live-Bewertung und im Notruf mit Begründung, bei D/E ohne Notarzt Hinweis „Notarzt erwägen“. Steht auch im Alarmtext. Die AAO/Stichwort-Auswahl bleibt wie bisher.
