@@ -231,7 +231,7 @@ html[data-device="handy"] .fach-grid{grid-template-columns:1fr}
 <header id="topbar">
  <div class="tb-left">
   <span class="tb-brand">🚑 Leitstelle<span>.sim</span></span>
-  <span id="versionTag" class="tb-ver">v6.06</span>
+  <span id="versionTag" class="tb-ver">v6.07</span>
   <span id="syncState"></span>
   <a id="deskTag" href="#" onclick="renameDesk();return false" title="Name dieses Platzes (für „offen an …“) – antippen zum Ändern"></a>
  </div>
@@ -3760,10 +3760,194 @@ function newCall(pref={}){
  db.currentCall={id:stamp.slice(-6),location:pref.location||"",count:pref.count||"",answers:{},history:[],keyword:"",suggestion:"",createdAt:new Date().toISOString(),phoneStart:Date.now()};
  save();render("notruf");
 }
+// ═══ v6.07: Leitsymptom, Dringlichkeitsstufe (Ω–E) und Anweisungen bis zum Eintreffen ═════════════
+// Eigene, vereinfachte Struktur – angelehnt an das Prinzip strukturierter Notrufabfragen, KEINE Inhalte
+// oder Codes aus lizenzierten Systemen (z. B. ProQA/MPDS). Stufen: Ω kein RD nötig · A nicht dringlich ·
+// B dringlich abklären · C potenziell ernst · D lebensbedrohlich · E Atem-/Kreislaufstillstand.
+const PRIO_ORDER=["Ω","A","B","C","D","E"];
+const PRIO_INFO={"Ω":["#64748b","kein Rettungsdienst nötig (Beratung / KV-Dienst)"],A:["#16a34a","nicht dringlich"],B:["#65a30d","dringlich abklären"],C:["#f59e0b","potenziell ernst"],D:["#dc2626","lebensbedrohlich"],E:["#7f1d1d","Atem-/Kreislaufstillstand"]};
+function prioMax(a,b){return PRIO_ORDER.indexOf(b)>PRIO_ORDER.indexOf(a)?b:a}
+// [Schlüssel, Frage, [[Antwort, Stufe|null], …]]
+const LEIT=[
+ {k:"atemnot",ic:"🫁",l:"Atemnot",base:"C",q:[
+   ["sprechen","Kann die Person in ganzen Sätzen sprechen?",[["Ja",null],["Nur einzelne Worte","D"],["Gar nicht","E"]]],
+   ["farbe","Wie sehen Gesicht und Lippen aus?",[["Normal",null],["Blass / grau","C"],["Bläulich","D"]]],
+   ["ausloeser","Gab es einen Auslöser?",[["Keiner bekannt",null],["Allergie / Insektenstich","D"],["Etwas verschluckt","D"],["Bekanntes Asthma / COPD",null]]]],
+  instr:["atemnot","tuer","medis"]},
+ {k:"brust",ic:"💔",l:"Brustschmerz",base:"C",q:[
+   ["ausstrahlung","Strahlt der Schmerz aus (Arm, Kiefer, Rücken, Oberbauch)?",[["Nein",null],["Ja","C"],["Unklar",null]]],
+   ["schweiss","Ist die Person kaltschweißig, blass oder ist ihr übel?",[["Nein",null],["Ja","D"]]],
+   ["dauer","Wie lange besteht der Schmerz?",[["Unter 20 Minuten",null],["Über 20 Minuten","C"],["Kommt und geht",null]]],
+   ["herz","Ist eine Herzerkrankung bekannt?",[["Nein",null],["Ja","C"],["Unbekannt",null]]]],
+  instr:["brust","tuer","medis"]},
+ {k:"schlag",ic:"🧠",l:"Schlaganfall-Zeichen",base:"C",q:[
+   ["fast","Was ist aufgefallen? (Gesicht hängt, Arm schwach, Sprache verwaschen)",[["Eins davon","C"],["Mehrere","D"],["Unsicher","C"]]],
+   ["beginn","Seit wann genau?",[["Unter 4 Stunden","D"],["4–24 Stunden","C"],["Unbekannt / beim Aufwachen bemerkt","C"]]],
+   ["blutv","Nimmt die Person Blutverdünner?",[["Nein",null],["Ja","C"],["Unbekannt",null]]]],
+  instr:["schlag","tuer","medis"]},
+ {k:"kollaps",ic:"😵",l:"Kollaps / Bewusstlosigkeit",base:"C",q:[
+   ["wach","Ist die Person jetzt wieder wach?",[["Ja, wieder wach",null],["Nein","D"]]],
+   ["atmung","Atmet die Person normal?",[["Ja",null],["Nein / Schnappatmung","E"],["Unsicher","D"]]],
+   ["ursache","Gibt es einen Hinweis auf die Ursache?",[["Keiner",null],["Diabetes bekannt","C"],["Sturz auf den Kopf","C"],["Brustschmerz vorher","D"]]]],
+  instr:["seite","tuer"]},
+ {k:"krampf",ic:"⚡",l:"Krampfanfall",base:"C",q:[
+   ["noch","Krampft die Person noch?",[["Nein, vorbei",null],["Ja, unter 5 Minuten","C"],["Ja, über 5 Minuten","D"]]],
+   ["bekannt","Ist eine Epilepsie bekannt?",[["Ja","B"],["Nein, erstmals","C"],["Unbekannt",null]]],
+   ["besonders","Besonderheiten?",[["Keine",null],["Schwanger","D"],["Kind mit Fieber","C"],["Kopfverletzung","D"]]]],
+  instr:["krampf","seite","tuer"]},
+ {k:"sturz",ic:"🤕",l:"Sturz / Verletzung",base:"A",q:[
+   ["hoehe","Aus welcher Höhe?",[["Aus dem Stand",null],["Treppe / bis 3 m","B"],["Über 3 m","D"]]],
+   ["kopf","Kopf angeschlagen oder kurz bewusstlos?",[["Nein",null],["Ja","C"]]],
+   ["aufstehen","Kann die Person aufstehen bzw. sich bewegen?",[["Ja",null],["Nein","B"]]],
+   ["blutv","Blutverdünner?",[["Nein",null],["Ja","C"],["Unbekannt",null]]]],
+  instr:["sturz","blutung","tuer"]},
+ {k:"blutung",ic:"🩸",l:"Blutung",base:"B",q:[
+   ["stark","Wie stark blutet es?",[["Leicht",null],["Stark","C"],["Spritzend / hört nicht auf","D"]]],
+   ["stelle","Wo blutet es?",[["Arm / Bein",null],["Kopf / Gesicht","B"],["Rumpf / Bauch","D"],["Mund / Erbrechen von Blut","D"]]],
+   ["blutv","Blutverdünner?",[["Nein",null],["Ja","C"],["Unbekannt",null]]]],
+  instr:["blutung","tuer"]},
+ {k:"bauch",ic:"🤢",l:"Bauchschmerz",base:"A",q:[
+   ["staerke","Wie stark und wie plötzlich?",[["Langsam stärker",null],["Plötzlich sehr stark","C"]]],
+   ["blut","Blut erbrochen oder schwarzer Stuhl?",[["Nein",null],["Ja","D"]]],
+   ["schwanger","Könnte die Patientin schwanger sein?",[["Nein / entfällt",null],["Ja","C"]]],
+   ["kreislauf","Blass, kaltschweißig, schwindelig?",[["Nein",null],["Ja","C"]]]],
+  instr:["bauch","tuer","medis"]},
+ {k:"allergie",ic:"🐝",l:"Allergische Reaktion",base:"B",q:[
+   ["atem","Atemnot oder Engegefühl im Hals?",[["Nein",null],["Ja","D"]]],
+   ["schwellung","Schwellung von Gesicht, Lippen oder Zunge?",[["Nein",null],["Ja","D"]]],
+   ["set","Ist ein Notfallset (Adrenalin-Pen) vorhanden?",[["Nein",null],["Ja",null]]]],
+  instr:["allergie","atemnot","tuer"]},
+ {k:"zucker",ic:"🍬",l:"Diabetes / Unterzucker",base:"B",q:[
+   ["wach","Ist die Person ansprechbar?",[["Ja",null],["Verwirrt / schläfrig","C"],["Nein","D"]]],
+   ["wert","Ist ein Zuckerwert bekannt?",[["Nein",null],["Niedrig","C"],["Hoch",null]]],
+   ["schlucken","Kann die Person sicher schlucken?",[["Ja",null],["Nein","C"]]]],
+  instr:["zucker","seite","tuer"]},
+ {k:"gift",ic:"☠️",l:"Vergiftung / Drogen / Alkohol",base:"B",q:[
+   ["wach","Ist die Person ansprechbar?",[["Ja",null],["Schläfrig","C"],["Nein","D"]]],
+   ["was","Ist bekannt, was genommen wurde?",[["Ja",null],["Nein",null]]],
+   ["absicht","War es Absicht?",[["Nein / Versehen",null],["Ja","C"],["Unklar",null]]]],
+  instr:["gift","seite","tuer"]},
+ {k:"psych",ic:"🧠",l:"Psychischer Ausnahmezustand",base:"B",q:[
+   ["gefahr","Gefährdet sich die Person selbst oder andere?",[["Nein",null],["Sich selbst","C"],["Andere","C"]]],
+   ["waffe","Gibt es Waffen oder gefährliche Gegenstände?",[["Nein",null],["Ja","D"],["Unbekannt",null]]],
+   ["verletzt","Ist die Person verletzt?",[["Nein",null],["Ja","C"]]]],
+  instr:["psych","tuer"]},
+ {k:"geburt",ic:"🤰",l:"Schwangerschaft / Geburt",base:"B",q:[
+   ["woche","Welche Schwangerschaftswoche?",[["Ab 37",null],["Unter 37","C"],["Unbekannt",null]]],
+   ["wehen","Wie häufig kommen die Wehen?",[["Seltener als alle 5 Min.",null],["Alle 2–5 Min.","C"],["Pressdrang / Kopf sichtbar","D"]]],
+   ["blutung","Starke Blutung?",[["Nein",null],["Ja","D"]]]],
+  instr:["geburt","tuer"]},
+ {k:"kind",ic:"🧒",l:"Kind krank / Fieber",base:"B",q:[
+   ["zustand","Wie wirkt das Kind?",[["Spielt / ist wach",null],["Schlapp, trinkt nicht","C"],["Kaum wach zu bekommen","D"]]],
+   ["haut","Flecken auf der Haut, die beim Draufdrücken nicht verschwinden?",[["Nein",null],["Ja","D"]]],
+   ["atmung","Pfeifendes oder bellendes Atemgeräusch, Atemnot?",[["Nein",null],["Ja","C"]]]],
+  instr:["kind","tuer"]},
+ {k:"verbrennung",ic:"🔥",l:"Verbrennung / Verbrühung",base:"B",q:[
+   ["flaeche","Wie groß ist die verbrannte Fläche?",[["Handfläche oder kleiner",null],["Größer","C"],["Sehr großflächig","D"]]],
+   ["gesicht","Gesicht, Hals oder Rauch eingeatmet?",[["Nein",null],["Ja","D"]]],
+   ["strom","Durch Strom?",[["Nein",null],["Ja","C"]]]],
+  instr:["verbrennung","tuer"]},
+ {k:"ersticken",ic:"🥩",l:"Verschluckt / Ersticken",base:"D",q:[
+   ["husten","Kann die Person kräftig husten?",[["Ja","B"],["Nein / kaum","E"]]],
+   ["alter","Alter?",[["Erwachsener / Kind",null],["Säugling (unter 1 Jahr)",null]]]],
+  instr:["ersticken","tuer"]},
+ {k:"unklar",ic:"❔",l:"Unklare Erkrankung / Schwäche",base:"A",q:[
+   ["ploetzlich","Plötzlich aufgetreten?",[["Nein, schleichend",null],["Ja","B"]]],
+   ["fieber","Fieber oder Infekt?",[["Nein",null],["Ja",null]]],
+   ["alleine","Ist die Person allein / hilflos?",[["Nein",null],["Ja","B"]]]],
+  instr:["tuer","medis"]}
+];
+// Anweisungen bis zum Eintreffen (allgemeine Erste-Hilfe-Regeln, zum Vorlesen)
+const LEIT_INSTR={
+ tuer:["🚪 Zugang","Machen Sie bitte die Haustür auf und das Licht an. Sperren Sie Haustiere weg. Wenn möglich, soll jemand den Rettungsdienst an der Straße einweisen."],
+ medis:["💊 Unterlagen","Legen Sie bitte Medikamente, Arztbriefe und die Versichertenkarte bereit."],
+ atemnot:["🫁 Atemnot","Lassen Sie die Person aufrecht sitzen, Arme abgestützt. Öffnen Sie enge Kleidung und das Fenster. Hat die Person ein eigenes Notfallspray, darf sie es wie verordnet benutzen."],
+ brust:["💔 Brustschmerz","Die Person soll sich hinsetzen oder mit erhöhtem Oberkörper hinlegen und nicht mehr herumlaufen. Enge Kleidung öffnen. Nichts essen. Wenn sie bewusstlos wird und nicht mehr normal atmet, rufen Sie sofort wieder an bzw. bleiben Sie dran."],
+ schlag:["🧠 Schlaganfall","Merken Sie sich die Uhrzeit, wann die Zeichen begonnen haben. Die Person soll nichts essen und nichts trinken. Oberkörper leicht erhöht lagern, nicht allein lassen."],
+ seite:["🛌 Stabile Seitenlage","Ist die Person bewusstlos und atmet normal: auf die Seite drehen, Kopf leicht nach hinten, Mund nach unten. Prüfen Sie ständig, ob sie weiter normal atmet – wenn nicht, sagen Sie es mir sofort."],
+ krampf:["⚡ Krampfanfall","Nicht festhalten, nichts in den Mund stecken. Gegenstände aus dem Weg räumen, Kopf weich unterlegen. Schauen Sie auf die Uhr, wie lange der Anfall dauert. Danach auf die Seite legen."],
+ sturz:["🤕 Sturz","Bewegen Sie die Person möglichst nicht, vor allem nicht bei Nacken- oder Rückenschmerzen. Decken Sie sie zu, damit sie nicht auskühlt."],
+ blutung:["🩸 Blutung","Drücken Sie mit einem sauberen Tuch fest direkt auf die Wunde und lassen Sie nicht los. Arm oder Bein wenn möglich hochhalten. Wird das Tuch durchgeblutet, ein weiteres darüber legen und weiter drücken."],
+ bauch:["🤢 Bauchschmerz","Nichts essen und nichts trinken. Lassen Sie die Person so liegen, wie es am angenehmsten ist, z. B. mit angezogenen Beinen."],
+ allergie:["🐝 Allergie","Hat die Person ein Notfallset mit Adrenalin-Pen, soll sie ihn wie verordnet anwenden (in den Oberschenkel). Bei Atemnot aufrecht sitzen lassen, bei Schwindel hinlegen und Beine hoch."],
+ zucker:["🍬 Unterzucker","Ist die Person wach und kann sicher schlucken: Geben Sie ihr Traubenzucker, Saft oder Limonade (kein Light-Getränk). Ist sie nicht wach: nichts einflößen, auf die Seite legen."],
+ gift:["☠️ Vergiftung","Kein Erbrechen auslösen, nichts zu trinken geben. Packungen, Reste oder Flaschen bereitlegen. Ist die Person bewusstlos und atmet: Seitenlage."],
+ psych:["🧠 Eigenschutz","Bringen Sie sich nicht selbst in Gefahr. Halten Sie Abstand und bleiben Sie ruhig. Wenn Sie sich bedroht fühlen, gehen Sie in einen sicheren Raum."],
+ geburt:["🤰 Geburt","Die Frau soll sich hinlegen. Legen Sie saubere Handtücher bereit und heizen Sie den Raum. Ziehen Sie nicht am Kind. Ist das Kind da: abtrocknen, auf den Bauch der Mutter legen, zudecken. Die Nabelschnur nicht durchschneiden."],
+ kind:["🧒 Kind","Kind nicht zu warm anziehen, Getränke anbieten. Bei Atemgeräuschen aufrecht halten und beruhigen, frische Luft."],
+ verbrennung:["🔥 Verbrennung","Kleine Verbrennungen sofort mit fließendem, nicht eiskaltem Wasser kühlen. Großflächige Verbrennungen und Kinder nicht lange kühlen (Unterkühlung) – mit einem sauberen Tuch abdecken und warm halten. Kleidung, die festklebt, nicht abreißen."],
+ ersticken:["🥩 Ersticken","Kann die Person nicht mehr husten: Oberkörper nach vorne beugen und bis zu 5 kräftige Schläge zwischen die Schulterblätter geben. Hilft das nicht: bis zu 5 Oberbauchstöße (von hinten umfassen, Faust unter das Brustbein, kräftig nach innen-oben ziehen). Abwechselnd wiederholen. Bei Säuglingen statt Oberbauchstößen 5 Stöße auf die Brust mit zwei Fingern."]
+};
+function leitOf(k){return LEIT.find(x=>x.k===k||x.l===k)}
+CALL_EDIT_OPTIONS.leit=LEIT.map(x=>x.l);
+// Dringlichkeit aus Leitsymptom, Schlüsselfragen und X-ABCDE
+function callPrio(c){
+ if(!c||c.kt)return null;
+ const a=c.answers||{};
+ if(a.callType==="116117"||c.kvd)return c.kvChoice&&!["hausbesuch","leichenschau"].includes(c.kvChoice)?"Ω":null;
+ let p=null; const why=[];
+ const up=(lv,txt)=>{if(!lv)return;const n=p?prioMax(p,lv):lv;if(n!==p||!p){why.push(txt)}p=n};
+ if(a.event==="Reanimation")up("E","Reanimation");
+ const L=leitOf(a.leit);
+ if(L){up(L.base,`Leitsymptom ${L.l}`);for(const [qk,qt,opts] of L.q){const v=(c.leitAns||{})[qk];const o=opts.find(x=>x[0]===v);if(o&&o[1])up(o[1],`${qt.replace(/\s*[?(].*$/,"")}: ${v}`)}}
+ if(a.x_massive==="Ja")up("D","kritische Blutung");
+ if(a.a_airway==="Verlegt")up("D","Atemweg verlegt");
+ if(a.b_breath==="Keine normale Atmung")up("E","keine normale Atmung");
+ else if(a.b_breath==="Auffällig")up("C","Atmung auffällig");
+ if(/Schockzeichen|Relevante Blutung/.test(a.c_circ||""))up("D","Schockzeichen / Blutung");
+ const d=String(a.d_disability||"");
+ if(/Bewusstlos/.test(d))up(a.b_breath==="Keine normale Atmung"?"E":"D","bewusstlos");
+ else if(/Bewusstseinsgetrübt|Krampfanfall|Neurologisch/.test(d))up("C","Bewusstsein / Neurologie");
+ if(!p&&a.event==="Medizinischer Notfall"&&needsXABCDE(c)&&a.b_breath)p="A";
+ return p?{lv:p,why}:null;
+}
+function prioBadge(lv,small){const i=PRIO_INFO[lv]||["#64748b",""];return `<span title="Dringlichkeit ${lv}: ${i[1]}" style="display:inline-block;background:${i[0]};color:#fff;border-radius:6px;padding:${small?"0 6px":"2px 10px"};font-weight:900;font-size:${small?"11px":"15px"}">${lv}</span>`}
+function leitPanelHTML(c){
+ if(!c||c.kt)return "";
+ const P=callPrio(c), L=leitOf((c.answers||{}).leit);
+ const inst=[...new Set([...(L?L.instr:[]),...(/Bewusstlos/.test(String(c.answers&&c.answers.d_disability||""))&&c.answers.b_breath!=="Keine normale Atmung"?["seite"]:[]),...(c.answers&&c.answers.x_massive==="Ja"?["blutung"]:[])])];
+ if(!P&&!inst.length)return "";
+ const done=new Set(c.instrDone||[]);
+ const prio=P?`<div class="row" style="gap:10px;align-items:center;flex-wrap:wrap"><b>Dringlichkeit</b> ${prioBadge(P.lv)} <span>${esc(PRIO_INFO[P.lv][1])}</span>${L?` <span class="pill">${L.ic} ${esc(L.l)}</span>`:""}
+   ${["D","E"].includes(P.lv)&&!callUnits(c).concat((c.proposedUnitIds||[]).map(id=>db.units.find(u=>String(u.id)===String(id))).filter(Boolean)).some(u=>u&&["NEF","NAW","RTH","ITH"].includes(u.type))?`<span style="color:#b91c1c;font-weight:800">⚠️ Notarzt erwägen</span>`:""}
+   <span class="muted" style="font-size:12px;width:100%">Grund: ${esc(P.why.slice(-3).join(" · "))}</span></div>`:"";
+ const ins=inst.length&&!(P&&P.lv==="E")?`<details ${c.alarmTime?"open":""} style="margin-top:8px"><summary style="cursor:pointer;font-weight:800">📋 Anweisungen bis zum Eintreffen <span class="muted" style="font-weight:400">(${done.size}/${inst.length} gegeben)</span></summary>
+   ${inst.map(k=>{const I=LEIT_INSTR[k];if(!I)return "";const on=done.has(k);return `<div style="margin-top:6px;padding:8px 10px;border-radius:10px;border:1px solid var(--line);${on?"background:#f0fdf4":""}"><div class="row between" style="gap:8px"><b>${I[0]}</b><button onclick="leitInstrDone('${esc(String(c.id))}','${k}')" style="padding:2px 10px;font-size:12px;${on?"background:#16a34a;color:#fff;border-color:#16a34a":""}">${on?"✓ gegeben":"Gegeben"}</button></div><div style="font-size:14px;margin-top:4px">„${esc(I[1])}“</div></div>`}).join("")}
+   <p class="muted" style="font-size:11px;margin:6px 0 0">Allgemeine Erste-Hilfe-Hinweise, vereinfacht für die Übung.</p></details>`:(P&&P.lv==="E"?`<div style="margin-top:6px;font-weight:800;color:#7f1d1d">❤️ Stufe E: sofort Telefonreanimation anleiten (Knopf „Reanimation“).</div>`:"");
+ return `<div class="card" style="border-left:6px solid ${P?PRIO_INFO[P.lv][0]:"#64748b"};padding:10px 14px">${prio}${ins}</div>`;
+}
+function leitInstrDone(id,k){
+ const c=[db.currentCall,...(db.activeCalls||[])].find(x=>x&&String(x.id)===String(id)); if(!c)return;
+ const S=new Set(c.instrDone||[]); if(S.has(k))S.delete(k); else{S.add(k);(c.history=c.history||[]).push({q:"📋 Anweisung gegeben",a:LEIT_INSTR[k][0].replace(/^\S+\s/,"")})}
+ c.instrDone=[...S]; save(); render(currentPage);
+}
+// Abfrage-Masken
+function leitHTML(id,label){
+ return `<label>${label}</label><div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:6px">${LEIT.map(L=>`<button onclick="answer('${id}','${esc(L.l)}')" style="text-align:left">${L.ic} ${esc(L.l)}</button>`).join("")}</div>`;
+}
+let leitSel={};
+function leitQHTML(id,c){
+ const L=leitOf(c.answers.leit); if(!L)return "";
+ leitSel={...(c.leitAns||{})};
+ return `<label>${L.ic} Schlüsselfragen: ${esc(L.l)}</label>${L.q.map(([qk,qt,opts])=>`<div style="margin:8px 0 2px;font-weight:700">„${esc(qt)}“</div><div class="answer">${opts.map(([v,lv])=>`<button data-lq="${qk}" data-v="${esc(v)}" class="${leitSel[qk]===v?"primary":""}" onclick="leitPick('${qk}',this)">${esc(v)}${lv?` ${prioBadge(lv,1)}`:""}</button>`).join("")}</div>`).join("")}
+  <div class="row" style="margin-top:12px"><button class="primary" onclick="leitQSubmit('${id}')">✔ Weiter</button><span class="muted" style="font-size:12px">Nicht Beantwortetes wird als „unbekannt“ übernommen. Die Buchstaben zeigen, welche Antwort die Dringlichkeit anhebt.</span></div>`;
+}
+function leitPick(qk,btn){leitSel[qk]=btn.dataset.v;document.querySelectorAll(`[data-lq="${qk}"]`).forEach(b=>b.classList.toggle("primary",b===btn))}
+function leitQSubmit(id){
+ const c=db.currentCall; if(!c)return; const L=leitOf(c.answers.leit); if(!L)return;
+ c.leitAns={}; L.q.forEach(([qk])=>c.leitAns[qk]=leitSel[qk]||"unbekannt");
+ answer(id,L.q.map(([qk,qt])=>`${qt.replace(/\?.*$/,"?")} ${c.leitAns[qk]}`).join(" · "));
+}
+// Übungs-Check: passendes Leitsymptom aus dem Fall erraten
+const LEIT_GUESS=[["ersticken",/verschluck|erstick|bekommt keine luft.*(essen|bonbon)/],["geburt",/wehen|geburt|schwanger|fruchtblase|ssw/],["schlag",/schlaganfall|hängt|verwaschen|lähmung|fazialis|sprachstör/],["brust",/brust|herz|acs|infarkt|angina/],["krampf",/krampf|epilep/],["allergie",/allerg|anaphyl|wespe|biene|quaddel|schwellung/],["zucker",/zucker|hypoglyk|diabet/],["gift",/vergift|tablett|alkohol|drogen|intox|überdosis/],["psych",/suizid|psych|verwirrt.*aggress|droht/],["verbrennung",/verbrenn|verbrüh/],["atemnot",/atemnot|luftnot|asthma|copd|atmet schwer/],["blutung",/blut(et|ung)|nasenbluten/],["kind",/fieber.*kind|kind.*fieber|pseudokrupp|krupp/],["bauch",/bauch|kolik|erbrech|übel/],["sturz",/sturz|gestürzt|fraktur|gefallen|verletz/],["kollaps",/bewusstlos|kollab|ohnmacht|synkope/]];
+function leitGuess(c){const d=c.sim&&c.sim.d;if(!d)return null;const t=[d.event,(d.f||{}).e,d.hist].join(" ").toLowerCase();const g=LEIT_GUESS.find(([,re])=>re.test(t));return g?g[0]:"unklar"}
+
 const QS_BASE=[
  ["callType","☎️ Über welche Nummer ist der Anruf eingegangen?","calltype"],
  ["location","📍 Wo genau ist der Notfallort?","text"],
  ["event","❓ Was ist passiert?","event112"],
+ ["leit","🩺 Leitsymptom – worum geht es hauptsächlich?","leit"],
+ ["leitQ","🩺 Schlüsselfragen zum Leitsymptom","leitQ"],
  ["fireKind","🔥 Was ist zu sehen – und was brennt?","fireDetail"],
  ["count","👥 Wie viele Personen/Tiere sind betroffen?","count"],
  ["trapped","🚗 Wie viele Personen sind eingeklemmt oder eingeschlossen?","ynTech"],
@@ -4064,11 +4248,12 @@ function notruf(){
    <div style="margin-top:15px">${outOfArea?`<div class="suggest" style="background:#fff8e1;border-color:#f0c419"><h2>⚠️ Vermutlich nicht zuständig</h2><p>Der Einsatzort scheint auf dem Gebiet der Stadt Wilhelmshaven oder außerhalb des Landkreises Friesland zu liegen (${esc(c.geocodedAddress||c.location)}).</p><div class="row" style="margin:10px 0"><button class="primary" onclick="weiterverbindenCall()">📞 Weiterverbinden</button><button onclick="overrideJurisdiction()">Trotzdem hier bearbeiten</button></div></div>`:(q?qsWithPrefill(q):(c.answers.callType&&c.answers.callType!=="112"?`<div class="suggest"><h2>☎️ Weiterleitung</h2><p>${esc(c.suggestion)}</p><p class="muted">Kein Fall für diese Rettungsleitstelle – kein Alarmvorschlag, keine weiteren Fragen nötig.</p><button onclick="render('leitstelle')">Zur Übersicht</button></div>`:`<div class="suggest"><h2>✅ Abfrage abgeschlossen</h2><p>${c.suggestion||"Kein Alarmvorschlag verfügbar."}</p><div class="row" style="margin:10px 0"><button class="primary" onclick="prepareAlarm()">🚨 Vorschlag alarmieren</button><button onclick="render('karte')">🗺️ Notfallort prüfen</button></div><button onclick="toggleNotrufDetails()">🔍 ${notrufDetailsVisible?"Details verbergen":"Interne Codes & Rohdaten anzeigen"}</button><div class="${notrufDetailsVisible?"":"hidden"}" style="margin-top:10px"><hr><b>Einsatzstichwort (intern)</b><div class="big">${esc(c.keyword)}</div><b>Antworten (Rohdaten)</b><pre style="white-space:pre-wrap">${esc(JSON.stringify(c.answers,null,2))}</pre></div></div>`))}</div>
   </div>
   ${kvPanelHTML(c)}
+  ${leitPanelHTML(c)}
   ${c.sim?`<div id="simChatBox">${simChatHTML(c)}</div>`:""}
   <div class="card"><h3>Abfrageverlauf</h3>${c.history.length?c.history.map(x=>`<div style="padding:7px 0;border-bottom:1px solid var(--line)"><b>${esc(x.q)}</b><br>${esc(x.a)}</div>`).join(""):"<span class='muted'>Noch keine Antworten.</span>"}</div>
  </section>
  <aside>
-  <div class="card"><h2>🧠 Live-Bewertung</h2><div class="big">${esc(c.keyword||"—")}</div>${c.aaoWinner?`<div class="muted" style="font-size:12px;margin-top:4px">AAO: ${esc(c.aaoWinner)}${(c.aaoCombined||[]).length?` · zusätzlich: ${esc(c.aaoCombined.join(", "))}`:""}${(c.aaoMatches||[]).filter(n=>n!==c.aaoWinner&&!(c.aaoCombined||[]).includes(n)).length?` · ebenfalls passend (nicht alarmiert): ${esc(c.aaoMatches.filter(n=>n!==c.aaoWinner&&!(c.aaoCombined||[]).includes(n)).join(", "))}`:""}${(c.aaoExcluded||[]).length?`<br><span style="color:#b91c1c">⛔ ausgeschlossen: ${esc(c.aaoExcluded.join(", "))}</span>`:""}</div>`:""}<p>${c.suggestion||"Antworten fehlen noch."}</p></div>
+  <div class="card"><h2>🧠 Live-Bewertung</h2><div class="big">${(()=>{const P=callPrio(c);return P?prioBadge(P.lv)+" ":""})()}${esc(c.keyword||"—")}</div>${c.aaoWinner?`<div class="muted" style="font-size:12px;margin-top:4px">AAO: ${esc(c.aaoWinner)}${(c.aaoCombined||[]).length?` · zusätzlich: ${esc(c.aaoCombined.join(", "))}`:""}${(c.aaoMatches||[]).filter(n=>n!==c.aaoWinner&&!(c.aaoCombined||[]).includes(n)).length?` · ebenfalls passend (nicht alarmiert): ${esc(c.aaoMatches.filter(n=>n!==c.aaoWinner&&!(c.aaoCombined||[]).includes(n)).join(", "))}`:""}${(c.aaoExcluded||[]).length?`<br><span style="color:#b91c1c">⛔ ausgeschlossen: ${esc(c.aaoExcluded.join(", "))}</span>`:""}</div>`:""}<p>${c.suggestion||"Antworten fehlen noch."}</p></div>
   <div class="card"><h2>🚑 Nächste verfügbare Mittel</h2>${nearest.length?nearest.map(u=>`<div class="row between" style="padding:6px 0;border-bottom:1px solid var(--line)"><span><b>${esc(u.type||"—")}</b><br><small class="muted">${esc(u.opta||u.name||"—")}${geographicRank(u)<999?` · ca. ${estimatedEtaMinutes(u)} min`:``}</small></span><span class="status ${statusClass(u.status)}">${statusName(u.status)}</span></div>`).join(""):`<span class="muted">Keine verfügbaren Mittel</span>`}</div>
  </aside></div>`;
  if(q && q[0]==="location" && !c.callerGpsPending) setTimeout(initNotrufMap,0);
@@ -4413,6 +4598,8 @@ function questionHTML(q){
  if(id!=="callType" && callType && callType!=="112" && callType!=="116117")
    return skip("entfällt – Weiterleitung");
  if(type==="custom")return qsCustomHTML(q,c);
+ if(type==="leit"){if(e!=="Medizinischer Notfall"||isManv(c))return skip("nicht zutreffend");return leitHTML(id,label)} // v6.07
+ if(type==="leitQ"){if(!leitOf(c.answers.leit))return skip("nicht zutreffend");return leitQHTML(id,c)}
  if(!c?.kt&&qsMaskOf(id))return qsMaskHTML(c,qsMaskOf(id));
 
  if(type==="calltype") return `<label>${label}</label><div class="answer">
@@ -5291,6 +5478,7 @@ function buildMeldertext(c, nafoReason=""){
   if(c.answers?.fireKind&&c.answers.fireKind!=="nicht zutreffend")txt+=`\nFeuer: ${c.answers.fireKind} · Objekt: ${c.answers.fireObject||"k.A."}`;
   if(String(c.answers?.freeText||"").trim())txt+=`\nNotruf-Freitext: ${c.answers.freeText}`;
   if(c.alarmFreeText)txt+=`\nAlarmierungs-Freitext: ${c.alarmFreeText}`;
+  {const P=callPrio(c),L=leitOf(c.answers&&c.answers.leit);if(P||L)txt+=`\n${L?`Leitsymptom: ${L.l}`:""}${P&&L?" · ":""}${P?`Dringlichkeit ${P.lv} (${PRIO_INFO[P.lv][1]})`:""}`} // v6.07
   if(c.giz&&c.giz.done&&String(c.giz.rec||"").trim())txt+=`\nGiftnotruf (GIZ): ${c.giz.subst?c.giz.subst+" – ":""}${c.giz.rec}`;
   if(mittel) txt+=`\nWeitere Rettungsmittel: ${mittel}`;
   txt+=`\nAnfahrt: entsprechend AAO`;
@@ -12396,6 +12584,7 @@ function simAaoCheck(c){
  if(s.d.srtw)a+=` · ℹ️ Patient ca. ${s.d.weightKg} kg: zusätzlich SRTW über die Nachbar-Leitstelle anfragen (GOL: Akkon Oldenburg 50/89-01 · KRLS Ostfriesland: Akkon Wittmund 81/89-01, ehrenamtlich).`;
  if(s.d.co)a+=" · ℹ️ CO-Vergiftung: Feuerwehr zur Messung/Belüftung mitalarmieren. Bei schwerer Vergiftung Druckkammer (HBO): Transport mit RTH (oder KTH Northern 06, dann fliegt der NEF-Notarzt mit) – nächste 24-h-Kammer Kronshagen bei Kiel, vorher anrufen.";
  if(s.d.inkubator)a+=" · ℹ️ Inkubatortransport: Baby-NAW „Felix“ (Florian Oldenburg 02/86-01) über die GOL anfragen.";
+ {const g=leitGuess(c),ch=c.answers&&c.answers.leit;if(g&&ch&&leitOf(ch)&&leitOf(ch).k!==g&&g!=="unklar")a+=` · ℹ️ Leitsymptom: gewählt „${leitOf(ch).l}“, passender wäre eher „${leitOf(g).l}“`;const P=callPrio(c);if(P)a+=` · Dringlichkeit ${P.lv}`} // v6.07
  c.history=c.history||[]; c.history.push({q:"🎓 Übungs-Check AAO",a});
  toast(miss.length?`AAO-Check: es fehlt ${miss.join(", ")}`:"AAO-Check: passt ✅");
 }
@@ -12686,7 +12875,7 @@ function kvDecide(id,choice){
    const keep=new Set(["callType","location"]), drop=new Set(Object.keys(c.answers||{}).filter(k=>!keep.has(k)));
    drop.forEach(k=>{delete c.answers[k];if(c.answerLabels)delete c.answerLabels[k]});
    c.history=c.history.filter(h=>!(h.id&&drop.has(h.id)));
-   if(drop.has("count"))c.count="";
+   if(drop.has("count"))c.count=""; delete c.leitAns; delete c.instrDone;
    c.answers.callType="112"; c.history.push({q:"🚑 Hochgestuft",a:"Kein Fall für den KV-Dienst – Notrufabfrage 112 wird neu durchgegangen"});
    if(c.sim&&c.sim.d&&c.sim.d.kv){c.history.push({q:"🎓 Übungs-Check",a:fb});toast(fb)}
    if(c===db.currentCall)evaluate(); save(); render("notruf"); return;
@@ -12953,7 +13142,7 @@ const SIM_INTENTS=[
  ["conscious",/ansprechbar|reagier|bewusst|wach|bei sich|redet|spricht|antwortet/],
  ["breath",/atm|luft|atem/],
  ["airway",/verschluck|erbroch|atemweg|schlucken/],
- ["bleed",/blut/],
+ ["bleed",/blut(?!verd)/],["hist",/blutverd|gerinnung|marcumar/],
  ["circ",/puls|blass|kaltschwei|schwei(ß|ss)|kreislauf|schwindel|hautfarbe|farbe/],
  ["pain",/schmerz|weh\b|tut .*weh|beschwerden/],
  ["age",/wie alt|alter|jahre alt|geburts/],
@@ -13618,6 +13807,13 @@ function simAnswerFor(c,text){
     case "doc":out.push(d.doc||"Weiß ich nicht.");break;
     case "greet":out.push(pick(d.open));break;
    }
+ }
+ if(!out.length&&/\?/.test(String(text))){ // v6.07: Schlüsselfragen – passende Stelle aus dem Fall suchen
+   const words=String(text).toLowerCase().replace(/[^a-zäöüß ]/g," ").split(/\s+/).filter(w=>w.length>=5&&!/^(haben|können|könnte|wurde|werden|welche|wie|schon|gerade|irgend|person|patient|ihnen|ihrem|ihrer|seine|ihren|sieht|genau|gibt|einen|einer|etwas)/.test(w)).map(w=>w.slice(0,6));
+   const src=[d.event,...(d.extra||[]),d.hist,d.onset,f.e].filter(Boolean).flatMap(t=>String(t).split(/(?<=[.!?])\s+/));
+   const hit=words.length&&src.find(t=>words.some(w=>t.toLowerCase().includes(w)));
+   if(hit)out.push(hit.trim());
+   else if(/^(ist|hat|kann|gibt|nimmt|hatte|war|sind|haben|könnte|strahlt|krampft|atmet|blutet)/i.test(String(text).trim()))out.push(pick(["Nein, das nicht.","Nein, glaube ich nicht.","Weiß ich nicht genau."]));
  }
  if(!out.length)out.push(pick(d.panic?["Was?! Bitte, helfen Sie mir einfach!","Was meinen Sie? Ich versteh das nicht!"]:["Wie bitte?","Das hab ich nicht verstanden.","Äh… was meinen Sie genau?","Das weiß ich nicht."]));
  return panic+[...new Set(out)].join(" ");

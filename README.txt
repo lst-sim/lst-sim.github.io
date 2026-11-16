@@ -1607,6 +1607,12 @@ Version 5.05:
   („a, b“ = a ODER b). Mit „🚑 NA-Indikation“ markierte Knöpfe ziehen weiterhin einen Notarzt.
 - Nur „Unauffällig“ (ohne weitere Befunde) zählt weiter als unauffälliges E (R0 möglich).
 
+Version 6.07 (ProQA-ähnliche Ergänzungen A, B, D – eigene, vereinfachte Inhalte, keine ProQA-Texte/-Codes):
+- A Leitsymptom: Bei „Medizinischer Notfall“ folgt jetzt „🩺 Leitsymptom“ (17 Auswahlen, z. B. Atemnot, Brustschmerz, Schlaganfall-Zeichen, Krampfanfall, Sturz, Blutung, Allergie, Geburt, Kind krank, Ersticken) und danach 2–4 Schlüsselfragen dazu zum Vorlesen. Die X-ABCDE-Abfrage bleibt danach unverändert.
+- B Dringlichkeit: Stufe Ω–E (Ω kein RD nötig · A nicht dringlich · B dringlich abklären · C potenziell ernst · D lebensbedrohlich · E Atem-/Kreislaufstillstand) aus Leitsymptom, Schlüsselfragen und X-ABCDE. Anzeige in der Live-Bewertung und im Notruf mit Begründung, bei D/E ohne Notarzt Hinweis „Notarzt erwägen“. Steht auch im Alarmtext. Die AAO/Stichwort-Auswahl bleibt wie bisher.
+- D Anweisungen bis zum Eintreffen: passende Anweisungen zum Vorlesen (z. B. Atemnot, Brustschmerz, Schlaganfall, Seitenlage, Krampfanfall, Blutung, Unterzucker, Allergie, Geburt, Verbrennung, Ersticken, Zugang/Unterlagen) mit Haken „gegeben“ – wird im Verlauf dokumentiert. Bei Stufe E Verweis auf die Telefonreanimation.
+- Übungsanrufe: Anrufer beantworten Schlüsselfragen aus den Falldaten; der Übungs-Check nennt bei Bedarf ein passenderes Leitsymptom und die Dringlichkeit.
+
 Version 6.06:
 - Neuer Schalter oben „🎯 Realübung AN/AUS“ – zum Mitlaufen parallel zu einer echten Übung:
   - Keine zufälligen Übungsanrufe und keine zufälligen eCalls; selbst vorbereitete Notrufe gehen weiter.
