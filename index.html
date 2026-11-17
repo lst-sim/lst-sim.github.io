@@ -263,7 +263,7 @@ html[data-device="handy"] .fach-grid{grid-template-columns:1fr}
 <header id="topbar">
  <div class="tb-left">
   <span class="tb-brand"><span class="tb-logo">🚑</span><span class="tb-name">Leitstelle<b>.sim</b></span></span>
-  <span id="versionTag" class="tb-ver">v6.27</span>
+  <span id="versionTag" class="tb-ver">v6.28</span>
   <span id="syncState"></span>
   <a id="deskTag" href="#" onclick="renameDesk();return false" title="Name dieses Platzes (für „offen an …“) – antippen zum Ändern"></a>
  </div>
@@ -1735,6 +1735,7 @@ function brCallForward(c,u,to){
 function rmhpOccupancy(c){
  const now=Date.now();
  return callUnits(c).filter(u=>{
+   if(u.type==="NEF")return false; // v6.28: NEF zählt nicht zu den max. 2 am RMHP
    const st=String(u.status);
    if(st==="3")return u.fwdCall===String(c.id)&&u.fwdTo==="rmhp";
    if(st==="4"||st==="8")return u.arrKind==="rmhp"&&st==="4";
@@ -1753,7 +1754,9 @@ function brQueueTick(){
    // Rettungsmittel → RMHP, höchstens 2 gleichzeitig
    if(c.rmhp){
      let free=RMHP_MAX-rmhpOccupancy(c);
-     for(const u of waiting.filter(rmhpUnit)){if(free<=0)break;brCallForward(c,u,"rmhp");free--;ch=true}
+     for(const u of waiting.filter(rmhpUnit)){
+       if(u.type==="NEF"){brCallForward(c,u,"rmhp");ch=true;continue} // v6.28: NEF ohne Begrenzung
+       if(free<=0)continue;brCallForward(c,u,"rmhp");free--;ch=true}
    }
    // alle anderen (Feuerwehr usw.) nach und nach zur Schadensstelle – Führung zuerst
    const rest=waiting.filter(u=>!rmhpUnit(u)).sort((a,b)=>(isLeadUnit(b)||/ELW/.test(b.type)?1:0)-(isLeadUnit(a)||/ELW/.test(a.type)?1:0));
