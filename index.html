@@ -263,7 +263,7 @@ html[data-device="handy"] .fach-grid{grid-template-columns:1fr}
 <header id="topbar">
  <div class="tb-left">
   <span class="tb-brand"><span class="tb-logo">🚑</span><span class="tb-name">Leitstelle<b>.sim</b></span></span>
-  <span id="versionTag" class="tb-ver">v6.18</span>
+  <span id="versionTag" class="tb-ver">v6.19</span>
   <span id="syncState"></span>
   <a id="deskTag" href="#" onclick="renameDesk();return false" title="Name dieses Platzes (für „offen an …“) – antippen zum Ändern"></a>
  </div>
@@ -1381,7 +1381,7 @@ function save(){fifoStamp();localStorage.setItem(KEY,JSON.stringify(db));if(type
 function esc(s){return String(s??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]))}
 function toast(t){const x=document.getElementById("toast");x.textContent=t;x.style.display="block";setTimeout(()=>x.style.display="none",1800)}
 // v6.13: alarmierte Fahrzeuge mit kleinem Status dahinter (Einsatzansicht)
-function statusMini(u){const st=String(u&&u.status!=null?u.status:"?");return `<span class="status s${esc(st)}" title="Status ${esc(st)} – ${esc(statusName(st))}" style="display:inline-block;font-size:10px;line-height:15px;padding:0 6px;border-radius:999px;font-weight:800;vertical-align:middle;animation:none;margin-left:4px;white-space:nowrap">${esc(st)} · ${esc(statusName(st))}</span>`}
+function statusMini(u){const st=String(u&&u.status!=null?u.status:"?");return `<span class="status s${esc(st)}" title="Status ${esc(st)} – ${esc(statusName(st))}" style="display:inline-flex;align-items:center;justify-content:center;min-width:16px;height:16px;font-size:10px;line-height:1;padding:0 3px;border-radius:4px;font-weight:900;vertical-align:middle;animation:none;margin-left:4px;box-sizing:border-box">${esc(st)}</span>`} // v6.19: nur die Zahl
 function unitStatusListHTML(us){return `<div style="display:flex;flex-wrap:wrap;gap:4px 12px;margin-top:3px">${us.map(u=>`<span style="white-space:nowrap">${esc(u.opta||u.name)} <span class="muted" style="font-size:11px">(${esc(u.type)})</span>${statusMini(u)}</span>`).join("")}</div>`}
 function statusPill(u){const st=String(u&&u.status!=null?u.status:"?");return `<span class="status s${esc(st)}" title="${esc(statusName(st))}" style="display:inline-block;font-size:11px;padding:1px 7px;border-radius:999px;font-weight:800;vertical-align:middle;animation:none">${esc(st)} · ${esc(statusName(st))}</span>`}
 function statusName(s){return {0:"Priorisierter Sprechwunsch",1:"Frei über Funk",2:"Frei auf Wache",3:"Einsatz übernommen",4:"Am Einsatzort",5:"Sprechwunsch",6:"Nicht einsatzbereit",7:"Patient aufgenommen",8:"bed. Verfügbar"}[s]||s}

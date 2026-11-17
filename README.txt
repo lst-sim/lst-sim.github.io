@@ -1607,6 +1607,9 @@ Version 5.05:
   („a, b“ = a ODER b). Mit „🚑 NA-Indikation“ markierte Knöpfe ziehen weiterhin einen Notarzt.
 - Nur „Unauffällig“ (ohne weitere Befunde) zählt weiter als unauffälliges E (R0 möglich).
 
+Version 6.19:
+- Einsatzansicht: Status hinter den Fahrzeugen nur noch als kleine, farbige Zahl (Text erscheint beim Drüberfahren).
+
 Version 6.18:
 - 116 117: Notfälle sind jetzt direkt alarmierbar. Am Ende der Abfrage kam bei 116 117 bisher immer „☎️ Weiterleitung – kein Fall für diese Leitstelle“ statt „🚨 Vorschlag alarmieren“ (mein Fehler seit der gemeinsamen Abfrage). Jetzt erscheint wie bei 112 der Alarmvorschlag (z. B. RTW + NEF), und „Alarmieren“ funktioniert jederzeit wie bei 112.
 
