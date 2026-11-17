@@ -263,7 +263,7 @@ html[data-device="handy"] .fach-grid{grid-template-columns:1fr}
 <header id="topbar">
  <div class="tb-left">
   <span class="tb-brand"><span class="tb-logo">🚑</span><span class="tb-name">Leitstelle<b>.sim</b></span></span>
-  <span id="versionTag" class="tb-ver">v6.23</span>
+  <span id="versionTag" class="tb-ver">v6.24</span>
   <span id="syncState"></span>
   <a id="deskTag" href="#" onclick="renameDesk();return false" title="Name dieses Platzes (für „offen an …“) – antippen zum Ändern"></a>
  </div>
@@ -1870,6 +1870,12 @@ function simulatedUnitPosition(u){
  }
  return null;
 }
+// v6.24: Funkkennung kurz, z. B. „Florian Wilhelmshaven 01/83-02“ → „01/83-02“
+function unitFunkShort(u){
+ const o=String(u&&(u.opta||u.name)||"").trim();
+ const m=o.match(/(\d[\d\/-]*\d)\s*$/);
+ return m?m[1]:o;
+}
 function renderVehiclePositionsOnMap(){
  if(!leafletMap||typeof L==="undefined")return;
  mapLayer("veh").clearLayers();
@@ -1877,6 +1883,7 @@ function renderVehiclePositionsOnMap(){
  const placed=[];
  relevant.forEach(u=>{
    if(isLNA(u))return; // v5.67: LNA im Privat-PKW ist nicht ortbar
+   if(String(u.status)==="2")return; // v6.24: Status 2 (frei auf Wache) nicht einzeln auf der Karte
    const hasLiveGps=Number.isFinite(Number(u.lat))&&Number.isFinite(Number(u.lng));
    if(hasLiveGps){
      placed.push({u,pos:[Number(u.lat),Number(u.lng)],mode:"live"});
@@ -1896,17 +1903,17 @@ function renderVehiclePositionsOnMap(){
  placed.forEach(p=>{const k=`${p.pos[0].toFixed(3)}_${p.pos[1].toFixed(3)}`;(clusters[k]=clusters[k]||[]).push(p)});
  Object.values(clusters).forEach(group=>{
    group.forEach((p,i)=>{
-     const n=group.length, len=n>1?44:34;
+     const n=group.length, len=n>1?34:24;
      const ang=n>1?(-Math.PI/2+(i-(n-1)/2)*Math.min(0.75,(2*Math.PI)/n)):-Math.PI/2; // nach oben, bei mehreren aufgefächert
      const dx=Math.round(Math.cos(ang)*len), dy=Math.round(Math.sin(ang)*len);
      const col=ST_COL[String(p.u.status)]||"#0b1220";
      const dash=p.mode==="live"?"solid":"dashed";
-     const short=esc(String(p.u.name||p.u.opta||"").replace(/^[A-ZÄÖÜ]+-/,""));
+     const short=esc(unitFunkShort(p.u));
      const icon=L.divIcon({className:"",iconSize:[0,0],iconAnchor:[0,0],
        html:`<div style="position:relative;width:0;height:0">
          <div style="position:absolute;left:0;top:0;width:${len}px;height:0;border-top:2px ${dash} ${col};transform-origin:0 0;transform:rotate(${ang}rad)"></div>
          <div style="position:absolute;left:-5px;top:-5px;width:10px;height:10px;border-radius:50%;background:${col};border:2px solid #fff;box-shadow:0 0 0 1px ${col},0 1px 3px rgba(0,0,0,.5)"></div>
-         <div style="position:absolute;left:${dx}px;top:${dy}px;transform:translate(-50%,-50%);display:flex;align-items:center;gap:3px;background:#0b1220;color:#fff;border:2px solid ${col};border-radius:7px;padding:1px 5px;font-size:11px;font-weight:700;white-space:nowrap;box-shadow:0 1px 4px rgba(0,0,0,.4)">${vehicleMapEmoji(p.u)} ${short} <span style="background:${col};border-radius:4px;padding:0 4px">${esc(String(p.u.status))}</span></div>
+         <div style="position:absolute;left:${dx}px;top:${dy}px;transform:translate(-50%,-50%);background:${col};color:#fff;border:1px solid #fff;border-radius:4px;padding:0 4px;font-size:10px;line-height:15px;font-weight:700;white-space:nowrap;box-shadow:0 1px 3px rgba(0,0,0,.45)" title="Status ${esc(String(p.u.status))}">${short}</div>
        </div>`});
      const age=p.u.gpsUpdatedAt?new Date(p.u.gpsUpdatedAt).toLocaleTimeString("de-DE",{hour:"2-digit",minute:"2-digit"}):null;
      const leg=UNIT_LEG[p.u.id], onRoad=p.mode!=="live"&&leg&&Date.now()-leg.at<5000;

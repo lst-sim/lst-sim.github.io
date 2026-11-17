@@ -1607,6 +1607,10 @@ Version 5.05:
   („a, b“ = a ODER b). Mit „🚑 NA-Indikation“ markierte Knöpfe ziehen weiterhin einen Notarzt.
 - Nur „Unauffällig“ (ohne weitere Befunde) zählt weiter als unauffälliges E (R0 möglich).
 
+Version 6.24:
+- Fahrzeugmarker auf der Karte ohne Symbole: nur noch klein die Funkkennung (z. B. 01/83-02), hinterlegt in der Farbe des Status. Punkt und Strich zur genauen Position bleiben.
+- Fahrzeuge in Status 2 werden nicht mehr einzeln auf der Karte angezeigt (auch nicht mit Live-GPS) – sie stehen gesammelt im Wachen-Marker.
+
 Version 6.23:
 - Fahrzeuge fahren auf der Einsatzkarte nach Navi über echte Straßen (Route vom OSRM-Routenserver, OpenStreetMap-Daten). Auf Landstraße/Autobahn kommen sie schneller voran als im Ort. Gilt für Anfahrt (Status 3), Transport (Status 7) und Rückfahrt (Status 1). Hubschrauber fliegen weiter Luftlinie.
 - Ist der Routenserver nicht erreichbar, fahren die Fahrzeuge wie bisher Luftlinie (steht dann so im Popup).
