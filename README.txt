@@ -1607,6 +1607,9 @@ Version 5.05:
   („a, b“ = a ODER b). Mit „🚑 NA-Indikation“ markierte Knöpfe ziehen weiterhin einen Notarzt.
 - Nur „Unauffällig“ (ohne weitere Befunde) zählt weiter als unauffälliges E (R0 möglich).
 
+Version 6.18:
+- 116 117: Notfälle sind jetzt direkt alarmierbar. Am Ende der Abfrage kam bei 116 117 bisher immer „☎️ Weiterleitung – kein Fall für diese Leitstelle“ statt „🚨 Vorschlag alarmieren“ (mein Fehler seit der gemeinsamen Abfrage). Jetzt erscheint wie bei 112 der Alarmvorschlag (z. B. RTW + NEF), und „Alarmieren“ funktioniert jederzeit wie bei 112.
+
 Version 6.17:
 - Im Notruf gibt es kein eigenes KV-Fenster mehr (auch nicht „An KV-Dienst übergeben“) – nur noch die normale Abfrage. Der KV-Dienst ergibt sich ausschließlich aus der Frage „🧭 Ergebnis – wie geht es weiter?“.
 - Ergebnis Praxis, Beratung oder Apotheke schließt den Anruf direkt ab (mit Eintrag im Verlauf und Übungs-Check).
