@@ -1607,6 +1607,11 @@ Version 5.05:
   („a, b“ = a ODER b). Mit „🚑 NA-Indikation“ markierte Knöpfe ziehen weiterhin einen Notarzt.
 - Nur „Unauffällig“ (ohne weitere Befunde) zählt weiter als unauffälliges E (R0 möglich).
 
+Version 6.27:
+- Führungsfahrzeuge (ELW, ELW 1/2, KdoW, OrgL, LNA, MTW Zugtrupp) sowie der 1. RTW und das 1. NEF eines Einsatzes fahren immer direkt zur Einsatzstelle (nicht in den BR) und bleiben dort.
+- Ist ein BR oder RMHP festgelegt, transportieren 1. RTW und 1. NEF keine Patienten (Erstversorgung/Sichtung vor Ort, SDS an die Leitstelle); sie werden auch nicht als Begleit-NEF für Transporte genommen. Ohne BR/RMHP (normaler Einsatz) transportiert der RTW wie bisher.
+- „1.“ = das zuerst alarmierte RTW bzw. NEF des Einsatzes. Wird es entfernt, rückt das nächste nach.
+
 Version 6.26:
 - Gibt es einen Bereitstellungsraum, fahren grundsätzlich alle Landfahrzeuge zuerst dorthin (auch Rettungsmittel). Ohne BR wie bisher direkt.
 - Am Rettungsmittelhalteplatz stehen höchstens 2 Rettungsmittel gleichzeitig. Wird ein Platz frei (nach Status 7 + 3 min Standzeit), wird das nächste Rettungsmittel aus dem BR abgerufen – wer zuerst im BR war, zuerst.

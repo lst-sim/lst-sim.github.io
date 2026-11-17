@@ -263,7 +263,7 @@ html[data-device="handy"] .fach-grid{grid-template-columns:1fr}
 <header id="topbar">
  <div class="tb-left">
   <span class="tb-brand"><span class="tb-logo">🚑</span><span class="tb-name">Leitstelle<b>.sim</b></span></span>
-  <span id="versionTag" class="tb-ver">v6.26</span>
+  <span id="versionTag" class="tb-ver">v6.27</span>
   <span id="syncState"></span>
   <a id="deskTag" href="#" onclick="renameDesk();return false" title="Name dieses Platzes (für „offen an …“) – antippen zum Ändern"></a>
  </div>
@@ -1692,6 +1692,7 @@ function stagingFor(call,u){
  const rp=call&&call.rmhp, rpOk=rp&&Number.isFinite(Number(rp.lat))&&Number.isFinite(Number(rp.lng));
  const st=call&&call.staging, stOk=st&&Number.isFinite(Number(st.lat))&&Number.isFinite(Number(st.lng));
  if(!u||waterCapable(u))return null;
+ if(call&&directToScene(call,u))return null; // v6.27: Führung, 1. RTW, 1. NEF immer direkt zur Einsatzstelle
  // v6.26: Gibt es einen BR, fahren grundsätzlich alle Landfahrzeuge erst dorthin. Von dort werden sie
  // abgerufen: Rettungsmittel zum RMHP (max. 2 gleichzeitig), alle anderen nach und nach zur Schadensstelle.
  if(stOk){
@@ -1704,6 +1705,24 @@ function stagingFor(call,u){
  if(rpOk&&rmhpUnit(u))return [Number(rp.lat),Number(rp.lng)]; // ohne BR: Rettungsmittel direkt zum RMHP
  return null;
 }
+// v6.27: Führungsfahrzeuge sowie der 1. RTW und das 1. NEF eines Einsatzes fahren immer direkt zur
+// Einsatzstelle und bleiben dort. Bei Lagen mit BR/RMHP transportieren 1. RTW und 1. NEF keine Patienten.
+const COMMAND_TYPES=new Set(["ELW","ELW1","ELW 1","ELW2","ELW 2","KdoW","OrgL","OrgL/LNA","LNA","MTW Zugtrupp"]);
+function isCommandUnit(u){return !!u&&(COMMAND_TYPES.has(u.type)||isLeadUnit(u))}
+function callFirstRD(c){
+ if(!c)return {};
+ const ids=(c.alarmedUnits||[]).map(String);
+ const pick=(key,type)=>{
+   if(c[key]&&ids.includes(String(c[key])))return c[key];
+   const id=ids.find(id=>{const u=db.units.find(x=>String(x.id)===id);return u&&u.type===type});
+   if(id)c[key]=id; else delete c[key];
+   return c[key]||null;
+ };
+ return {rtw:pick("firstRtwId","RTW"),nef:pick("firstNefId","NEF")};
+}
+function isFirstRD(c,u){if(!c||!u)return false;const f=callFirstRD(c);return String(u.id)===String(f.rtw)||String(u.id)===String(f.nef)}
+function directToScene(c,u){return isCommandUnit(u)||isFirstRD(c,u)}
+function firstRdStays(c,u){return !!c&&!!(c.staging||c.rmhp)&&isFirstRD(c,u)}
 // v6.26: Abruf aus dem Bereitstellungsraum
 const RMHP_MAX=2, BR_SCENE_EVERY=2*60000;
 function brCallForward(c,u,to){
@@ -6301,7 +6320,7 @@ function crewPlan(u,call){
  if(u.type==="RTW"&&idx===0&&currentScenarioId==="fri-whv"&&info.sev!=="rea"&&((call.sim&&call.sim.d&&call.sim.d.srtw)||(!isManvCall(call)&&Math.random()<0.012)))
    u.crew.srtw={askAt:now+rint(4,8)*60000,kg:(call.sim&&call.sim.d&&call.sim.d.weightKg)||rint(205,280)};
  // NEF auf demselben Einsatz: begleitet bei kritischen Patienten (sonst frei, wenn der RTW entschieden hat)
- const nef=(call.alarmedUnits||[]).map(id=>db.units.find(x=>String(x.id)===String(id))).find(x=>x&&x.type==="NEF"&&!unitPhoneLive(x)&&String(x.status)==="4"&&!(x.crew&&x.crew.follow));
+ const nef=(call.alarmedUnits||[]).map(id=>db.units.find(x=>String(x.id)===String(id))).find(x=>x&&x.type==="NEF"&&!unitPhoneLive(x)&&String(x.status)==="4"&&!(x.crew&&x.crew.follow)&&!(x.crew&&x.crew.mode==="stay")&&!firstRdStays(call,x));
  if(nef){if(info.sev==="rea"||info.sev==="critical"){nef.crew={callId:String(call.id),nef:true,follow:u.id};u.crew.nefId=nef.id}else nef.crew={callId:String(call.id),nef:true,needed:false,releaseAt:now+rint(6,12)*60000}}
 }
 function crewRegister(u,call){
@@ -6360,9 +6379,11 @@ function crewTick(){
        // vom Disponenten schon eine IVENA-Zuweisung für dieses Fahrzeug? → die gilt
        const asg=findUnitHospitalAssignment(u);
        if(asg&&new Date(asg.createdAt).getTime()>=(u.status4Since||0)-60000&&asg.source!=="crew"){u.crew={callId:String(call.id),mode:"transport",patient:0,departAt:(u.status4Since||now)+20*60000,registered:true,asgId:asg.id,hospId:asg.hospitalId,manual:true,owner:DEVICE_ID,info:crewCaseInfo(call)};changed=true;continue}
+       if(firstRdStays(call,u)){u.crew={callId:String(call.id),mode:"stay",owner:DEVICE_ID};crewSds(u,call,`Als ${u.type==="NEF"?"1. NEF":"1. RTW"} an der Einsatzstelle – bleiben vor Ort (Erstversorgung/Sichtung), kein Patiententransport.`);changed=true;continue} // v6.27
        crewPlan(u,call); if(u.crew)u.crew.owner=DEVICE_ID; (call.alarmedUnits||[]).forEach(id=>{const x=db.units.find(y=>String(y.id)===String(id));if(x&&x.crew&&!x.crew.owner)x.crew.owner=DEVICE_ID}); changed=true; continue;
      }
      const C=u.crew;
+     if(C.mode==="stay")continue; // v6.27: 1. RTW / 1. NEF bleiben an der Einsatzstelle
      if(C.nef&&C.manvWait){if(call&&call.manvPatients){delete u.crew;changed=true}continue}
      // Bereitschaft beim MANV: neuer passender Patient frei → neu planen; sonst warten (Freigabe im Überhang-Check)
      if(C.mode==="standby"||(C.nef&&C.standby)){const P=call&&call.manvPatients||[];
@@ -6419,7 +6440,7 @@ function crewTick(){
          const drive=C.drive||(h?ivenaEtaMin(u,h,call,asg.dringlichkeit):null)||15;
          const keep={...C,arriveAt:now+drive*60000};
          setUnitStatus(u,"7"); if(u.s7Hold){keep.arriveAt+=u.s7Hold;crewSds(u,call,"Patient aufgenommen – stehen noch mind. 3 Minuten am Rettungsmittelhalteplatz, dann Abfahrt.")} u.crew=keep;
-         if(C.nefId){const n=db.units.find(x=>String(x.id)===String(C.nefId));if(n&&String(n.status)==="4"){setUnitStatus(n,"7");n.crew={callId:C.callId,nef:true,follow:u.id,arriveAt:keep.arriveAt,owner:DEVICE_ID};
+         if(C.nefId){const n=db.units.find(x=>String(x.id)===String(C.nefId));if(n&&String(n.status)==="4"&&!(n.crew&&n.crew.mode==="stay")&&!firstRdStays(call,n)){setUnitStatus(n,"7");n.crew={callId:C.callId,nef:true,follow:u.id,arriveAt:keep.arriveAt,owner:DEVICE_ID};
            if(asg&&!(asg.vehicleIds||[]).some(id=>String(id)===String(n.id))){asg.vehicleIds.push(n.id);asg.vehicleLabels.push(`${n.opta||n.name} (${n.type})`);asg.na=true;asg.flags=asg.flags||{};asg.flags.n=true}}}
          changed=true;
        }
