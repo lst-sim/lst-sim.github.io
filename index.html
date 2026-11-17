@@ -263,7 +263,7 @@ html[data-device="handy"] .fach-grid{grid-template-columns:1fr}
 <header id="topbar">
  <div class="tb-left">
   <span class="tb-brand"><span class="tb-logo">🚑</span><span class="tb-name">Leitstelle<b>.sim</b></span></span>
-  <span id="versionTag" class="tb-ver">v6.21</span>
+  <span id="versionTag" class="tb-ver">v6.22</span>
   <span id="syncState"></span>
   <a id="deskTag" href="#" onclick="renameDesk();return false" title="Name dieses Platzes (für „offen an …“) – antippen zum Ändern"></a>
  </div>
@@ -1422,7 +1422,9 @@ function bgBlocked(){return uiLocked||appDirty||!!document.getElementById("lstMo
 function bgRender(page){
  if(page!==currentPage)return;
  if(bgBlocked()){bgPending=page;return}
- bgPending=null; const y=window.scrollY; render(page); window.scrollTo(0,y);
+ bgPending=null;
+ if(page==="karte"&&karteSoftRefresh())return; // v6.22: Karte nur aktualisieren, nicht neu aufbauen
+ const y=window.scrollY; render(page); window.scrollTo(0,y);
 }
 setInterval(()=>{try{if(bgPending&&bgPending===currentPage&&!bgBlocked())bgRender(bgPending);else if(typeof syncPendingRender!=="undefined"&&syncPendingRender&&!bgBlocked())syncRequestRender()}catch(e){}},1500);
 // Eine Unteransicht (Formular) gilt als offen, wenn der Nutzer gerade etwas angetippt hat und danach
@@ -1465,7 +1467,7 @@ let leafletMap=null, incidentMarker=null, selectedMapLocation=null;
 function karte(){ // v6.00: Karte füllt die ganze Seite, Steuerung als Leiste auf der Karte, ohne Notfallort-Liste
   const c=db.currentCall;
   const panel="position:absolute;z-index:1100;background:var(--panel,#fff);border-radius:12px;box-shadow:0 6px 24px rgba(0,0,0,.25);";
-  document.getElementById("app").innerHTML=`<div style="position:relative;height:calc(100vh - 66px);min-height:480px;border-radius:14px;overflow:hidden;background:#e5e7eb">
+  document.getElementById("app").innerHTML=`<div id="karteWrap" style="position:relative;isolation:isolate;height:calc(100vh - 80px);min-height:420px;border-radius:14px;overflow:hidden;background:#e5e7eb">
     <div id="map" style="position:absolute;inset:0;height:auto;min-height:0;border:0;border-radius:0"></div>
     <div style="${panel}top:10px;left:10px;right:10px;padding:8px 12px">
       <div class="row" style="gap:8px;align-items:center;flex-wrap:wrap">
@@ -1473,12 +1475,33 @@ function karte(){ // v6.00: Karte füllt die ganze Seite, Steuerung als Leiste a
         ${c?`<span class="status s2">Einsatz #${c.id}</span>`:""}
         <input id="mapQuery" placeholder="Ort suchen (nur ansehen), z. B. Dangast Strand" style="flex:1;min-width:180px" onkeydown="if(event.key==='Enter')searchMap()">
         <button class="primary" onclick="searchMap()">🔎 Suchen</button>
-        ${c?`<button class="${stagingPickMode?"primary":""}" onclick="stagingPickMode=!stagingPickMode;karte()">🅿️ ${stagingPickMode?"Bereitstellungsort wird gewählt – zum Abbrechen tippen":"Bereitstellungsort wählen"}</button>${c.staging?`<span class="pill">🅿️ ${esc(c.staging.name)}</span><button onclick="setStaging(null,'karte')">✕</button>`:""}${stagingPickMode?`<button onclick="stagingPickMode=false;prepareAlarm()">⬅️ Zurück zur Alarmierung</button>`:""}`:""}
+        <span id="karteStagingBtns" style="display:contents">${karteStagingBtnsHTML(c)}</span>
       </div>
       <div id="mapResults" style="max-height:40vh;overflow:auto"></div>
     </div>
   </div>`;
+  karteFit();
   setTimeout(initMap,0);
+}
+// v6.22: Karte genau so hoch wie der freie Platz unter der oberen Leiste – die Seite scrollt nicht,
+// die obere Leiste bleibt immer sichtbar.
+function karteFit(){
+ const w=document.getElementById("karteWrap"); if(!w)return;
+ const top=w.getBoundingClientRect().top+window.scrollY;
+ w.style.height=Math.max(420,window.innerHeight-top-18)+"px";
+ try{if(leafletMap&&leafletMap.getContainer()===document.getElementById("map"))leafletMap.invalidateSize()}catch(e){}
+}
+window.addEventListener("resize",()=>{if(currentPage==="karte")karteFit()});
+function karteStagingBtnsHTML(c){
+ return c?`<button class="${stagingPickMode?"primary":""}" onclick="stagingPickMode=!stagingPickMode;if(!karteStagingUpdate())karte()">🅿️ ${stagingPickMode?"Bereitstellungsort wird gewählt – zum Abbrechen tippen":"Bereitstellungsort wählen"}</button>${c.staging?`<span class="pill">🅿️ ${esc(c.staging.name)}</span><button onclick="setStaging(null,'karte')">✕</button>`:""}${stagingPickMode?`<button onclick="stagingPickMode=false;prepareAlarm()">⬅️ Zurück zur Alarmierung</button>`:""}`:"";
+}
+// v6.22: Bereitstellungsort wählen ändert nur die Knöpfe und Marker – die Karte wird nicht neu geladen.
+function karteStagingUpdate(){
+ const box=document.getElementById("karteStagingBtns");
+ if(!box||currentPage!=="karte"||!karteSoftRefresh())return false;
+ box.innerHTML=karteStagingBtnsHTML(db.currentCall);
+ try{leafletMap.getContainer().style.cursor=stagingPickMode?"crosshair":""}catch(e){}
+ return true;
 }
 
 // v5.51: Kartenausschnitt merken – beim Neuzeichnen (alle paar Sekunden) springt die Karte nicht mehr
@@ -1510,17 +1533,32 @@ function initMap(){
   leafletMap.on("click", async e=>{
     if(stagingPickMode&&db.currentCall){await stagingFromMap(e.latlng.lat,e.latlng.lng);return}
   });
+  if(stagingPickMode)try{leafletMap.getContainer().style.cursor="crosshair"}catch(e){}
   setTimeout(()=>leafletMap.invalidateSize(),150);
 }
 let stagingPickMode=false, stagingMarker=null;
+// v6.22: Ebenen für Fahrzeuge/Bereitstellungsräume – damit die Karte im Hintergrund nur die Marker
+// aktualisiert statt komplett neu aufgebaut zu werden (kein sichtbares Neuladen mehr).
+let MAP_LAYERS={}, MAP_LAYERS_OF=null;
+function mapLayer(k){
+ if(MAP_LAYERS_OF!==leafletMap){MAP_LAYERS={};MAP_LAYERS_OF=leafletMap}
+ if(!MAP_LAYERS[k])MAP_LAYERS[k]=L.layerGroup().addTo(leafletMap);
+ return MAP_LAYERS[k];
+}
+function karteSoftRefresh(){
+ const el=document.getElementById("map");
+ if(!leafletMap||typeof L==="undefined"||!el||leafletMap.getContainer()!==el)return false;
+ try{renderIncidentMarkersOnMap();renderVehiclePositionsOnMap();renderStagingMarkerOnMap();return true}catch(e){console.warn(e);return false}
+}
 function renderStagingMarkerOnMap(){
  if(!leafletMap||typeof L==="undefined")return;
  if(stagingMarker){leafletMap.removeLayer(stagingMarker);stagingMarker=null}
+ mapLayer("br").clearLayers();
  // Bereitstellungsorte aller offenen Einsätze anzeigen
  for(const c of allOpenCalls()){
    const st=c.staging; if(!st||!Number.isFinite(Number(st.lat)))continue;
    const icon=L.divIcon({html:`<div style="background:#0369a1;color:#fff;border-radius:6px;padding:2px 6px;font-weight:800;font-size:13px;border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.4);white-space:nowrap">🅿️ BR</div>`,className:"",iconSize:[44,24],iconAnchor:[22,12]});
-   const m=L.marker([Number(st.lat),Number(st.lng)],{icon}).addTo(leafletMap).bindPopup(`<b>🅿️ Bereitstellungsraum</b><br>${esc(st.name)}<br><small>Einsatz #${esc(c.id)} – Landfahrzeuge sammeln hier</small>`);
+   const m=L.marker([Number(st.lat),Number(st.lng)],{icon}).addTo(mapLayer("br")).bindPopup(`<b>🅿️ Bereitstellungsraum</b><br>${esc(st.name)}<br><small>Einsatz #${esc(c.id)} – Landfahrzeuge sammeln hier</small>`);
    if(db.currentCall&&String(c.id)===String(db.currentCall.id))stagingMarker=m;
  }
 }
@@ -1538,7 +1576,7 @@ async function stagingFromMap(lat,lng){
  const pl={id:Date.now(),name:String(given||name).trim()||name,lat,lng};
  db.stagingPlaces=db.stagingPlaces||[]; db.stagingPlaces.push(pl);
  applyStaging(c,{name:pl.name,lat,lng});
- stagingPickMode=false; toast(`🅿️ Bereitstellungsort: ${pl.name}`); karte();
+ stagingPickMode=false; toast(`🅿️ Bereitstellungsort: ${pl.name}`); if(!karteStagingUpdate())karte();
 }
 function vehicleMapEmoji(u){
  if(u.org==="DGzRS")return"⚓";
@@ -1774,6 +1812,7 @@ function simulatedUnitPosition(u){
 }
 function renderVehiclePositionsOnMap(){
  if(!leafletMap||typeof L==="undefined")return;
+ mapLayer("veh").clearLayers();
  const relevant=(db.units||[]).filter(u=>[...STATION_ORGS,"Luftrettung"].includes(u.org));
  const placed=[];
  relevant.forEach(u=>{
@@ -1804,7 +1843,7 @@ function renderVehiclePositionsOnMap(){
      });
      const age=p.u.gpsUpdatedAt?new Date(p.u.gpsUpdatedAt).toLocaleTimeString("de-DE",{hour:"2-digit",minute:"2-digit"}):null;
      const modeTxt=p.mode==="live"?`📍 Live-GPS${age?` · ${age}`:""}`:"🧭 Simulierte Position (unterwegs)";
-     L.marker([lat,lng],{icon}).addTo(leafletMap)
+     L.marker([lat,lng],{icon}).addTo(mapLayer("veh"))
        .bindPopup(`${vehicleLabelBlock(p.u)}<br>Status ${esc(String(p.u.status))} – ${esc(statusName(p.u.status))}<br><small>${modeTxt}</small>`);
    });
  });
@@ -5723,7 +5762,7 @@ function setStaging(id,back){
  const c=db.currentCall; if(!c)return;
  if(id==null)applyStaging(c,null);
  else{const pl=(db.stagingPlaces||[]).find(x=>String(x.id)===String(id));if(!pl)return;applyStaging(c,{name:pl.name,lat:pl.lat,lng:pl.lng})}
- if(back==="karte")karte(); else if(c.alarmTime&&back!=="alarm")render("leitstelle"); else prepareAlarm();
+ if(back==="karte"){if(!karteStagingUpdate())karte()} else if(c.alarmTime&&back!=="alarm")render("leitstelle"); else prepareAlarm();
 }
 async function stagingSearch(){
  const c=db.currentCall; if(!c)return;

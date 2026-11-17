@@ -1607,6 +1607,10 @@ Version 5.05:
   („a, b“ = a ODER b). Mit „🚑 NA-Indikation“ markierte Knöpfe ziehen weiterhin einen Notarzt.
 - Nur „Unauffällig“ (ohne weitere Befunde) zählt weiter als unauffälliges E (R0 möglich).
 
+Version 6.22:
+- Einsatzkarte: Die Karte ist genau so hoch wie der freie Platz. Die Seite scrollt nicht mehr, die obere Leiste bleibt immer sichtbar und wird nicht mehr von der Karte überdeckt (auch beim Bereitstellungsort wählen).
+- Einsatzkarte: Kein sichtbares Neuladen mehr. Im Hintergrund werden nur noch Fahrzeuge, Einsätze und Bereitstellungsräume aktualisiert. Auch „Bereitstellungsort wählen“ und das Setzen des Punkts laden die Karte nicht mehr neu.
+
 Version 6.21:
 - Alarm ändern und erneut senden: Bereits alarmierte Fahrzeuge behalten ihren Status (z. B. 4 oder 7). Nur neu hinzugefügte Fahrzeuge gehen auf Status 3. Entfernte Fahrzeuge werden wie bisher frei (Status 1).
 - Fehlerbehebung: Über „Einsatzstufe ändern“ oder „Vorschlag alarmieren“ bei schon alarmiertem Einsatz wurden bisher alle Fahrzeuge wieder auf Status 3 gesetzt und die Alarmzeit überschrieben. Diese Wege laufen jetzt über „Alarm erneut senden“.
