@@ -263,7 +263,7 @@ html[data-device="handy"] .fach-grid{grid-template-columns:1fr}
 <header id="topbar">
  <div class="tb-left">
   <span class="tb-brand"><span class="tb-logo">🚑</span><span class="tb-name">Leitstelle<b>.sim</b></span></span>
-  <span id="versionTag" class="tb-ver">v6.25</span>
+  <span id="versionTag" class="tb-ver">v6.26</span>
   <span id="syncState"></span>
   <a id="deskTag" href="#" onclick="renameDesk();return false" title="Name dieses Platzes (für „offen an …“) – antippen zum Ändern"></a>
  </div>
@@ -1689,11 +1689,58 @@ function waterCapable(u){
 }
 function stagingFor(call,u){
  if(call&&call.heliLanding&&u&&!(isAirUnit(u)&&call.locationIsWater&&waterCapable(u))){const hp=heliPointFor(call,u);if(hp)return hp} // v5.93: Hubschrauber/LF → zugeteilter Landeplatz
- const rp=call&&call.rmhp; // v6.25: Rettungsmittel fahren direkt zum Rettungsmittelhalteplatz
- if(rp&&u&&rmhpUnit(u)&&Number.isFinite(Number(rp.lat))&&Number.isFinite(Number(rp.lng)))return [Number(rp.lat),Number(rp.lng)];
- const st=call&&call.staging;
- if(!st||!Number.isFinite(Number(st.lat))||!Number.isFinite(Number(st.lng))||!u||waterCapable(u))return null;
- return [Number(st.lat),Number(st.lng)];
+ const rp=call&&call.rmhp, rpOk=rp&&Number.isFinite(Number(rp.lat))&&Number.isFinite(Number(rp.lng));
+ const st=call&&call.staging, stOk=st&&Number.isFinite(Number(st.lat))&&Number.isFinite(Number(st.lng));
+ if(!u||waterCapable(u))return null;
+ // v6.26: Gibt es einen BR, fahren grundsätzlich alle Landfahrzeuge erst dorthin. Von dort werden sie
+ // abgerufen: Rettungsmittel zum RMHP (max. 2 gleichzeitig), alle anderen nach und nach zur Schadensstelle.
+ if(stOk){
+   if(call&&u.fwdCall===String(call.id)){
+     if(u.fwdTo==="rmhp"&&rpOk)return [Number(rp.lat),Number(rp.lng)];
+     if(u.fwdTo==="scene")return null;
+   }
+   return [Number(st.lat),Number(st.lng)];
+ }
+ if(rpOk&&rmhpUnit(u))return [Number(rp.lat),Number(rp.lng)]; // ohne BR: Rettungsmittel direkt zum RMHP
+ return null;
+}
+// v6.26: Abruf aus dem Bereitstellungsraum
+const RMHP_MAX=2, BR_SCENE_EVERY=2*60000;
+function brCallForward(c,u,to){
+ const from=u.arrPt||(c.staging?[Number(c.staging.lat),Number(c.staging.lng)]:null);
+ setUnitStatus(u,"3"); if(from)u.shuttleFrom=from; delete u.crew; delete u._brWait;
+ u.fwdCall=String(c.id); u.fwdTo=to;
+ crewSds(u,c,to==="rmhp"?`Aus dem Bereitstellungsraum zum Rettungsmittelhalteplatz abgerufen: ${c.rmhp.name}.`:"Aus dem Bereitstellungsraum zur Schadensstelle abgerufen.");
+ (c.history=c.history||[]).push({q:to==="rmhp"?"🚑 Abruf zum RMHP":"🔥 Abruf zur Schadensstelle",a:unitLabel(u)});
+}
+function rmhpOccupancy(c){
+ const now=Date.now();
+ return callUnits(c).filter(u=>{
+   const st=String(u.status);
+   if(st==="3")return u.fwdCall===String(c.id)&&u.fwdTo==="rmhp";
+   if(st==="4"||st==="8")return u.arrKind==="rmhp"&&st==="4";
+   if(st==="7")return u.arrKind==="rmhp"&&u.s7Hold&&now<(u.status7Since||0)+u.s7Hold;
+   return false;
+ }).length;
+}
+function brQueueTick(){
+ if(vehManual())return false;
+ const now=Date.now(); let ch=false;
+ for(const c of allOpenCalls()){
+   if(!c.alarmTime||!c.staging||policeHold(c))continue;
+   if(c.deskId&&c.deskId!==DEVICE_ID)continue;
+   if(/^Patientenübergabestelle/.test(c.staging.name||""))continue;
+   const waiting=callUnits(c).filter(u=>String(u.status)==="4"&&u.arrKind==="br"&&!unitPhoneLive(u)).sort((a,b)=>(a.status4Since||0)-(b.status4Since||0));
+   // Rettungsmittel → RMHP, höchstens 2 gleichzeitig
+   if(c.rmhp){
+     let free=RMHP_MAX-rmhpOccupancy(c);
+     for(const u of waiting.filter(rmhpUnit)){if(free<=0)break;brCallForward(c,u,"rmhp");free--;ch=true}
+   }
+   // alle anderen (Feuerwehr usw.) nach und nach zur Schadensstelle – Führung zuerst
+   const rest=waiting.filter(u=>!rmhpUnit(u)).sort((a,b)=>(isLeadUnit(b)||/ELW/.test(b.type)?1:0)-(isLeadUnit(a)||/ELW/.test(a.type)?1:0));
+   if(rest.length&&now-(c._brSceneAt||0)>=BR_SCENE_EVERY){brCallForward(c,rest[0],"scene");c._brSceneAt=now;ch=true}
+ }
+ return ch;
 }
 // v6.25: Rettungsmittelhalteplatz (RMHP) – hier wird gerettet/versorgt; im Bereitstellungsraum nicht.
 // Gilt für bodengebundene Rettungsmittel (RTW, KTW, NEF, NAW …), nicht für Hubschrauber/Boote.
@@ -1710,12 +1757,8 @@ function applyRmhp(c,rp){
  if(rp)c.rmhp=rp; else delete c.rmhp;
  (c.history=c.history||[]).push({q:"🚑 Rettungsmittelhalteplatz",a:rp?rp.name:"entfernt"});
  if(c.alarmTime&&rp){
-   // Rettungsmittel, die im Bereitstellungsraum warten, rücken zum RMHP vor
-   for(const u of callUnits(c)){
-     if(String(u.status)!=="4"||unitPhoneLive(u)||!rmhpUnit(u)||u.arrKind!=="br")continue;
-     const from=u.arrPt; setUnitStatus(u,"3"); if(from)u.shuttleFrom=from; delete u.crew; delete u._brWait;
-     if(!vehManual())crewSds(u,c,`Rücken vom Bereitstellungsraum zum Rettungsmittelhalteplatz vor: ${rp.name}.`);
-   }
+   // v6.26: Abruf aus dem BR übernimmt brQueueTick (max. 2 Rettungsmittel am RMHP).
+   // Ohne BR: Rettungsmittel, die schon an der Einsatzstelle stehen, bleiben dort.
  }
  if(!c.alarmTime)evaluate();
  save(); if(db.cloud?.enabled&&c.alarmTime)setTimeout(()=>pushCallCloud(c),0);
@@ -1881,7 +1924,8 @@ function simulatedUnitPosition(u){
  if(status==="3"){
    const call=findUnitCall(u);
    const dest=callDestinationPoint(call,u)||home;
-   const etaMs=(estimatedEtaMinutes(u)||10)*60000;
+   const sf=u.shuttleFrom, skm=sf?haversine(sf[0],sf[1],dest[0],dest[1]):null;
+   const etaMs=((sf&&shuttleEtaMin(u,skm))||estimatedEtaMinutes(u)||10)*60000;
    const startMs=u.status3Since||(call?.alarmTime?new Date(call.alarmTime).getTime():Date.now());
    const frac=Math.min(1,Math.max(0,(Date.now()-startMs)/etaMs));
    return movePoint(u.shuttleFrom||home,dest,frac,u);
@@ -2137,6 +2181,7 @@ function setUnitStatus(u,status){
    if(u.arrKind==="rmhp")u.s7Hold=3*60000; else delete u.s7Hold;
  }
  if(["1","2","3","6"].includes(String(status))){delete u.arrKind;delete u.arrPt;delete u.s7Hold;delete u._brWait}
+ if(["1","2","6"].includes(String(status))){delete u.fwdCall;delete u.fwdTo}
  if(db.cloud?.enabled) setTimeout(()=>pushUnitCloud(u),0);
 }
 function autoAdvanceEnRoute(){
@@ -2168,7 +2213,7 @@ function autoAdvanceEnRoute(){
      const home=u.shuttleFrom||unitPoint(u), dest=callDestinationPoint(call,u); // v5.62: Shuttle startet an der Klinik
      if(home&&dest){
        const km=haversine(home[0],home[1],dest[0],dest[1]);
-       const etaMs=(etaMinutesForDistance(u,km)||10)*60000;
+       const etaMs=(shuttleEtaMin(u,km)??etaMinutesForDistance(u,km)??10)*60000;
        if(now-u.status3Since>=etaMs){setUnitStatus(u,"4");changed=true;}
      }
    } else if(u.crew&&["4","7","8"].includes(status)){
@@ -2693,6 +2738,8 @@ function lnaEtaSds(u,now){
  crewSds(u,call,`Alarm erhalten, komme mit dem Privat-PKW${tw&&tw[1]<8?` aus ${tw[0]}`:""}. Eintreffen in ca. ${rest} min (ca. ${hhmm(arr)} Uhr).`);
  return true;
 }
+// v6.26: Fahrt ab BR/Klinik (Abruf, Shuttle) – Fahrzeug ist schon besetzt, keine Ausrückzeit
+function shuttleEtaMin(u,km){if(!u||!u.shuttleFrom||km==null)return null;try{return Math.max(1,Math.round(travelMinutes(u,km,unitCallIsR0(u))))}catch(e){return null}}
 function etaMinutesForDistance(u,km){
  if(km==null||km>=999)return null;
  // Krankentransport: ohne Sonderrechte, mit Vorlauf – deutlich mehr Zeit
@@ -6283,6 +6330,7 @@ function crewRegister(u,call){
 function crewTick(){
  if(vehManual())return false; // v6.04
  const now=Date.now(); let changed=false;
+ try{if(brQueueTick())changed=true}catch(e){console.warn(e)} // v6.26
  for(const u of (db.units||[])){
    if(unitPhoneLive(u))continue;
    // v5.55: erstes eintreffendes Fahrzeug gibt noch aus dem Fahrzeug eine Kurzlage

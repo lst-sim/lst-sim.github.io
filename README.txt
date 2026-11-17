@@ -1607,6 +1607,13 @@ Version 5.05:
   („a, b“ = a ODER b). Mit „🚑 NA-Indikation“ markierte Knöpfe ziehen weiterhin einen Notarzt.
 - Nur „Unauffällig“ (ohne weitere Befunde) zählt weiter als unauffälliges E (R0 möglich).
 
+Version 6.26:
+- Gibt es einen Bereitstellungsraum, fahren grundsätzlich alle Landfahrzeuge zuerst dorthin (auch Rettungsmittel). Ohne BR wie bisher direkt.
+- Am Rettungsmittelhalteplatz stehen höchstens 2 Rettungsmittel gleichzeitig. Wird ein Platz frei (nach Status 7 + 3 min Standzeit), wird das nächste Rettungsmittel aus dem BR abgerufen – wer zuerst im BR war, zuerst.
+- Feuerwehr und übrige Fahrzeuge werden nach und nach zur Schadensstelle abgerufen: alle 2 Minuten eines, Führung (ELW/OrgL/LNA) zuerst.
+- Abruf per SDS und im Einsatzverlauf. Bei Polizeilagen erst nach Freigabe. Im Modus „Fahrzeuge MANUELL“/Realübung kein automatischer Abruf.
+- Fahrten aus dem BR (und Shuttles ab Klinik) ohne Ausrückzeit – das Fahrzeug ist ja schon besetzt.
+
 Version 6.25:
 - Neu: Rettungsmittelhalteplatz (RMHP) auf der Karte markierbar („🚑 Rettungsmittelhalteplatz wählen“, auch über den Knopf „🚑 RMHP“ am Einsatz).
 - Bodengebundene Rettungsmittel (RTW, KTW, NEF, NAW …) fahren direkt zum RMHP, wenn einer festgelegt ist. Dort wird gerettet und versorgt.
