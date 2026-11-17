@@ -263,7 +263,7 @@ html[data-device="handy"] .fach-grid{grid-template-columns:1fr}
 <header id="topbar">
  <div class="tb-left">
   <span class="tb-brand"><span class="tb-logo">🚑</span><span class="tb-name">Leitstelle<b>.sim</b></span></span>
-  <span id="versionTag" class="tb-ver">v6.19</span>
+  <span id="versionTag" class="tb-ver">v6.20</span>
   <span id="syncState"></span>
   <a id="deskTag" href="#" onclick="renameDesk();return false" title="Name dieses Platzes (für „offen an …“) – antippen zum Ändern"></a>
  </div>
@@ -2533,6 +2533,11 @@ function estimatedEtaMinutes(u){
 }
 function nearestFirst(arr){
  return [...arr].sort((a,b)=>{
+   // v6.20: First in – first out: stehen mehrere Fahrzeuge gleichen Typs auf derselben Wache (Status 2),
+   // fährt immer das, das am längsten frei ist – auch wenn die Eintreffzeit minimal abweicht
+   if(a.type===b.type&&a.location&&a.location===b.location&&String(a.status)==="2"&&String(b.status)==="2"){
+     const fa=a.freeSince||Infinity, fb=b.freeSince||Infinity; if(fa!==fb)return fa-fb;
+   }
    const ea=estimatedEtaMinutes(a)??9999, eb=estimatedEtaMinutes(b)??9999;
    if(ea!==eb)return ea-eb;
    // FIFO: gleiche Wache/Entfernung → wer am längsten frei ist, fährt zuerst
@@ -5855,6 +5860,7 @@ const CREW_RMI=[
  [/harnverhalt/,"713"],
  [/akute augenerkrankung|rotes schmerzhaftes auge/,"721"],
  [/tonsillektomie|mandel-op|nachblutung/,"732"],
+ [/blinddarm/,"243"],[/erbrechen und durchfall/,"326"],[/panikattacke|hyperventilation/,"363"],[/platzwunde/,"221"],[/allgemeinzustand/,"326"], // v6.20
  [/aortendissektion|dissektion/,"299"],[/bauchaortenaneurysma|aneurysma/,"291"],[/lungenembolie/,"348"],[/pneumothorax/,"318"],[/subarachnoidal/,"421"],[/meningitis/,"371"],[/sepsis/,"373"],[/gi-blutung|kaffeesatz|teerstuhl/,"351"],[/bradykardie/,"342"],[/tachykardie/,"343"],[/ketoazidose|hyperglyk/,"392"],[/status epilepticus|anhaltender krampf/,"411"],[/hitzschlag/,"286"],[/stromunfall|strommarke/,"344"],[/bolusaspiration/,"314"],[/hypertensive krise/,"345"],[/lungenödem/,"347"],[/gefäßverschluss/,"292"],[/exsikkose/,"326"], // v6.08
  [/co-melder|kohlenmonoxid|co-vergiftung|co-hb/,"370"],
  [/reanim|herzstillstand|keine normale atmung.*bewusstlos/,"132"],
@@ -12355,6 +12361,47 @@ const SIM_CASES=[
    event:"Sie hat die letzten Tage kaum getrunken, es war so warm. Jetzt ist sie total schwach, die Zunge ist ganz trocken und sie weiß nicht, welcher Tag ist.",
    f:{count:"1",x:"Nein",a:"Frei",b:"Normal",c:"Auffällig",d:"Bewusstseinsgetrübt",e:"stark ausgetrocknet, trockene Zunge, Schwäche, akute Verwirrtheit (V. a. Exsikkose)",psy:"Nein",danger:"nein"},
    onset:"Seit zwei, drei Tagen schleichend.",hist:"Sie nimmt Wassertabletten.",extra:["Sie war seit gestern nicht mehr auf Toilette."]}}},
+ // ── v6.20: häufige, eher leichte Einsätze (realistischere Verteilung) ─────────────────────────────
+ {id:"az_verschl",w:4,num:"112",loc:"home",mk:()=>{const p=simPerson(),age=rint(78,95);return {rel:p.g==="m"?"mein Vater":"meine Mutter",caller:simPerson(),patient:p,age,
+   open:[`Hallo, ${p.g==="m"?"mein Vater":"meine Mutter"} ist seit gestern so schwach, ${p.g==="m"?"er":"sie"} kommt kaum noch aus dem Sessel.`],
+   event:`${p.g==="m"?"Er":"Sie"} isst und trinkt seit zwei Tagen kaum, ist ganz schlapp und will nur schlafen. Ansprechbar ist ${p.g==="m"?"er":"sie"} aber, redet normal mit mir. Fieber hat ${p.g==="m"?"er":"sie"} nicht.`,
+   f:{count:"1",x:"Nein",a:"Frei",b:"Normal",c:"Unauffällig",d:"Wach / orientiert",e:"Allgemeinzustandsverschlechterung, Schwäche, trinkt wenig",psy:"Nein",danger:"nein"},
+   onset:"Seit zwei Tagen langsam schlechter.",hist:"Herzschwäche, Diabetes, nimmt viele Tabletten.",extra:["Der Hausarzt kommt erst übermorgen.","Kann man nicht einfach mal gucken?"]}}},
+ {id:"synkope_leicht",w:3,num:"112",loc:"road",mk:()=>{const p=simPerson("w"),age=rint(18,45);return {rel:"eine Frau",caller:simPerson(),patient:p,age,passerby:true,
+   open:["Hallo, hier ist eine junge Frau umgekippt, jetzt ist sie wieder wach."],
+   event:"Sie stand an der Kasse und ist einfach zusammengesackt, war ein paar Sekunden weg. Jetzt sitzt sie, ist wieder ganz klar und sagt, sie hat heute nichts gegessen. Verletzt hat sie sich nicht.",
+   f:{count:"1",x:"Nein",a:"Frei",b:"Normal",c:"Unauffällig",d:"Wach / orientiert",e:"kurze Synkope, wieder wach und orientiert, nicht verletzt",psy:"Nein",danger:"nein"},
+   onset:"Vor fünf Minuten.",hist:"Sie sagt, das hatte sie schon mal, wenn sie nichts gegessen hat.",extra:["Sie will eigentlich gar keinen Krankenwagen."]}}},
+ {id:"bauchschmerz",w:3,num:"112",loc:"home",mk:()=>{const p=simPerson(),age=rint(20,70);return {rel:"ich selbst",caller:p,patient:p,age,
+   open:["Hallo, ich hab so starke Bauchschmerzen, ich weiß nicht mehr weiter."],
+   event:"Seit heute Mittag Schmerzen im rechten Unterbauch, wird immer schlimmer. Mir ist übel, einmal erbrochen. Fieber hab ich ein bisschen.",
+   f:{count:"1",x:"Nein",a:"Frei",b:"Normal",c:"Unauffällig",d:"Wach / orientiert",e:"Unterbauchschmerz rechts, Übelkeit, leichtes Fieber (V. a. Blinddarmentzündung)",psy:"Nein",danger:"nein"},
+   onset:"Seit heute Mittag.",hist:"Sonst gesund.",extra:["Ich kann nicht mehr gerade stehen."]}}},
+ {id:"intox_alk",w:3,num:"112",loc:"road",mk:()=>{const p=simPerson("m"),age=rint(25,60);return {rel:"ein Mann",caller:simPerson(),patient:p,age,passerby:true,
+   open:["Hallo, hier liegt ein Mann auf dem Gehweg, der ist wohl betrunken."],
+   event:"Er liegt hier an der Bushaltestelle, riecht stark nach Alkohol und lallt. Wenn man ihn anspricht, macht er die Augen auf und schimpft. Verletzt sieht er nicht aus. Es ist ziemlich kalt.",
+   f:{count:"1",x:"Nein",a:"Frei",b:"Normal",c:"Unauffällig",d:"Bewusstseinsgetrübt",e:"alkoholisiert, hilflose Person, schläfrig aber erweckbar, Unterkühlungsgefahr",psy:"Nein",danger:"nein"},
+   onset:"Ich hab ihn eben gefunden.",hist:"Weiß ich nicht, kenne ihn nicht.",extra:["Neben ihm liegt eine leere Flasche."]}}},
+ {id:"platzwunde",w:3,num:"112",loc:"home",mk:()=>{const p=simPerson(),age=rint(70,90);return {rel:p.g==="m"?"mein Mann":"meine Frau",caller:simPerson(p.g==="m"?"w":"m"),patient:p,age,
+   open:[`${p.g==="m"?"Mein Mann":"Meine Frau"} ist gestürzt und blutet am Kopf.`],
+   event:`${p.g==="m"?"Er":"Sie"} ist im Bad ausgerutscht und mit dem Kopf gegen das Waschbecken. Da ist eine Platzwunde an der Stirn, es blutet, aber nicht spritzend. ${p.g==="m"?"Er":"Sie"} war nicht bewusstlos und redet ganz normal.`,
+   f:{count:"1",x:"Nein",a:"Frei",b:"Normal",c:"Unauffällig",d:"Wach / orientiert",e:"Sturz im Bad, Platzwunde Stirn, nicht bewusstlos",psy:"Nein",danger:"nein"},
+   onset:"Gerade eben.",hist:"Nimmt ASS.",extra:["Ich drück ein Handtuch drauf."]}}},
+ {id:"rueckenschmerz",w:2,num:"112",loc:"home",mk:()=>{const p=simPerson(),age=rint(35,70);return {rel:"ich selbst",caller:p,patient:p,age,
+   open:["Hallo, ich komm nicht mehr hoch, mein Rücken!"],
+   event:"Ich hab mich gebückt und dann hat es im Rücken eingeschossen. Ich liege auf dem Boden und komm nicht hoch. Beine kann ich bewegen, Kribbeln hab ich nicht.",
+   f:{count:"1",x:"Nein",a:"Frei",b:"Normal",c:"Unauffällig",d:"Wach / orientiert",e:"akuter Rückenschmerz, keine neurologischen Ausfälle, kommt nicht hoch",psy:"Nein",danger:"nein"},
+   onset:"Vor einer halben Stunde.",hist:"Bandscheibe, hatte ich schon mal.",extra:["Ich bin allein zu Hause."]}}},
+ {id:"panik",w:2,num:"112",loc:"home",mk:()=>{const p=simPerson("w"),age=rint(18,40);return {rel:"ich selbst",caller:p,patient:p,age,
+   open:["Hallo… ich krieg keine Luft, mein Herz rast, ich glaub ich sterbe!"],
+   event:"Das kam ganz plötzlich, ich zittere, meine Hände kribbeln und ich atme ganz schnell. Ich hab so Angst. Schmerzen hab ich eigentlich keine.",
+   f:{count:"1",x:"Nein",a:"Frei",b:"Auffällig",c:"Unauffällig",d:"Wach / orientiert",e:"Hyperventilation, Kribbeln in den Händen, Angst (V. a. Panikattacke)",psy:"Ja",danger:"nein"},
+   onset:"Vor zehn Minuten.",hist:"Ich hatte schon mal Panikattacken.",extra:["Meine Finger verkrampfen sich."],panic:true}}},
+ {id:"erbrechen_alt",w:2,num:"112",loc:"home",mk:()=>{const p=simPerson("w"),age=rint(75,92);return {rel:"meine Mutter",caller:simPerson(),patient:p,age,
+   open:["Meine Mutter erbricht seit heute Morgen und hat Durchfall, sie ist ganz schwach."],
+   event:"Sie hat bestimmt zehnmal erbrochen, kann nichts bei sich behalten. Sie ist wach, aber ganz schlapp und schwindelig beim Aufstehen.",
+   f:{count:"1",x:"Nein",a:"Frei",b:"Normal",c:"Unauffällig",d:"Wach / orientiert",e:"Erbrechen und Durchfall, Schwäche, Schwindel beim Aufstehen",psy:"Nein",danger:"nein"},
+   onset:"Seit heute Morgen.",hist:"Blutdrucktabletten.",extra:["Im Pflegedienst gehen gerade auch so Magen-Darm-Sachen rum."]}}},
  {id:"uro_kolik",w:1.0,num:"112",loc:"home",mk:()=>{const p=simPerson("m"),age=rint(30,60);return {rel:"ich selbst",caller:p,patient:p,age,
    open:["Hallo, ich hab so wahnsinnige Schmerzen in der Flanke, ich halt das nicht mehr aus."],
    event:"Seit einer Stunde habe ich ganz heftige, wellenartige Schmerzen links in der Flanke, die bis in die Leiste ziehen. Ich kann nicht still sitzen, mir ist übel.",
@@ -12537,13 +12584,13 @@ const SIM_CASES=[
    onset:"Vor gut einer Stunde geboren.",hist:"Die Mutter hatte vorzeitige Wehen, die Lungenreife-Spritze wurde gegeben. Die Neonatologie in Oldenburg ist schon informiert.",
    extra:["Die Kinderärzte in Oldenburg wissen Bescheid und warten auf den Anruf.","Die Mutter bleibt erst einmal hier bei uns.","Wir sind im Kreißsaal, die Pforte zeigt Ihnen den Weg."]}}},
 
- {id:"acs",w:9,num:"112",loc:"home",mk:()=>{const p=simPerson("m"),age=rint(52,79);return {rel:"mein Mann",caller:simPerson("w"),patient:p,age,
+ {id:"acs",w:6,num:"112",loc:"home",mk:()=>{const p=simPerson("m"),age=rint(52,79);return {rel:"mein Mann",caller:simPerson("w"),patient:p,age,
    open:["Hallo? Mein Mann hat ganz starke Schmerzen in der Brust!","Bitte kommen Sie schnell, meinem Mann geht es ganz schlecht, er hat so Druck auf der Brust!"],
    event:"Er hat seit ungefähr zwanzig Minuten so einen Druck auf der Brust, das zieht in den linken Arm. Er ist ganz grau im Gesicht.",
    f:{count:"1",x:"Nein",a:"Frei",b:"Auffällig",c:"Auffällig",d:"Wach / orientiert",e:"Druck auf der Brust, Ausstrahlung linker Arm, kaltschweißig",psy:"Nein",danger:"nein"},
    onset:"So seit zwanzig Minuten, vielleicht auch etwas länger.",hist:"Er hat Bluthochdruck und nimmt dafür Tabletten. Mit dem Herzen war bisher nichts.",
    extra:["Er schwitzt so stark, das ist gar nicht normal.","Soll ich ihm ein Glas Wasser geben?","Er sagt, es wird nicht besser."]}}},
- {id:"stroke",w:7,num:"112",loc:"home",mk:()=>{const p=simPerson(),age=rint(66,88);return {rel:p.g==="m"?"mein Vater":"meine Mutter",caller:simPerson(),patient:p,age,
+ {id:"stroke",w:6,num:"112",loc:"home",mk:()=>{const p=simPerson(),age=rint(66,88);return {rel:p.g==="m"?"mein Vater":"meine Mutter",caller:simPerson(),patient:p,age,
    open:[`Hallo, ich glaube ${p.g==="m"?"mein Vater":"meine Mutter"} hat einen Schlaganfall!`,`${p.g==="m"?"Mein Vater":"Meine Mutter"} kann auf einmal nicht mehr richtig sprechen!`],
    event:`${p.g==="m"?"Er":"Sie"} spricht ganz verwaschen, der Mundwinkel hängt rechts runter und ${p.g==="m"?"er":"sie"} kann den rechten Arm nicht mehr richtig heben.`,
    f:{count:"1",x:"Nein",a:"Frei",b:"Normal",c:"Unauffällig",d:"Neurologisch auffällig",e:"Sprachstörung, hängender Mundwinkel rechts, Armschwäche rechts",psy:"Nein",danger:"nein"},
@@ -12561,19 +12608,19 @@ const SIM_CASES=[
    f:{count:"1",x:"Nein",a:"Frei",b:"Auffällig",c:"Unauffällig",d:"Wach / orientiert",e:"starke Atemnot, Giemen, Spray ohne Wirkung",psy:"Nein",danger:"nein"},
    onset:"Seit heute Morgen schlechter, jetzt seit einer halben Stunde ganz schlimm.",hist:"Er hat COPD und raucht leider immer noch.",
    extra:["Er kann kaum noch sprechen.","Die Lippen sind ein bisschen bläulich, glaube ich."]}}},
- {id:"hypo",w:5,num:"112",loc:"home",mk:()=>{const p=simPerson(),age=rint(35,75);return {rel:p.g==="m"?"mein Mann":"meine Frau",caller:simPerson(p.g==="m"?"w":"m"),patient:p,age,
+ {id:"hypo",w:3,num:"112",loc:"home",mk:()=>{const p=simPerson(),age=rint(35,75);return {rel:p.g==="m"?"mein Mann":"meine Frau",caller:simPerson(p.g==="m"?"w":"m"),patient:p,age,
    open:[`${p.g==="m"?"Mein Mann":"Meine Frau"} ist ganz komisch, ich krieg ${p.g==="m"?"ihn":"sie"} kaum wach!`],
    event:`${p.g==="m"?"Er":"Sie"} ist total verschwitzt und reagiert kaum, redet wirres Zeug. ${p.g==="m"?"Er":"Sie"} ist Diabetiker.`,
    f:{count:"1",x:"Nein",a:"Frei",b:"Normal",c:"Unauffällig",d:"Bewusstseinsgetrübt",e:"kaltschweißig, Diabetes mit Insulin",psy:"Nein",danger:"nein"},
    onset:"Vor zehn Minuten hab ich das gemerkt.",hist:"Diabetes, spritzt Insulin. Heute Mittag hat er kaum was gegessen.".replace("er",p.g==="m"?"er":"sie"),
    extra:["Soll ich ihm Saft geben? Ich hab Orangensaft da.","Das hatte er schon mal, aber nicht so schlimm."]}}},
- {id:"seizure",w:4,num:"112",loc:"home",mk:()=>{const p=simPerson(),age=rint(17,45);return {rel:"mein Mitbewohner",caller:simPerson(),patient:p,age,
+ {id:"seizure",w:3,num:"112",loc:"home",mk:()=>{const p=simPerson(),age=rint(17,45);return {rel:"mein Mitbewohner",caller:simPerson(),patient:p,age,
    open:["Hallo, hier hat jemand einen Krampfanfall!"],
    event:`${p.g==="m"?"Er":"Sie"} ist umgefallen und hat am ganzen Körper gezuckt, so zwei Minuten lang. Jetzt hört es auf, ${p.g==="m"?"er":"sie"} ist ganz schläfrig.`,
    f:{count:"1",x:"Nein",a:"Frei",b:"Normal",c:"Unauffällig",d:"Krampfanfall",e:"Zungenbiss, eingenässt",psy:"Nein",danger:"nein"},
    onset:"Gerade eben, vor ein paar Minuten.",hist:"Epilepsie hat er nicht, das hatte er noch nie.".replace("er",p.g==="m"?"er":"sie"),
    extra:["Da ist ein bisschen Blut am Mund, ich glaub, auf die Zunge gebissen."]}}},
- {id:"anaph",w:4,num:"112",loc:"water",mk:()=>{const p=simPerson("w"),age=rint(20,60);return {rel:"meine Freundin",caller:simPerson(),patient:p,age,landPatient:true,
+ {id:"anaph",w:1.5,num:"112",loc:"water",mk:()=>{const p=simPerson("w"),age=rint(20,60);return {rel:"meine Freundin",caller:simPerson(),patient:p,age,landPatient:true,
    open:["Hallo, wir sind am Strand, hier ist jemand von einer Wespe gestochen worden und kriegt schlecht Luft!"],
    event:"Sie wurde in den Hals gestochen, das schwillt total an, sie kratzt sich überall und atmet ganz schwer.",
    f:{count:"1",x:"Nein",a:"Gefährdet",b:"Auffällig",c:"Auffällig",d:"Wach / orientiert",e:"Quaddeln am ganzen Körper, Schwellung Hals",psy:"Nein",danger:"nein"},
@@ -12591,7 +12638,7 @@ const SIM_CASES=[
    f:{count:"1",x:"Nein",a:"Frei",b:"Normal",c:"Unauffällig",d:"Wach / orientiert",e:"verwirrt, ängstlich, laut",psy:"Ja",danger:"unbekannt"},
    onset:"Seit einer halben Stunde.",hist:"Ich glaub, der war schon mal in Behandlung, so genau weiß ich das aber nicht.",
    extra:["Der hat jetzt die Wohnungstür zugeknallt.","Ich hab ein bisschen Angst, ehrlich gesagt."]}}},
- {id:"rea",w:5,num:"112",loc:"home",mk:()=>{const p=simPerson("m"),age=rint(55,84);return {rel:"mein Mann",caller:simPerson("w"),patient:p,age,panic:true,cpr:true,
+ {id:"rea",w:1.5,num:"112",loc:"home",mk:()=>{const p=simPerson("m"),age=rint(55,84);return {rel:"mein Mann",caller:simPerson("w"),patient:p,age,panic:true,cpr:true,
    open:["Hilfe! Mein Mann ist umgefallen, er reagiert nicht mehr!","Bitte! Mein Mann liegt am Boden und rührt sich nicht!"],
    event:"Er ist einfach umgekippt, in der Küche. Er reagiert gar nicht, ich hab ihn geschüttelt!",
    f:{count:"1",x:"Nein",a:"Gefährdet",b:"Keine normale Atmung",c:"Unklar",d:"Bewusstlos",e:"",psy:"Nein",danger:"nein"},
@@ -12603,7 +12650,7 @@ const SIM_CASES=[
    f:{count:"1",x:"Nein",a:"Frei",b:"Normal",c:"Unauffällig",d:"Bewusstseinsgetrübt",e:"Platzwunde an der Stirn",psy:"Nein",danger:"nein"},
    onset:"Keine Ahnung, ich bin gerade vorbeigekommen.",hist:"Ich kenn den nicht.",
    extra:["Der blutet ein bisschen an der Stirn.","Jetzt bewegt er sich ein bisschen."]}}},
- {id:"vu_trapped",w:5,num:"112",loc:"road",mk:()=>{const p=simPerson(),age=rint(19,70),n=pick([1,1,2,2,3,4]),t=n>1&&Math.random()<0.35?2:1;
+ {id:"vu_trapped",w:1.2,num:"112",loc:"road",mk:()=>{const p=simPerson(),age=rint(19,70),n=pick([1,1,2,2,3,4]),t=n>1&&Math.random()<0.35?2:1;
    const NUM=["","ein","zwei","drei","vier"];
    return {rel:"der Fahrer",caller:simPerson(),patient:p,age,passerby:true,
    open:[n>1?`Hier ist ein schwerer Unfall, ein Auto ist gegen einen Baum gefahren, da sitzen mehrere Leute drin!`:"Hier ist ein schwerer Unfall, ein Auto ist gegen einen Baum gefahren!"],
@@ -12619,7 +12666,7 @@ const SIM_CASES=[
    f:{event:"Verkehrsunfall",count:String(n),trapped:"0",x:"Nein",a:"Frei",b:"Normal",c:"Unauffällig",d:"Wach / orientiert",e:"Nackenschmerzen, Prellung",psy:"Nein",danger:"nein"},
    onset:"Vor drei Minuten.",hist:"Weiß ich nicht.",danger:"Die Autos stehen noch auf der Kreuzung, hier ist viel Verkehr.",
    extra:["Brauchen wir auch die Polizei?","Mir tut auch die Schulter ein bisschen weh.",...(n>2?["Das Kind weint die ganze Zeit."]:[])]}}},
- {id:"vu_bus",w:2,num:"112",loc:"road",mk:()=>{const p=simPerson(),age=rint(19,70),n=rint(5,8);
+ {id:"vu_bus",w:0.4,num:"112",loc:"road",mk:()=>{const p=simPerson(),age=rint(19,70),n=rint(5,8);
    return {rel:"die Fahrgäste",caller:simPerson(),patient:p,age,passerby:true,panic:true,
    open:["Hier ist ein ganz schwerer Unfall, ein Kleinbus und ein Auto, da sind ganz viele Verletzte!"],
    event:`Ein Kleinbus ist mit einem Auto zusammengestoßen, der Bus liegt halb im Graben. Ich zähl so ${n} Verletzte, ein paar bluten, der Autofahrer ist eingeklemmt.`,
@@ -12627,7 +12674,7 @@ const SIM_CASES=[
    trappedText:"Ja, der Autofahrer kommt nicht raus! Die aus dem Bus sind alle draußen.",
    onset:"Gerade eben!",hist:"Ich kenn die Leute nicht.",danger:"Der Bus liegt schräg im Graben, und es kommen noch Autos aus der Kurve.",
    extra:["Einer sitzt am Straßenrand und blutet ganz stark am Arm!","Hier sind jetzt mehrere Leute am Helfen.","Wie viele Krankenwagen kommen denn?"]}}},
- {id:"fire_kitchen",w:5,num:"112",loc:"home",mk:()=>{const p=simPerson(),k=pick([1,1,2,2,3]);
+ {id:"fire_kitchen",w:3,num:"112",loc:"home",mk:()=>{const p=simPerson(),k=pick([1,1,2,2,3]);
    const inside=k===1?"Ich glaube, die ältere Dame aus der Wohnung ist noch drin, die macht nicht auf!":k===2?"Das ältere Ehepaar aus der Wohnung ist noch drin, die machen nicht auf!":"Die Familie aus dem zweiten Stock ist noch drin, die Mutter mit zwei Kindern, die kommen nicht durchs Treppenhaus!";
    return {rel:"die Nachbarn",caller:simPerson(),patient:p,age:rint(30,70),fire:true,
    open:["Hallo, Feuerwehr? Bei uns im Haus brennt es, aus der Wohnung im ersten Stock kommt Rauch!"],
@@ -12635,7 +12682,7 @@ const SIM_CASES=[
    f:{event:"Feuer / Rauchentwicklung",count:String(k),firePeople:String(k),danger:"ja",x:"",a:"",b:"",c:"",d:"",e:""},
    onset:"Vor fünf Minuten haben wir es gerochen.",hist:"",inside,
    extra:["Ich hör die Rauchmelder piepen.",k===3?"Die Kinder stehen oben am Fenster!":"Wir sind jetzt alle draußen auf der Straße, nur die nicht."]}}},
- {id:"fire_roof",w:3,num:"112",loc:"home",mk:()=>{const p=simPerson();return {rel:"",caller:simPerson(),patient:p,age:40,fire:true,
+ {id:"fire_roof",w:1.5,num:"112",loc:"home",mk:()=>{const p=simPerson();return {rel:"",caller:simPerson(),patient:p,age:40,fire:true,
    open:["Bei meinem Nachbarn brennt der Dachstuhl!"],
    event:"Aus dem Dach vom Einfamilienhaus nebenan schlagen Flammen raus, ganz viel Rauch.",
    f:{event:"Feuer / Rauchentwicklung",count:"0",firePeople:"0",danger:"ja",x:"",a:"",b:"",c:"",d:"",e:""},
@@ -12696,7 +12743,7 @@ const SIM_CASES=[
    f:{event:"Tierrettung",count:"0",trapped:"0",danger:"nein",x:"",a:"",b:"",c:"",d:"",e:""},
    onset:"Ich hab's gerade beim Spazierengehen gesehen.",hist:"",danger:"",
    extra:["Der Schäfer ist nicht zu sehen.","Das bewegt sich kaum noch."]}}},
- {id:"swimmer",w:4,num:"112",loc:"water",mk:()=>{const p=simPerson(),age=rint(10,70);return {rel:"ein Schwimmer",caller:simPerson(),patient:p,age,panic:true,
+ {id:"swimmer",w:3,num:"112",loc:"water",mk:()=>{const p=simPerson(),age=rint(10,70);return {rel:"ein Schwimmer",caller:simPerson(),patient:p,age,panic:true,
    open:["Hilfe, da draußen ist ein Schwimmer in Not, der winkt und geht immer wieder unter!"],
    event:"Ein Schwimmer ist ziemlich weit draußen, der winkt mit den Armen und geht immer wieder unter. Die Strömung zieht ihn weg.",
    f:{event:"Person im Wasser",count:"1",water:"Ja",waterState:"Lebenszeichen",x:"",a:"",b:"",c:"",d:"",e:"",danger:"ja"},
@@ -12716,7 +12763,7 @@ const SIM_CASES=[
    open:["Hallo, hier ist die Station 3 vom Klinikum Wilhelmshaven, wir bräuchten einen Rücktransport."],
    ktType:"KT-Entlassung",dest:"nach Hause",mode:"sitzend im Tragestuhl",time:"heute um 14 Uhr",doc:"Der Transportschein ist ausgefüllt.",
    event:"Ein Patient wird entlassen und muss nach Hause gebracht werden.",extra:["Der Patient hat zwei Taschen dabei."]}}},
- {id:"cut",w:3,num:"112",loc:"home",mk:()=>{const p=simPerson("m"),age=rint(30,75);return {rel:"mein Mann",caller:simPerson("w"),patient:p,age,
+ {id:"cut",w:1.5,num:"112",loc:"home",mk:()=>{const p=simPerson("m"),age=rint(30,75);return {rel:"mein Mann",caller:simPerson("w"),patient:p,age,
    open:["Hallo, mein Mann hat sich ganz schlimm geschnitten, das blutet wie verrückt!"],
    event:"Er ist beim Holzmachen mit der Säge abgerutscht, am Unterarm. Das blutet total, ich drück ein Handtuch drauf.",
    f:{count:"1",x:"Ja",a:"Frei",b:"Normal",c:"Auffällig",d:"Wach / orientiert",e:"tiefe Schnittwunde Unterarm, starke Blutung",psy:"Nein",danger:"nein"},

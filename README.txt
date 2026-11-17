@@ -1607,6 +1607,10 @@ Version 5.05:
   („a, b“ = a ODER b). Mit „🚑 NA-Indikation“ markierte Knöpfe ziehen weiterhin einen Notarzt.
 - Nur „Unauffällig“ (ohne weitere Befunde) zählt weiter als unauffälliges E (R0 möglich).
 
+Version 6.20:
+- Realistischere Einsatzverteilung: schwere Notfälle kommen weiter vor, aber seltener (z. B. Reanimation ca. 1 %, eingeklemmte Person nach VU ca. 1 %, Anaphylaxie, Herzinfarkt/Schlaganfall je ca. 4 %). Dafür 8 neue häufige, eher leichte Einsätze: AZ-Verschlechterung bei älteren Menschen, kurze Synkope, Bauchschmerz (V. a. Blinddarm), hilflose Person mit Alkohol, Platzwunde nach Sturz, Rückenschmerz, Panikattacke, Erbrechen/Durchfall bei älteren Menschen. Anteil der Übungsnotrufe mit Notarzt sinkt von ca. 32 % auf ca. 25 %.
+- First in – first out: Stehen mehrere RTW (oder andere gleiche Fahrzeuge) auf derselben Wache in Status 2, wird immer der vorgeschlagen, der am längsten frei ist – auch wenn die berechnete Eintreffzeit minimal abweicht.
+
 Version 6.19:
 - Einsatzansicht: Status hinter den Fahrzeugen nur noch als kleine, farbige Zahl (Text erscheint beim Drüberfahren).
 
