@@ -1607,6 +1607,14 @@ Version 5.05:
   („a, b“ = a ODER b). Mit „🚑 NA-Indikation“ markierte Knöpfe ziehen weiterhin einen Notarzt.
 - Nur „Unauffällig“ (ohne weitere Befunde) zählt weiter als unauffälliges E (R0 möglich).
 
+Version 6.23:
+- Fahrzeuge fahren auf der Einsatzkarte nach Navi über echte Straßen (Route vom OSRM-Routenserver, OpenStreetMap-Daten). Auf Landstraße/Autobahn kommen sie schneller voran als im Ort. Gilt für Anfahrt (Status 3), Transport (Status 7) und Rückfahrt (Status 1). Hubschrauber fliegen weiter Luftlinie.
+- Ist der Routenserver nicht erreichbar, fahren die Fahrzeuge wie bisher Luftlinie (steht dann so im Popup).
+- Neue Fahrzeugmarker: Punkt an der genauen Position, Strich zum Schild mit Kurzname und Status (Farbe nach Status). Stehen mehrere am selben Ort, fächern die Schilder auf – die Punkte bleiben genau.
+- Für die Fahrzeuge des geöffneten Einsatzes wird die restliche Route gestrichelt angezeigt.
+- Fahrzeuge bewegen sich auf der Karte alle 4 Sekunden weiter, ohne dass die Karte neu lädt.
+- Unverändert: Wie lange eine Fahrt dauert, wird weiter wie bisher berechnet; die Straße bestimmt nur den Weg.
+
 Version 6.22:
 - Einsatzkarte: Die Karte ist genau so hoch wie der freie Platz. Die Seite scrollt nicht mehr, die obere Leiste bleibt immer sichtbar und wird nicht mehr von der Karte überdeckt (auch beim Bereitstellungsort wählen).
 - Einsatzkarte: Kein sichtbares Neuladen mehr. Im Hintergrund werden nur noch Fahrzeuge, Einsätze und Bereitstellungsräume aktualisiert. Auch „Bereitstellungsort wählen“ und das Setzen des Punkts laden die Karte nicht mehr neu.
