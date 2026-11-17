@@ -263,7 +263,7 @@ html[data-device="handy"] .fach-grid{grid-template-columns:1fr}
 <header id="topbar">
  <div class="tb-left">
   <span class="tb-brand"><span class="tb-logo">🚑</span><span class="tb-name">Leitstelle<b>.sim</b></span></span>
-  <span id="versionTag" class="tb-ver">v6.20</span>
+  <span id="versionTag" class="tb-ver">v6.21</span>
   <span id="syncState"></span>
   <a id="deskTag" href="#" onclick="renameDesk();return false" title="Name dieses Platzes (für „offen an …“) – antippen zum Ändern"></a>
  </div>
@@ -3206,18 +3206,31 @@ function saveCallEdit(){
  c.history.push({q:"📝 Notruf geändert",a:changes.join(" · ")});
  const oldKw=c.keyword||"";
  if(!c.alarmTime){evaluate();save();toast("Notruf geändert – neu bewertet");prepareAlarm();return}
- // Bereits alarmiert: neu bewerten, aber Alarmstand behalten; zusätzlich nötige Mittel ermitteln
- const keep={proposal:c.proposal,proposedUnitIds:c.proposedUnitIds,neighborProposal:c.neighborProposal,suggestion:c.suggestion,abPlans:c.abPlans};
+ realarmReevaluate(c,changes,oldKw);
+ toast(oldKw!==c.keyword?`Neues Stichwort: ${c.keyword}`:"Notruf geändert");
+ showResourcePicker("additional");
+}
+// v6.21: Bereits alarmierter Einsatz wird neu bewertet – alle schon alarmierten Fahrzeuge bleiben
+// in ihrem Status; nur zusätzlich nötige Mittel werden (angehakt) vorgeschlagen.
+function realarmReevaluate(c,changes,oldKw){
+ const keep={proposal:c.proposal,neighborProposal:c.neighborProposal,suggestion:c.suggestion,abPlans:c.abPlans};
  evaluate();
  const fresh=(c.proposal||[]).filter(x=>!x.missing&&!x.neighbor&&!x.firstResponder);
  Object.assign(c,keep);
+ const alarmed=(c.alarmedUnits||[]).map(String);
+ c.proposedUnitIds=[...(c.alarmedUnits||[])]; // zugeordnet = nur wirklich alarmierte Fahrzeuge
  const have={};
- for(const id of (c.alarmedUnits||[])){const u=db.units.find(x=>String(x.id)===String(id));if(u)have[u.type]=(have[u.type]||0)+1}
+ for(const id of alarmed){const u=db.units.find(x=>String(x.id)===id);if(u)have[u.type]=(have[u.type]||0)+1}
  const extras=[];
- for(const x of fresh){if(have[x.type]>0){have[x.type]--;continue}if(!(c.alarmedUnits||[]).map(String).includes(String(x.id)))extras.push(String(x.id))}
- c.realarmPending={oldKw,changes,extras,checked:[...extras]};
+ for(const x of fresh){if(have[x.type]>0){have[x.type]--;continue}if(!alarmed.includes(String(x.id)))extras.push(String(x.id))}
+ const prev=c.realarmPending;
+ c.realarmPending={oldKw:prev?prev.oldKw:oldKw,changes:[...(prev?prev.changes||[]:[]),...changes],extras,checked:[...extras]};
  save();
- toast(oldKw!==c.keyword?`Neues Stichwort: ${c.keyword}`:"Notruf geändert");
+}
+function realarmFromNotruf(){
+ const c=db.currentCall; if(!c||!c.alarmTime)return;
+ const oldKw=c.realarmPending?.oldKw??c.keyword??"";
+ realarmReevaluate(c,["Abfrage ergänzt"],oldKw);
  showResourcePicker("additional");
 }
 function realarmBannerHTML(c){
@@ -4375,7 +4388,7 @@ function notruf(){
    ${dupCallBannerHTML(c)}
    ${q?`<div class="muted" style="margin-top:10px">Frage ${answeredCount+1} von ${QS.length}</div>
    <div style="height:6px;background:#eef2f6;border-radius:999px;margin-top:4px;overflow:hidden"><div style="height:100%;width:${Math.round(100*answeredCount/QS.length)}%;background:#e30613"></div></div>`:""}
-   <div style="margin-top:15px">${outOfArea?`<div class="suggest" style="background:#fff8e1;border-color:#f0c419"><h2>⚠️ Vermutlich nicht zuständig</h2><p>Der Einsatzort scheint auf dem Gebiet der Stadt Wilhelmshaven oder außerhalb des Landkreises Friesland zu liegen (${esc(c.geocodedAddress||c.location)}).</p><div class="row" style="margin:10px 0"><button class="primary" onclick="weiterverbindenCall()">📞 Weiterverbinden</button><button onclick="overrideJurisdiction()">Trotzdem hier bearbeiten</button></div></div>`:(q?qsWithPrefill(q):(c.answers.callType&&c.answers.callType!=="112"&&c.answers.callType!=="116117"?`<div class="suggest"><h2>☎️ Weiterleitung</h2><p>${esc(c.suggestion)}</p><p class="muted">Kein Fall für diese Rettungsleitstelle – kein Alarmvorschlag, keine weiteren Fragen nötig.</p><button onclick="render('leitstelle')">Zur Übersicht</button></div>`:`<div class="suggest"><h2>✅ Abfrage abgeschlossen</h2><p>${c.suggestion||"Kein Alarmvorschlag verfügbar."}</p><div class="row" style="margin:10px 0"><button class="primary" onclick="prepareAlarm()">🚨 Vorschlag alarmieren</button><button onclick="render('karte')">🗺️ Notfallort prüfen</button></div><button onclick="toggleNotrufDetails()">🔍 ${notrufDetailsVisible?"Details verbergen":"Interne Codes & Rohdaten anzeigen"}</button><div class="${notrufDetailsVisible?"":"hidden"}" style="margin-top:10px"><hr><b>Einsatzstichwort (intern)</b><div class="big">${esc(c.keyword)}</div><b>Antworten (Rohdaten)</b><pre style="white-space:pre-wrap">${esc(JSON.stringify(c.answers,null,2))}</pre></div></div>`))}</div>
+   <div style="margin-top:15px">${outOfArea?`<div class="suggest" style="background:#fff8e1;border-color:#f0c419"><h2>⚠️ Vermutlich nicht zuständig</h2><p>Der Einsatzort scheint auf dem Gebiet der Stadt Wilhelmshaven oder außerhalb des Landkreises Friesland zu liegen (${esc(c.geocodedAddress||c.location)}).</p><div class="row" style="margin:10px 0"><button class="primary" onclick="weiterverbindenCall()">📞 Weiterverbinden</button><button onclick="overrideJurisdiction()">Trotzdem hier bearbeiten</button></div></div>`:(q?qsWithPrefill(q):(c.answers.callType&&c.answers.callType!=="112"&&c.answers.callType!=="116117"?`<div class="suggest"><h2>☎️ Weiterleitung</h2><p>${esc(c.suggestion)}</p><p class="muted">Kein Fall für diese Rettungsleitstelle – kein Alarmvorschlag, keine weiteren Fragen nötig.</p><button onclick="render('leitstelle')">Zur Übersicht</button></div>`:`<div class="suggest"><h2>✅ Abfrage abgeschlossen</h2><p>${c.suggestion||"Kein Alarmvorschlag verfügbar."}</p><div class="row" style="margin:10px 0">${c.alarmTime?`<button class="primary" style="background:#ea580c;border-color:#ea580c" onclick="realarmFromNotruf()">📢 Alarm ändern / erneut senden</button>`:`<button class="primary" onclick="prepareAlarm()">🚨 Vorschlag alarmieren</button>`}<button onclick="render('karte')">🗺️ Notfallort prüfen</button></div><button onclick="toggleNotrufDetails()">🔍 ${notrufDetailsVisible?"Details verbergen":"Interne Codes & Rohdaten anzeigen"}</button><div class="${notrufDetailsVisible?"":"hidden"}" style="margin-top:10px"><hr><b>Einsatzstichwort (intern)</b><div class="big">${esc(c.keyword)}</div><b>Antworten (Rohdaten)</b><pre style="white-space:pre-wrap">${esc(JSON.stringify(c.answers,null,2))}</pre></div></div>`))}</div>
   </div>
   ${leitPanelHTML(c)}
   ${c.sim?`<div id="simChatBox">${simChatHTML(c)}</div>`:""}
@@ -4454,7 +4467,9 @@ function answerYes(v){return answerCount(v)>0}
 const R_LEVEL_RE=/(^|[^A-Za-z0-9])(R\d(?:N\d)?)(?![A-Za-z0-9])/;
 function rLevelOf(c){if(!c)return null;if(c.rOverride)return c.rOverride;const m=String(c.keyword||"").match(R_LEVEL_RE);return m?m[2]:(c.rZero?"R0":null)}
 function withRLevel(k,lv){k=String(k||"");if(R_LEVEL_RE.test(k))return k.replace(R_LEVEL_RE,(_,p)=>p+lv);return k?`${k} (${lv})`:lv}
-function setRLevel(lv){const c=db.currentCall;if(!c)return;c.rOverride=lv||null;evaluate();save();prepareAlarm();toast(lv?`Einsatzstufe ${lv} gesetzt`:"Einsatzstufe wieder automatisch")}
+function setRLevel(lv){const c=db.currentCall;if(!c)return;
+ if(c.alarmTime){const oldKw=c.realarmPending?.oldKw??c.keyword??"";c.rOverride=lv||null;realarmReevaluate(c,[`Einsatzstufe → ${lv||"automatisch"}`],oldKw);showResourcePicker("additional");toast(`Einsatzstufe ${lv||"automatisch"} – bisherige Fahrzeuge behalten ihren Status`);return}
+ c.rOverride=lv||null;evaluate();save();prepareAlarm();toast(lv?`Einsatzstufe ${lv} gesetzt`:"Einsatzstufe wieder automatisch")}
 // AAO-Anzahl "Pat." = so viele Fahrzeuge wie Patienten. Patientenzahl = größte der Angaben
 // (Betroffene, verletzt/erkrankt/gefährdet, eingeklemmt, durch Feuer bedroht), mindestens 1.
 function patientCount(a){a=a||{};return Math.max(1,Number(a.count)||0,answerCount(a.personDanger),answerCount(a.trapped),answerCount(a.firePeople))}
@@ -5750,7 +5765,7 @@ function prepareAlarm(){
    `E: ${c.answers.e_exposure}`
  ].join("\n"):"";
  document.getElementById("app").innerHTML=`<div class="card call">
-   <div class="row between"><div><h2>🚨 Alarmierung vorbereiten</h2><div class="muted">Noch keine Alarmierung – Angaben prüfen und ergänzen.</div></div><button onclick="render('leitstelle')">Abbrechen</button></div>
+   <div class="row between"><div><h2>🚨 Alarmierung vorbereiten</h2><div class="muted">${c.alarmTime?"Einsatz ist schon alarmiert – bereits alarmierte Fahrzeuge behalten beim erneuten Senden ihren Status.":"Noch keine Alarmierung – Angaben prüfen und ergänzen."}</div></div><button onclick="render('leitstelle')">Abbrechen</button></div>
    <label>Einsatzstichwort</label><div class="big">${esc(c.keyword||"—")}</div>
    ${c.aaoWinner?`<div class="muted" style="font-size:12px;margin-top:4px">AAO: ${esc(c.aaoWinner)}${(c.aaoCombined||[]).length?` · zusätzlich: ${esc(c.aaoCombined.join(", "))}`:""}${(c.aaoExcluded||[]).length?` · <span style="color:#b91c1c">⛔ ausgeschlossen: ${esc(c.aaoExcluded.join(", "))}</span>`:""}</div>`:""}
    <div class="row" style="margin-top:8px;gap:6px;flex-wrap:wrap"><span class="muted">Einsatzstufe:</span>${["R0","R1","R1N1"].map(l=>`<button class="${rLevelOf(c)===l?"primary":""}" onclick="setRLevel('${l}')">${l}</button>`).join("")}<button class="${c.rOverride?"":"primary"}" onclick="setRLevel(null)">Automatisch</button></div>
@@ -5818,19 +5833,28 @@ function alarmProposal(){
  if(manvNow){c.alarmedUnits=c.alarmedUnits||[];for(const nu of nbAsk)if(["1","2"].includes(String(nu.status)))manvNbAlarm(c,nu,null)}
  else setTimeout(()=>nbAsk.forEach(nu=>nbOutRequest(c.id,NEIGHBOR_LEITSTELLE[nu.district],{unitId:nu.id,type:nu.type})),300);
  if(manvNow)setTimeout(()=>{try{manvAreaCover(c.id)}catch(e){console.warn(e)}},500);
+ // v6.21: Schon alarmierte Fahrzeuge behalten beim erneuten Senden ihren Status (z. B. 4 oder 7)
+ const wasAlarmed=!!c.alarmTime, before=new Set(c.alarmedUnits.map(String)), added=[];
  for(const id of c.proposedUnitIds){
    const u=db.units.find(x=>x.id===id);
    if(!u)continue;
+   if(before.has(String(id)))continue;
    if(!u.phoneAssigned)setUnitStatus(u,"3");
-   if(!c.alarmedUnits.includes(id))c.alarmedUnits.push(id);
+   c.alarmedUnits.push(id); added.push(u);
  }
  for(const pl of (c.abPlans||[]))if(c.alarmedUnits.some(id=>String(id)===String(pl.wlfId))&&c.alarmedUnits.some(id=>String(id)===String(pl.abId)))applyAbPlan(c,pl);
  c.abPlans=[];
+ if(wasAlarmed){
+   c.alarmVersion=(c.alarmVersion||0)+1; c.realarmAt=now.toISOString(); delete c.realarmPending;
+   c.history.push({q:"📢 Alarm erneut gesendet",a:`${c.keyword||"—"} – bisherige Fahrzeuge behalten ihren Status${added.length?` (neu: ${added.map(unitLabel).join(", ")})`:""}`});
+ } else {
  c.alarmTime=now.toISOString();
  c.history.push({q:"🚨 Alarmierung",a:`Vorschlag alarmiert – ${now.toLocaleTimeString("de-DE")}${c.alarmFreeText?` | Freitext: ${c.alarmFreeText}`:""}`});
- try{simAaoCheck(c)}catch(e){}
+ }
+ if(!wasAlarmed){try{simAaoCheck(c)}catch(e){}}
  save();
  if(db.cloud?.enabled)setTimeout(()=>pushCallCloud(c),0);
+ if(wasAlarmed){toast("📢 Alarm erneut gesendet – bisherige Fahrzeuge behalten ihren Status");render("leitstelle");return}
  toast(c.proposedUnitIds.length?"Vorschlag im Simulator alarmiert – weiterer Notruf möglich":"Einsatz ohne verfügbare Fahrzeuge alarmiert – bitte Einsatzmittel nachfordern");
  render("leitstelle");
 }
