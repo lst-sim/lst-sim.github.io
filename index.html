@@ -263,7 +263,7 @@ html[data-device="handy"] .fach-grid{grid-template-columns:1fr}
 <header id="topbar">
  <div class="tb-left">
   <span class="tb-brand"><span class="tb-logo">🚑</span><span class="tb-name">Leitstelle<b>.sim</b></span></span>
-  <span id="versionTag" class="tb-ver">v6.16</span>
+  <span id="versionTag" class="tb-ver">v6.17</span>
   <span id="syncState"></span>
   <a id="deskTag" href="#" onclick="renameDesk();return false" title="Name dieses Platzes (für „offen an …“) – antippen zum Ändern"></a>
  </div>
@@ -4372,7 +4372,6 @@ function notruf(){
    <div style="height:6px;background:#eef2f6;border-radius:999px;margin-top:4px;overflow:hidden"><div style="height:100%;width:${Math.round(100*answeredCount/QS.length)}%;background:#e30613"></div></div>`:""}
    <div style="margin-top:15px">${outOfArea?`<div class="suggest" style="background:#fff8e1;border-color:#f0c419"><h2>⚠️ Vermutlich nicht zuständig</h2><p>Der Einsatzort scheint auf dem Gebiet der Stadt Wilhelmshaven oder außerhalb des Landkreises Friesland zu liegen (${esc(c.geocodedAddress||c.location)}).</p><div class="row" style="margin:10px 0"><button class="primary" onclick="weiterverbindenCall()">📞 Weiterverbinden</button><button onclick="overrideJurisdiction()">Trotzdem hier bearbeiten</button></div></div>`:(q?qsWithPrefill(q):(c.answers.callType&&c.answers.callType!=="112"?`<div class="suggest"><h2>☎️ Weiterleitung</h2><p>${esc(c.suggestion)}</p><p class="muted">Kein Fall für diese Rettungsleitstelle – kein Alarmvorschlag, keine weiteren Fragen nötig.</p><button onclick="render('leitstelle')">Zur Übersicht</button></div>`:`<div class="suggest"><h2>✅ Abfrage abgeschlossen</h2><p>${c.suggestion||"Kein Alarmvorschlag verfügbar."}</p><div class="row" style="margin:10px 0"><button class="primary" onclick="prepareAlarm()">🚨 Vorschlag alarmieren</button><button onclick="render('karte')">🗺️ Notfallort prüfen</button></div><button onclick="toggleNotrufDetails()">🔍 ${notrufDetailsVisible?"Details verbergen":"Interne Codes & Rohdaten anzeigen"}</button><div class="${notrufDetailsVisible?"":"hidden"}" style="margin-top:10px"><hr><b>Einsatzstichwort (intern)</b><div class="big">${esc(c.keyword)}</div><b>Antworten (Rohdaten)</b><pre style="white-space:pre-wrap">${esc(JSON.stringify(c.answers,null,2))}</pre></div></div>`))}</div>
   </div>
-  ${kvPanelHTML(c)}
   ${leitPanelHTML(c)}
   ${c.sim?`<div id="simChatBox">${simChatHTML(c)}</div>`:""}
   <div class="card"><h3>Abfrageverlauf</h3>${c.history.length?c.history.map(x=>`<div style="padding:7px 0;border-bottom:1px solid var(--line)"><b>${esc(x.q)}</b><br>${esc(x.a)}</div>`).join(""):"<span class='muted'>Noch keine Antworten.</span>"}</div>
@@ -5096,7 +5095,7 @@ async function fireDetailSubmit(){
  save(); notruf();
 }
 async function answer(k,v,auto=false){
- const c=db.currentCall;
+ const c=db.currentCall; if(!c)return; // v6.17: Anruf evtl. schon abgeschlossen
  c.answers[k]=v;
  if(k==="location"){
    c.location=v;
@@ -5157,7 +5156,6 @@ function evaluate0(){
  const c=db.currentCall, a=c.answers, e=a.event||"";
 
  if(c.kvd&&!leitPath(c)){kvEvaluate(c);return} // v5.97: KV-Dienst (alte Übergabe ohne Leitsymptom)
- if(a.callType==="116117"&&!leitPath(c)&&!a.event){kvEvaluate(c);return}
  if(a.callType && a.callType!=="112" && a.callType!=="116117"){ // v6.16: 116 117 wird wie 112 bewertet
    const target=a.callType==="110"?"die Polizei (110)":"den Ärztlichen Bereitschaftsdienst (116 117)";
    c.keyword=a.callType==="110"?"WEITERLEITUNG – An 110":"WEITERLEITUNG – An 116 117";
@@ -13141,7 +13139,7 @@ function kvRecommend(c){
  const pr=KV_PRAXEN.some(x=>x.open(new Date()));
  return {k:pr?"praxis":"beratung",why:`Stufe Ω – kein Hausbesuch nötig${pr?", Praxis geöffnet":""}`};
 }
-const DISPO_OPTS=[["Rettungsdienst","🚑 Rettungsdienst (R0)","RTW/NKTW ohne Sonderrechte"],["KV-Hausbesuch","🩺 KV-Dienst: Hausbesuch","ÄBD fährt zum Patienten"],["KTW","🚐 Krankentransport (KTW)","Transport ins Krankenhaus, nicht dringlich"],["Praxis","🏥 Bereitschaftsdienstpraxis","Patient kommt selbst"],["Beratung","📞 Telefonische Beratung","ggf. morgen Hausarzt"],["Apotheke","💊 Notdienst-Apotheke","Rezept/Medikament"],["Leichenschau","⚱️ Leichenschau (KV-Dienst)","erwarteter Tod"]];
+const DISPO_OPTS=[["Rettungsdienst","🚑 Rettungsdienst (R0)","RTW/NKTW ohne Sonderrechte"],["KV-Hausbesuch","🩺 KV-Dienst: Hausbesuch","ÄBD fährt zum Patienten"],["KTW","🚐 Krankentransport (KTW)","Transport ins Krankenhaus, nicht dringlich"],["Praxis","🏥 Bereitschaftsdienstpraxis","Patient kommt selbst – Anruf wird abgeschlossen"],["Beratung","📞 Telefonische Beratung","ggf. morgen Hausarzt – Anruf wird abgeschlossen"],["Apotheke","💊 Notdienst-Apotheke","Rezept/Medikament – Anruf wird abgeschlossen"],["Leichenschau","⚱️ Leichenschau (KV-Dienst)","erwarteter Tod"]];
 function dispoRecommend(c){
  const P=callPrio(c), L=leitOf(leitKey(c)); if(!P)return null;
  if(PRIO_ORDER.indexOf(P.lv)>=2)return "Rettungsdienst";
@@ -13154,8 +13152,14 @@ function dispoHTML(id,label,c){
  const R=dispoRecommend(c), P=callPrio(c), duty=kvOnDuty(), pr=KV_PRAXEN.filter(x=>x.open(new Date()));
  return `<label>${label}</label>
   <div class="muted" style="font-size:12px;margin:2px 0 8px">Dringlichkeit ${P?prioBadge(P.lv,1):""} · KV-Dienst ${duty?"<b style='color:#15803d'>im Dienst</b>":"<b style='color:#b91c1c'>außerhalb der Dienstzeit</b>"} · Praxis ${pr.length?`<b style="color:#15803d">offen</b> (${esc(pr.map(x=>x.n.replace("Bereitschaftsdienstpraxis ","")).join(", "))})`:"geschlossen"}</div>
-  <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:6px">${DISPO_OPTS.map(([v,l,d])=>`<button onclick="answer('${id}','${v}')" title="${esc(d)}" style="text-align:left;${R===v?"border:2px solid #0d9488;font-weight:800;background:#f0fdfa":""}">${l}${R===v?" ⭐":""}<small style="display:block;font-weight:400" class="muted">${esc(d)}</small></button>`).join("")}</div>
+  <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:6px">${DISPO_OPTS.map(([v,l,d])=>`<button onclick="dispoPick('${id}','${v}')" title="${esc(d)}" style="text-align:left;${R===v?"border:2px solid #0d9488;font-weight:800;background:#f0fdfa":""}">${l}${R===v?" ⭐":""}<small style="display:block;font-weight:400" class="muted">${esc(d)}</small></button>`).join("")}</div>
   ${R?`<p class="muted" style="font-size:12px;margin:6px 0 0">⭐ = Empfehlung aus Leitsymptom und Dringlichkeit</p>`:""}`;
+}
+// v6.17: Ergebnis ohne Fahrzeug (Praxis/Beratung/Apotheke) schließt den Anruf direkt ab – kein Extra-Fenster
+async function dispoPick(id,v){
+ const c=db.currentCall; if(!c)return;
+ await answer(id,v);
+ if(["Praxis","Beratung","Apotheke"].includes(v))kvDecide(c.id,DISPO_KV[v]);
 }
 const DISPO_KV={"KV-Hausbesuch":"hausbesuch","Leichenschau":"leichenschau","Praxis":"praxis","Beratung":"beratung","Apotheke":"apotheke","KTW":"rd","Rettungsdienst":"rd"};
 // Abschluss ohne Fahrzeug (Praxis, Beratung, Apotheke)

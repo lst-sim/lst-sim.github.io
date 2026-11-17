@@ -1607,6 +1607,10 @@ Version 5.05:
   („a, b“ = a ODER b). Mit „🚑 NA-Indikation“ markierte Knöpfe ziehen weiterhin einen Notarzt.
 - Nur „Unauffällig“ (ohne weitere Befunde) zählt weiter als unauffälliges E (R0 möglich).
 
+Version 6.17:
+- Im Notruf gibt es kein eigenes KV-Fenster mehr (auch nicht „An KV-Dienst übergeben“) – nur noch die normale Abfrage. Der KV-Dienst ergibt sich ausschließlich aus der Frage „🧭 Ergebnis – wie geht es weiter?“.
+- Ergebnis Praxis, Beratung oder Apotheke schließt den Anruf direkt ab (mit Eintrag im Verlauf und Übungs-Check).
+
 Version 6.16 – eine gemeinsame Abfrage für 112, 116 117 und KTW:
 - 116 117-Anrufe laufen jetzt durch genau dieselbe Abfrage wie 112 (kein eigenes KV-Feld mehr).
 - Nach Leitsymptom und Schlüsselfragen kommt bei Dringlichkeit A oder Ω die Frage „🧭 Ergebnis – wie geht es weiter?“: Rettungsdienst (R0), KV-Dienst Hausbesuch, Krankentransport (KTW), Bereitschaftsdienstpraxis, telefonische Beratung, Notdienst-Apotheke oder Leichenschau. Die Empfehlung aus Leitsymptom und Dringlichkeit ist mit ⭐ markiert; KV-Dienstzeit und offene Praxen stehen dabei. Ab Stufe B geht es automatisch zum Rettungsdienst.
