@@ -263,7 +263,7 @@ html[data-device="handy"] .fach-grid{grid-template-columns:1fr}
 <header id="topbar">
  <div class="tb-left">
   <span class="tb-brand"><span class="tb-logo">🚑</span><span class="tb-name">Leitstelle<b>.sim</b></span></span>
-  <span id="versionTag" class="tb-ver">v6.24</span>
+  <span id="versionTag" class="tb-ver">v6.25</span>
   <span id="syncState"></span>
   <a id="deskTag" href="#" onclick="renameDesk();return false" title="Name dieses Platzes (für „offen an …“) – antippen zum Ändern"></a>
  </div>
@@ -1495,14 +1495,14 @@ window.addEventListener("resize",()=>{if(currentPage==="karte")karteFit()});
 // v6.23: Fahrzeuge auf der Karte alle 4 s weiterbewegen (nur Marker, kein Neuladen; nicht bei offenem Popup)
 setInterval(()=>{try{if(currentPage==="karte"&&leafletMap&&!document.querySelector("#map .leaflet-popup")&&leafletMap.getContainer()===document.getElementById("map"))renderVehiclePositionsOnMap()}catch(e){}},4000);
 function karteStagingBtnsHTML(c){
- return c?`<button class="${stagingPickMode?"primary":""}" onclick="stagingPickMode=!stagingPickMode;if(!karteStagingUpdate())karte()">🅿️ ${stagingPickMode?"Bereitstellungsort wird gewählt – zum Abbrechen tippen":"Bereitstellungsort wählen"}</button>${c.staging?`<span class="pill">🅿️ ${esc(c.staging.name)}</span><button onclick="setStaging(null,'karte')">✕</button>`:""}${stagingPickMode?`<button onclick="stagingPickMode=false;prepareAlarm()">⬅️ Zurück zur Alarmierung</button>`:""}`:"";
+ return c?`<button class="${stagingPickMode?"primary":""}" onclick="stagingPickMode=!stagingPickMode;rmhpPickMode=false;if(!karteStagingUpdate())karte()">🅿️ ${stagingPickMode?"Bereitstellungsort wird gewählt – zum Abbrechen tippen":"Bereitstellungsort wählen"}</button>${c.staging?`<span class="pill">🅿️ ${esc(c.staging.name)}</span><button onclick="setStaging(null,'karte')">✕</button>`:""}<button class="${rmhpPickMode?"primary":""}" style="${rmhpPickMode?"background:#b91c1c;border-color:#b91c1c":""}" onclick="rmhpPickMode=!rmhpPickMode;stagingPickMode=false;if(!karteStagingUpdate())karte()">🚑 ${rmhpPickMode?"RMHP wird gewählt – zum Abbrechen tippen":"Rettungsmittelhalteplatz wählen"}</button>${c.rmhp?`<span class="pill">🚑 ${esc(c.rmhp.name)}</span><button onclick="clearRmhp()">✕</button>`:""}${stagingPickMode?`<button onclick="stagingPickMode=false;prepareAlarm()">⬅️ Zurück zur Alarmierung</button>`:""}`:"";
 }
 // v6.22: Bereitstellungsort wählen ändert nur die Knöpfe und Marker – die Karte wird nicht neu geladen.
 function karteStagingUpdate(){
  const box=document.getElementById("karteStagingBtns");
  if(!box||currentPage!=="karte"||!karteSoftRefresh())return false;
  box.innerHTML=karteStagingBtnsHTML(db.currentCall);
- try{leafletMap.getContainer().style.cursor=stagingPickMode?"crosshair":""}catch(e){}
+ try{leafletMap.getContainer().style.cursor=(stagingPickMode||rmhpPickMode)?"crosshair":""}catch(e){}
  return true;
 }
 
@@ -1533,12 +1533,13 @@ function initMap(){
   renderStagingMarkerOnMap();
   // Notfallorte werden nur angezeigt – übernommen wird der Ort in der Notrufabfrage (v4.98).
   leafletMap.on("click", async e=>{
+    if(rmhpPickMode&&db.currentCall){await rmhpFromMap(e.latlng.lat,e.latlng.lng);return}
     if(stagingPickMode&&db.currentCall){await stagingFromMap(e.latlng.lat,e.latlng.lng);return}
   });
-  if(stagingPickMode)try{leafletMap.getContainer().style.cursor="crosshair"}catch(e){}
+  if(stagingPickMode||rmhpPickMode)try{leafletMap.getContainer().style.cursor="crosshair"}catch(e){}
   setTimeout(()=>leafletMap.invalidateSize(),150);
 }
-let stagingPickMode=false, stagingMarker=null;
+let stagingPickMode=false, stagingMarker=null, rmhpPickMode=false;
 // v6.22: Ebenen für Fahrzeuge/Bereitstellungsräume – damit die Karte im Hintergrund nur die Marker
 // aktualisiert statt komplett neu aufgebaut zu werden (kein sichtbares Neuladen mehr).
 let MAP_LAYERS={}, MAP_LAYERS_OF=null;
@@ -1556,6 +1557,11 @@ function renderStagingMarkerOnMap(){
  if(!leafletMap||typeof L==="undefined")return;
  if(stagingMarker){leafletMap.removeLayer(stagingMarker);stagingMarker=null}
  mapLayer("br").clearLayers();
+ for(const c of allOpenCalls()){ // v6.25: Rettungsmittelhalteplätze
+   const rp=c.rmhp; if(!rp||!Number.isFinite(Number(rp.lat)))continue;
+   const icon=L.divIcon({html:`<div style="background:#b91c1c;color:#fff;border-radius:6px;padding:2px 6px;font-weight:800;font-size:13px;border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.4);white-space:nowrap">🚑 RMHP</div>`,className:"",iconSize:[64,24],iconAnchor:[32,12]});
+   L.marker([Number(rp.lat),Number(rp.lng)],{icon}).addTo(mapLayer("br")).bindPopup(`<b>🚑 Rettungsmittelhalteplatz</b><br>${esc(rp.name)}<br><small>Einsatz #${esc(c.id)} – Rettungsmittel retten/versorgen hier; nach Status 7 mind. 3 min Standzeit</small>`);
+ }
  // Bereitstellungsorte aller offenen Einsätze anzeigen
  for(const c of allOpenCalls()){
    const st=c.staging; if(!st||!Number.isFinite(Number(st.lat)))continue;
@@ -1564,6 +1570,21 @@ function renderStagingMarkerOnMap(){
    if(db.currentCall&&String(c.id)===String(db.currentCall.id))stagingMarker=m;
  }
 }
+async function rmhpFromMap(lat,lng){
+ const c=db.currentCall; if(!c)return;
+ let name=`Kartenpunkt ${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+ try{
+   const r=await fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}`,{headers:{"Accept":"application/json"}});
+   const j=await r.json(); const a=j&&j.address||{};
+   const short=[a.road||a.harbour||a.amenity||a.leisure,a.house_number,a.village||a.town||a.city||a.suburb].filter(Boolean).join(" ");
+   if(short)name=short;
+ }catch(e){}
+ const given=prompt("Name für den Rettungsmittelhalteplatz:",name);
+ if(given===null)return;
+ applyRmhp(c,{name:String(given||name).trim()||name,lat,lng});
+ rmhpPickMode=false; toast(`🚑 Rettungsmittelhalteplatz: ${c.rmhp.name}`); if(!karteStagingUpdate())karte();
+}
+function clearRmhp(){const c=db.currentCall;if(!c)return;applyRmhp(c,null);if(currentPage==="karte"){if(!karteStagingUpdate())karte()}else render(currentPage)}
 async function stagingFromMap(lat,lng){
  const c=db.currentCall; if(!c)return;
  let name=`Kartenpunkt ${lat.toFixed(4)}, ${lng.toFixed(4)}`;
@@ -1668,9 +1689,36 @@ function waterCapable(u){
 }
 function stagingFor(call,u){
  if(call&&call.heliLanding&&u&&!(isAirUnit(u)&&call.locationIsWater&&waterCapable(u))){const hp=heliPointFor(call,u);if(hp)return hp} // v5.93: Hubschrauber/LF → zugeteilter Landeplatz
+ const rp=call&&call.rmhp; // v6.25: Rettungsmittel fahren direkt zum Rettungsmittelhalteplatz
+ if(rp&&u&&rmhpUnit(u)&&Number.isFinite(Number(rp.lat))&&Number.isFinite(Number(rp.lng)))return [Number(rp.lat),Number(rp.lng)];
  const st=call&&call.staging;
  if(!st||!Number.isFinite(Number(st.lat))||!Number.isFinite(Number(st.lng))||!u||waterCapable(u))return null;
  return [Number(st.lat),Number(st.lng)];
+}
+// v6.25: Rettungsmittelhalteplatz (RMHP) – hier wird gerettet/versorgt; im Bereitstellungsraum nicht.
+// Gilt für bodengebundene Rettungsmittel (RTW, KTW, NEF, NAW …), nicht für Hubschrauber/Boote.
+function rmhpUnit(u){return !!u&&!isAirUnit(u)&&!waterCapable(u)&&!isLNA(u)&&(CREW_TRANSPORT.has(u.type)||["NEF","NAW","ITW","GW-SAN","Baby-NAW"].includes(u.type))}
+function ptSame(a,b){return !!a&&!!b&&Math.abs(a[0]-b[0])<1e-6&&Math.abs(a[1]-b[1])<1e-6}
+// Wo ist das Fahrzeug angekommen? (Bereitstellungsraum / RMHP / Einsatzstelle)
+function arrivalKind(call,u){
+ const d=call&&stagingFor(call,u); if(!d)return "scene";
+ if(call.rmhp&&ptSame(d,[Number(call.rmhp.lat),Number(call.rmhp.lng)]))return "rmhp";
+ if(call.staging&&ptSame(d,[Number(call.staging.lat),Number(call.staging.lng)]))return "br";
+ return "other";
+}
+function applyRmhp(c,rp){
+ if(rp)c.rmhp=rp; else delete c.rmhp;
+ (c.history=c.history||[]).push({q:"🚑 Rettungsmittelhalteplatz",a:rp?rp.name:"entfernt"});
+ if(c.alarmTime&&rp){
+   // Rettungsmittel, die im Bereitstellungsraum warten, rücken zum RMHP vor
+   for(const u of callUnits(c)){
+     if(String(u.status)!=="4"||unitPhoneLive(u)||!rmhpUnit(u)||u.arrKind!=="br")continue;
+     const from=u.arrPt; setUnitStatus(u,"3"); if(from)u.shuttleFrom=from; delete u.crew; delete u._brWait;
+     if(!vehManual())crewSds(u,c,`Rücken vom Bereitstellungsraum zum Rettungsmittelhalteplatz vor: ${rp.name}.`);
+   }
+ }
+ if(!c.alarmTime)evaluate();
+ save(); if(db.cloud?.enabled&&c.alarmTime)setTimeout(()=>pushCallCloud(c),0);
 }
 // ─── Wechsellader (WLF) und Abrollbehälter (AB) der FTZ Jever ─────────────────────────────────
 // Ein AB kommt nur mit einem WLF zum Einsatz. Freies WLF: lädt den AB an der FTZ und fährt los.
@@ -1836,19 +1884,20 @@ function simulatedUnitPosition(u){
    const etaMs=(estimatedEtaMinutes(u)||10)*60000;
    const startMs=u.status3Since||(call?.alarmTime?new Date(call.alarmTime).getTime():Date.now());
    const frac=Math.min(1,Math.max(0,(Date.now()-startMs)/etaMs));
-   return movePoint(home,dest,frac,u);
+   return movePoint(u.shuttleFrom||home,dest,frac,u);
  }
  if(status==="4"){
+   if(Array.isArray(u.arrPt))return u.arrPt;
    const call=findUnitCall(u);
    return callDestinationPoint(call,u)||home;
  }
  if(status==="7"){
    const call=findUnitCall(u);
-   const start=callDestinationPoint(call,u)||home;
+   const start=(Array.isArray(u.arrPt)&&u.arrPt)||callDestinationPoint(call,u)||home;
    const asg=findUnitHospitalAssignment(u);
    const dest=(asg&&hospitalPoint(asg.hospitalId))||start;
    const etaMs=(estimatedEtaMinutes(u)||10)*60000; // vereinfachend: gleiche Reisegeschwindigkeit
-   const startMs=u.status7Since||Date.now();
+   const startMs=(u.status7Since||Date.now())+(u.s7Hold||0); // v6.25: erst nach der Standzeit am RMHP losfahren
    const frac=Math.min(1,Math.max(0,(Date.now()-startMs)/etaMs));
    return movePoint(start,dest,frac,u);
  }
@@ -2081,9 +2130,13 @@ function setUnitStatus(u,status){
    u.status3Since=Date.now();
  } else if(String(status)==="4"){
    u.status4Since=Date.now();
+   try{const cl=findUnitCall(u); u.arrKind=arrivalKind(cl,u); u.arrPt=callDestinationPoint(cl,u)||null}catch(e){}
  } else if(String(status)==="7"){
    u.status7Since=Date.now();
+   // v6.25: am Rettungsmittelhalteplatz steht das Fahrzeug nach Status 7 noch mind. 3 Minuten
+   if(u.arrKind==="rmhp")u.s7Hold=3*60000; else delete u.s7Hold;
  }
+ if(["1","2","3","6"].includes(String(status))){delete u.arrKind;delete u.arrPt;delete u.s7Hold;delete u._brWait}
  if(db.cloud?.enabled) setTimeout(()=>pushUnitCloud(u),0);
 }
 function autoAdvanceEnRoute(){
@@ -2130,11 +2183,11 @@ function autoAdvanceEnRoute(){
    } else if(status==="7" && u.status7Since){
      const call=findUnitCall(u);
      const asg=findUnitHospitalAssignment(u);
-     const start=callDestinationPoint(call,u)||unitPoint(u);
+     const start=(Array.isArray(u.arrPt)&&u.arrPt)||callDestinationPoint(call,u)||unitPoint(u);
      const dest=asg&&hospitalPoint(asg.hospitalId);
      if(start&&dest){
        const km=haversine(start[0],start[1],dest[0],dest[1]);
-       const etaMs=(etaMinutesForDistance(u,km)||10)*60000;
+       const etaMs=(etaMinutesForDistance(u,km)||10)*60000+(u.s7Hold||0);
        if(now-u.status7Since>=etaMs){setUnitStatus(u,"8");changed=true;}
      }
    }
@@ -3821,7 +3874,7 @@ function incidentCard(c,isSelected){
     ${otherDesks().length&&(!c.deskId||c.deskId===DEVICE_ID)?`<button onclick="xferDeskDialog('call','${esc(c.id)}')" title="Einsatz an anderen Platz verlegen">➡️ An Platz</button>`:""}
     ${(c.alarmedUnits||[]).length?`<button onclick="funkCallDialog('${esc(c.id)}')" title="Alle alarmierten Fahrzeuge in eine Funkrufgruppe setzen">📻 Funkgruppe${c.funkGroup?`: ${esc(c.funkGroup)}`:""}</button>`:""}
     ${c.alarmTime?`<button class="btn blue" onclick="openNachforderung('${esc(c.id)}')">📟 Nachforderung</button>`:""}
-    <button onclick="activateCallById('${esc(c.id)}');stagingPickMode=true;render('karte')" title="Bereitstellungsort für Landfahrzeuge auf der Karte wählen">🅿️ ${c.staging?esc(c.staging.name):"Bereitstellungsort"}</button>
+    <button onclick="activateCallById('${esc(c.id)}');stagingPickMode=true;rmhpPickMode=false;render('karte')" title="Bereitstellungsort für Landfahrzeuge auf der Karte wählen">🅿️ ${c.staging?esc(c.staging.name):"Bereitstellungsort"}</button><button onclick="activateCallById('${esc(c.id)}');rmhpPickMode=true;stagingPickMode=false;render('karte')" title="Rettungsmittelhalteplatz auf der Karte wählen – dort wird gerettet">🚑 ${c.rmhp?esc(c.rmhp.name):"RMHP"}</button>
     <button class="primary" onclick="finishCall('${esc(c.id)}')">✅ Einsatz abschließen</button>
    </div>
  </div>`;
@@ -5832,7 +5885,12 @@ function stagingSectionHTML(c){
 // Vor der Alarmierung wird der Vorschlag neu berechnet; danach ändert sich nur das Ziel der
 // Landfahrzeuge (Karte/Terminal/Fahrzeit), die alarmierten Fahrzeuge bleiben.
 function applyStaging(c,st){
+ const oldBr=c.staging;
  if(st)c.staging=st; else delete c.staging;
+ if(!st&&oldBr&&c.alarmTime)for(const u of callUnits(c)){ // v6.25: BR aufgehoben → wartende Rettungsmittel rücken vor
+   if(String(u.status)!=="4"||unitPhoneLive(u)||u.arrKind!=="br")continue;
+   setUnitStatus(u,"3"); u.shuttleFrom=u.arrPt||[Number(oldBr.lat),Number(oldBr.lng)]; delete u.crew; delete u._brWait;
+ }
  c.history=c.history||[];
  c.history.push({q:"🅿️ Bereitstellungsort",a:st?st.name:"entfernt"});
  if(!c.alarmTime)evaluate();
@@ -6248,6 +6306,8 @@ function crewTick(){
      if(call.deskId&&call.deskId!==DEVICE_ID)continue;
      // v5.66 Polizeilage: im Bereitstellungsraum warten, bis die Polizei freigibt
      if(policeHold(call)){if(u._polWait!==String(call.id)){u._polWait=String(call.id);delete u.crew;crewSds(u,call,"Im Bereitstellungsraum eingetroffen – warten auf Freigabe durch die Polizei.");changed=true}continue}
+     // v6.25: Im Bereitstellungsraum wird nicht gerettet – warten, bis ein Rettungsmittelhalteplatz zugewiesen ist
+     if(u.arrKind==="br"&&!(call.staging&&/^Patientenübergabestelle/.test(call.staging.name||""))){if(u._brWait!==String(call.id)){u._brWait=String(call.id);delete u.crew;crewSds(u,call,"Im Bereitstellungsraum eingetroffen – warten auf Zuweisung zum Rettungsmittelhalteplatz.");changed=true}continue}
      if(!u.crew||u.crew.callId!==String(call.id)){
        // vom Disponenten schon eine IVENA-Zuweisung für dieses Fahrzeug? → die gilt
        const asg=findUnitHospitalAssignment(u);
@@ -6282,7 +6342,7 @@ function crewTick(){
        }
        continue;
      }
-     if(C.mode==="evacT"){if(now>=C.departAt){const keep={...C,arriveAt:now+C.drive*60000};setUnitStatus(u,"7");u.crew=keep;changed=true}continue} // v5.63
+     if(C.mode==="evacT"){if(now>=C.departAt){const keep={...C,arriveAt:now+C.drive*60000};setUnitStatus(u,"7");if(u.s7Hold)keep.arriveAt+=u.s7Hold;u.crew=keep;changed=true}continue} // v5.63
      if(C.mode==="care"){const P=(call&&call.manvPatients||[]).find(x=>x.n===C.patient);if(!P||P.sk!==4){delete u.crew;changed=true}continue} // v5.60
      if(C.mode==="none"&&now>=C.doneAt&&!rtwMayFree(u,call)){C.doneAt=now+60000;if(!C.waitTx){C.waitTx=true;crewSds(u,call,"Kein eigener Patient – bleiben vor Ort, bis der Patient abtransportiert wird.");changed=true}continue} // v6.03
      if(C.mode==="none"&&now>=C.doneAt){crewSds(u,call,C.info&&C.info.noPatient?"Kein Patient vor Ort – Einsatzende, wieder einsatzbereit.":"Kein weiterer Patient für uns – Einsatzende, wieder einsatzbereit.");setUnitStatus(u,"1");delete u.crew;changed=true;continue}
@@ -6310,7 +6370,7 @@ function crewTick(){
          const h=asg&&(db.ivena||[]).find(x=>String(x.id)===String(asg.hospitalId));
          const drive=C.drive||(h?ivenaEtaMin(u,h,call,asg.dringlichkeit):null)||15;
          const keep={...C,arriveAt:now+drive*60000};
-         setUnitStatus(u,"7"); u.crew=keep;
+         setUnitStatus(u,"7"); if(u.s7Hold){keep.arriveAt+=u.s7Hold;crewSds(u,call,"Patient aufgenommen – stehen noch mind. 3 Minuten am Rettungsmittelhalteplatz, dann Abfahrt.")} u.crew=keep;
          if(C.nefId){const n=db.units.find(x=>String(x.id)===String(C.nefId));if(n&&String(n.status)==="4"){setUnitStatus(n,"7");n.crew={callId:C.callId,nef:true,follow:u.id,arriveAt:keep.arriveAt,owner:DEVICE_ID};
            if(asg&&!(asg.vehicleIds||[]).some(id=>String(id)===String(n.id))){asg.vehicleIds.push(n.id);asg.vehicleLabels.push(`${n.opta||n.name} (${n.type})`);asg.na=true;asg.flags=asg.flags||{};asg.flags.n=true}}}
          changed=true;
@@ -7373,7 +7433,10 @@ async function orglPickStaging(c,u){
  const st=pl?{name:`${OPEN_KIND_DE[pl.k]||"Fläche"} ${pl.name&&!/^\d/.test(pl.name)?pl.name:""} (ca. ${Math.round(pl.km*1000/50)*50} m)`.replace(/\s+/g," ").trim(),lat:pl.lat,lng:pl.lng}
    :{name:"Zufahrt ca. 300 m vor der Einsatzstelle (Ort geschätzt)",lat:ip[0]+0.0027,lng:ip[1]};
  c._brBusy=false; if(c.staging)return;
- applyStaging(c,st); crewSds(u,c,`Bereitstellungsraum: ${st.name}. Nachrückende Kräfte bitte dort melden.`); save();
+ applyStaging(c,st); crewSds(u,c,`Bereitstellungsraum: ${st.name}. Nachrückende Kräfte bitte dort melden.`);
+ // v6.25: OrgL legt auch den Rettungsmittelhalteplatz fest (Ort nahe der Einsatzstelle – geschätzt)
+ if(!c.rmhp){applyRmhp(c,{name:"RMHP nahe der Einsatzstelle (vom OrgL festgelegt, Ort geschätzt)",lat:ip[0]-0.0009,lng:ip[1]});crewSds(u,c,"Rettungsmittelhalteplatz nahe der Einsatzstelle eingerichtet – Rettungsmittel bitte dorthin.")}
+ save();
 }
 // Hubschrauber landen nur auf freien Flächen
 function isAirUnit(u){return !!u&&(["RTH","ITH","KTH"].includes(u.type)||u.org==="Luftrettung")}
@@ -8602,7 +8665,7 @@ async function pushCallCloud(c){
    id:u.id,name:u.name,opta:u.opta,type:u.type,org:u.org,status:String(u.status)
  }));
  await cloudRequest(`calls/${encodeURIComponent(String(c.id))}`,"PUT",{
-   id:c.id,location:c.location||"",keyword:c.keyword||"",count:c.count||"",staging:c.staging||null,
+   id:c.id,location:c.location||"",keyword:c.keyword||"",count:c.count||"",staging:c.staging||null,rmhp:c.rmhp||null,
    suggestion:c.suggestion||"",alarmFreeText:c.alarmFreeText||"",
    alarmTime:c.alarmTime||null,endTime:c.endTime||null,alarmVersion:c.alarmVersion||0,realarmAt:c.realarmAt||null,
    unitIds,units,history:c.history||[],nafo:c.nafo||[],
@@ -9744,7 +9807,7 @@ function naviMsgHTML(){
  const D=vehicleNaviData||{}, calls=D.calls||[], sds=(D.sds||[]).filter(x=>Date.now()-new Date(x.time).getTime()<60*60000).slice(0,2);
  const parts=calls.map(c=>`<div style="margin-bottom:6px"><div style="font-size:18px;font-weight:900;color:#fca5a5">🚨 ${esc(c.keyword||"Einsatz")}</div>
    <div style="font-weight:700">📍 ${esc(c.location||"Ort unbekannt")}</div>
-   ${c.staging&&c.staging.name&&!waterCapable(D.unit)?`<div style="color:#7dd3fc;font-weight:700">🅿️ BR: ${esc(c.staging.name)}</div>`:""}
+   ${c.rmhp&&c.rmhp.name&&rmhpUnit(D.unit)?`<div style="color:#fca5a5;font-weight:700">🚑 RMHP: ${esc(c.rmhp.name)}</div>`:c.staging&&c.staging.name&&!waterCapable(D.unit)?`<div style="color:#7dd3fc;font-weight:700">🅿️ BR: ${esc(c.staging.name)}</div>`:""}
    ${c.alarmFreeText?`<div style="margin-top:3px">📝 ${esc(c.alarmFreeText)}</div>`:""}
    ${Array.isArray(c.nafo)&&c.nafo.length?`<div style="margin-top:3px;color:#fdba74">📟 ${esc(c.nafo[c.nafo.length-1].reason||"")}</div>`:""}
 </div>`).join(""); // v5.88: alarmierte Mittel nicht mehr anzeigen
@@ -9754,8 +9817,8 @@ function naviMsgHTML(){
 function naviTarget(){
  const D=vehicleNaviData; if(!D||!D.calls||!D.calls.length)return null;
  const c=D.calls[0], pt=callDestinationPoint(c,D.unit); if(!pt)return null;
- const br=c.staging&&c.staging.name&&!waterCapable(D.unit);
- return {lat:pt[0],lng:pt[1],label:br?`BR ${c.staging.name}`:(c.location||"Einsatzstelle"),kw:c.keyword||"Einsatz"};
+ const rm=c.rmhp&&c.rmhp.name&&rmhpUnit(D.unit), br=!rm&&c.staging&&c.staging.name&&!waterCapable(D.unit);
+ return {lat:pt[0],lng:pt[1],label:rm?`RMHP ${c.rmhp.name}`:br?`BR ${c.staging.name}`:(c.location||"Einsatzstelle"),kw:c.keyword||"Einsatz"};
 }
 function naviOwnPos(){const u=vehicleNaviData&&vehicleNaviData.unit;if(vehicleNaviGps)return [vehicleNaviGps[0],vehicleNaviGps[1]];if(u&&Number.isFinite(Number(u.lat))&&Number.isFinite(Number(u.lng)))return [Number(u.lat),Number(u.lng)];const p=u?unitPoint(u):null;return p||null}
 function naviBearing(a,b){const r=Math.PI/180,y=Math.sin((b[1]-a[1])*r)*Math.cos(b[0]*r),x=Math.cos(a[0]*r)*Math.sin(b[0]*r)-Math.sin(a[0]*r)*Math.cos(b[0]*r)*Math.cos((b[1]-a[1])*r);return (Math.atan2(y,x)/r+360)%360}

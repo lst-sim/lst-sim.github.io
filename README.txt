@@ -1607,6 +1607,14 @@ Version 5.05:
   („a, b“ = a ODER b). Mit „🚑 NA-Indikation“ markierte Knöpfe ziehen weiterhin einen Notarzt.
 - Nur „Unauffällig“ (ohne weitere Befunde) zählt weiter als unauffälliges E (R0 möglich).
 
+Version 6.25:
+- Neu: Rettungsmittelhalteplatz (RMHP) auf der Karte markierbar („🚑 Rettungsmittelhalteplatz wählen“, auch über den Knopf „🚑 RMHP“ am Einsatz).
+- Bodengebundene Rettungsmittel (RTW, KTW, NEF, NAW …) fahren direkt zum RMHP, wenn einer festgelegt ist. Dort wird gerettet und versorgt.
+- Im Bereitstellungsraum wird nicht mehr gerettet: Rettungsmittel warten dort (SDS „warten auf Zuweisung zum Rettungsmittelhalteplatz“). Wird ein RMHP festgelegt, rücken sie dorthin vor; wird der BR aufgehoben, rücken sie zur Einsatzstelle vor. Ausnahme: „Patientenübergabestelle am BR“ bei Polizeilagen.
+- Status 7 am RMHP: Das Fahrzeug steht danach noch mind. 3 Minuten am RMHP, erst dann Abfahrt ins Krankenhaus (Ankunft entsprechend später).
+- MANV mit OrgL: Der OrgL legt neben dem BR auch einen RMHP nahe der Einsatzstelle fest (Ort geschätzt, ca. 100 m).
+- Fahrzeuge in Status 4 werden auf der Karte dort angezeigt, wo sie angekommen sind (BR, RMHP oder Einsatzstelle).
+
 Version 6.24:
 - Fahrzeugmarker auf der Karte ohne Symbole: nur noch klein die Funkkennung (z. B. 01/83-02), hinterlegt in der Farbe des Status. Punkt und Strich zur genauen Position bleiben.
 - Fahrzeuge in Status 2 werden nicht mehr einzeln auf der Karte angezeigt (auch nicht mit Live-GPS) – sie stehen gesammelt im Wachen-Marker.
