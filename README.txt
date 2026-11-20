@@ -1607,6 +1607,9 @@ Version 5.05:
   („a, b“ = a ODER b). Mit „🚑 NA-Indikation“ markierte Knöpfe ziehen weiterhin einen Notarzt.
 - Nur „Unauffällig“ (ohne weitere Befunde) zählt weiter als unauffälliges E (R0 möglich).
 
+Version 6.33:
+- MANV/Verkehrsunfall: Die Maske „Betroffene“ ließ sich nicht übernehmen, solange „Wie viele Personen sind eingeklemmt?“ (bzw. Personen im Feuer/in Gefahr, Evakuierungszahlen) leer war – es kam nur der Hinweis „Bitte noch beantworten“. Jetzt gilt leer = „unbekannt“ und die Abfrage geht weiter. Hinweis „(leer = unbekannt)“ steht am Feld.
+
 Version 6.32:
 - Leitsymptom-Schlüsselfragen: Sind alle Fragen angeklickt, geht die Abfrage automatisch weiter (kein extra „✔ Weiter“ nötig). „✔ Weiter“ bleibt für den Fall, dass nicht alles beantwortet wird (Rest = „unbekannt“).
 - Die angeklickten Antworten bleiben erhalten, auch wenn die Seite zwischendurch neu gezeichnet wird.

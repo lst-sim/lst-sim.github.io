@@ -263,7 +263,7 @@ html[data-device="handy"] .fach-grid{grid-template-columns:1fr}
 <header id="topbar">
  <div class="tb-left">
   <span class="tb-brand"><span class="tb-logo">🚑</span><span class="tb-name">Leitstelle<b>.sim</b></span></span>
-  <span id="versionTag" class="tb-ver">v6.32</span>
+  <span id="versionTag" class="tb-ver">v6.33</span>
   <span id="syncState"></span>
   <a id="deskTag" href="#" onclick="renameDesk();return false" title="Name dieses Platzes (für „offen an …“) – antippen zum Ändern"></a>
  </div>
@@ -4857,7 +4857,7 @@ function qsMaskHTML(c,m){
     <div class="row" style="margin-top:12px"><button class="primary" onclick="qsMaskSubmit('freitext')">✔ Antwort übernehmen</button>${ft?`<button onclick="const t=document.getElementById('mk_freeText');if(t)t.value='';qsMaskSubmit('freitext')">Keine weiteren Angaben</button>`:""}</div></div>`;
  }
  const field=id=>{
-   const L=`<label style="margin-top:10px">${esc(labels[id]||id)}${["psy","patientName","patientAge","patientGender"].includes(id)?` <span class="muted" style="font-weight:500">(optional)</span>`:id==="count"?` <span class="muted" style="font-weight:500">(optional – leer = 1)</span>`:""}</label>`;
+   const L=`<label style="margin-top:10px">${esc(labels[id]||id)}${["psy","patientName","patientAge","patientGender"].includes(id)?` <span class="muted" style="font-weight:500">(optional)</span>`:id==="count"?` <span class="muted" style="font-weight:500">(optional – leer = 1)</span>`:["trapped","firePeople","personDanger","evacTotal","evacLying","evacChair"].includes(id)?` <span class="muted" style="font-weight:500">(leer = unbekannt)</span>`:""}</label>`;
    if(QS_MASK_CHOICES[id]){
      const own=qsAnswers(id), ch=own?own.map(a=>[a.own?a.label:a.value,a.label]):QS_MASK_CHOICES[id].map(v=>[v,v]);
      return `${L}<input type="hidden" id="mk_${id}"><div style="display:flex;flex-wrap:wrap;gap:6px">${ch.map(([v,lab])=>`<button type="button" style="flex:1 1 0;min-width:84px" data-mk="${id}" data-v="${esc(v)}" onclick="qsMaskPick(this,'${id}',${esc(JSON.stringify(v))})">${esc(lab)}</button>`).join("")}</div>`;
@@ -4883,6 +4883,7 @@ async function qsMaskSubmit(key){
      else if(id==="patientGender")v="Unbekannt";
      else if(id==="psy")v="nicht erhoben"; // optional
      else if(id==="count")v="1"; // optional: leer = 1 Betroffener
+     else if(["trapped","firePeople","personDanger","evacTotal","evacLying","evacChair"].includes(id))v="unbekannt"; // v6.33: leer = unbekannt, Abfrage geht weiter
      else missing.push(String(labels[id]||id).replace(/^[^A-Za-zÄÖÜäöü]+/,""));
    }
    vals[id]=v;
