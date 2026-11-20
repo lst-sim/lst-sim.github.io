@@ -263,7 +263,7 @@ html[data-device="handy"] .fach-grid{grid-template-columns:1fr}
 <header id="topbar">
  <div class="tb-left">
   <span class="tb-brand"><span class="tb-logo">🚑</span><span class="tb-name">Leitstelle<b>.sim</b></span></span>
-  <span id="versionTag" class="tb-ver">v6.29</span>
+  <span id="versionTag" class="tb-ver">v6.30</span>
   <span id="syncState"></span>
   <a id="deskTag" href="#" onclick="renameDesk();return false" title="Name dieses Platzes (für „offen an …“) – antippen zum Ändern"></a>
  </div>
@@ -2239,7 +2239,7 @@ function setUnitStatus(u,status){
    // v6.25: am Rettungsmittelhalteplatz steht das Fahrzeug nach Status 7 noch mind. 3 Minuten
    if(u.arrKind==="rmhp")u.s7Hold=3*60000; else delete u.s7Hold;
  }
- if(["1","2","3","6"].includes(String(status))){delete u.arrKind;delete u.arrPt;delete u.s7Hold;delete u._brWait}
+ if(["1","2","3","6"].includes(String(status))){delete u.arrKind;delete u.arrPt;delete u.s7Hold;delete u._brWait;delete u._shAt;delete u._shDone}
  if(["1","2","6"].includes(String(status))){delete u.fwdCall;delete u.fwdTo}
  if(db.cloud?.enabled) setTimeout(()=>pushUnitCloud(u),0);
 }
@@ -6390,6 +6390,7 @@ function crewTick(){
  if(vehManual())return false; // v6.04
  const now=Date.now(); let changed=false;
  try{if(brQueueTick())changed=true}catch(e){console.warn(e)} // v6.26
+ try{if(heliShuttleTick())changed=true}catch(e){console.warn(e)} // v6.30
  for(const u of (db.units||[])){
    if(unitPhoneLive(u))continue;
    // v5.55: erstes eintreffendes Fahrzeug gibt noch aus dem Fahrzeug eine Kurzlage
@@ -6413,6 +6414,13 @@ function crewTick(){
      if(call.deskId&&call.deskId!==DEVICE_ID)continue;
      // v5.66 Polizeilage: im Bereitstellungsraum warten, bis die Polizei freigibt
      if(policeHold(call)){if(u._polWait!==String(call.id)){u._polWait=String(call.id);delete u.crew;crewSds(u,call,"Im Bereitstellungsraum eingetroffen – warten auf Freigabe durch die Polizei.");changed=true}continue}
+     // v6.30: Hubschrauberbesatzung wartet am entfernten Landeplatz auf den Polizei-Shuttle
+     if(isAirUnit(u)&&c_heliFar(call,u)){
+       const si=heliAssign(call).get(String(u.id))??0, sh=heliShuttleOf(call,si);
+       if(!u._shAt){u._shAt=Math.max(now,sh?sh.readyAt:now+8*60000)+heliShuttleRide(call,si)*60000;delete u.crew;crewSds(u,call,`Am Landeplatz gelandet – Einsatzstelle ca. ${heliSiteKm(call,si).toFixed(1).replace(".",",")} km entfernt, warten auf Polizei-Shuttle.`);changed=true;continue}
+       if(now<u._shAt)continue;
+       if(u._shDone!==String(call.id)){u._shDone=String(call.id);crewSds(u,call,"Mit dem Polizei-Shuttle an der Einsatzstelle eingetroffen.");changed=true}
+     }
      // v6.25: Im Bereitstellungsraum wird nicht gerettet – warten, bis ein Rettungsmittelhalteplatz zugewiesen ist
      if(u.arrKind==="br"&&!(call.staging&&/^Patientenübergabestelle/.test(call.staging.name||""))){if(u._brWait!==String(call.id)){u._brWait=String(call.id);delete u.crew;crewSds(u,call,"Im Bereitstellungsraum eingetroffen – warten auf Zuweisung zum Rettungsmittelhalteplatz.");changed=true}continue}
      if(!u.crew||u.crew.callId!==String(call.id)){
@@ -7585,7 +7593,9 @@ function heliLzHTML(c){
  return sites.map((s,i)=>{
    const k=cnt[i]||0, need=siteLfNeed(c,i), have=heliLzLfs(c,i), miss=Math.max(0,need-have.length);
    const lf=need||have.length?` · 🚒 Absicherung ${have.length}/${need} LF${have.length?` (${have.map(u=>esc(u.opta||u.name)).join(", ")})`:""}${miss?` <button onclick="heliLzAlarm('${esc(String(c.id))}',${i})" style="padding:2px 8px;font-size:12px;margin-left:4px">🚒 ${miss} LF alarmieren</button>`:""}`:"";
-   return `<div style="margin-top:4px;font-size:13px;${miss?"color:#b91c1c;font-weight:700":""}">🚁 ${multi?`Landeplatz ${i+1}`:"Landeplatz"}: ${esc(s.name)}${s.manual?` (selbst gewählt, ${s.cap} Platz/Plätze, Sperrkreis ${heliSiteRadiusM(s)} m)`:""} – ${k} Hubschrauber${lf}</div>`;
+   const shN=heliShuttleNeeded(c,i), sh=heliShuttleOf(c,i);
+   const shTxt=shN?`<div style="font-size:12px;color:#1d4ed8;font-weight:700">👮 ${sh?`Polizeilicher Shuttleservice ${Date.now()<sh.readyAt?`unterwegs – am Landeplatz ca. ${hhmm(sh.readyAt)}`:"am Landeplatz"}`:`Landeplatz ca. ${heliSiteKm(c,i).toFixed(1).replace(".",",")} km entfernt – Polizei-Shuttle nötig <button onclick="event.stopPropagation();heliShuttleRequest('${esc(String(c.id))}',${i})" style="padding:2px 8px;font-size:12px">👮 Shuttle anfordern</button>`}</div>`:"";
+   return `<div style="margin-top:4px;font-size:13px;${miss?"color:#b91c1c;font-weight:700":""}">🚁 ${multi?`Landeplatz ${i+1}`:"Landeplatz"}: ${esc(s.name)}${s.manual?` (selbst gewählt, ${s.cap} Platz/Plätze, Sperrkreis ${heliSiteRadiusM(s)} m)`:""} – ${k} Hubschrauber${lf}${shTxt}</div>`;
  }).join("");
 }
 // v6.29: Landeplatz auf der Karte selbst wählen
@@ -7617,6 +7627,35 @@ function clearHeliManual(){
  delete c.heliManual; delete c.heliLandings; delete c.heliLanding; delete c.heliForN;
  (c.history=c.history||[]).push({q:"🚁 Landeplatz",a:"selbst gewählte Landeplätze entfernt – wieder automatisch"});
  save(); if(currentPage==="karte"){if(!karteStagingUpdate())karte()}else render(currentPage);
+}
+function c_heliFar(c,u){if(!c||!u||!isAirUnit(u)||!heliSites(c).length)return false;const si=heliAssign(c).get(String(u.id));return si!=null&&heliShuttleNeeded(c,si)}
+// v6.30: Polizeilicher Shuttleservice – liegt ein Landeplatz weiter als 500 m (Luftlinie) von der
+// Einsatzstelle entfernt, bringt die Polizei die Hubschrauberbesatzung zwischen Landeplatz und Einsatzstelle.
+const HELI_SHUTTLE_KM=0.5;
+function heliSiteKm(c,i){const s=heliSites(c)[i];if(!s||!Number.isFinite(Number(c.lat)))return 0;return haversine(Number(s.lat),Number(s.lng),Number(c.lat),Number(c.lng))}
+function heliShuttleNeeded(c,i){return heliSiteKm(c,i)>HELI_SHUTTLE_KM}
+function heliShuttleOf(c,i){return (c.heliShuttle||{})[String(i)]||null}
+function heliShuttleRequest(id,i,auto){
+ const c=allOpenCalls().find(x=>String(x.id)===String(id))||(db.currentCall&&String(db.currentCall.id)===String(id)?db.currentCall:null); if(!c)return;
+ const s=heliSites(c)[i]; if(!s||heliShuttleOf(c,i))return;
+ const now=Date.now(), m=rint(5,10), km=heliSiteKm(c,i);
+ c.heliShuttle=c.heliShuttle||{}; c.heliShuttle[String(i)]={reqAt:now,readyAt:now+m*60000};
+ const lbl=heliSites(c).length>1?`Landeplatz ${i+1}`:"Landeplatz";
+ (c.history=c.history||[]).push({q:"👮 Polizeilicher Shuttleservice angefordert",a:`${lbl}: ${s.name} – ca. ${km.toFixed(1).replace(".",",")} km zur Einsatzstelle${auto?" (automatisch)":""}`});
+ policeMsg(c,`Shuttleservice für den ${lbl} (${s.name}): Streifenwagen ist in ca. ${m} min am Landeplatz und bringt die Hubschrauberbesatzung zur Einsatzstelle (ca. ${km.toFixed(1).replace(".",",")} km).`);
+ save(); if(db.cloud?.enabled)setTimeout(()=>pushCallCloud(c),0);
+ if(!auto)render(currentPage);
+}
+function heliShuttleRide(c,i){return Math.max(2,Math.round(heliSiteKm(c,i)*1.3/40*60))} // Fahrt mit Sonderrechten, ca. 40 km/h im Schnitt (Annahme)
+function heliShuttleTick(){
+ let ch=false;
+ for(const c of allOpenCalls()){
+   if(!c.alarmTime||(c.deskId&&c.deskId!==DEVICE_ID))continue;
+   const sites=heliSites(c); if(!sites.length)continue;
+   const cnt=heliSiteCounts(c);
+   sites.forEach((s,i)=>{if((cnt[i]||0)>0&&heliShuttleNeeded(c,i)&&!heliShuttleOf(c,i)){heliShuttleRequest(String(c.id),i,true);ch=true}});
+ }
+ return ch;
 }
 function heliLzAlarm(id,si=0){
  const c=allOpenCalls().find(x=>String(x.id)===String(id)); if(!c)return;

@@ -1607,6 +1607,11 @@ Version 5.05:
   („a, b“ = a ODER b). Mit „🚑 NA-Indikation“ markierte Knöpfe ziehen weiterhin einen Notarzt.
 - Nur „Unauffällig“ (ohne weitere Befunde) zählt weiter als unauffälliges E (R0 möglich).
 
+Version 6.30:
+- Polizeilicher Shuttleservice: Liegt ein Landeplatz mehr als 500 m (Luftlinie) von der Einsatzstelle entfernt, wird automatisch ein Polizei-Shuttle angefordert, sobald dort ein Hubschrauber eingeplant ist (Nachricht der Polizei: Streifenwagen in ca. 5–10 min am Landeplatz). Im manuellen Modus/Realübung per Knopf „👮 Shuttle anfordern“ am Landeplatz.
+- Die Hubschrauberbesatzung wartet am Landeplatz (SDS), bis der Shuttle da ist und sie zur Einsatzstelle gebracht hat (Fahrzeit ca. 40 km/h im Schnitt, Annahme); erst dann beginnt die Versorgung.
+- Anzeige am Einsatz: Shuttle nötig / unterwegs (mit Uhrzeit) / am Landeplatz.
+
 Version 6.29:
 - Fehlerbehebung NEF (und andere Fahrzeuge) blieben nach Alarm manchmal in Status 2: Wurde für ein Fahrzeug einmal der Handy-QR-Code geöffnet, galt es dauerhaft als „per Handy gesteuert“ und ging nie selbst auf Status 3 – auch ohne verbundenes Handy. Jetzt setzt nur ein tatsächlich verbundenes Handy den Status selbst.
 - Landeplatz selbst wählen: Auf der Karte „🚁 Landeplatz wählen“, Name und Anzahl Hubschrauber-Plätze (je 25 × 25 m) eingeben. Mehrere Landeplätze möglich. Selbst gewählte Landeplätze werden nicht mehr automatisch ersetzt (✕ = wieder automatisch).
