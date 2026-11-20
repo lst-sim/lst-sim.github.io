@@ -263,7 +263,7 @@ html[data-device="handy"] .fach-grid{grid-template-columns:1fr}
 <header id="topbar">
  <div class="tb-left">
   <span class="tb-brand"><span class="tb-logo">🚑</span><span class="tb-name">Leitstelle<b>.sim</b></span></span>
-  <span id="versionTag" class="tb-ver">v6.28</span>
+  <span id="versionTag" class="tb-ver">v6.29</span>
   <span id="syncState"></span>
   <a id="deskTag" href="#" onclick="renameDesk();return false" title="Name dieses Platzes (für „offen an …“) – antippen zum Ändern"></a>
  </div>
@@ -1492,17 +1492,19 @@ function karteFit(){
  try{if(leafletMap&&leafletMap.getContainer()===document.getElementById("map"))leafletMap.invalidateSize()}catch(e){}
 }
 window.addEventListener("resize",()=>{if(currentPage==="karte")karteFit()});
+let _layMap=null;
+setInterval(()=>{try{if(leafletMap&&_layMap!==leafletMap){_layMap=leafletMap;leafletMap.on("zoomend",()=>{try{if(currentPage==="karte"&&leafletMap.getContainer()===document.getElementById("map"))renderVehiclePositionsOnMap()}catch(e){}})}}catch(e){}},1000); // v6.29: Schilder nach Zoom neu anordnen
 // v6.23: Fahrzeuge auf der Karte alle 4 s weiterbewegen (nur Marker, kein Neuladen; nicht bei offenem Popup)
 setInterval(()=>{try{if(currentPage==="karte"&&leafletMap&&!document.querySelector("#map .leaflet-popup")&&leafletMap.getContainer()===document.getElementById("map"))renderVehiclePositionsOnMap()}catch(e){}},4000);
 function karteStagingBtnsHTML(c){
- return c?`<button class="${stagingPickMode?"primary":""}" onclick="stagingPickMode=!stagingPickMode;rmhpPickMode=false;if(!karteStagingUpdate())karte()">🅿️ ${stagingPickMode?"Bereitstellungsort wird gewählt – zum Abbrechen tippen":"Bereitstellungsort wählen"}</button>${c.staging?`<span class="pill">🅿️ ${esc(c.staging.name)}</span><button onclick="setStaging(null,'karte')">✕</button>`:""}<button class="${rmhpPickMode?"primary":""}" style="${rmhpPickMode?"background:#b91c1c;border-color:#b91c1c":""}" onclick="rmhpPickMode=!rmhpPickMode;stagingPickMode=false;if(!karteStagingUpdate())karte()">🚑 ${rmhpPickMode?"RMHP wird gewählt – zum Abbrechen tippen":"Rettungsmittelhalteplatz wählen"}</button>${c.rmhp?`<span class="pill">🚑 ${esc(c.rmhp.name)}</span><button onclick="clearRmhp()">✕</button>`:""}${stagingPickMode?`<button onclick="stagingPickMode=false;prepareAlarm()">⬅️ Zurück zur Alarmierung</button>`:""}`:"";
+ return c?`<button class="${stagingPickMode?"primary":""}" onclick="stagingPickMode=!stagingPickMode;rmhpPickMode=false;heliPickMode=false;if(!karteStagingUpdate())karte()">🅿️ ${stagingPickMode?"Bereitstellungsort wird gewählt – zum Abbrechen tippen":"Bereitstellungsort wählen"}</button>${c.staging?`<span class="pill">🅿️ ${esc(c.staging.name)}</span><button onclick="setStaging(null,'karte')">✕</button>`:""}<button class="${rmhpPickMode?"primary":""}" style="${rmhpPickMode?"background:#b91c1c;border-color:#b91c1c":""}" onclick="rmhpPickMode=!rmhpPickMode;stagingPickMode=false;heliPickMode=false;if(!karteStagingUpdate())karte()">🚑 ${rmhpPickMode?"RMHP wird gewählt – zum Abbrechen tippen":"Rettungsmittelhalteplatz wählen"}</button>${c.rmhp?`<span class="pill">🚑 ${esc(c.rmhp.name)}</span><button onclick="clearRmhp()">✕</button>`:""}<button class="${heliPickMode?"primary":""}" style="${heliPickMode?"background:#7c3aed;border-color:#7c3aed":""}" onclick="heliPickMode=!heliPickMode;stagingPickMode=false;rmhpPickMode=false;if(!karteStagingUpdate())karte()">🚁 ${heliPickMode?"Landeplatz wird gewählt – zum Abbrechen tippen":(c.heliManual?"weiteren Landeplatz wählen":"Landeplatz wählen")}</button>${c.heliManual?`<span class="pill">🚁 ${(c.heliLandings||[]).length} selbst gewählt</span><button onclick="clearHeliManual()" title="Selbst gewählte Landeplätze entfernen">✕</button>`:""}${stagingPickMode?`<button onclick="stagingPickMode=false;prepareAlarm()">⬅️ Zurück zur Alarmierung</button>`:""}`:"";
 }
 // v6.22: Bereitstellungsort wählen ändert nur die Knöpfe und Marker – die Karte wird nicht neu geladen.
 function karteStagingUpdate(){
  const box=document.getElementById("karteStagingBtns");
  if(!box||currentPage!=="karte"||!karteSoftRefresh())return false;
  box.innerHTML=karteStagingBtnsHTML(db.currentCall);
- try{leafletMap.getContainer().style.cursor=(stagingPickMode||rmhpPickMode)?"crosshair":""}catch(e){}
+ try{leafletMap.getContainer().style.cursor=(stagingPickMode||rmhpPickMode||heliPickMode)?"crosshair":""}catch(e){}
  return true;
 }
 
@@ -1513,6 +1515,7 @@ function mapViewKey(c){return `${c&&c.id||"-"}|${c&&c.lat||""}|${c&&c.lng||""}`}
 function mapKeepView(m,name,c){try{m.on("moveend zoomend",()=>{try{const ce=m.getCenter();MAP_VIEW[name]={c:[ce.lat,ce.lng],z:m.getZoom(),key:mapViewKey(c)}}catch(e){}})}catch(e){}}
 function mapStartView(name,c,def,z){const v=MAP_VIEW[name];return v&&v.key===mapViewKey(c)?[v.c,v.z]:[def,z]}
 function initMap(){
+  { const el0=document.getElementById("map"); if(!el0)return; if(el0._leaflet_id||(leafletMap&&leafletMap.getContainer&&leafletMap.getContainer()===el0))return; } // v6.29: nicht doppelt aufbauen
   if(typeof L==="undefined"){
     document.getElementById("map").innerHTML='<div style="padding:20px">Kartenbibliothek konnte nicht geladen werden. Internetverbindung prüfen.</div>';
     return;
@@ -1533,13 +1536,14 @@ function initMap(){
   renderStagingMarkerOnMap();
   // Notfallorte werden nur angezeigt – übernommen wird der Ort in der Notrufabfrage (v4.98).
   leafletMap.on("click", async e=>{
+    if(heliPickMode&&db.currentCall){await heliFromMap(e.latlng.lat,e.latlng.lng);return}
     if(rmhpPickMode&&db.currentCall){await rmhpFromMap(e.latlng.lat,e.latlng.lng);return}
     if(stagingPickMode&&db.currentCall){await stagingFromMap(e.latlng.lat,e.latlng.lng);return}
   });
-  if(stagingPickMode||rmhpPickMode)try{leafletMap.getContainer().style.cursor="crosshair"}catch(e){}
+  if(stagingPickMode||rmhpPickMode||heliPickMode)try{leafletMap.getContainer().style.cursor="crosshair"}catch(e){}
   setTimeout(()=>leafletMap.invalidateSize(),150);
 }
-let stagingPickMode=false, stagingMarker=null, rmhpPickMode=false;
+let stagingPickMode=false, stagingMarker=null, rmhpPickMode=false, heliPickMode=false;
 // v6.22: Ebenen für Fahrzeuge/Bereitstellungsräume – damit die Karte im Hintergrund nur die Marker
 // aktualisiert statt komplett neu aufgebaut zu werden (kein sichtbares Neuladen mehr).
 let MAP_LAYERS={}, MAP_LAYERS_OF=null;
@@ -1557,6 +1561,16 @@ function renderStagingMarkerOnMap(){
  if(!leafletMap||typeof L==="undefined")return;
  if(stagingMarker){leafletMap.removeLayer(stagingMarker);stagingMarker=null}
  mapLayer("br").clearLayers();
+ for(const c of allOpenCalls()){ // v6.29: Hubschrauber-Landeplätze mit Sperrkreis
+   heliSites(c).forEach((hs,i)=>{
+     if(!Number.isFinite(Number(hs.lat)))return;
+     const ll=[Number(hs.lat),Number(hs.lng)], r=heliSiteRadiusM(hs);
+     L.circle(ll,{radius:r,color:"#7c3aed",weight:2,dashArray:"6 4",fillColor:"#7c3aed",fillOpacity:.12}).addTo(mapLayer("br"))
+       .bindPopup(`<b>🚁 Landeplatz${heliSites(c).length>1?` ${i+1}`:""}</b><br>${esc(hs.name)}<br>Sperrkreis ${r} m – freihalten (keine Fahrzeuge, keine Personen)<br><small>${hs.cap} Platz/Plätze · Einsatz #${esc(c.id)}${hs.manual?" · selbst gewählt":" · automatisch gefunden"}</small>`);
+     const icon=L.divIcon({html:`<div style="width:26px;height:26px;border-radius:50%;background:#fff;border:3px solid #7c3aed;color:#7c3aed;font-weight:900;font-size:15px;line-height:20px;text-align:center;box-shadow:0 1px 4px rgba(0,0,0,.4)">H</div>`,className:"",iconSize:[26,26],iconAnchor:[13,13]});
+     L.marker(ll,{icon}).addTo(mapLayer("br")).bindPopup(`<b>🚁 Landeplatz</b><br>${esc(hs.name)}<br>Sperrkreis ${r} m`);
+   });
+ }
  for(const c of allOpenCalls()){ // v6.25: Rettungsmittelhalteplätze
    const rp=c.rmhp; if(!rp||!Number.isFinite(Number(rp.lat)))continue;
    const icon=L.divIcon({html:`<div style="background:#b91c1c;color:#fff;border-radius:6px;padding:2px 6px;font-weight:800;font-size:13px;border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.4);white-space:nowrap">🚑 RMHP</div>`,className:"",iconSize:[64,24],iconAnchor:[32,12]});
@@ -1692,7 +1706,8 @@ function stagingFor(call,u){
  const rp=call&&call.rmhp, rpOk=rp&&Number.isFinite(Number(rp.lat))&&Number.isFinite(Number(rp.lng));
  const st=call&&call.staging, stOk=st&&Number.isFinite(Number(st.lat))&&Number.isFinite(Number(st.lng));
  if(!u||waterCapable(u))return null;
- if(call&&directToScene(call,u))return null; // v6.27: Führung, 1. RTW, 1. NEF immer direkt zur Einsatzstelle
+ if(call&&directToScene(call,u))return null; // v6.27
+ if(u.org==="Feuerwehr")return null; // v6.29: Feuerwehr fährt direkt zur Einsatzstelle: Führung, 1. RTW, 1. NEF immer direkt zur Einsatzstelle
  // v6.26: Gibt es einen BR, fahren grundsätzlich alle Landfahrzeuge erst dorthin. Von dort werden sie
  // abgerufen: Rettungsmittel zum RMHP (max. 2 gleichzeitig), alle anderen nach und nach zur Schadensstelle.
  if(stOk){
@@ -2016,10 +2031,32 @@ function renderVehiclePositionsOnMap(){
  const mine=new Set((db.currentCall&&db.currentCall.alarmedUnits||[]).map(String));
  const clusters={};
  placed.forEach(p=>{const k=`${p.pos[0].toFixed(3)}_${p.pos[1].toFixed(3)}`;(clusters[k]=clusters[k]||[]).push(p)});
+ // v6.29: Schilder überlappen sich nicht – jedes Schild sucht sich eine freie Stelle rund um seinen Punkt
+ const boxes=[], fitPt=ll=>{try{return leafletMap.latLngToContainerPoint(ll)}catch(e){return null}};
+ // Punkte der Fahrzeuge und Einsatz-Marker freihalten
+ placed.forEach(p=>{const q=fitPt(p.pos);if(q)boxes.push({x1:q.x-7,y1:q.y-7,x2:q.x+7,y2:q.y+7})});
+ try{for(const c of allOpenCalls()){const q=Number.isFinite(Number(c.lat))?fitPt([Number(c.lat),Number(c.lng)]):null;if(q)boxes.push({x1:q.x-34,y1:q.y-40,x2:q.x+20,y2:q.y+16})}}catch(e){}
+ const ordered=[...placed].sort((a,b)=>(mine.has(String(b.u.id))?1:0)-(mine.has(String(a.u.id))?1:0));
+ ordered.forEach(p=>{
+   const txt=unitFunkShort(p.u), w=txt.length*6.4+12, h=17, pt=fitPt(p.pos);
+   let best=null;
+   if(pt){
+     outer: for(const len of [28,44,62,82,104,130]){
+       for(let k=0;k<16;k++){
+         const ang=-Math.PI/2+(k%2?1:-1)*Math.ceil(k/2)*(Math.PI/8);
+         const cx=pt.x+Math.cos(ang)*len, cy=pt.y+Math.sin(ang)*len;
+         const r={x1:cx-w/2-2,y1:cy-h/2-2,x2:cx+w/2+2,y2:cy+h/2+2};
+         if(!boxes.some(b=>r.x1<b.x2&&r.x2>b.x1&&r.y1<b.y2&&r.y2>b.y1)){best={ang,len,r};break outer}
+       }
+     }
+   }
+   if(!best){const ang=-Math.PI/2,len=24;best={ang,len,r:pt?{x1:pt.x-w/2,y1:pt.y-len-h/2,x2:pt.x+w/2,y2:pt.y-len+h/2}:null}}
+   if(best.r)boxes.push(best.r);
+   p._lay=best;
+ });
  Object.values(clusters).forEach(group=>{
    group.forEach((p,i)=>{
-     const n=group.length, len=n>1?34:24;
-     const ang=n>1?(-Math.PI/2+(i-(n-1)/2)*Math.min(0.75,(2*Math.PI)/n)):-Math.PI/2; // nach oben, bei mehreren aufgefächert
+     const ang=p._lay.ang, len=p._lay.len;
      const dx=Math.round(Math.cos(ang)*len), dy=Math.round(Math.sin(ang)*len);
      const col=ST_COL[String(p.u.status)]||"#0b1220";
      const dash=p.mode==="live"?"solid":"dashed";
@@ -3494,7 +3531,7 @@ function resendAlarm(){
  const add=(r.checked||[]).map(id=>db.units.find(u=>String(u.id)===String(id))).filter(u=>u&&["1","2","8"].includes(String(u.status))&&!(c.alarmedUnits||[]).map(String).includes(String(u.id)));
  for(const u of add){
    appendUnitToCall(c,u,"nach Änderung");
-   if(!u.phoneAssigned)setUnitStatus(u,"3");
+   if(!unitPhoneLive(u))setUnitStatus(u,"3"); // v6.29: nur echtes, verbundenes Handy setzt Status selbst
    c.alarmedUnits=c.alarmedUnits||[]; c.alarmedUnits.push(u.id);
  }
  c.alarmVersion=(c.alarmVersion||0)+1; c.realarmAt=new Date().toISOString();
@@ -3787,7 +3824,7 @@ function addResourceUnits(list,mode="additional",groupLabel=""){
  for(const u of list){
    appendUnitToCall(c,u,isNafo?"Nachforderung":"zusätzlich");
    if(c.alarmTime || isNafo){
-     if(!u.phoneAssigned)setUnitStatus(u,"3");
+     if(!unitPhoneLive(u))setUnitStatus(u,"3"); // v6.29: nur echtes, verbundenes Handy setzt Status selbst
      c.alarmedUnits=c.alarmedUnits||[];
      if(!c.alarmedUnits.some(id=>String(id)===String(u.id)))c.alarmedUnits.push(u.id);
    }
@@ -6085,7 +6122,7 @@ function alarmProposal(){
    const u=db.units.find(x=>x.id===id);
    if(!u)continue;
    if(before.has(String(id)))continue;
-   if(!u.phoneAssigned)setUnitStatus(u,"3");
+   if(!unitPhoneLive(u))setUnitStatus(u,"3"); // v6.29: nur echtes, verbundenes Handy setzt Status selbst
    c.alarmedUnits.push(id); added.push(u);
  }
  for(const pl of (c.abPlans||[]))if(c.alarmedUnits.some(id=>String(id)===String(pl.wlfId))&&c.alarmedUnits.some(id=>String(id)===String(pl.abId)))applyAbPlan(c,pl);
@@ -7519,6 +7556,11 @@ const HELI_M2=625, HELI_LZ_TYPES=["LF","HLF"];
 function heliCount(c){return Math.max(1,callUnits(c).filter(isAirUnit).length)}
 function heliNeedM2(c){return heliCount(c)*HELI_M2}
 function lfNeedFor(k){return k>=2?Math.floor((k+1)/3):0}
+// v6.29: Selbst gewählte Landeplätze: Anzahl Plätze legt der Disponent fest; LF-Absicherung erst bei
+// mehr als 2 Plätzen (3–4: 1 LF, 5–7: 2 LF, 8–10: 3 LF …). Automatisch gefundene: wie bisher nach Anzahl Hubschrauber.
+function siteLfNeed(c,i){const s=heliSites(c)[i]; if(!s)return 0; if(s.manual)return s.cap>2?Math.floor((s.cap+1)/3):0; return lfNeedFor(heliSiteCounts(c)[i]||0)}
+// Radius des Sperrkreises: Kreis um die Fläche für alle Plätze (je Platz 25 × 25 m)
+function heliSiteRadiusM(s){const k=Math.max(1,Number(s&&s.cap)||1);return Math.round(Math.sqrt(k)*25/Math.SQRT2)}
 function heliSites(c){return c.heliLandings&&c.heliLandings.length?c.heliLandings:(c.heliLanding?[{...c.heliLanding,cap:c.heliLanding.m2!=null?Math.floor(c.heliLanding.m2/HELI_M2):99}]:[])}
 // Hubschrauber der Reihe nach auf die Landeplätze verteilen (nach Kapazität)
 function heliAssign(c){
@@ -7541,15 +7583,45 @@ function heliLzHTML(c){
  const sites=heliSites(c); if(!sites.length)return "";
  const cnt=heliSiteCounts(c), multi=sites.length>1;
  return sites.map((s,i)=>{
-   const k=cnt[i]||0, need=lfNeedFor(k), have=heliLzLfs(c,i), miss=Math.max(0,need-have.length);
+   const k=cnt[i]||0, need=siteLfNeed(c,i), have=heliLzLfs(c,i), miss=Math.max(0,need-have.length);
    const lf=need||have.length?` · 🚒 Absicherung ${have.length}/${need} LF${have.length?` (${have.map(u=>esc(u.opta||u.name)).join(", ")})`:""}${miss?` <button onclick="heliLzAlarm('${esc(String(c.id))}',${i})" style="padding:2px 8px;font-size:12px;margin-left:4px">🚒 ${miss} LF alarmieren</button>`:""}`:"";
-   return `<div style="margin-top:4px;font-size:13px;${miss?"color:#b91c1c;font-weight:700":""}">🚁 ${multi?`Landeplatz ${i+1}`:"Landeplatz"}: ${esc(s.name)} – ${k} Hubschrauber${lf}</div>`;
+   return `<div style="margin-top:4px;font-size:13px;${miss?"color:#b91c1c;font-weight:700":""}">🚁 ${multi?`Landeplatz ${i+1}`:"Landeplatz"}: ${esc(s.name)}${s.manual?` (selbst gewählt, ${s.cap} Platz/Plätze, Sperrkreis ${heliSiteRadiusM(s)} m)`:""} – ${k} Hubschrauber${lf}</div>`;
  }).join("");
+}
+// v6.29: Landeplatz auf der Karte selbst wählen
+async function heliFromMap(lat,lng){
+ const c=db.currentCall; if(!c)return;
+ let name=`Landeplatz ${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+ try{const r=await fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}`,{headers:{"Accept":"application/json"}});
+   const j=await r.json(); const a=j&&j.address||{};
+   const short=[a.leisure||a.amenity||a.road,a.village||a.town||a.city||a.suburb].filter(Boolean).join(" ");
+   if(short)name=`Landeplatz ${short}`}catch(e){}
+ const given=prompt("Name des Landeplatzes:",name); if(given===null)return;
+ const defN=Math.max(1,callUnits(c).filter(isAirUnit).length);
+ const nTxt=prompt("Wie viele Hubschrauber-Plätze hat der Landeplatz? (je Platz 25 × 25 m)",String(defN)); if(nTxt===null)return;
+ const cap=Math.max(1,Math.min(20,parseInt(nTxt,10)||1));
+ const site={name:String(given||name).trim()||name,lat,lng,m2:cap*HELI_M2,cap,manual:true};
+ if(!c.heliManual){c.heliLandings=[];c.heliManual=true}
+ c.heliLandings=[...(c.heliLandings||[]),site]; c.heliLanding={...c.heliLandings[0],forN:99}; c.heliForN=99;
+ (c.history=c.history||[]).push({q:"🚁 Landeplatz (selbst gewählt)",a:`${site.name} – ${cap} Platz/Plätze, Sperrkreis ${heliSiteRadiusM(site)} m`});
+ heliPickMode=false;
+ const si=c.heliLandings.length-1, need=siteLfNeed(c,si);
+ if(need&&c.alarmTime&&!realEx())heliLzAlarm(String(c.id),si); // mehr als 2 Plätze → LF zur Absicherung
+ else if(need)toast(`🚁 Landeplatz gesetzt – ${need} LF zur Absicherung nötig`);
+ else toast(`🚁 Landeplatz: ${site.name}`);
+ save(); if(db.cloud?.enabled&&c.alarmTime)setTimeout(()=>pushCallCloud(c),0);
+ if(!karteStagingUpdate())karte();
+}
+function clearHeliManual(){
+ const c=db.currentCall; if(!c)return;
+ delete c.heliManual; delete c.heliLandings; delete c.heliLanding; delete c.heliForN;
+ (c.history=c.history||[]).push({q:"🚁 Landeplatz",a:"selbst gewählte Landeplätze entfernt – wieder automatisch"});
+ save(); if(currentPage==="karte"){if(!karteStagingUpdate())karte()}else render(currentPage);
 }
 function heliLzAlarm(id,si=0){
  const c=allOpenCalls().find(x=>String(x.id)===String(id)); if(!c)return;
  const s=heliSites(c)[si]; if(!s)return;
- const miss=Math.max(0,lfNeedFor(heliSiteCounts(c)[si]||0)-heliLzLfs(c,si).length); if(!miss)return;
+ const miss=Math.max(0,siteLfNeed(c,si)-heliLzLfs(c,si).length); if(!miss)return;
  const lp=[Number(s.lat),Number(s.lng)], used=new Set((c.alarmedUnits||[]).map(String));
  const free=db.units.filter(u=>HELI_LZ_TYPES.includes(u.type)&&u.org==="Feuerwehr"&&["1","2"].includes(String(u.status))&&!used.has(String(u.id))&&!notAlarmable(u));
  const dist=u=>{const p=unitPoint(u);return p?haversine(p[0],p[1],lp[0],lp[1]):9999};
@@ -7579,7 +7651,7 @@ async function findOpenAreas(lat,lng,kinds,radiusDeg,minKm=0.05){
 }
 function heliSiteName(pl){const cap=Math.floor(pl.m2/HELI_M2);return `${pl.name&&new RegExp(OPEN_KIND_DE[pl.k]||"§","i").test(pl.name)?"":(OPEN_KIND_DE[pl.k]||"freie Fläche")} ${pl.name&&!/^\d/.test(pl.name)?pl.name:""}`.trim().replace(/\s+/g," ")+` (ca. ${Math.round(pl.km*1000/50)*50} m, ca. ${Math.round(pl.m2/100)*100} m² – Platz für ${cap} Hubschrauber)`}
 async function heliPickLanding(c){
- if(c._heliBusy)return;
+ if(c._heliBusy||c.heliManual)return; // v6.29: selbst gewählte Landeplätze nicht automatisch überschreiben
  const n=heliCount(c), need=n*HELI_M2, sites=heliSites(c);
  if(sites.length&&(c.heliForN||(c.heliLanding&&c.heliLanding.forN)||1)>=n)return;
  if(sites.length&&sites.every(s=>s.m2!=null)&&sites.reduce((t,s)=>t+(s.cap||0),0)>=n){c.heliForN=n;return}

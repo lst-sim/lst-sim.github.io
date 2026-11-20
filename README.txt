@@ -1607,6 +1607,15 @@ Version 5.05:
   („a, b“ = a ODER b). Mit „🚑 NA-Indikation“ markierte Knöpfe ziehen weiterhin einen Notarzt.
 - Nur „Unauffällig“ (ohne weitere Befunde) zählt weiter als unauffälliges E (R0 möglich).
 
+Version 6.29:
+- Fehlerbehebung NEF (und andere Fahrzeuge) blieben nach Alarm manchmal in Status 2: Wurde für ein Fahrzeug einmal der Handy-QR-Code geöffnet, galt es dauerhaft als „per Handy gesteuert“ und ging nie selbst auf Status 3 – auch ohne verbundenes Handy. Jetzt setzt nur ein tatsächlich verbundenes Handy den Status selbst.
+- Landeplatz selbst wählen: Auf der Karte „🚁 Landeplatz wählen“, Name und Anzahl Hubschrauber-Plätze (je 25 × 25 m) eingeben. Mehrere Landeplätze möglich. Selbst gewählte Landeplätze werden nicht mehr automatisch ersetzt (✕ = wieder automatisch).
+- Jeder Landeplatz (auch automatisch gefundene) wird mit Sperrkreis angezeigt – freihalten, keine Fahrzeuge/Personen. Radius = Kreis um die Fläche aller Plätze (1 Platz ≈ 18 m, 4 Plätze ≈ 35 m).
+- Selbst gewählter Landeplatz mit mehr als 2 Plätzen: LF/HLF zur Absicherung wird automatisch alarmiert (3–4 Plätze 1 LF, 5–7 2 LF …). In der Realübung nur Hinweis.
+- Feuerwehrfahrzeuge fahren wieder direkt zur Einsatzstelle, nicht in den BR.
+- Funkkennungen auf der Karte überlappen sich nicht mehr: Jedes Schild sucht sich eine freie Stelle um seinen Punkt (auch nach dem Zoomen); Einsatzmarker und Fahrzeugpunkte bleiben frei.
+- Karte wurde in seltenen Fällen doppelt aufgebaut (Fehlermeldung „Map container is already initialized“) – behoben.
+
 Version 6.28:
 - NEF zählen nicht mehr zu den max. 2 Rettungsmitteln am RMHP und werden aus dem BR ohne Begrenzung zum RMHP abgerufen.
 
