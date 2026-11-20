@@ -263,7 +263,7 @@ html[data-device="handy"] .fach-grid{grid-template-columns:1fr}
 <header id="topbar">
  <div class="tb-left">
   <span class="tb-brand"><span class="tb-logo">🚑</span><span class="tb-name">Leitstelle<b>.sim</b></span></span>
-  <span id="versionTag" class="tb-ver">v6.33</span>
+  <span id="versionTag" class="tb-ver">v6.34</span>
   <span id="syncState"></span>
   <a id="deskTag" href="#" onclick="renameDesk();return false" title="Name dieses Platzes (für „offen an …“) – antippen zum Ändern"></a>
  </div>
@@ -6092,7 +6092,18 @@ function toggleOptionalUnit(id,on){
  for(const i of String(id).split(",")){if(on)set.add(i);else set.delete(i)}
  c.optionalChecked=[...set]; save();
 }
+// v6.34: Alarmieren darf nie „still“ scheitern – Fehler werden angezeigt (zum Melden).
 function confirmAlarm(){
+ if(!db.currentCall){toast("⚠️ Kein Einsatz geöffnet – bitte den Einsatz erneut öffnen");return}
+ try{confirmAlarm0()}catch(e){
+   console.error(e);
+   const msg=String(e&&e.message||e);
+   try{(db.currentCall.history=db.currentCall.history||[]).push({q:"⚠️ Fehler beim Alarmieren",a:msg})}catch(x){}
+   try{save()}catch(x){}
+   showModal(`<h3>⚠️ Alarmierung fehlgeschlagen</h3><p>Beim Alarmieren ist ein Programmfehler aufgetreten. Bitte diese Meldung (Foto/Screenshot) an den Entwickler schicken:</p><pre style="white-space:pre-wrap;font-size:12px;background:#f1f5f9;padding:8px;border-radius:6px">${esc(msg)}\n${esc(String(e&&e.stack||"").split("\n").slice(1,4).join("\n"))}\nStichwort: ${esc(db.currentCall?.keyword||"")}</pre><div class="row" style="justify-content:flex-end"><button class="primary" onclick="closeModal()">OK</button></div>`);
+ }
+}
+function confirmAlarm0(){
  const c=db.currentCall;
  if(!c)return;
  const ft=document.getElementById("alarmFreeText"); if(ft)c.alarmFreeText=ft.value||"";

@@ -1607,6 +1607,10 @@ Version 5.05:
   („a, b“ = a ODER b). Mit „🚑 NA-Indikation“ markierte Knöpfe ziehen weiterhin einen Notarzt.
 - Nur „Unauffällig“ (ohne weitere Befunde) zählt weiter als unauffälliges E (R0 möglich).
 
+Version 6.34:
+- „Jetzt alarmieren“: Tritt beim Alarmieren ein Programmfehler auf, passiert nicht mehr einfach nichts – es erscheint ein Fenster mit der Fehlermeldung (bitte als Foto an den Entwickler), der Fehler steht auch im Einsatzverlauf.
+- MANV 20 bei Verkehrsunfall nachgestellt (Übungsnotruf, alle Bildschirmgrößen, Auto/Manuell/Realübung): Alarmierung lief im Test durch – Ursache beim Anwender noch offen.
+
 Version 6.33:
 - MANV/Verkehrsunfall: Die Maske „Betroffene“ ließ sich nicht übernehmen, solange „Wie viele Personen sind eingeklemmt?“ (bzw. Personen im Feuer/in Gefahr, Evakuierungszahlen) leer war – es kam nur der Hinweis „Bitte noch beantworten“. Jetzt gilt leer = „unbekannt“ und die Abfrage geht weiter. Hinweis „(leer = unbekannt)“ steht am Feld.
 
