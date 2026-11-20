@@ -1607,6 +1607,11 @@ Version 5.05:
   („a, b“ = a ODER b). Mit „🚑 NA-Indikation“ markierte Knöpfe ziehen weiterhin einen Notarzt.
 - Nur „Unauffällig“ (ohne weitere Befunde) zählt weiter als unauffälliges E (R0 möglich).
 
+Version 6.35:
+- Fehlerbehebung „Auflegen/Einsatz abschließen geht nicht mehr“: Wahrscheinliche Ursache war der volle Browser-Speicher (ca. 5 MB). Abgeschlossene Einsätze wurden bisher mit allem (komplettes Übungsgespräch, Kopien aller Fahrzeuge) unbegrenzt gespeichert; war der Speicher voll, brach jedes Speichern mit einem Fehler ab – und damit auch Auflegen und Abschließen.
+- Jetzt: Abgeschlossene Einsätze werden schlank gespeichert (max. 300). Ist der Speicher trotzdem voll, werden alte Einträge (Einsätze, Protokolle, SDS) automatisch gekürzt und erneut gespeichert. Speichern blockiert nie mehr die Bedienung.
+- Unerwartete Programmfehler werden kurz unten angezeigt („⚠️ Programmfehler: …“), damit sie gemeldet werden können.
+
 Version 6.34:
 - „Jetzt alarmieren“: Tritt beim Alarmieren ein Programmfehler auf, passiert nicht mehr einfach nichts – es erscheint ein Fenster mit der Fehlermeldung (bitte als Foto an den Entwickler), der Fehler steht auch im Einsatzverlauf.
 - MANV 20 bei Verkehrsunfall nachgestellt (Übungsnotruf, alle Bildschirmgrößen, Auto/Manuell/Realübung): Alarmierung lief im Test durch – Ursache beim Anwender noch offen.

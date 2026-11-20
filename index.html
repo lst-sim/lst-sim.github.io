@@ -263,7 +263,7 @@ html[data-device="handy"] .fach-grid{grid-template-columns:1fr}
 <header id="topbar">
  <div class="tb-left">
   <span class="tb-brand"><span class="tb-logo">🚑</span><span class="tb-name">Leitstelle<b>.sim</b></span></span>
-  <span id="versionTag" class="tb-ver">v6.34</span>
+  <span id="versionTag" class="tb-ver">v6.35</span>
   <span id="syncState"></span>
   <a id="deskTag" href="#" onclick="renameDesk();return false" title="Name dieses Platzes (für „offen an …“) – antippen zum Ändern"></a>
  </div>
@@ -1377,7 +1377,38 @@ function fifoStamp(){
    else if(!free&&u.freeSince)delete u.freeSince;
  }
 }
-function save(){fifoStamp();localStorage.setItem(KEY,JSON.stringify(db));if(typeof scheduleStateSync==="function")scheduleStateSync()}
+// v6.35: Speichern darf nie die Bedienung blockieren. Ist der Browser-Speicher voll (ca. 5 MB),
+// werden alte abgeschlossene Einsätze/Protokolle gekürzt und erneut gespeichert.
+let saveWarned=0;
+// v6.35: Unerwartete Programmfehler kurz anzeigen (statt dass einfach nichts passiert) – zum Melden an den Entwickler
+let lastErrToast=0;
+window.addEventListener("error",ev=>{try{if(Date.now()-lastErrToast<8000)return;lastErrToast=Date.now();const m=String(ev&&ev.message||"");if(!m||/Script error|ResizeObserver/.test(m))return;toast("⚠️ Programmfehler: "+m.slice(0,120))}catch(e){}});
+function slimLoggedCall(c){
+ if(!c||c._slim)return c;
+ delete c.proposal; delete c.neighborProposal; delete c.optionalOffer; delete c.abPlans; delete c.manvTruth;
+ if(c.sim){const s=c.sim;c.sim={caseId:s.caseId,num:s.num,phone:s.phone,soll:s.soll}}
+ if(Array.isArray(c.history)&&c.history.length>80)c.history=c.history.slice(-80);
+ c._slim=true; return c;
+}
+function compactDb(level){
+ const keep=level>1?40:150;
+ if(Array.isArray(db.logs)){db.logs=db.logs.slice(0,keep);db.logs.forEach(slimLoggedCall)}
+ if(Array.isArray(db.simProtocols))db.simProtocols=db.simProtocols.slice(-(level>1?40:150));
+ if(Array.isArray(db.sdsIn))db.sdsIn=db.sdsIn.slice(0,level>1?80:200);
+ if(Array.isArray(db.nbReqLog))db.nbReqLog=db.nbReqLog.slice(0,level>1?50:150);
+ if(Array.isArray(db.ecalls))db.ecalls=db.ecalls.filter(e=>!e.closed&&!e.done).concat(db.ecalls.filter(e=>e.closed||e.done).slice(-20));
+ if(Array.isArray(db.ivenaAssignments)&&db.ivenaAssignments.length>300)db.ivenaAssignments=db.ivenaAssignments.slice(-300);
+}
+function save(){
+ try{fifoStamp()}catch(e){}
+ let ok=false;
+ for(let level=0;level<3&&!ok;level++){
+   try{if(level)compactDb(level);localStorage.setItem(KEY,JSON.stringify(db));ok=true}
+   catch(e){console.warn("save",level,e)}
+ }
+ if(!ok&&Date.now()-saveWarned>60000){saveWarned=Date.now();try{toast("⚠️ Speichern nicht möglich – Browser-Speicher voll. Bitte unter Einstellungen alte Einsätze löschen.")}catch(e){}}
+ if(typeof scheduleStateSync==="function")try{scheduleStateSync()}catch(e){}
+}
 function esc(s){return String(s??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]))}
 function toast(t){const x=document.getElementById("toast");x.textContent=t;x.style.display="block";setTimeout(()=>x.style.display="none",1800)}
 // v6.13: alarmierte Fahrzeuge mit kleinem Status dahinter (Einsatzansicht)
@@ -8238,7 +8269,8 @@ function finishCall(id=null){
  c.endTime=new Date().toISOString();
  try{manvCoverRelease(c.id)}catch(e){}
  if(db.cloud?.enabled)setTimeout(()=>closeCallCloud(c),0);
- db.logs.unshift(c);
+ db.logs=db.logs||[]; db.logs.unshift(slimLoggedCall(c)); // v6.35: abgeschlossene Einsätze schlank speichern
+ if(db.logs.length>300)db.logs.length=300;
 
  if(source==="current")db.currentCall=null;
  else db.activeCalls=db.activeCalls.filter(x=>String(x.id)!==targetId);
