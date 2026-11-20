@@ -1607,6 +1607,10 @@ Version 5.05:
   („a, b“ = a ODER b). Mit „🚑 NA-Indikation“ markierte Knöpfe ziehen weiterhin einen Notarzt.
 - Nur „Unauffällig“ (ohne weitere Befunde) zählt weiter als unauffälliges E (R0 möglich).
 
+Version 6.32:
+- Leitsymptom-Schlüsselfragen: Sind alle Fragen angeklickt, geht die Abfrage automatisch weiter (kein extra „✔ Weiter“ nötig). „✔ Weiter“ bleibt für den Fall, dass nicht alles beantwortet wird (Rest = „unbekannt“).
+- Die angeklickten Antworten bleiben erhalten, auch wenn die Seite zwischendurch neu gezeichnet wird.
+
 Version 6.31:
 - Handy als Anrufer: Jedes Anrufer-Handy bekommt eine ausgedachte Mobilnummer (z. B. 0171 4700284), die immer gleich bleibt. Die Leitstelle sieht sie bei der Rückrufnummer als „Angezeigte Nummer“ (Übernehmen-Knopf), der Anrufer sieht sie auf seiner Wähltastatur als „Eigene Nummer (Übung)“. Die Nummern sind erfunden.
 

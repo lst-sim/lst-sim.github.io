@@ -263,7 +263,7 @@ html[data-device="handy"] .fach-grid{grid-template-columns:1fr}
 <header id="topbar">
  <div class="tb-left">
   <span class="tb-brand"><span class="tb-logo">🚑</span><span class="tb-name">Leitstelle<b>.sim</b></span></span>
-  <span id="versionTag" class="tb-ver">v6.31</span>
+  <span id="versionTag" class="tb-ver">v6.32</span>
   <span id="syncState"></span>
   <a id="deskTag" href="#" onclick="renameDesk();return false" title="Name dieses Platzes (für „offen an …“) – antippen zum Ändern"></a>
  </div>
@@ -4344,14 +4344,22 @@ function leitHTML(id,label,late){
 let leitSel={};
 function leitQHTML(id,c,late){
  const L=leitOf(leitKey(c)); if(!L)return "";
- leitSel={...(c.leitAns||{})};
+ leitSel={...(c.leitAns||{}),...(c.leitDraft||{})}; // v6.32: Auswahl übersteht Neuzeichnen der Seite
  return `<label>${L.ic} Schlüsselfragen: ${esc(L.l)}</label>${L.q.map(([qk,qt,opts])=>`<div style="margin:8px 0 2px;font-weight:700">„${esc(qt)}“</div><div class="answer">${opts.map(([v,lv])=>`<button data-lq="${qk}" data-v="${esc(v)}" class="${leitSel[qk]===v?"primary":""}" onclick="leitPick('${qk}',this)">${esc(v)}${lv?` ${prioBadge(lv,1)}`:""}</button>`).join("")}</div>`).join("")}
-  <div class="row" style="margin-top:12px;gap:8px;flex-wrap:wrap"><button class="primary" onclick="leitQSubmit('${id}')">✔ Weiter</button><span class="muted" style="font-size:12px">Nicht Beantwortetes wird als „unbekannt“ übernommen. Die Buchstaben zeigen, welche Antwort die Dringlichkeit anhebt.</span></div>`;
+  <div class="row" data-leitq="${id}" style="margin-top:12px;gap:8px;flex-wrap:wrap"><button class="primary" onclick="leitQSubmit('${id}')">✔ Weiter</button><span class="muted" style="font-size:12px">Nicht Beantwortetes wird als „unbekannt“ übernommen. Die Buchstaben zeigen, welche Antwort die Dringlichkeit anhebt.</span></div>`;
 }
-function leitPick(qk,btn){leitSel[qk]=btn.dataset.v;document.querySelectorAll(`[data-lq="${qk}"]`).forEach(b=>b.classList.toggle("primary",b===btn))}
+let leitAutoT=null;
+function leitPick(qk,btn){
+ leitSel[qk]=btn.dataset.v;
+ const c=db.currentCall; if(c){c.leitDraft={...(c.leitDraft||{}),[qk]:btn.dataset.v}}
+ document.querySelectorAll(`[data-lq="${qk}"]`).forEach(b=>b.classList.toggle("primary",b===btn));
+ // v6.32: Sind alle Schlüsselfragen beantwortet, geht es automatisch weiter
+ const L=c&&leitOf(leitKey(c)); clearTimeout(leitAutoT);
+ if(L&&L.q.every(([k])=>leitSel[k])){const id=document.querySelector("[data-leitq]")?.dataset.leitq;if(id)leitAutoT=setTimeout(()=>{if(document.querySelector(`[data-leitq="${id}"]`))leitQSubmit(id)},450)}
+}
 function leitQSubmit(id){
  const c=db.currentCall; if(!c)return; const L=leitOf(leitKey(c)); if(!L)return;
- c.leitAns={}; L.q.forEach(([qk])=>c.leitAns[qk]=leitSel[qk]||"unbekannt");
+ clearTimeout(leitAutoT); c.leitAns={}; L.q.forEach(([qk])=>c.leitAns[qk]=leitSel[qk]||"unbekannt"); delete c.leitDraft;
  answer(id,L.q.map(([qk,qt])=>`${qt.replace(/\?.*$/,"?")} ${c.leitAns[qk]}`).join(" · "));
 }
 // Übungs-Check: passendes Leitsymptom aus dem Fall erraten
