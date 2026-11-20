@@ -263,7 +263,7 @@ html[data-device="handy"] .fach-grid{grid-template-columns:1fr}
 <header id="topbar">
  <div class="tb-left">
   <span class="tb-brand"><span class="tb-logo">🚑</span><span class="tb-name">Leitstelle<b>.sim</b></span></span>
-  <span id="versionTag" class="tb-ver">v6.30</span>
+  <span id="versionTag" class="tb-ver">v6.31</span>
   <span id="syncState"></span>
   <a id="deskTag" href="#" onclick="renameDesk();return false" title="Name dieses Platzes (für „offen an …“) – antippen zum Ändern"></a>
  </div>
@@ -5008,7 +5008,7 @@ function phoneSubmit(id){
  answer(id,v);
 }
 function phoneQHTML(id,label,c){
- const S=c.sim, ani=S?(S.hidden?null:S.phone):(c.callerNumber&&/\d{5,}/.test(String(c.callerNumber))?c.callerNumber:null);
+ const S=c.sim, ani=S?(S.hidden?null:S.phone):(c.callerAni||(c.callerNumber&&/\d{5,}/.test(String(c.callerNumber))?c.callerNumber:null));
  return `<label>${label}</label>
   <div style="margin:4px 0 8px;padding:6px 10px;border-radius:8px;background:${ani?"#f0fdf4":"#fef3c7"};font-size:13px">📟 ${ani?`Angezeigte Nummer: <b>${esc(ani)}</b> <button style="padding:2px 10px;margin-left:6px" onclick="answer('${id}','${esc(ani)}')">Übernehmen</button>`:"Rufnummer unterdrückt – bitte beim Anrufer erfragen."}</div>
   <div class="row"><input id="ans" type="tel" inputmode="tel" autocomplete="off" maxlength="20" placeholder="nur Telefonnummer, z. B. 0151 2345678" style="flex:1" oninput="const p=this.selectionStart,n=this.value.replace(/[^0-9+ /-]/g,'');if(n!==this.value){this.value=n;try{this.setSelectionRange(p-1,p-1)}catch(e){}}" onkeydown="if(event.key==='Enter')phoneSubmit('${id}')"><button class="primary" onclick="phoneSubmit('${id}')">OK</button><button onclick="answer('${id}','nicht erhalten')">Nicht erhalten</button></div>`;
@@ -9124,7 +9124,7 @@ async function acceptCallerRequest(callerId){
    db.currentCall={id:stamp.slice(-6),location:"",count:"",answers:{callType:num},history:[{q:"☎️ Über welche Nummer ist der Anruf eingegangen?",a:CALLER_NUMBERS[num].label}],keyword:"",suggestion:"",createdAt:new Date().toISOString()};
    if(num!=="112")try{evaluate()}catch(e){}
  }
- db.currentCall.phoneStart=Date.now(); db.currentCall.callerId=String(callerId); db.currentCall.callerNumber=num;
+ db.currentCall.phoneStart=Date.now(); db.currentCall.callerId=String(callerId); db.currentCall.callerNumber=num; db.currentCall.callerAni=callerFakeMobile(callerId);
  if(req&&req.lat!=null&&req.lng!=null){
    db.currentCall.callerGps={lat:req.lat,lng:req.lng};
    db.currentCall.callerGpsPending=true;
@@ -9334,11 +9334,21 @@ function callerPhoneFrame(inner){
  </div>`;
 }
 const CALLER_RED_BTN=(onclick,title="Auflegen")=>`<button onclick="${onclick}" title="${title}" style="width:76px;height:76px;border-radius:50%;background:#dc2626;border:none;color:#fff;font-size:32px;padding:0;margin:0 auto">📵</button>`;
+// v6.31: Handy als Anrufer – ausgedachte, gleichbleibende Mobilnummer je Anrufer-Handy (Übung, keine echte Nummer)
+function callerFakeMobile(id){
+ let h=2166136261; for(const ch of String(id||"x")){h^=ch.charCodeAt(0);h=Math.imul(h,16777619)>>>0}
+ const pre=["0151","0152","0157","0159","0160","0162","0163","0170","0171","0172","0173","0174","0175","0176","0177","0178","0179"];
+ const p=pre[h%pre.length]; let n=""; let x=h;
+ for(let i=0;i<7;i++){x=Math.imul(x^(x>>>13),2654435761)>>>0;n+=String(x%10)}
+ if(n[0]==="0")n="4"+n.slice(1);
+ return `${p} ${n}`;
+}
 function callerNumLabel(n){return n==="112"?"112":n==="116117"?"116 117":String(n||"")}
 function callerKeypadHTML(callerId,dburl,sid,msg){
  const keys=[["1",""],["2","ABC"],["3","DEF"],["4","GHI"],["5","JKL"],["6","MNO"],["7","PQRS"],["8","TUV"],["9","WXYZ"],["*",""],["0","+"],["#",""]];
  const args=`'${esc(String(callerId))}','${esc(dburl)}','${esc(sid)}'`;
  return callerPhoneFrame(`
+   <div style="font-size:12px;opacity:.7;margin-top:4px">📱 Eigene Nummer (Übung): <b>${esc(callerFakeMobile(callerId))}</b></div>
    <div id="callerDisplay" style="min-height:52px;font-size:36px;font-weight:300;letter-spacing:3px;margin:12px 0 4px;word-break:break-all">${esc(callerDialed)||"&nbsp;"}</div>
    <div id="callerMsg" style="min-height:20px;font-size:14px;color:#fca5a5">${msg?esc(msg):""}</div>
    <div style="display:grid;grid-template-columns:repeat(3,76px);gap:14px 22px;justify-content:center;margin:14px 0">

@@ -1607,6 +1607,9 @@ Version 5.05:
   („a, b“ = a ODER b). Mit „🚑 NA-Indikation“ markierte Knöpfe ziehen weiterhin einen Notarzt.
 - Nur „Unauffällig“ (ohne weitere Befunde) zählt weiter als unauffälliges E (R0 möglich).
 
+Version 6.31:
+- Handy als Anrufer: Jedes Anrufer-Handy bekommt eine ausgedachte Mobilnummer (z. B. 0171 4700284), die immer gleich bleibt. Die Leitstelle sieht sie bei der Rückrufnummer als „Angezeigte Nummer“ (Übernehmen-Knopf), der Anrufer sieht sie auf seiner Wähltastatur als „Eigene Nummer (Übung)“. Die Nummern sind erfunden.
+
 Version 6.30:
 - Polizeilicher Shuttleservice: Liegt ein Landeplatz mehr als 500 m (Luftlinie) von der Einsatzstelle entfernt, wird automatisch ein Polizei-Shuttle angefordert, sobald dort ein Hubschrauber eingeplant ist (Nachricht der Polizei: Streifenwagen in ca. 5–10 min am Landeplatz). Im manuellen Modus/Realübung per Knopf „👮 Shuttle anfordern“ am Landeplatz.
 - Die Hubschrauberbesatzung wartet am Landeplatz (SDS), bis der Shuttle da ist und sie zur Einsatzstelle gebracht hat (Fahrzeit ca. 40 km/h im Schnitt, Annahme); erst dann beginnt die Versorgung.
