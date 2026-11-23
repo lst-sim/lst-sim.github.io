@@ -1607,6 +1607,9 @@ Version 5.05:
   („a, b“ = a ODER b). Mit „🚑 NA-Indikation“ markierte Knöpfe ziehen weiterhin einen Notarzt.
 - Nur „Unauffällig“ (ohne weitere Befunde) zählt weiter als unauffälliges E (R0 möglich).
 
+Version 6.43:
+- Startbildschirm: Einsätze in Wilhelmshaven stehen als eigene Gruppe unter den übrigen Einsätzen und lassen sich mit „▼ Wilhelmshaven (n Einsätze)“ ein- und ausklappen. Die Einstellung bleibt gespeichert. Ein gerade geöffneter WHV-Einsatz bleibt auch eingeklappt sichtbar.
+
 Version 6.42:
 - „Realistisch“ erzeugt jetzt auch Krankentransporte (Einweisung, Entlassung …) in Friesland und Wilhelmshaven – tagsüber (7–19 Uhr) ca. 5–9 in 3 h, nachts 0–2 (Annahme). Sie laufen im Zeitraffer selbst ab (Übernahme 10–20 min → Status 7 → Status 8 → frei → abgeschlossen); noch laufende stehen danach normal auf dem Startbildschirm und laufen weiter selbst ab. Selbst angenommene Krankentransporte steuerst du wie bisher von Hand.
 

@@ -263,7 +263,7 @@ html[data-device="handy"] .fach-grid{grid-template-columns:1fr}
 <header id="topbar">
  <div class="tb-left">
   <span class="tb-brand"><span class="tb-logo">🚑</span><span class="tb-name">Leitstelle<b>.sim</b></span></span>
-  <span id="versionTag" class="tb-ver">v6.42</span>
+  <span id="versionTag" class="tb-ver">v6.43</span>
   <span id="syncState"></span>
   <a id="deskTag" href="#" onclick="renameDesk();return false" title="Name dieses Platzes (für „offen an …“) – antippen zum Ändern"></a>
  </div>
@@ -4174,6 +4174,26 @@ function sprechwunschUnits(){
  return db.units.filter(u=>["0","5"].includes(String(u.status)))
    .sort((a,b)=>(String(a.status)==="0"?0:1)-(String(b.status)==="0"?0:1));
 }
+// v6.43: Einsatzliste (Aktensortierer) für eine Gruppe von Einsätzen
+function incidentListHTML(list,total){
+ return list.map((c,i)=>{
+    const isCurrentCall=db.currentCall&&String(db.currentCall.id)===String(c.id);
+    const isExpanded=expandedCallId!==undefined?String(expandedCallId)===String(c.id):isCurrentCall;
+    if(isExpanded){
+      return `<div style="position:relative;z-index:${(total||list.length)+2};margin-top:${i===0?0:6}px">
+        <button onclick="toggleIncidentExpand('${esc(String(c.id))}')" style="width:100%;text-align:left;background:#eef2f6;border:1px solid var(--line);border-bottom:none;border-radius:10px 10px 0 0;padding:8px 14px;font-weight:800">▲ Einklappen – #${esc(c.id)}</button>
+        <div style="margin-top:0">${incidentCard(c,isCurrentCall)}</div>
+       </div>`;
+    }
+    const stateColor=CALL_PHASES[callPhase(c)][1];
+    return `<div onclick="toggleIncidentExpand('${esc(String(c.id))}')" title="${esc(CALL_PHASES[callPhase(c)][0])}" style="cursor:pointer;background:var(--panel);border:1px solid var(--line);border-left:6px solid ${stateColor};border-radius:10px;padding:8px 14px;margin-top:${i===0?0:-9}px;position:relative;z-index:${(total||list.length)-i};box-shadow:0 2px 5px rgba(0,0,0,.10);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">
+      ${callPhaseHTML(c,true)}<b>#${esc(c.id)}</b>${waitBadgeHTML(c)}${deskBadgeHTML(c)} <span class="muted">${esc(c.keyword||"Noch keine Bewertung")}</span>
+      ${c.alarmTime&&c.police?policeStripHTML(c):""}${c.alarmTime&&isManvCall(c)?manvStripHTML(c):""}${c.alarmTime&&c.evac?evacStripHTML(c):""}
+     </div>`;
+  }).join("");
+}
+function whvCollapsed(){try{return localStorage.getItem("lst-whv-collapsed")==="1"}catch(e){return false}}
+function whvToggle(){try{localStorage.setItem("lst-whv-collapsed",whvCollapsed()?"0":"1")}catch(e){}render("leitstelle")}
 function dashboard(){
  const calls=allOpenCalls().filter(c=>!c.mergedInto); // zusammengeführte, noch gehaltene Anrufe nicht doppelt zeigen
  const sprech=sprechwunschUnits();
@@ -4213,21 +4233,15 @@ function dashboard(){
      <button onclick="openExternalRequest('ostfriesland')">📠 LST Ostfriesland</button>
    </div>`:""}
   </div>
-  ${calls.length?`<div id="incidentStack" style="display:flex;flex-direction:column;margin-top:4px">${sortedCalls.map((c,i)=>{
-    const isCurrentCall=db.currentCall&&String(db.currentCall.id)===String(c.id);
-    const isExpanded=expandedCallId!==undefined?String(expandedCallId)===String(c.id):isCurrentCall;
-    if(isExpanded){
-      return `<div style="position:relative;z-index:${sortedCalls.length+2};margin-top:${i===0?0:6}px">
-        <button onclick="toggleIncidentExpand('${esc(String(c.id))}')" style="width:100%;text-align:left;background:#eef2f6;border:1px solid var(--line);border-bottom:none;border-radius:10px 10px 0 0;padding:8px 14px;font-weight:800">▲ Einklappen – #${esc(c.id)}</button>
-        <div style="margin-top:0">${incidentCard(c,isCurrentCall)}</div>
-       </div>`;
-    }
-    const stateColor=CALL_PHASES[callPhase(c)][1];
-    return `<div onclick="toggleIncidentExpand('${esc(String(c.id))}')" title="${esc(CALL_PHASES[callPhase(c)][0])}" style="cursor:pointer;background:var(--panel);border:1px solid var(--line);border-left:6px solid ${stateColor};border-radius:10px;padding:8px 14px;margin-top:${i===0?0:-9}px;position:relative;z-index:${sortedCalls.length-i};box-shadow:0 2px 5px rgba(0,0,0,.10);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">
-      ${callPhaseHTML(c,true)}<b>#${esc(c.id)}</b>${waitBadgeHTML(c)}${deskBadgeHTML(c)} <span class="muted">${esc(c.keyword||"Noch keine Bewertung")}</span>
-      ${c.alarmTime&&c.police?policeStripHTML(c):""}${c.alarmTime&&isManvCall(c)?manvStripHTML(c):""}${c.alarmTime&&c.evac?evacStripHTML(c):""}
-     </div>`;
-  }).join("")}</div>
+  ${calls.length?`<div id="incidentStack" style="display:flex;flex-direction:column;margin-top:4px">${(()=>{
+    // v6.43: Einsätze in Wilhelmshaven als eigene, einklappbare Gruppe
+    const split=currentScenarioId==="fri-whv"&&!CUSTOM_SC_EARLY();
+    const whv=split?sortedCalls.filter(c=>callAreaOf(c)==="whv"):[], rest=sortedCalls.filter(c=>!whv.includes(c));
+    const coll=whvCollapsed(), cur=db.currentCall&&String(db.currentCall.id);
+    const shownWhv=coll?whv.filter(c=>String(c.id)===cur):whv;
+    const head=whv.length?`<button onclick="whvToggle()" style="width:100%;text-align:left;margin-top:${rest.length?12:0}px;background:#eef2ff;border:1px solid #c7d2fe;border-radius:10px;padding:8px 14px;font-weight:800;color:#3730a3">${coll?"▶":"▼"} Wilhelmshaven (${whv.length} ${whv.length===1?"Einsatz":"Einsätze"})${coll?" – eingeklappt, zum Aufklappen tippen":""}</button>`:"";
+    return incidentListHTML(rest,sortedCalls.length)+head+incidentListHTML(shownWhv,sortedCalls.length);
+  })()}</div>
    <p class="muted" style="margin-top:8px;font-size:11px">📂 Wie ein Aktensortierer: dringende Einsätze oben, R0 danach, bereits alarmierte ganz unten. Auf einen Eintrag tippen, um alle Infos zu sehen.</p>`:`<div class="card"><h2>Keine offenen Einsätze</h2><p class="muted">Starte einen Übungsnotruf.</p></div>`}
  </section>
  <aside>
