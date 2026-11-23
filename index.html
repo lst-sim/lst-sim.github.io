@@ -263,7 +263,7 @@ html[data-device="handy"] .fach-grid{grid-template-columns:1fr}
 <header id="topbar">
  <div class="tb-left">
   <span class="tb-brand"><span class="tb-logo">🚑</span><span class="tb-name">Leitstelle<b>.sim</b></span></span>
-  <span id="versionTag" class="tb-ver">v6.36</span>
+  <span id="versionTag" class="tb-ver">v6.37</span>
   <span id="syncState"></span>
   <a id="deskTag" href="#" onclick="renameDesk();return false" title="Name dieses Platzes (für „offen an …“) – antippen zum Ändern"></a>
  </div>
@@ -2940,6 +2940,15 @@ function aefApply(c,selected,used,keyword){
  if(!free().length)return;
  const m=String(keyword||"").match(R_LEVEL_RE), lv=c.rOverride||(m?m[2]:(c.rZero?"R0":null));
  const hasNef=selected.some(x=>x.type==="NEF");
+ // v6.37: Reanimation – AEF (corpuls cpr, erweitertes Ampullarium) zusätzlich, wenn das NEF mind. 5 min länger braucht
+ if((c.answers&&c.answers.event==="Reanimation")||/reanimation/i.test(String(keyword||""))){
+   const a=free()[0], nef=selected.find(x=>x.type==="NEF"), ea=aefEta(a), en=nef?aefEta(nef):null;
+   if(a&&ea!=null&&(!nef||nef.missing||en==null||en-ea>=5)){
+     selected.push({...a,aefRole:"rea"});used.add(a.id);
+     c.aefNote=`AEF (G-NFS, corpuls cpr, erweitertes Ampullarium) zusätzlich – ca. ${Math.round(ea)} min${nef&&!nef.missing&&en!=null?`, NEF ca. ${Math.round(en)} min`:", kein NEF frei"}`;
+   }
+   return;
+ }
  const uro=aefUroCase(c);
  const swap=(i,nu,role)=>{const old=selected[i];if(old&&!old.missing&&!old.neighbor)used.delete(old.id);selected.splice(i,1,{...nu,aefRole:role});used.add(nu.id)};
  if((lv==="R0"||uro)&&!hasNef){
@@ -6383,6 +6392,16 @@ function crewPlan(u,call){
    u.crew={callId:String(call.id),mode:"transport",patient:0,departAt:now+rint(35,50)*60000,registerAt:now+rint(20,30)*60000,forceHosp:3,forceFach:"Pädiatrie",info:{...info,sev:"urgent",age:0}};
    crewSds(u,call,"Übernahme Frühgeborenes in den Transportinkubator, Stabilisierung läuft – Transport ins Perinatalzentrum Klinikum Oldenburg folgt.");return;
  }
+ // v6.37: NKTW hat RTW nachgefordert → RTW übernimmt den Patienten, NEF begleitet den NKTW
+ {const nk=callUnits(call).find(x=>x!==u&&x.type==="NKTW"&&x.crew&&x.crew.mode==="transport"&&x.crew.upg&&!x.crew.upg.done&&String(x.status)==="4");
+  if(nk&&u.type==="RTW"){const C=nk.crew;C.upg.done=true;
+    u.crew={...C,upg:null,registered:false,asgId:null,registerAt:now+rint(4,8)*60000,departAt:now+rint(12,18)*60000,info:{...C.info}};
+    nk.crew={callId:C.callId,mode:"none",doneAt:now+rint(3,6)*60000,info:C.info,owner:C.owner};
+    crewSds(nk,call,`${u.opta||u.name} ist da – Patient an den RTW übergeben, wir werden gleich frei.`);
+    (call.history=call.history||[]).push({q:`🚑 ${u.opta||u.name}`,a:`übernimmt den Patienten von ${nk.opta||nk.name}`});return}
+  if(nk&&isNef){const C=nk.crew;C.upg.done=true;C.nefId=u.id;if(C.registerAt>now)C.registerAt=now;C.departAt=Math.max(C.departAt||0,now+rint(10,15)*60000);
+    u.crew={callId:String(call.id),nef:true,follow:nk.id};crewSds(nk,call,"Notarzt ist da – Transport mit NEF-Begleitung folgt.");return}
+ }
  // welcher Patient? jedes Transportmittel übernimmt einen
  const planned=(call.alarmedUnits||[]).map(id=>db.units.find(x=>String(x.id)===String(id))).filter(x=>x&&x!==u&&x.crew&&x.crew.callId===String(call.id)&&x.crew.patient!=null&&CREW_TRANSPORT.has(x.type));
  // v5.52 MANV: jedes NEF gehört zu einem roten (SK I) oder blauen (SK IV) Patienten – frei nur bei NEF-Überhang
@@ -6522,7 +6541,7 @@ function crewTick(){
        const asg=findUnitHospitalAssignment(u);
        if(asg&&new Date(asg.createdAt).getTime()>=(u.status4Since||0)-60000&&asg.source!=="crew"){u.crew={callId:String(call.id),mode:"transport",patient:0,departAt:(u.status4Since||now)+20*60000,registered:true,asgId:asg.id,hospId:asg.hospitalId,manual:true,owner:DEVICE_ID,info:crewCaseInfo(call)};changed=true;continue}
        if(firstRdStays(call,u)){u.crew={callId:String(call.id),mode:"stay",owner:DEVICE_ID};crewSds(u,call,`Als ${u.type==="NEF"?"1. NEF":"1. RTW"} an der Einsatzstelle – bleiben vor Ort (Erstversorgung/Sichtung), kein Patiententransport.`);changed=true;continue} // v6.27
-       crewPlan(u,call); if(u.crew)u.crew.owner=DEVICE_ID; (call.alarmedUnits||[]).forEach(id=>{const x=db.units.find(y=>String(y.id)===String(id));if(x&&x.crew&&!x.crew.owner)x.crew.owner=DEVICE_ID}); changed=true; continue;
+       crewPlan(u,call); if(u.crew)u.crew.owner=DEVICE_ID; try{nktwUpgradeCheck(u,call,now)}catch(e){console.warn(e)} // v6.37 (call.alarmedUnits||[]).forEach(id=>{const x=db.units.find(y=>String(y.id)===String(id));if(x&&x.crew&&!x.crew.owner)x.crew.owner=DEVICE_ID}); changed=true; continue;
      }
      const C=u.crew;
      if(C.mode==="stay")continue; // v6.27: 1. RTW / 1. NEF bleiben an der Einsatzstelle
@@ -6575,6 +6594,14 @@ function crewTick(){
        else if(C.srtw.asked&&now-C.srtw.askedAt>75*60000){C.srtw.done=true;C.registerAt=now;C.departAt=now+rint(15,20)*60000;crewSds(u,call,"Kein SRTW gekommen – Transport jetzt mit Tragehilfe der Feuerwehr in unserem RTW.");changed=true}
        continue;
      }
+     if(C.mode==="transport"&&C.upg&&!C.upg.done){ // v6.37: NKTW wartet auf RTW/AEF/NEF
+       if(!C.upg.asked&&now>=C.upg.askAt){C.upg.asked=true;C.upg.askedAt=now;
+         crewSds(u,call,"Nachforderung: RTW – Patient braucht RTW-Versorgung. Alternativ AEF (NKTW + AEF = RTW).");
+         (call.history=call.history||[]).push({q:`📟 Nachforderung (${u.opta||u.name})`,a:"RTW (oder AEF – NKTW + AEF = RTW)"});
+         (call.nafo=call.nafo||[]).push({reason:"NKTW fordert RTW nach (alternativ AEF)",at:new Date().toISOString()});changed=true}
+       else if(C.upg.asked&&now-C.upg.askedAt>45*60000){C.upg.done=true;C.registerAt=now;C.departAt=now+rint(5,10)*60000;crewSds(u,call,"Keine Unterstützung gekommen – Transport jetzt mit dem NKTW.");changed=true}
+       continue;
+     }
      if(C.mode==="transport"){
        if(!C.registered&&now>=C.registerAt){crewRegister(u,call);changed=true}
        if(C.registered&&now>=C.departAt){
@@ -6584,7 +6611,7 @@ function crewTick(){
          const keep={...C,arriveAt:now+drive*60000};
          setUnitStatus(u,"7"); if(u.s7Hold){keep.arriveAt+=u.s7Hold;crewSds(u,call,"Patient aufgenommen – stehen noch mind. 3 Minuten am Rettungsmittelhalteplatz, dann Abfahrt.")} u.crew=keep;
          if(C.nefId){const n=db.units.find(x=>String(x.id)===String(C.nefId));if(n&&String(n.status)==="4"&&!(n.crew&&n.crew.mode==="stay")&&!firstRdStays(call,n)){setUnitStatus(n,"7");n.crew={callId:C.callId,nef:true,follow:u.id,arriveAt:keep.arriveAt,owner:DEVICE_ID};
-           if(asg&&!(asg.vehicleIds||[]).some(id=>String(id)===String(n.id))){asg.vehicleIds.push(n.id);asg.vehicleLabels.push(`${n.opta||n.name} (${n.type})`);asg.na=true;asg.flags=asg.flags||{};asg.flags.n=true}}}
+           if(asg&&!(asg.vehicleIds||[]).some(id=>String(id)===String(n.id))){asg.vehicleIds.push(n.id);asg.vehicleLabels.push(`${n.opta||n.name} (${n.type})`);if(n.type!=="AEF"){asg.na=true;asg.flags=asg.flags||{};asg.flags.n=true}}}}
          changed=true;
        }
      }
@@ -6627,6 +6654,12 @@ function crewTick(){
 // Fahrzeug des Einsatzes den Patienten bereits transportiert (Status 7) – sonst bleibt er vor Ort.
 function aefCrewPlan(u,call,info,now){
  const cid=String(call.id), tx=callUnits(call).filter(x=>x!==u&&CREW_TRANSPORT.has(x.type)&&["3","4"].includes(String(x.status)));
+ // v6.37: Wie ein NEF – transportiert nie, begleitet. NKTW + AEF = RTW: AEF fährt beim NKTW mit.
+ const nk=tx.find(x=>x.type==="NKTW"&&String(x.status)==="4"&&x.crew&&x.crew.mode==="transport"&&!x.crew.nefId);
+ if(nk&&info.sev!=="rea"){aefJoinNktw(u,nk,call,now);return}
+ if(info.sev==="rea"){ // v6.37: Reanimation – mechanische Thoraxkompression und erweitertes Ampullarium
+   u.crew={callId:cid,mode:"none",doneAt:now+rint(20,35)*60000,info:{...info},aefSupport:true,owner:DEVICE_ID};
+   crewSds(u,call,"Reanimation läuft – corpuls cpr (mechanische Thoraxkompression) angelegt, Zugang und Medikamente aus dem erweiterten Ampullarium. Bleiben bis zur Übergabe.");return}
  if(tx.length){ // zusammen mit NKTW/RTW: unterstützt, frei sobald der Patient abtransportiert ist
    u.crew={callId:cid,mode:"none",doneAt:now+rint(8,15)*60000,info:{...info},aefSupport:true,owner:DEVICE_ID};
    crewSds(u,call,"Gemeindenotfallsanitäter unterstützt die Besatzung vor Ort – frei, sobald der Patient abtransportiert ist.");return}
@@ -6641,6 +6674,27 @@ function aefCrewPlan(u,call,info,now){
  u.crew={callId:cid,mode:"none",doneAt:now+rint(10,18)*60000,info:{...info},aefNeedTx:need,owner:DEVICE_ID};
  crewSds(u,call,`Nachforderung: ${need} für den Transport – Patient ist vom Gemeindenotfallsanitäter versorgt, wir bleiben bis zur Übergabe.`);
  (call.history=call.history||[]).push({q:`📟 Nachforderung (${u.opta||u.name})`,a:`${need} für Transport (G-NFS vor Ort)`});
+}
+// v6.37: AEF begleitet den NKTW (zusammen = RTW-Versorgung)
+function aefJoinNktw(aef,nk,call,now){
+ const C=nk.crew; const wasAsked=C.upg&&C.upg.asked&&!C.upg.done;
+ if(C.upg)C.upg.done=true;
+ C.nefId=aef.id; if(C.registerAt>now)C.registerAt=now; C.departAt=Math.max(C.departAt||0,now+rint(8,14)*60000);
+ aef.crew={callId:String(call.id),nef:true,follow:nk.id,owner:DEVICE_ID};
+ crewSds(aef,call,`Gemeindenotfallsanitäter übernimmt mit ${nk.opta||nk.name} die Versorgung (NKTW + AEF = RTW) und begleitet den Transport.`);
+ if(wasAsked)crewSds(nk,call,"AEF ist da – Versorgung jetzt auf RTW-Niveau, Transport folgt.");
+ (call.history=call.history||[]).push({q:`🩺 ${aef.opta||aef.name} (G-NFS)`,a:`begleitet ${nk.opta||nk.name} – NKTW + AEF = RTW`});
+}
+// v6.37: NKTW fordert bei RTW-pflichtigem Patienten einen RTW nach (oder AEF: NKTW + AEF = RTW)
+function nktwUpgradeCheck(u,call,now){
+ if(!u||u.type!=="NKTW"||!u.crew||u.crew.mode!=="transport"||u.crew.upg||isManvCall(call))return;
+ const sev=u.crew.info&&u.crew.info.sev;
+ if(!["urgent","critical","rea"].includes(sev))return;
+ const others=callUnits(call).filter(x=>x!==u&&["RTW","NEF","AEF","RTH","NAW","ITW"].includes(x.type)&&["3","4"].includes(String(x.status)));
+ const aef=others.find(x=>x.type==="AEF"&&String(x.status)==="4"&&(!x.crew||x.crew.aefSupport));
+ if(aef){aefJoinNktw(aef,u,call,now);return}
+ if(others.length)return; // RTW/NEF/AEF schon unterwegs
+ u.crew.upg={askAt:now+rint(3,6)*60000};
 }
 // AEF bleibt, bis der Patient übergeben/abtransportiert ist
 function aefMustStay(u,call,C){

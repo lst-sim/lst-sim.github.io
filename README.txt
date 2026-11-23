@@ -1607,6 +1607,11 @@ Version 5.05:
   („a, b“ = a ODER b). Mit „🚑 NA-Indikation“ markierte Knöpfe ziehen weiterhin einen Notarzt.
 - Nur „Unauffällig“ (ohne weitere Befunde) zählt weiter als unauffälliges E (R0 möglich).
 
+Version 6.37:
+- AEF wie ein NEF: transportiert nie, begleitet. NKTW + AEF = RTW – beim Transport fährt das AEF mit (Status 7/8) und wird danach frei. Begleitet es einen NKTW, gilt das in IVENA nicht als Notarztbegleitung.
+- NKTW fordert bei RTW-pflichtigem Patienten (dringlich/kritisch) selbst nach: „Nachforderung: RTW – alternativ AEF (NKTW + AEF = RTW)“. Kommt ein AEF, begleitet es den NKTW; kommt ein RTW, übernimmt er den Patienten und der NKTW wird frei; kommt ein NEF, begleitet es den NKTW. Ohne Unterstützung nach 45 min transportiert der NKTW allein.
+- Reanimation: Ein AEF (corpuls cpr, erweitertes Ampullarium) wird zusätzlich mitgeschickt, wenn das NEF mindestens 5 Minuten länger braucht als das AEF (oder kein NEF frei ist). Vor Ort: mechanische Thoraxkompression, bleibt bis zur Übergabe.
+
 Version 6.36:
 - Neue Fahrzeuggruppe AEF (Einsatzfahrzeug mit Gemeindenotfallsanitäter, G-NFS) im Rettungsdienst. Anlegen unter Rettungsmittel → Rettungsdienst → Typ „AEF“ (Besatzung 1). Es sind noch KEINE AEF-Fahrzeuge hinterlegt – Standorte/Funkrufnamen bitte eintragen bzw. mitteilen.
 - R0 (niederschwellig): AEF wird statt NKTW/RTW vorgeschlagen, wenn es mindestens genauso schnell da ist.
