@@ -263,7 +263,7 @@ html[data-device="handy"] .fach-grid{grid-template-columns:1fr}
 <header id="topbar">
  <div class="tb-left">
   <span class="tb-brand"><span class="tb-logo">🚑</span><span class="tb-name">Leitstelle<b>.sim</b></span></span>
-  <span id="versionTag" class="tb-ver">v6.37</span>
+  <span id="versionTag" class="tb-ver">v6.38</span>
   <span id="syncState"></span>
   <a id="deskTag" href="#" onclick="renameDesk();return false" title="Name dieses Platzes (für „offen an …“) – antippen zum Ändern"></a>
  </div>
@@ -2945,7 +2945,7 @@ function aefApply(c,selected,used,keyword){
    const a=free()[0], nef=selected.find(x=>x.type==="NEF"), ea=aefEta(a), en=nef?aefEta(nef):null;
    if(a&&ea!=null&&(!nef||nef.missing||en==null||en-ea>=5)){
      selected.push({...a,aefRole:"rea"});used.add(a.id);
-     c.aefNote=`AEF (G-NFS, corpuls cpr, erweitertes Ampullarium) zusätzlich – ca. ${Math.round(ea)} min${nef&&!nef.missing&&en!=null?`, NEF ca. ${Math.round(en)} min`:", kein NEF frei"}`;
+     c.aefNote=`AEF (G-NFS) zusätzlich – ca. ${Math.round(ea)} min${nef&&!nef.missing&&en!=null?`, NEF ca. ${Math.round(en)} min`:", kein NEF frei"}`;
    }
    return;
  }
@@ -6574,6 +6574,7 @@ function crewTick(){
      }
      if(C.mode==="evacT"){if(now>=C.departAt){const keep={...C,arriveAt:now+C.drive*60000};setUnitStatus(u,"7");if(u.s7Hold)keep.arriveAt+=u.s7Hold;u.crew=keep;changed=true}continue} // v5.63
      if(C.mode==="care"){const P=(call&&call.manvPatients||[]).find(x=>x.n===C.patient);if(!P||P.sk!==4){delete u.crew;changed=true}continue} // v5.60
+     if(u.type==="AEF"&&C.cprAt&&!C.cprDone&&now>=C.cprAt){C.cprDone=true;aefCprApplied(u,call);changed=true} // v6.38
      if(C.mode==="none"&&now>=C.doneAt&&aefMustStay(u,call,C)){C.doneAt=now+60000;continue} // v6.36
      if(C.mode==="none"&&now>=C.doneAt&&!rtwMayFree(u,call)){C.doneAt=now+60000;if(!C.waitTx){C.waitTx=true;crewSds(u,call,"Kein eigener Patient – bleiben vor Ort, bis der Patient abtransportiert wird.");changed=true}continue} // v6.03
      if(C.mode==="none"&&now>=C.doneAt){crewSds(u,call,C.info&&C.info.noPatient?"Kein Patient vor Ort – Einsatzende, wieder einsatzbereit.":"Kein weiterer Patient für uns – Einsatzende, wieder einsatzbereit.");setUnitStatus(u,"1");delete u.crew;changed=true;continue}
@@ -6657,9 +6658,9 @@ function aefCrewPlan(u,call,info,now){
  // v6.37: Wie ein NEF – transportiert nie, begleitet. NKTW + AEF = RTW: AEF fährt beim NKTW mit.
  const nk=tx.find(x=>x.type==="NKTW"&&String(x.status)==="4"&&x.crew&&x.crew.mode==="transport"&&!x.crew.nefId);
  if(nk&&info.sev!=="rea"){aefJoinNktw(u,nk,call,now);return}
- if(info.sev==="rea"){ // v6.37: Reanimation – mechanische Thoraxkompression und erweitertes Ampullarium
-   u.crew={callId:cid,mode:"none",doneAt:now+rint(20,35)*60000,info:{...info},aefSupport:true,owner:DEVICE_ID};
-   crewSds(u,call,"Reanimation läuft – corpuls cpr (mechanische Thoraxkompression) angelegt, Zugang und Medikamente aus dem erweiterten Ampullarium. Bleiben bis zur Übergabe.");return}
+ if(info.sev==="rea"){ // v6.38: Reanimation – frühestens 25 min nach Ankunft wird die mechanische Reanimationshilfe angelegt
+   u.crew={callId:cid,mode:"none",doneAt:now+rint(20,35)*60000,info:{...info},aefSupport:true,cprAt:(u.status4Since||now)+rint(25,35)*60000,owner:DEVICE_ID};
+   crewSds(u,call,"Unterstützen bei der Reanimation.");return}
  if(tx.length){ // zusammen mit NKTW/RTW: unterstützt, frei sobald der Patient abtransportiert ist
    u.crew={callId:cid,mode:"none",doneAt:now+rint(8,15)*60000,info:{...info},aefSupport:true,owner:DEVICE_ID};
    crewSds(u,call,"Gemeindenotfallsanitäter unterstützt die Besatzung vor Ort – frei, sobald der Patient abtransportiert ist.");return}
@@ -6674,6 +6675,17 @@ function aefCrewPlan(u,call,info,now){
  u.crew={callId:cid,mode:"none",doneAt:now+rint(10,18)*60000,info:{...info},aefNeedTx:need,owner:DEVICE_ID};
  crewSds(u,call,`Nachforderung: ${need} für den Transport – Patient ist vom Gemeindenotfallsanitäter versorgt, wir bleiben bis zur Übergabe.`);
  (call.history=call.history||[]).push({q:`📟 Nachforderung (${u.opta||u.name})`,a:`${need} für Transport (G-NFS vor Ort)`});
+}
+// v6.38: Reanimation mit AEF – ist die mechanische Reanimationshilfe angelegt, werden HLF, NKTW und
+// zusätzliche RTW (nicht der transportierende) in Status 4 frei.
+function aefCprApplied(aef,call){
+ const us=callUnits(call).filter(x=>x!==aef&&String(x.status)==="4"&&!unitPhoneLive(x));
+ const rtws=us.filter(x=>x.type==="RTW").sort((a,b)=>(a.status4Since||0)-(b.status4Since||0));
+ const keepRtw=rtws.find(x=>x.crew&&x.crew.mode==="transport")||rtws[0];
+ const freeList=us.filter(x=>x.type==="HLF"||x.type==="NKTW"||(x.type==="RTW"&&x!==keepRtw));
+ crewSds(aef,call,`Mechanische Reanimationshilfe angelegt${freeList.length?` – ${freeList.map(x=>x.opta||x.name).join(", ")} werden nicht mehr benötigt`:""}.`);
+ for(const x of freeList){setUnitStatus(x,"1");delete x.crew;crewSds(x,call,"Mechanische Reanimationshilfe angelegt – nicht mehr benötigt, frei Einsatzstelle.")}
+ (call.history=call.history||[]).push({q:`🩺 ${aef.opta||aef.name} (G-NFS)`,a:`Mechanische Reanimationshilfe angelegt${freeList.length?` – frei: ${freeList.map(unitLabel).join(", ")}`:""}`});
 }
 // v6.37: AEF begleitet den NKTW (zusammen = RTW-Versorgung)
 function aefJoinNktw(aef,nk,call,now){
@@ -7307,7 +7319,7 @@ function crewSurplusTick(){
      const st=String(u.status);
      if(st==="3"&&CREW_TRANSPORT.has(u.type)&&!u.crew&&covered>=need&&rtwOnScene){if(!u._relAt)u._relAt=now+rint(1,3)*60000;else if(now>=u._relAt){delete u._relAt;free(u,"Abbestellt – Patient wird bereits versorgt, nicht mehr benötigt.")}}
      else if(st==="3"&&u.type==="NEF"&&!u.crew&&rtwOnScene&&rtwOnScene.crew.info&&!["rea","critical"].includes(rtwOnScene.crew.info.sev)){if(!u._relAt)u._relAt=now+rint(1,3)*60000;else if(now>=u._relAt){delete u._relAt;free(u,"Abbestellt – RTW vor Ort: kein Notarzt erforderlich.")}}
-     else if(st==="4"&&!rd(u)&&u.type!=="AEF"&&u.org!=="Polizei"&&rtwOnScene&&!/Feuer|Brand|Verkehrsunfall|Technische|Wasser|Gefahr/i.test([call.answers&&call.answers.event,call.keyword].join(" "))&&!Number(call.answers&&(call.answers.trapped||call.answers.firePeople))){
+     else if(st==="4"&&!rd(u)&&u.type!=="AEF"&&u.org!=="Polizei"&&rtwOnScene&&!(info.sev==="rea"&&!us.some(x=>["7","8"].includes(String(x.status))))&&!/Feuer|Brand|Verkehrsunfall|Technische|Wasser|Gefahr/i.test([call.answers&&call.answers.event,call.keyword].join(" "))&&!Number(call.answers&&(call.answers.trapped||call.answers.firePeople))){
        if(!u._relAt)u._relAt=now+rint(5,10)*60000;else if(now>=u._relAt){delete u._relAt;free(u,"Patient an den Rettungsdienst übergeben – nicht mehr benötigt, frei Einsatzstelle.")}
      }
    }
@@ -8272,6 +8284,8 @@ function callTick(){
      if(c.evac&&!c.evac.complete)continue; // v5.63: alle bleiben, bis die Evakuierung abgeschlossen ist
      if((["ELW","ELW1","ELW2"].includes(u.type)||isLeadUnit(u)||u.manvComp)&&(us.some(x=>x!==u&&CREW_TRANSPORT.has(x.type)&&String(x.status)==="4")||(c.manvPatients||[]).some(p=>!p.unit&&p.sk<=4)||manvStayOpen(c)))continue; // v5.66: auch MANV-PA und Betreuung (MANB)
      if(manvKind(c)==="MANB"&&/^(MTW|GW-Betreuung|GW-SEG|Küchenwagen)$/.test(u.type)&&u.org==="DRK"&&manvStayOpen(c))continue;
+     // v6.38: Reanimation – Feuerwehr hilft bis zum Transport (oder bis die mech. Reanimationshilfe des AEF läuft)
+     if(/Reanimation/.test(String(c.answers?.event||"")+" "+String(c.keyword||""))&&!us.some(x=>["7","8"].includes(String(x.status)))&&us.some(x=>x!==u&&CREW_TRANSPORT.has(x.type)&&String(x.status)==="4"))continue;
      setUnitStatus(u,"1"); delete u.sceneUntil; delete u.sceneCall; changed=true;
    }
    // Einsatz selbst abschließen, wenn alle Fahrzeuge wieder frei sind (Status 1/2)

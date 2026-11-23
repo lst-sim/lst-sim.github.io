@@ -1607,6 +1607,10 @@ Version 5.05:
   („a, b“ = a ODER b). Mit „🚑 NA-Indikation“ markierte Knöpfe ziehen weiterhin einen Notarzt.
 - Nur „Unauffällig“ (ohne weitere Befunde) zählt weiter als unauffälliges E (R0 möglich).
 
+Version 6.38:
+- Reanimation mit AEF: Frühestens 25 min nach Ankunft des AEF (25–35 min) wird die mechanische Reanimationshilfe angelegt. Dann werden HLF, NKTW und zusätzliche RTW (nicht der transportierende) in Status 4 frei (SDS + Einsatzverlauf). Geräte-/Ampullarium-Hinweise im Alarmierungsfenster entfernt (für die Leitstelle nicht relevant).
+- Reanimation allgemein: Die Feuerwehr bleibt jetzt bis zum Transport an der Einsatzstelle (vorher automatisch nach Zeit frei).
+
 Version 6.37:
 - AEF wie ein NEF: transportiert nie, begleitet. NKTW + AEF = RTW – beim Transport fährt das AEF mit (Status 7/8) und wird danach frei. Begleitet es einen NKTW, gilt das in IVENA nicht als Notarztbegleitung.
 - NKTW fordert bei RTW-pflichtigem Patienten (dringlich/kritisch) selbst nach: „Nachforderung: RTW – alternativ AEF (NKTW + AEF = RTW)“. Kommt ein AEF, begleitet es den NKTW; kommt ein RTW, übernimmt er den Patienten und der NKTW wird frei; kommt ein NEF, begleitet es den NKTW. Ohne Unterstützung nach 45 min transportiert der NKTW allein.
