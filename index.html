@@ -263,7 +263,7 @@ html[data-device="handy"] .fach-grid{grid-template-columns:1fr}
 <header id="topbar">
  <div class="tb-left">
   <span class="tb-brand"><span class="tb-logo">🚑</span><span class="tb-name">Leitstelle<b>.sim</b></span></span>
-  <span id="versionTag" class="tb-ver">v6.45</span>
+  <span id="versionTag" class="tb-ver">v6.46</span>
   <span id="syncState"></span>
   <a id="deskTag" href="#" onclick="renameDesk();return false" title="Name dieses Platzes (für „offen an …“) – antippen zum Ändern"></a>
  </div>
@@ -3044,6 +3044,7 @@ function rmMakeCall(area,caseId,t){
    c.alarmedUnits=[];
    for(const id of (c.proposedUnitIds||[])){const u=db.units.find(x=>x.id===id);if(!u||!["1","2"].includes(String(u.status)))continue;setUnitStatus(u,"3");c.alarmedUnits.push(id)}
    c.neighborProposal=[]; c.abPlans=[];
+   if(Math.random()<0.6)c.alarmSub=alarmSubtextFor(c); // v6.46: manchmal Subtext (Annahme 60 %)
    c.alarmTime=new Date().toISOString();
    c.history.push({q:"🚨 Alarmierung",a:`Vorschlag alarmiert – ${new Date().toLocaleTimeString("de-DE")}`});
  }finally{db.currentCall=keepC}
@@ -3067,6 +3068,7 @@ function rmMakeKt(area,caseId,t){
  try{evaluate();
    c.alarmedUnits=[];
    for(const id of (c.proposedUnitIds||[])){const u=db.units.find(x=>x.id===id);if(!u||!["1","2"].includes(String(u.status)))continue;setUnitStatus(u,"3");c.alarmedUnits.push(id)}
+   if(Math.random()<0.6)c.alarmSub=alarmSubtextFor(c); // v6.46
    c.alarmTime=new Date().toISOString();
    c.history.push({q:"🚨 Alarmierung",a:`${(c.proposal||[])[0]?.opta||"KTW"} – ${new Date().toLocaleTimeString("de-DE")}`});
  }finally{db.currentCall=keepC}
@@ -4120,7 +4122,7 @@ function incidentCard(c,isSelected){
    ${c.alarmTime&&c.police?policeStripHTML(c):""}${c.alarmTime&&isManvCall(c)?manvStripHTML(c):""}${c.alarmTime&&c.evac?evacStripHTML(c):""}${c.heliLanding?`<div style="margin-top:6px">${heliLzHTML(c)}</div>`:""}
    <hr>
    <div class="formgrid">
-    <div><label>Einsatzstichwort</label><div class="big">${esc(c.keyword||"Noch keine Bewertung")}</div></div>
+    <div><label>Einsatzstichwort</label><div class="big">${esc(c.keyword||"Noch keine Bewertung")}</div>${alarmSubHTML(c)}</div>
     <div><label>Betroffene</label><div class="big">${esc(c.count||"–")}</div></div>
    </div>
    <div class="suggest-compact"><b>🧠 Vorschlag / alarmierte Mittel</b>${(()=>{const us=c.alarmTime?callUnits(c):[];return us.length?unitStatusListHTML(us):`<div>${c.suggestion||"Noch nicht genügend Angaben."}</div>`})()}${(c.stackedUnits||[]).length?`<div style="margin-top:4px;color:#0369a1;font-weight:700">🔁 Gestapelt: ${(c.stackedUnits||[]).map(id=>db.units.find(u=>String(u.id)===String(id))).filter(Boolean).map(u=>`${esc(u.opta||u.name)} (${esc(u.type)}, Status ${esc(String(u.status))})`).join(", ")}</div>`:""}</div>
@@ -4205,6 +4207,35 @@ function sprechwunschUnits(){
  return db.units.filter(u=>["0","5"].includes(String(u.status)))
    .sort((a,b)=>(String(a.status)==="0"?0:1)-(String(b.status)==="0"?0:1));
 }
+// v6.46: Subtext unter dem Stichwort (kurze Zusatzinfo, z. B. „Vom Pferd gefallen“)
+const SUBTEXT_RULES=[
+ [/pferd|reitunfall|reiter/,"Vom Pferd gefallen"],[/leiter|gerüst|dach(?!stuhl)|aus .{0,20}höhe|meter tief|>\s*3\s*m/,"Sturz > 3 m"],
+ [/treppe/,"Treppensturz"],[/e-bike|fahrrad|radfahrer/,"Fahrradsturz"],[/motorrad|krad/,"Motorradunfall"],[/traktor|landwirtschaft|maschine/,"Landwirtschaftlicher Unfall"],
+ [/eingeklemmt/,"Person eingeklemmt"],[/baum.*(straße|fahrbahn)|(straße|fahrbahn).*baum/,"Baum auf Fahrbahn"],[/herd|küche|topf|pfanne/,"Essen auf Herd / Küche"],
+ [/mülltonne|container/,"Mülltonnenbrand"],[/rauchmelder/,"Rauchmelder ausgelöst"],[/heim|pflegeheim|seniorenheim/,"Pflegeheim"],
+ [/badesee|ertrinken|im wasser|schwimm/,"Person im Wasser"],[/kind|säugling|baby/,"Kind betroffen"],[/schwanger|wehen|geburt/,"Geburt / Wehen"],
+ [/krampf/,"Krampfanfall"],[/brustschmerz|druck auf der brust|herzinfarkt/,"Brustschmerz"],[/lähmung|sprachstörung|hängender mundwinkel/,"V. a. Schlaganfall"],
+ [/zucker|unterzucker/,"Unterzucker"],[/alkohol|betrunken/,"Alkohol im Spiel"],[/katheter|harnverhalt/,"Katheterproblem / Harnverhalt"],
+ [/einweisung/,"Einweisung durch Hausarzt"],[/entlassung|rücktransport|nach hause/,"Entlassung nach Hause"],[/liegend/,"liegend"],[/tragestuhl|sitzend/,"sitzend / Tragestuhl"]];
+const SUBTEXT_CASE={rea:"Leblose Person",fire_kitchen:"Essen auf Herd",fire_roof:"Dachstuhlbrand",unconscious:"Person nicht ansprechbar",psych:"Psychischer Ausnahmezustand",
+ kv_katheter:"Katheter verstopft",kv_hwi:"Brennen beim Wasserlassen",ph_poison:"Vergiftung möglich",tier_kuh:"Tier in Notlage",tier_hund_eis:"Hund im Eis",tier_katze:"Katze in Notlage",tier_reh:"Wildunfall",tier_schaf:"Tier in Notlage",
+ boat:"Boot in Not",ph_police:"Polizei vor Ort",ph_misdial:"",vu_bus:"Bus beteiligt",uro_harnverhalt:"Harnverhalt",uro_kolik:"V. a. Nierenkolik",kt_dis:"Einweisung durch Hausarzt",
+ co_schwer:"V. a. CO-Vergiftung",mani_noro:"Viele Erkrankte – Magen-Darm",mani_essen:"Viele Erkrankte nach dem Essen",ve_manv_gross:"Viele Verletzte auf Veranstaltung",
+ hitzschlag:"Hitzschlag",beinischaemie:"Kaltes, blasses Bein",gyn_ssw_blutung:"Blutung in der Schwangerschaft",dissektion:"Reißender Brust-/Rückenschmerz",
+ swimmer:"Schwimmer in Not",fire_bin:"Mülltonnenbrand",tree:"Baum auf Fahrbahn",ph_smoke:"Rauchmelder ausgelöst",whv_hafenbecken:"Person im Hafenbecken",
+ evak_gas:"Gasaustritt – Evakuierung",evak_bombe:"Bombenfund – Evakuierung",ph_pharm:"Frage zu Medikament"};
+function alarmSubtextFor(c){
+ const S=c&&c.sim&&c.sim.d, A=(c&&c.answers)||{};
+ const cid=String(c&&c.sim&&c.sim.caseId||"");
+ if(SUBTEXT_CASE[cid])return SUBTEXT_CASE[cid];
+ // nur die kurze Befund-Zusammenfassung prüfen – nicht die Erzählung des Anrufers (die nennt oft Nebensächliches)
+ const t=[cid.replace(/_/g," "),S&&S.f&&S.f.e,S&&S.mode,S&&S.dest,S&&S.ktType,A.e_exposure!=="entfällt – Abfrage über Leitsymptom"?A.e_exposure:"",A.freeText].filter(Boolean).join(" ").toLowerCase();
+ for(const [re,txt] of SUBTEXT_RULES)if(re.test(t))return txt;
+ const e=String((S&&S.f&&S.f.e)||A.e_exposure||"").split(/[,;.]/)[0].trim();
+ if(e&&e.length>=4&&e.length<=45&&!/entfällt|keine besonderheit|unauffällig/i.test(e))return e.charAt(0).toUpperCase()+e.slice(1);
+ return "";
+}
+function alarmSubHTML(c,style){return c&&c.alarmSub?`<div style="font-size:12px;font-style:italic;color:#475569;${style||""}">„${esc(c.alarmSub)}“</div>`:""}
 // v6.43: Einsatzliste (Aktensortierer) für eine Gruppe von Einsätzen
 function incidentListHTML(list,total){
  return list.map((c,i)=>{
@@ -4218,7 +4249,7 @@ function incidentListHTML(list,total){
     }
     const stateColor=CALL_PHASES[callPhase(c)][1];
     return `<div onclick="toggleIncidentExpand('${esc(String(c.id))}')" title="${esc(CALL_PHASES[callPhase(c)][0])}" style="cursor:pointer;background:var(--panel);border:1px solid var(--line);border-left:6px solid ${stateColor};border-radius:10px;padding:8px 14px;margin-top:${i===0?0:-9}px;position:relative;z-index:${(total||list.length)-i};box-shadow:0 2px 5px rgba(0,0,0,.10);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">
-      ${callPhaseHTML(c,true)}<b>#${esc(c.id)}</b>${waitBadgeHTML(c)}${deskBadgeHTML(c)} <span class="muted">${esc(c.keyword||"Noch keine Bewertung")}</span>
+      ${callPhaseHTML(c,true)}<b>#${esc(c.id)}</b>${waitBadgeHTML(c)}${deskBadgeHTML(c)} <span class="muted">${esc(c.keyword||"Noch keine Bewertung")}</span>${alarmSubHTML(c,"margin-left:2px")}
       ${c.alarmTime&&c.police?policeStripHTML(c):""}${c.alarmTime&&isManvCall(c)?manvStripHTML(c):""}${c.alarmTime&&c.evac?evacStripHTML(c):""}
      </div>`;
   }).join("");
@@ -6249,6 +6280,8 @@ function prepareAlarm(){
        :`<div class="muted" style="margin:4px 0">☐ ${esc(o.type)} – nicht verfügbar <small>· ${esc(o.aao)}</small></div>`}).join("")}</div>`:""}
    ${(c.proposedUnitIds.length+(c.neighborProposal||[]).length)?"":`<div class="suggest" style="margin-top:8px;background:#fff1f1;border-color:#f3b4b4">⚠️ Kein Einsatzmittel verfügbar. Der Einsatz wird trotzdem alarmiert und angelegt – Fahrzeuge können über „Fahrzeuge bearbeiten“ oder später per Nachforderung ergänzt werden.</div>`}
    ${xtext?`<label style="margin-top:12px">XABCDE</label><pre style="white-space:pre-wrap;background:#f8fafc;padding:10px;border-radius:10px">${esc(xtext)}</pre>`:""}
+   <label style="margin-top:12px">💬 Subtext (kurz, steht unter dem Stichwort)</label>
+   ${(()=>{const sug=alarmSubtextFor(c);return `<div class="row" style="gap:6px;align-items:center"><input id="alarmSub" maxlength="60" value="${esc(c.alarmSub||"")}" placeholder="${esc(sug?`z. B. ${sug}`:"z. B. Vom Pferd gefallen, Sturz > 3 m …")}" style="flex:1">${sug?`<button type="button" onclick="document.getElementById('alarmSub').value=${esc(JSON.stringify(sug))}" title="Vorschlag übernehmen">💡 ${esc(sug)}</button>`:""}</div>`})()}
    <label style="margin-top:12px">📝 Freitext für die Alarmierung</label>
    <textarea id="alarmFreeText" rows="7" placeholder="Zusätzliche Lageinformationen, Hinweise zur Anfahrt, Gefahren, Zugang, Ansprechpartner …">${esc(c.alarmFreeText||"")}</textarea>
    <div class="row" style="margin-top:12px">
@@ -6282,6 +6315,7 @@ function confirmAlarm0(){
  const c=db.currentCall;
  if(!c)return;
  const ft=document.getElementById("alarmFreeText"); if(ft)c.alarmFreeText=ft.value||"";
+ const sb=document.getElementById("alarmSub"); if(sb)c.alarmSub=String(sb.value||"").trim(); // v6.46
  // Angehakte optionale AAO-Fahrzeuge mit alarmieren (nur wenn noch frei)
  for(const id of (c.optionalChecked||[])){
    const u=db.units.find(x=>String(x.id)===String(id));
@@ -6328,7 +6362,7 @@ function alarmProposal(){
    c.history.push({q:"📢 Alarm erneut gesendet",a:`${c.keyword||"—"} – bisherige Fahrzeuge behalten ihren Status${added.length?` (neu: ${added.map(unitLabel).join(", ")})`:""}`});
  } else {
  c.alarmTime=now.toISOString();
- c.history.push({q:"🚨 Alarmierung",a:`Vorschlag alarmiert – ${now.toLocaleTimeString("de-DE")}${c.alarmFreeText?` | Freitext: ${c.alarmFreeText}`:""}`});
+ c.history.push({q:"🚨 Alarmierung",a:`Vorschlag alarmiert – ${now.toLocaleTimeString("de-DE")}${c.alarmSub?` | „${c.alarmSub}“`:""}${c.alarmFreeText?` | Freitext: ${c.alarmFreeText}`:""}`});
  }
  if(!wasAlarmed){try{simAaoCheck(c)}catch(e){}}
  save();
@@ -9228,7 +9262,7 @@ async function pushCallCloud(c){
  }));
  await cloudRequest(`calls/${encodeURIComponent(String(c.id))}`,"PUT",{
    id:c.id,location:c.location||"",keyword:c.keyword||"",count:c.count||"",staging:c.staging||null,rmhp:c.rmhp||null,
-   suggestion:c.suggestion||"",alarmFreeText:c.alarmFreeText||"",
+   suggestion:c.suggestion||"",alarmFreeText:c.alarmFreeText||"",alarmSub:c.alarmSub||"",
    alarmTime:c.alarmTime||null,endTime:c.endTime||null,alarmVersion:c.alarmVersion||0,realarmAt:c.realarmAt||null,
    unitIds,units,history:c.history||[],nafo:c.nafo||[],
    manvPats:manvPatsForCloud(c), // v5.89: Patientenliste für die Fahrzeug-Handys
@@ -10337,6 +10371,7 @@ async function renderVehicleTerminal(unitId,dburl,sid){
     ${canOrglFeedback?`<div class="row" style="margin-top:12px"><button class="primary" onclick="sendOrglSituationReport('${unitId}','${dburl.replace(/'/g,"\\'")}','${sid.replace(/'/g,"\\'")}','${esc(String(calls[0].id))}')">📢 Lagemeldung (Status 4) senden</button></div>`:""}
     ${calls.length?calls.map(c=>`<div class="card call" style="margin-top:12px">
        <div class="row between"><h2>🚨 ${esc(c.keyword||"Einsatz")}</h2><span class="status s3">ALARM</span></div>
+       ${c.alarmSub?`<div style="font-style:italic;font-size:16px;margin:-4px 0 6px">„${esc(c.alarmSub)}“</div>`:""}
        <div class="big">📍 ${esc(c.location||"Ort unbekannt")}</div>
        ${c.staging&&c.staging.name&&!waterCapable(local)?`<div class="suggest" style="background:#e0f2fe;border-color:#7dd3fc"><b>🅿️ Bereitstellungsraum anfahren:</b><div style="font-size:18px;font-weight:800">${esc(c.staging.name)}</div><small>Einsatzstelle liegt auf dem Wasser – nur Boote/Hubschrauber direkt zur Einsatzstelle.</small></div>`:""}
        ${c.alarmFreeText?`<div class="suggest"><b>Meldetext / Zusatz:</b><div>${esc(c.alarmFreeText)}</div></div>`:""}
@@ -10378,6 +10413,7 @@ function vehicleNaviToggle(){
 function naviMsgHTML(){
  const D=vehicleNaviData||{}, calls=D.calls||[], sds=(D.sds||[]).filter(x=>Date.now()-new Date(x.time).getTime()<60*60000).slice(0,2);
  const parts=calls.map(c=>`<div style="margin-bottom:6px"><div style="font-size:18px;font-weight:900;color:#fca5a5">🚨 ${esc(c.keyword||"Einsatz")}</div>
+   ${c.alarmSub?`<div style="font-style:italic;color:#fde68a">„${esc(c.alarmSub)}“</div>`:""}
    <div style="font-weight:700">📍 ${esc(c.location||"Ort unbekannt")}</div>
    ${c.rmhp&&c.rmhp.name&&rmhpUnit(D.unit)?`<div style="color:#fca5a5;font-weight:700">🚑 RMHP: ${esc(c.rmhp.name)}</div>`:c.staging&&c.staging.name&&!waterCapable(D.unit)?`<div style="color:#7dd3fc;font-weight:700">🅿️ BR: ${esc((brOfPoint(c,callDestinationPoint(c,D.unit))||c.staging).name)}</div>`:""}
    ${c.alarmFreeText?`<div style="margin-top:3px">📝 ${esc(c.alarmFreeText)}</div>`:""}

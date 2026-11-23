@@ -1607,6 +1607,10 @@ Version 5.05:
   („a, b“ = a ODER b). Mit „🚑 NA-Indikation“ markierte Knöpfe ziehen weiterhin einen Notarzt.
 - Nur „Unauffällig“ (ohne weitere Befunde) zählt weiter als unauffälliges E (R0 möglich).
 
+Version 6.46:
+- Subtext unter dem Stichwort, z. B. „R1N1_Trauma schwer – „Vom Pferd gefallen““. Im Alarmierungsfenster eigenes Feld „💬 Subtext“ mit Vorschlag (💡) aus der Abfrage/dem Fall. Angezeigt in der Einsatzliste, im Einsatz, in der Fahrzeug-App und im Navi; steht auch im Einsatzverlauf.
+- Simulierte Alarmierungen („Realistisch“, auch Krankentransporte) bekommen in ca. 60 % einen passenden Subtext (Annahme).
+
 Version 6.45:
 - Fehlerbehebung (selbst eingebaut in v6.37): Ein Kommentar hatte im Besatzungs-Ablauf den Rest einer Zeile „verschluckt“. Folge: Nach dem Planen eines Fahrzeugs lief die Simulation in derselben Runde fehlerhaft weiter und konnte mit einer Fehlermeldung abbrechen (Fahrzeuge blieben dann z. B. hängen). Behoben.
 - Reanimation, die sich erst vor Ort/im Verlauf ergibt: Die Feuerwehr bleibt jetzt auch hier bis zum Transport bzw. bis die mechanische Reanimationshilfe läuft.
