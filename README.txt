@@ -1607,6 +1607,9 @@ Version 5.05:
   („a, b“ = a ODER b). Mit „🚑 NA-Indikation“ markierte Knöpfe ziehen weiterhin einen Notarzt.
 - Nur „Unauffällig“ (ohne weitere Befunde) zählt weiter als unauffälliges E (R0 möglich).
 
+Version 6.42:
+- „Realistisch“ erzeugt jetzt auch Krankentransporte (Einweisung, Entlassung …) in Friesland und Wilhelmshaven – tagsüber (7–19 Uhr) ca. 5–9 in 3 h, nachts 0–2 (Annahme). Sie laufen im Zeitraffer selbst ab (Übernahme 10–20 min → Status 7 → Status 8 → frei → abgeschlossen); noch laufende stehen danach normal auf dem Startbildschirm und laufen weiter selbst ab. Selbst angenommene Krankentransporte steuerst du wie bisher von Hand.
+
 Version 6.41:
 - Krankentransport: In ca. 0,5 % kommt es im Verlauf (bei Übernahme oder auf der Fahrt) zu einer Zustandsverschlechterung oder sogar Reanimation (Aufteilung 70/30 = Annahme). Die Besatzung meldet per SDS und fordert nach: bei Verschlechterung RTW (bzw. NEF, wenn schon RTW-Niveau), bei Reanimation NEF (ggf. AEF), RTW und HLF. Steht im Einsatzverlauf und als Nachforderung.
 

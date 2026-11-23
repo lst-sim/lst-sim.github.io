@@ -263,7 +263,7 @@ html[data-device="handy"] .fach-grid{grid-template-columns:1fr}
 <header id="topbar">
  <div class="tb-left">
   <span class="tb-brand"><span class="tb-logo">🚑</span><span class="tb-name">Leitstelle<b>.sim</b></span></span>
-  <span id="versionTag" class="tb-ver">v6.41</span>
+  <span id="versionTag" class="tb-ver">v6.42</span>
   <span id="syncState"></span>
   <a id="deskTag" href="#" onclick="renameDesk();return false" title="Name dieses Platzes (für „offen an …“) – antippen zum Ändern"></a>
  </div>
@@ -3020,6 +3020,50 @@ function rmMakeCall(area,caseId,t){
  db.activeCalls=db.activeCalls||[]; db.activeCalls.push(c);
  return c;
 }
+// v6.42: Krankentransporte im realistischen Stand (Einweisung, Entlassung, Verlegung …)
+function rmMakeKt(area,caseId,t){
+ dispatchArea=()=>area;
+ const noAi=simMakeCall.noAi, noTier=simMakeCall0.noTier; simMakeCall.noAi=true; simMakeCall0.noTier=true; simMakeCall0.forceCase=caseId;
+ let s; try{s=simMakeCall0()}finally{simMakeCall.noAi=noAi;simMakeCall0.noTier=noTier;simMakeCall0.forceCase=null}
+ if(!s||s.caseId!==caseId||!s.kt||!s.loc||!Number.isFinite(s.loc.lat))return null;
+ if(areaOfText(`${s.loc.town||""} ${s.loc.text||""}`)!==area)return null;
+ const d=s.d||{}, loc=s.loc, addr=loc.kind==="home"?loc.addr:String(loc.text||"").replace(/^(am|auf der|auf dem|im|in der) /,"");
+ const kt=d.ktType||"Krankentransport", ft=[d.dest?`Ziel: ${String(d.dest).replace(/^(ins|in die|in das|nach|zur|zum) /,"")}`:"",d.mode||"",d.time||""].filter(Boolean).join(" · ");
+ const c={id:String(t+Math.floor(Math.random()*99999)).slice(-6),kt:true,location:addr,lat:loc.lat,lng:loc.lng,geocodedAddress:addr,count:"1",answers:{ktType:kt,location:addr,freeText:ft},answerLabels:{},
+   history:[{q:"☎️ Anruf über",a:"🚑 19222 – Krankentransport"},{q:"🚑 Art",a:kt},{q:"📍 Abholort",a:addr},...(ft?[{q:"📝 Freitext",a:ft}]:[])],
+   keyword:kt,suggestion:"",createdAt:new Date(t-rint(2,4)*60000).toISOString(),phoneStart:t-rint(2,4)*60000,phoneEnd:t-60000,callerNumber:"19222",sim:{...s,owner:DEVICE_ID},rmGenerated:true};
+ const keepC=db.currentCall; db.currentCall=c;
+ try{evaluate();
+   c.alarmedUnits=[];
+   for(const id of (c.proposedUnitIds||[])){const u=db.units.find(x=>x.id===id);if(!u||!["1","2"].includes(String(u.status)))continue;setUnitStatus(u,"3");c.alarmedUnits.push(id)}
+   c.alarmTime=new Date().toISOString();
+   c.history.push({q:"🚨 Alarmierung",a:`${(c.proposal||[])[0]?.opta||"KTW"} – ${new Date().toLocaleTimeString("de-DE")}`});
+ }finally{db.currentCall=keepC}
+ if(!c.alarmedUnits.length)return null;
+ db.activeCalls=db.activeCalls||[]; db.activeCalls.push(c);
+ return c;
+}
+// Im Zeitraffer erzeugte Krankentransporte laufen selbst ab: Übernahme → Status 7 → 8 → frei → abgeschlossen.
+// (Selbst angenommene Krankentransporte steuerst du weiter von Hand.) Zeiten = Annahmen.
+function rmKtTick(){
+ if(vehManual())return false;
+ const now=Date.now(); let ch=false;
+ for(const c of [...allOpenCalls()]){
+   if(!c.kt||!c.rmGenerated||!c.alarmTime||c===db.currentCall)continue;
+   const u=callUnits(c)[0]; if(!u||unitPhoneLive(u))continue;
+   const st=String(u.status);
+   if(st==="4"){if(!c._ktLoadAt){c._ktLoadAt=(u.status4Since||now)+rint(10,20)*60000;ch=true}
+     if(now>=c._ktLoadAt){setUnitStatus(u,"7");c._ktArrAt=now+rint(15,35)*60000;c.history.push({q:"🚑 Status 7",a:"Patient aufgenommen"});ch=true}}
+   else if(st==="7"&&c._ktArrAt&&now>=c._ktArrAt){setUnitStatus(u,"8");c._ktFreeAt=now+rint(5,12)*60000;ch=true}
+   else if(st==="8"&&c._ktFreeAt&&now>=c._ktFreeAt){
+     setUnitStatus(u,"1"); c.endTime=new Date(now).toISOString();
+     c.history.push({q:"✅ Krankentransport abgeschlossen",a:"Patient übergeben – Fahrzeug frei"});
+     db.logs=db.logs||[]; db.logs.unshift(slimLoggedCall(c)); if(db.logs.length>300)db.logs.length=300;
+     db.activeCalls=(db.activeCalls||[]).filter(x=>x!==c); ch=true;
+   }
+ }
+ return ch;
+}
 function rmIvenaHistory(fromT,toT){
  const hs=(db.ivena||[]).filter(h=>!h.hbo&&/LST Friesland|GOL|KRLS Ostfriesland/.test(h.area||"")&&hospitalPointOf(h));
  const RMIS=[["331",3],["421",2],["311",3],["272",3],["273",2],["329",3],["322",2],["414",1],["353",2],["214",2],["224",2],["412",1],["393",1],["435",1],["325",1],
@@ -3060,13 +3104,17 @@ function realisticMode(){
  const add=(area,list,n)=>{for(let i=0;i<n;i++)plan.push({t:start+Math.sqrt(Math.random())*(now-start-4*60000),area,caseId:pick(list)})};
  add("fri",RM_RD_CASES,rint(7,10)); add("whv",RM_RD_CASES,rint(5,8));
  add("fri",RM_FW_CASES,rint(1,2)); add("whv",[...RM_FW_CASES,"whv_containerunfall","whv_seemann"],rint(1,2));
+ // v6.42: Krankentransporte – tagsüber deutlich mehr (Annahme)
+ {const KT=SIM_CASES.filter(x=>x.kt).map(x=>x.id), hr=new Date(now).getHours(), day=hr>=7&&hr<19;
+  if(KT.length){const addK=(area,n)=>{for(let i=0;i<n;i++)plan.push({t:start+Math.sqrt(Math.random())*(now-start-4*60000),area,caseId:pick(KT),kt:true})};
+   addK("fri",day?rint(3,5):rint(0,1)); addK("whv",day?rint(2,4):rint(0,1));}}
  plan.sort((a,b)=>a.t-b.t);
- const sdsBefore=new Set((db.sdsIn||[]).map(m=>m.id)); let made=0;
+ const sdsBefore=new Set((db.sdsIn||[]).map(m=>m.id)); let made=0, madeKt=0;
  rmWithClock(setT=>{
    let i=0;
    for(let t=start;t<=now;t+=30000){
      setT(t);
-     while(i<plan.length&&plan[i].t<=t){const p=plan[i++];for(let k=0;k<4;k++){try{if(rmMakeCall(p.area,p.caseId,t)){made++;break}}catch(e){console.warn("rm",e);break}}}
+     while(i<plan.length&&plan[i].t<=t){const p=plan[i++];for(let k=0;k<6;k++){try{if((p.kt?rmMakeKt:rmMakeCall)(p.area,p.caseId,t)){made++;if(p.kt)madeKt++;break}}catch(e){console.warn("rm",e);break}}}
      try{applyDutySchedule();autoReturnToStation();autoAdvanceEnRoute();crewTick();callTick();if(t%(5*60000)<30000)nbSimTick()}catch(e){console.warn("rm tick",e)}
    }
    setT(Date.now());
@@ -3078,7 +3126,7 @@ function realisticMode(){
  const hist=[...rmIvenaHistory(now-14*3600000,start),...rmIvenaHistory(start,now).filter(a=>!a.vehicleIds.length)]; // im Zeitraffer melden die eigenen Besatzungen selbst an
  db.ivenaAssignments.push(...hist); db.ivenaAssignments.sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt));
  const open=allOpenCalls().filter(c=>c.rmGenerated).length;
- save(); toast(`Realistischer Stand: ${made} Einsätze der letzten ${H} h durchgespielt, ${open} laufen noch · ${hist.length} IVENA-Anmeldungen`); render("leitstelle");
+ save(); toast(`Realistischer Stand: ${made} Einsätze (davon ${madeKt} Krankentransporte) der letzten ${H} h durchgespielt, ${open} laufen noch · ${hist.length} IVENA-Anmeldungen`); render("leitstelle");
 }
 function realisticModeOld(){
   applyDutySchedule();
@@ -6506,6 +6554,7 @@ function crewTick(){
  try{if(heliShuttleTick())changed=true}catch(e){console.warn(e)} // v6.30
  try{if(reaLaterTick())changed=true}catch(e){console.warn(e)} // v6.40
  try{if(ktWorseTick())changed=true}catch(e){console.warn(e)} // v6.41
+ try{if(rmKtTick())changed=true}catch(e){console.warn(e)} // v6.42
  try{if(cprTick())changed=true}catch(e){console.warn(e)} // v6.39
  for(const u of (db.units||[])){
    if(unitPhoneLive(u))continue;
