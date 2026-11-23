@@ -1607,6 +1607,9 @@ Version 5.05:
   („a, b“ = a ODER b). Mit „🚑 NA-Indikation“ markierte Knöpfe ziehen weiterhin einen Notarzt.
 - Nur „Unauffällig“ (ohne weitere Befunde) zählt weiter als unauffälliges E (R0 möglich).
 
+Version 6.39:
+- Mechanische Reanimationshilfe gibt es auf NEF und AEF: Bei einer Reanimation wird sie frühestens 25 min (25–35 min) nach Ankunft des ersten NEF bzw. AEF angelegt – dann werden HLF, NKTW und zusätzliche RTW (nicht der transportierende) in Status 4 frei. Wird schon vorher transportiert, entfällt das.
+
 Version 6.38:
 - Reanimation mit AEF: Frühestens 25 min nach Ankunft des AEF (25–35 min) wird die mechanische Reanimationshilfe angelegt. Dann werden HLF, NKTW und zusätzliche RTW (nicht der transportierende) in Status 4 frei (SDS + Einsatzverlauf). Geräte-/Ampullarium-Hinweise im Alarmierungsfenster entfernt (für die Leitstelle nicht relevant).
 - Reanimation allgemein: Die Feuerwehr bleibt jetzt bis zum Transport an der Einsatzstelle (vorher automatisch nach Zeit frei).
