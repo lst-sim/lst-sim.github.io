@@ -1607,6 +1607,10 @@ Version 5.05:
   („a, b“ = a ODER b). Mit „🚑 NA-Indikation“ markierte Knöpfe ziehen weiterhin einen Notarzt.
 - Nur „Unauffällig“ (ohne weitere Befunde) zählt weiter als unauffälliges E (R0 möglich).
 
+Version 6.45:
+- Fehlerbehebung (selbst eingebaut in v6.37): Ein Kommentar hatte im Besatzungs-Ablauf den Rest einer Zeile „verschluckt“. Folge: Nach dem Planen eines Fahrzeugs lief die Simulation in derselben Runde fehlerhaft weiter und konnte mit einer Fehlermeldung abbrechen (Fahrzeuge blieben dann z. B. hängen). Behoben.
+- Reanimation, die sich erst vor Ort/im Verlauf ergibt: Die Feuerwehr bleibt jetzt auch hier bis zum Transport bzw. bis die mechanische Reanimationshilfe läuft.
+
 Version 6.44:
 - Fehlerbehebung Wangerooge: Für die Absicherung eines Hubschrauber-Landeplatzes wurde das nächste LF/HLF ohne Insel-Prüfung gewählt – so konnte ein LF vom Festland (z. B. Wangerland) zu einem Landeplatz auf Wangerooge alarmiert werden. Jetzt: Landeplatz auf der Insel → nur Insel-LF, auf dem Festland → nur Festland-LF.
 - Zusätzliche Sicherung beim Alarmieren: Landfahrzeuge werden nie über das Wasser alarmiert (Insel ↔ Festland); steht dann als „⚠️ Nicht alarmiert“ im Einsatzverlauf. Hubschrauber und Boote bei Wasser-Einsätzen ausgenommen; in der Realübung keine Sperre.

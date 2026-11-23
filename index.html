@@ -263,7 +263,7 @@ html[data-device="handy"] .fach-grid{grid-template-columns:1fr}
 <header id="topbar">
  <div class="tb-left">
   <span class="tb-brand"><span class="tb-logo">🚑</span><span class="tb-name">Leitstelle<b>.sim</b></span></span>
-  <span id="versionTag" class="tb-ver">v6.44</span>
+  <span id="versionTag" class="tb-ver">v6.45</span>
   <span id="syncState"></span>
   <a id="deskTag" href="#" onclick="renameDesk();return false" title="Name dieses Platzes (für „offen an …“) – antippen zum Ändern"></a>
  </div>
@@ -6639,7 +6639,7 @@ function crewTick(){
        const asg=findUnitHospitalAssignment(u);
        if(asg&&new Date(asg.createdAt).getTime()>=(u.status4Since||0)-60000&&asg.source!=="crew"){u.crew={callId:String(call.id),mode:"transport",patient:0,departAt:(u.status4Since||now)+20*60000,registered:true,asgId:asg.id,hospId:asg.hospitalId,manual:true,owner:DEVICE_ID,info:crewCaseInfo(call)};changed=true;continue}
        if(firstRdStays(call,u)){u.crew={callId:String(call.id),mode:"stay",owner:DEVICE_ID};crewSds(u,call,`Als ${u.type==="NEF"?"1. NEF":"1. RTW"} an der Einsatzstelle – bleiben vor Ort (Erstversorgung/Sichtung), kein Patiententransport.`);changed=true;continue} // v6.27
-       crewPlan(u,call); if(u.crew)u.crew.owner=DEVICE_ID; try{nktwUpgradeCheck(u,call,now)}catch(e){console.warn(e)} // v6.37 (call.alarmedUnits||[]).forEach(id=>{const x=db.units.find(y=>String(y.id)===String(id));if(x&&x.crew&&!x.crew.owner)x.crew.owner=DEVICE_ID}); changed=true; continue;
+       crewPlan(u,call); if(u.crew)u.crew.owner=DEVICE_ID; try{nktwUpgradeCheck(u,call,now)}catch(e){console.warn(e)} /* v6.37 */ (call.alarmedUnits||[]).forEach(id=>{const x=db.units.find(y=>String(y.id)===String(id));if(x&&x.crew&&!x.crew.owner)x.crew.owner=DEVICE_ID}); changed=true; continue;
      }
      const C=u.crew;
      if(C.mode==="stay")continue; // v6.27: 1. RTW / 1. NEF bleiben an der Einsatzstelle
@@ -8474,7 +8474,7 @@ function callTick(){
      if((["ELW","ELW1","ELW2"].includes(u.type)||isLeadUnit(u)||u.manvComp)&&(us.some(x=>x!==u&&CREW_TRANSPORT.has(x.type)&&String(x.status)==="4")||(c.manvPatients||[]).some(p=>!p.unit&&p.sk<=4)||manvStayOpen(c)))continue; // v5.66: auch MANV-PA und Betreuung (MANB)
      if(manvKind(c)==="MANB"&&/^(MTW|GW-Betreuung|GW-SEG|Küchenwagen)$/.test(u.type)&&u.org==="DRK"&&manvStayOpen(c))continue;
      // v6.38: Reanimation – Feuerwehr hilft bis zum Transport (oder bis die mech. Reanimationshilfe des AEF läuft)
-     if(/Reanimation/.test(String(c.answers?.event||"")+" "+String(c.keyword||""))&&!us.some(x=>["7","8"].includes(String(x.status)))&&us.some(x=>x!==u&&CREW_TRANSPORT.has(x.type)&&String(x.status)==="4"))continue;
+     if((c.reaLater||/Reanimation/.test(String(c.answers?.event||"")+" "+String(c.keyword||"")))&&!us.some(x=>["7","8"].includes(String(x.status)))&&us.some(x=>x!==u&&CREW_TRANSPORT.has(x.type)&&String(x.status)==="4"))continue;
      setUnitStatus(u,"1"); delete u.sceneUntil; delete u.sceneCall; changed=true;
    }
    // Einsatz selbst abschließen, wenn alle Fahrzeuge wieder frei sind (Status 1/2)
