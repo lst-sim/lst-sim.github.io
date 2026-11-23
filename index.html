@@ -263,7 +263,7 @@ html[data-device="handy"] .fach-grid{grid-template-columns:1fr}
 <header id="topbar">
  <div class="tb-left">
   <span class="tb-brand"><span class="tb-logo">🚑</span><span class="tb-name">Leitstelle<b>.sim</b></span></span>
-  <span id="versionTag" class="tb-ver">v6.39</span>
+  <span id="versionTag" class="tb-ver">v6.40</span>
   <span id="syncState"></span>
   <a id="deskTag" href="#" onclick="renameDesk();return false" title="Name dieses Platzes (für „offen an …“) – antippen zum Ändern"></a>
  </div>
@@ -6309,7 +6309,7 @@ function crewCaseInfo(call){
  const ev=String((f&&f.event)||A.event||"");
  const text=[S&&S.event,f&&f.e,A.e_exposure,A.freeText,call?.keyword,ev].filter(Boolean).join(" ").toLowerCase();
  const pats=Math.max(0,Number((f&&f.count)||A.personDanger||A.count||1)||0);
- const rea=ev==="Reanimation"||!!(S&&S.cpr)||(/keine normale/i.test(b)&&/bewusstlos/i.test(d));
+ const rea=ev==="Reanimation"||!!(S&&S.cpr)||!!(call&&call.reaLater)||(/keine normale/i.test(b)&&/bewusstlos/i.test(d));
  const critical=rea||x==="Ja"||/verlegt/i.test(a)||/keine normale/i.test(b)||/schock|relevante/i.test(cc)||/bewusstlos/i.test(d);
  const urgent=!critical&&(/gefährdet/i.test(a)||/auffällig/i.test(b)||/auffällig/i.test(cc)||/krampf|getrübt|neuro/i.test(d)||/R1N1|NA-Indikation/.test(call?.keyword||"")||!!eNaIndication({answers:{e_exposure:text}}));
  const minor=!critical&&!urgent&&(!!(S&&S.phoneOnly)||/^R0/.test(call?.keyword||"")||(/^(nein)?$/i.test(x)&&/^(frei)?$/i.test(a)&&/^(normal)?$/i.test(b)&&/^(unauffällig)?$/i.test(cc)&&/^(wach)?/i.test(d)));
@@ -6504,6 +6504,7 @@ function crewTick(){
  const now=Date.now(); let changed=false;
  try{if(brQueueTick())changed=true}catch(e){console.warn(e)} // v6.26
  try{if(heliShuttleTick())changed=true}catch(e){console.warn(e)} // v6.30
+ try{if(reaLaterTick())changed=true}catch(e){console.warn(e)} // v6.40
  try{if(cprTick())changed=true}catch(e){console.warn(e)} // v6.39
  for(const u of (db.units||[])){
    if(unitPhoneLive(u))continue;
@@ -6684,13 +6685,52 @@ function cprTick(){
  const now=Date.now(); let ch=false;
  for(const c of allOpenCalls()){
    if(!c.alarmTime||c._cprDone||(c.deskId&&c.deskId!==DEVICE_ID))continue;
-   if(!/Reanimation/.test(String(c.answers?.event||"")+" "+String(c.keyword||"")))continue;
+   if(!c.reaLater&&!/Reanimation/.test(String(c.answers?.event||"")+" "+String(c.keyword||"")))continue;
    const us=callUnits(c);
    if(us.some(x=>["7","8"].includes(String(x.status)))){c._cprDone=true;continue}
    const dev=us.filter(x=>["NEF","AEF"].includes(x.type)&&String(x.status)==="4"&&!unitPhoneLive(x)).sort((a,b)=>(a.status4Since||0)-(b.status4Since||0))[0];
    if(!dev)continue;
    if(!c._cprAt){c._cprAt=(dev.status4Since||now)+rint(25,35)*60000;ch=true}
    if(now>=c._cprAt){c._cprDone=true;cprApplied(dev,c);ch=true}
+ }
+ return ch;
+}
+// v6.40: Patient ist vor Ort reanimationspflichtig (obwohl nicht so alarmiert) oder wird es im Verlauf →
+// Besatzung fordert nach, was fehlt (NEF/AEF, HLF, RTW). Wahrscheinlichkeiten sind Annahmen.
+const REA_LATER_P={critical:0.08,urgent:0.02,normal:0.005};
+function reaLaterTick(){
+ if(vehManual())return false;
+ const now=Date.now(); let ch=false;
+ for(const c of allOpenCalls()){
+   if(!c.alarmTime||c.kt||c.reaLater||(c.deskId&&c.deskId!==DEVICE_ID)||isManvCall(c))continue;
+   if(/Reanimation/.test(String(c.answers?.event||"")+" "+String(c.keyword||""))||(c.sim&&c.sim.d&&c.sim.d.cpr))continue;
+   const us=callUnits(c);
+   const tx=us.find(x=>CREW_TRANSPORT.has(x.type)&&!isAirUnit(x)&&String(x.status)==="4"&&x.crew&&x.crew.mode==="transport");
+   if(!tx)continue;
+   if(c._reaRoll==null){
+     const sev=tx.crew.info&&tx.crew.info.sev, p=REA_LATER_P[sev]||0;
+     c._reaRoll=Math.random()<p?1:0;
+     if(c._reaRoll)c._reaAt=Math.random()<0.5?now:now+rint(3,15)*60000; // sofort „stellt sich heraus“ oder im Verlauf
+     ch=true;
+   }
+   if(!c._reaRoll||now<c._reaAt)continue;
+   if(us.some(x=>["7","8"].includes(String(x.status)))){c._reaRoll=0;continue} // schon auf dem Transport
+   c.reaLater=true; ch=true;
+   if(c.sim&&c.sim.d)c.sim.d.cpr=true;
+   const has=t=>us.some(x=>t.includes(x.type)&&["3","4"].includes(String(x.status)));
+   const need=[];
+   if(!has(["NEF","RTH","NAW"]))need.push(availableUnits("AEF","Rettungsdienst").length?"NEF (ggf. zusätzlich AEF)":"NEF");
+   if(!has(["HLF","LF","TLF","LF 10","LF 20","HLF 10","HLF 20"]))need.push("HLF (Unterstützung Reanimation)");
+   if(!has(["RTW"]))need.push("RTW");
+   else if(us.filter(x=>x.type==="RTW"&&["3","4"].includes(String(x.status))).length<2&&!has(["NKTW","AEF"]))need.push("weiteren RTW");
+   const first=Math.abs(c._reaAt-(tx.status4Since||0))<120000;
+   const txt=`${first?"Patient ist reanimationspflichtig":"Patient ist im Verlauf reanimationspflichtig geworden"} – Reanimation läuft.${need.length?` Nachforderung: ${need.join(", ")}.`:""}`;
+   crewSds(tx,c,txt);
+   (c.history=c.history||[]).push({q:"⚠️ Lageänderung: Reanimation",a:txt});
+   (c.nafo=c.nafo||[]).push({reason:txt,at:new Date().toISOString()});
+   // Transport verzögert sich durch die Reanimation
+   const C=tx.crew; C.info={...(C.info||{}),sev:"rea"}; C.departAt=Math.max(C.departAt||0,now+rint(25,40)*60000); if(!C.registered)C.registerAt=Math.max(C.registerAt||0,now+rint(10,20)*60000);
+   try{toast(`⚠️ ${c.location||"Einsatz"}: Reanimation – Nachforderung`)}catch(e){}
  }
  return ch;
 }

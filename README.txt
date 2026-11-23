@@ -1607,6 +1607,11 @@ Version 5.05:
   („a, b“ = a ODER b). Mit „🚑 NA-Indikation“ markierte Knöpfe ziehen weiterhin einen Notarzt.
 - Nur „Unauffällig“ (ohne weitere Befunde) zählt weiter als unauffälliges E (R0 möglich).
 
+Version 6.40:
+- Reanimation vor Ort bzw. im Verlauf: Stellt sich an der Einsatzstelle heraus, dass der Patient reanimationspflichtig ist (obwohl nicht so alarmiert), oder wird er es während des Einsatzes, meldet die Besatzung per SDS „Lageänderung: Reanimation“ und fordert nach, was fehlt: NEF (ggf. zusätzlich AEF, wenn eins existiert), HLF zur Unterstützung, RTW bzw. weiteren RTW. Steht im Einsatzverlauf und als Nachforderung.
+- Wahrscheinlichkeit (Annahme): kritische Patienten ca. 8 %, dringliche ca. 2 %, übrige 0,5 %; halb sofort beim Eintreffen, halb 3–15 min später. Nicht bei MANV und Krankentransport.
+- Der Transport verzögert sich dann (Reanimation vor Ort), und die Regel zur mechanischen Reanimationshilfe (NEF/AEF) greift auch hier.
+
 Version 6.39:
 - Mechanische Reanimationshilfe gibt es auf NEF und AEF: Bei einer Reanimation wird sie frühestens 25 min (25–35 min) nach Ankunft des ersten NEF bzw. AEF angelegt – dann werden HLF, NKTW und zusätzliche RTW (nicht der transportierende) in Status 4 frei. Wird schon vorher transportiert, entfällt das.
 
