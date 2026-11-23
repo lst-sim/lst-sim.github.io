@@ -263,7 +263,7 @@ html[data-device="handy"] .fach-grid{grid-template-columns:1fr}
 <header id="topbar">
  <div class="tb-left">
   <span class="tb-brand"><span class="tb-logo">🚑</span><span class="tb-name">Leitstelle<b>.sim</b></span></span>
-  <span id="versionTag" class="tb-ver">v6.43</span>
+  <span id="versionTag" class="tb-ver">v6.44</span>
   <span id="syncState"></span>
   <a id="deskTag" href="#" onclick="renameDesk();return false" title="Name dieses Platzes (für „offen an …“) – antippen zum Ändern"></a>
  </div>
@@ -1528,7 +1528,7 @@ setInterval(()=>{try{if(leafletMap&&_layMap!==leafletMap){_layMap=leafletMap;lea
 // v6.23: Fahrzeuge auf der Karte alle 4 s weiterbewegen (nur Marker, kein Neuladen; nicht bei offenem Popup)
 setInterval(()=>{try{if(currentPage==="karte"&&leafletMap&&!document.querySelector("#map .leaflet-popup")&&leafletMap.getContainer()===document.getElementById("map"))renderVehiclePositionsOnMap()}catch(e){}},4000);
 function karteStagingBtnsHTML(c){
- return c?`<button class="${stagingPickMode?"primary":""}" onclick="stagingPickMode=!stagingPickMode;rmhpPickMode=false;heliPickMode=false;if(!karteStagingUpdate())karte()">🅿️ ${stagingPickMode?"Bereitstellungsort wird gewählt – zum Abbrechen tippen":"Bereitstellungsort wählen"}</button>${c.staging?`<span class="pill">🅿️ ${esc(c.staging.name)}</span><button onclick="setStaging(null,'karte')">✕</button>`:""}<button class="${rmhpPickMode?"primary":""}" style="${rmhpPickMode?"background:#b91c1c;border-color:#b91c1c":""}" onclick="rmhpPickMode=!rmhpPickMode;stagingPickMode=false;heliPickMode=false;if(!karteStagingUpdate())karte()">🚑 ${rmhpPickMode?"RMHP wird gewählt – zum Abbrechen tippen":"Rettungsmittelhalteplatz wählen"}</button>${c.rmhp?`<span class="pill">🚑 ${esc(c.rmhp.name)}</span><button onclick="clearRmhp()">✕</button>`:""}<button class="${heliPickMode?"primary":""}" style="${heliPickMode?"background:#7c3aed;border-color:#7c3aed":""}" onclick="heliPickMode=!heliPickMode;stagingPickMode=false;rmhpPickMode=false;if(!karteStagingUpdate())karte()">🚁 ${heliPickMode?"Landeplatz wird gewählt – zum Abbrechen tippen":(c.heliManual?"weiteren Landeplatz wählen":"Landeplatz wählen")}</button>${c.heliManual?`<span class="pill">🚁 ${(c.heliLandings||[]).length} selbst gewählt</span><button onclick="clearHeliManual()" title="Selbst gewählte Landeplätze entfernen">✕</button>`:""}${stagingPickMode?`<button onclick="stagingPickMode=false;prepareAlarm()">⬅️ Zurück zur Alarmierung</button>`:""}`:"";
+ return c?`<button class="${stagingPickMode?"primary":""}" onclick="stagingPickMode=!stagingPickMode;stagingAddMode=false;rmhpPickMode=false;heliPickMode=false;if(!karteStagingUpdate())karte()">🅿️ ${stagingPickMode?"Bereitstellungsort wird gewählt – zum Abbrechen tippen":"Bereitstellungsort wählen"}</button>${c.staging?`<span class="pill">🅿️ ${(c.stagingsExtra||[]).length?"1: ":""}${esc(c.staging.name)}</span><button onclick="setStaging(null,'karte')">✕</button>${(c.stagingsExtra||[]).map((b,i)=>`<span class="pill">🅿️ ${i+2}: ${esc(b.name)}</span><button onclick="removeExtraStaging(${i})">✕</button>`).join("")}<button class="${stagingPickMode&&stagingAddMode?"primary":""}" onclick="stagingAddMode=!(stagingPickMode&&stagingAddMode);stagingPickMode=stagingAddMode;rmhpPickMode=false;heliPickMode=false;if(!karteStagingUpdate())karte()" title="Weiteren Bereitstellungsraum festlegen – jedes Fahrzeug fährt den nächstgelegenen an">＋ ${stagingPickMode&&stagingAddMode?"weiterer BR wird gewählt – zum Abbrechen tippen":"weiterer BR"}</button>`:""}<button class="${rmhpPickMode?"primary":""}" style="${rmhpPickMode?"background:#b91c1c;border-color:#b91c1c":""}" onclick="rmhpPickMode=!rmhpPickMode;stagingPickMode=false;heliPickMode=false;if(!karteStagingUpdate())karte()">🚑 ${rmhpPickMode?"RMHP wird gewählt – zum Abbrechen tippen":"Rettungsmittelhalteplatz wählen"}</button>${c.rmhp?`<span class="pill">🚑 ${esc(c.rmhp.name)}</span><button onclick="clearRmhp()">✕</button>`:""}<button class="${heliPickMode?"primary":""}" style="${heliPickMode?"background:#7c3aed;border-color:#7c3aed":""}" onclick="heliPickMode=!heliPickMode;stagingPickMode=false;rmhpPickMode=false;if(!karteStagingUpdate())karte()">🚁 ${heliPickMode?"Landeplatz wird gewählt – zum Abbrechen tippen":(c.heliManual?"weiteren Landeplatz wählen":"Landeplatz wählen")}</button>${c.heliManual?`<span class="pill">🚁 ${(c.heliLandings||[]).length} selbst gewählt</span><button onclick="clearHeliManual()" title="Selbst gewählte Landeplätze entfernen">✕</button>`:""}${stagingPickMode?`<button onclick="stagingPickMode=false;prepareAlarm()">⬅️ Zurück zur Alarmierung</button>`:""}`:"";
 }
 // v6.22: Bereitstellungsort wählen ändert nur die Knöpfe und Marker – die Karte wird nicht neu geladen.
 function karteStagingUpdate(){
@@ -1574,7 +1574,7 @@ function initMap(){
   if(stagingPickMode||rmhpPickMode||heliPickMode)try{leafletMap.getContainer().style.cursor="crosshair"}catch(e){}
   setTimeout(()=>leafletMap.invalidateSize(),150);
 }
-let stagingPickMode=false, stagingMarker=null, rmhpPickMode=false, heliPickMode=false;
+let stagingPickMode=false, stagingMarker=null, rmhpPickMode=false, heliPickMode=false, stagingAddMode=false;
 // v6.22: Ebenen für Fahrzeuge/Bereitstellungsräume – damit die Karte im Hintergrund nur die Marker
 // aktualisiert statt komplett neu aufgebaut zu werden (kein sichtbares Neuladen mehr).
 let MAP_LAYERS={}, MAP_LAYERS_OF=null;
@@ -1609,10 +1609,13 @@ function renderStagingMarkerOnMap(){
  }
  // Bereitstellungsorte aller offenen Einsätze anzeigen
  for(const c of allOpenCalls()){
-   const st=c.staging; if(!st||!Number.isFinite(Number(st.lat)))continue;
-   const icon=L.divIcon({html:`<div style="background:#0369a1;color:#fff;border-radius:6px;padding:2px 6px;font-weight:800;font-size:13px;border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.4);white-space:nowrap">🅿️ BR</div>`,className:"",iconSize:[44,24],iconAnchor:[22,12]});
-   const m=L.marker([Number(st.lat),Number(st.lng)],{icon}).addTo(mapLayer("br")).bindPopup(`<b>🅿️ Bereitstellungsraum</b><br>${esc(st.name)}<br><small>Einsatz #${esc(c.id)} – Landfahrzeuge sammeln hier</small>`);
-   if(db.currentCall&&String(c.id)===String(db.currentCall.id))stagingMarker=m;
+   const Ls=callStagings(c);
+   Ls.forEach((st,bi)=>{
+   const lbl=Ls.length>1?`🅿️ BR ${bi+1}`:"🅿️ BR";
+   const icon=L.divIcon({html:`<div style="background:#0369a1;color:#fff;border-radius:6px;padding:2px 6px;font-weight:800;font-size:13px;border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.4);white-space:nowrap">${lbl}</div>`,className:"",iconSize:[Ls.length>1?58:44,24],iconAnchor:[Ls.length>1?29:22,12]});
+   const m=L.marker([Number(st.lat),Number(st.lng)],{icon}).addTo(mapLayer("br")).bindPopup(`<b>${lbl.replace("🅿️ ","🅿️ Bereitstellungsraum ").replace(/BR$/,"").trim()}</b><br>${esc(st.name)}<br><small>Einsatz #${esc(c.id)} – Landfahrzeuge sammeln hier${Ls.length>1?" (jedes Fahrzeug fährt den nächstgelegenen an)":""}</small>`);
+   if(bi===0&&db.currentCall&&String(c.id)===String(db.currentCall.id))stagingMarker=m;
+   });
  }
 }
 async function rmhpFromMap(lat,lng){
@@ -1643,8 +1646,9 @@ async function stagingFromMap(lat,lng){
  if(given===null)return;
  const pl={id:Date.now(),name:String(given||name).trim()||name,lat,lng};
  db.stagingPlaces=db.stagingPlaces||[]; db.stagingPlaces.push(pl);
- applyStaging(c,{name:pl.name,lat,lng});
- stagingPickMode=false; toast(`🅿️ Bereitstellungsort: ${pl.name}`); if(!karteStagingUpdate())karte();
+ if(stagingAddMode&&c.staging){addExtraStaging(c,{name:pl.name,lat,lng});toast(`🅿️ Weiterer Bereitstellungsraum: ${pl.name}`)}
+ else{applyStaging(c,{name:pl.name,lat,lng});toast(`🅿️ Bereitstellungsort: ${pl.name}`)}
+ stagingPickMode=false; stagingAddMode=false; if(!karteStagingUpdate())karte();
 }
 function vehicleMapEmoji(u){
  if(u.org==="DGzRS")return"⚓";
@@ -1746,7 +1750,7 @@ function stagingFor(call,u){
      if(u.fwdTo==="rmhp"&&rpOk)return [Number(rp.lat),Number(rp.lng)];
      if(u.fwdTo==="scene")return null;
    }
-   return [Number(st.lat),Number(st.lng)];
+   return brPointFor(call,u); // v6.44: bei mehreren BR der für dieses Fahrzeug passende
  }
  if(rpOk&&rmhpUnit(u))return [Number(rp.lat),Number(rp.lng)]; // ohne BR: Rettungsmittel direkt zum RMHP
  return null;
@@ -1810,6 +1814,25 @@ function brQueueTick(){
  }
  return ch;
 }
+// v6.44: Mehrere Bereitstellungsräume je Einsatz. c.staging ist der erste, c.stagingsExtra die weiteren.
+// Jedes Fahrzeug fährt den BR an, der seinem Standort beim Alarm am nächsten liegt (bleibt dann fest).
+function callStagings(c){return [c&&c.staging,...((c&&c.stagingsExtra)||[])].filter(b=>b&&Number.isFinite(Number(b.lat))&&Number.isFinite(Number(b.lng)))}
+function brKey(b){return `${Number(b.lat).toFixed(5)},${Number(b.lng).toFixed(5)}`}
+function brPointFor(c,u){
+ const L=callStagings(c); if(!L.length)return null;
+ if(L.length===1){return [Number(L[0].lat),Number(L[0].lng)]}
+ let b=(u.brFor===String(c.id))?L.find(x=>brKey(x)===u.brKey):null;
+ if(!b){const hp=Number.isFinite(Number(u.homeLat))&&Number.isFinite(Number(u.homeLng))?[Number(u.homeLat),Number(u.homeLng)]:null;
+   const p=(Array.isArray(u.shuttleFrom)&&u.shuttleFrom)||(Number.isFinite(Number(u.lat))&&Number.isFinite(Number(u.lng))?[Number(u.lat),Number(u.lng)]:null)||hp||unitPoint(u)||incidentPoint();
+   b=p?[...L].sort((x,y)=>haversine(p[0],p[1],+x.lat,+x.lng)-haversine(p[0],p[1],+y.lat,+y.lng))[0]:L[0];
+   u.brFor=String(c.id); u.brKey=brKey(b)}
+ return [Number(b.lat),Number(b.lng)];
+}
+function brOfPoint(c,pt){return pt?callStagings(c).find(b=>ptSame(pt,[Number(b.lat),Number(b.lng)]))||null:null}
+function addExtraStaging(c,b){c.stagingsExtra=[...(c.stagingsExtra||[]),b];(c.history=c.history||[]).push({q:"🅿️ Weiterer Bereitstellungsraum",a:b.name});save();if(db.cloud?.enabled&&c.alarmTime)setTimeout(()=>pushCallCloud(c),0)}
+function removeExtraStaging(i){const c=db.currentCall;if(!c||!c.stagingsExtra)return;const b=c.stagingsExtra[i];c.stagingsExtra.splice(i,1);
+ if(b&&c.alarmTime)for(const u of callUnits(c)){if(u.brFor===String(c.id)&&u.brKey===brKey(b)){delete u.brFor;delete u.brKey; if(String(u.status)==="4"&&u.arrKind==="br"){setUnitStatus(u,"3");u.shuttleFrom=[+b.lat,+b.lng];delete u.crew}}}
+ (c.history=c.history||[]).push({q:"🅿️ Bereitstellungsraum entfernt",a:b?b.name:""});save();if(currentPage==="karte"){if(!karteStagingUpdate())karte()}else render(currentPage)}
 // v6.25: Rettungsmittelhalteplatz (RMHP) – hier wird gerettet/versorgt; im Bereitstellungsraum nicht.
 // Gilt für bodengebundene Rettungsmittel (RTW, KTW, NEF, NAW …), nicht für Hubschrauber/Boote.
 function rmhpUnit(u){return !!u&&!isAirUnit(u)&&!waterCapable(u)&&!isLNA(u)&&(CREW_TRANSPORT.has(u.type)||["NEF","NAW","ITW","GW-SAN","Baby-NAW"].includes(u.type))}
@@ -1818,7 +1841,7 @@ function ptSame(a,b){return !!a&&!!b&&Math.abs(a[0]-b[0])<1e-6&&Math.abs(a[1]-b[
 function arrivalKind(call,u){
  const d=call&&stagingFor(call,u); if(!d)return "scene";
  if(call.rmhp&&ptSame(d,[Number(call.rmhp.lat),Number(call.rmhp.lng)]))return "rmhp";
- if(call.staging&&ptSame(d,[Number(call.staging.lat),Number(call.staging.lng)]))return "br";
+ if(brOfPoint(call,d))return "br";
  return "other";
 }
 function applyRmhp(c,rp){
@@ -2271,7 +2294,7 @@ function setUnitStatus(u,status){
    if(u.arrKind==="rmhp")u.s7Hold=3*60000; else delete u.s7Hold;
  }
  if(["1","2","3","6"].includes(String(status))){delete u.arrKind;delete u.arrPt;delete u.s7Hold;delete u._brWait;delete u._shAt;delete u._shDone}
- if(["1","2","6"].includes(String(status))){delete u.fwdCall;delete u.fwdTo}
+ if(["1","2","6"].includes(String(status))){delete u.fwdCall;delete u.fwdTo;delete u.brFor;delete u.brKey}
  if(db.cloud?.enabled) setTimeout(()=>pushUnitCloud(u),0);
 }
 function autoAdvanceEnRoute(){
@@ -2862,6 +2885,14 @@ function nearestFirst(arr){
 
 // Insel Wangerooge: bodengebundene Fahrzeuge kommen nicht vom Festland auf die Insel und
 // umgekehrt. Luftrettung und DLRG (Boote) sind davon ausgenommen.
+function pointOnWangerooge(p){return !!p&&p[0]>53.76&&p[0]<53.81&&p[1]>7.84&&p[1]<7.99}
+function callOnWangerooge(c){const lat=Number(c&&c.lat),lng=Number(c&&c.lng);if(Number.isFinite(lat)&&Number.isFinite(lng))return pointOnWangerooge([lat,lng]);return /wangerooge/i.test(`${c&&c.location||""} ${c&&c.geocodedAddress||""}`)}
+// v6.44: letzte Sicherung beim automatischen Alarmieren – kein Landfahrzeug über das Wasser
+function islandOkForCall(c,u){
+ if(!c||!u||u.org==="Luftrettung"||isAirUnit(u))return true;
+ if(c.locationIsWater&&waterCapable(u))return true;
+ return callOnWangerooge(c)===unitOnIsland(u);
+}
 function incidentOnWangerooge(){
  const p=incidentPoint();
  if(p)return p[0]>53.76&&p[0]<53.81&&p[1]>7.84&&p[1]<7.99;
@@ -6144,7 +6175,7 @@ function stagingSectionHTML(c){
 // Landfahrzeuge (Karte/Terminal/Fahrzeit), die alarmierten Fahrzeuge bleiben.
 function applyStaging(c,st){
  const oldBr=c.staging;
- if(st)c.staging=st; else delete c.staging;
+ if(st)c.staging=st; else if((c.stagingsExtra||[]).length){c.staging=c.stagingsExtra.shift();st=c.staging} else delete c.staging; // v6.44: nächster BR rückt nach
  if(!st&&oldBr&&c.alarmTime)for(const u of callUnits(c)){ // v6.25: BR aufgehoben → wartende Rettungsmittel rücken vor
    if(String(u.status)!=="4"||unitPhoneLive(u)||u.arrKind!=="br")continue;
    setUnitStatus(u,"3"); u.shuttleFrom=u.arrPt||[Number(oldBr.lat),Number(oldBr.lng)]; delete u.crew; delete u._brWait;
@@ -6286,6 +6317,7 @@ function alarmProposal(){
    const u=db.units.find(x=>x.id===id);
    if(!u)continue;
    if(before.has(String(id)))continue;
+   if(!realEx()&&!islandOkForCall(c,u)){c.history.push({q:"⚠️ Nicht alarmiert",a:`${unitLabel(u)} – ${unitOnIsland(u)?"auf Wangerooge":"auf dem Festland"}, Einsatzort ${unitOnIsland(u)?"auf dem Festland":"auf Wangerooge"}`});continue}
    if(!unitPhoneLive(u))setUnitStatus(u,"3"); // v6.29: nur echtes, verbundenes Handy setzt Status selbst
    c.alarmedUnits.push(id); added.push(u);
  }
@@ -8005,7 +8037,8 @@ function heliLzAlarm(id,si=0){
  const s=heliSites(c)[si]; if(!s)return;
  const miss=Math.max(0,siteLfNeed(c,si)-heliLzLfs(c,si).length); if(!miss)return;
  const lp=[Number(s.lat),Number(s.lng)], used=new Set((c.alarmedUnits||[]).map(String));
- const free=db.units.filter(u=>HELI_LZ_TYPES.includes(u.type)&&u.org==="Feuerwehr"&&["1","2"].includes(String(u.status))&&!used.has(String(u.id))&&!notAlarmable(u));
+ const lzIsl=pointOnWangerooge(lp); // v6.44: Insel ↔ Festland – kein Festland-LF zum Landeplatz auf Wangerooge (und umgekehrt)
+ const free=db.units.filter(u=>HELI_LZ_TYPES.includes(u.type)&&u.org==="Feuerwehr"&&["1","2"].includes(String(u.status))&&!used.has(String(u.id))&&!notAlarmable(u)&&unitOnIsland(u)===lzIsl);
  const dist=u=>{const p=unitPoint(u);return p?haversine(p[0],p[1],lp[0],lp[1]):9999};
  const pick=free.sort((a,b)=>(inDispatchArea(b)-inDispatchArea(a))||(dist(a)-dist(b))).slice(0,miss);
  const lbl=heliSites(c).length>1?`Landeplatz ${si+1}`:"Landeplatz";
@@ -10346,7 +10379,7 @@ function naviMsgHTML(){
  const D=vehicleNaviData||{}, calls=D.calls||[], sds=(D.sds||[]).filter(x=>Date.now()-new Date(x.time).getTime()<60*60000).slice(0,2);
  const parts=calls.map(c=>`<div style="margin-bottom:6px"><div style="font-size:18px;font-weight:900;color:#fca5a5">🚨 ${esc(c.keyword||"Einsatz")}</div>
    <div style="font-weight:700">📍 ${esc(c.location||"Ort unbekannt")}</div>
-   ${c.rmhp&&c.rmhp.name&&rmhpUnit(D.unit)?`<div style="color:#fca5a5;font-weight:700">🚑 RMHP: ${esc(c.rmhp.name)}</div>`:c.staging&&c.staging.name&&!waterCapable(D.unit)?`<div style="color:#7dd3fc;font-weight:700">🅿️ BR: ${esc(c.staging.name)}</div>`:""}
+   ${c.rmhp&&c.rmhp.name&&rmhpUnit(D.unit)?`<div style="color:#fca5a5;font-weight:700">🚑 RMHP: ${esc(c.rmhp.name)}</div>`:c.staging&&c.staging.name&&!waterCapable(D.unit)?`<div style="color:#7dd3fc;font-weight:700">🅿️ BR: ${esc((brOfPoint(c,callDestinationPoint(c,D.unit))||c.staging).name)}</div>`:""}
    ${c.alarmFreeText?`<div style="margin-top:3px">📝 ${esc(c.alarmFreeText)}</div>`:""}
    ${Array.isArray(c.nafo)&&c.nafo.length?`<div style="margin-top:3px;color:#fdba74">📟 ${esc(c.nafo[c.nafo.length-1].reason||"")}</div>`:""}
 </div>`).join(""); // v5.88: alarmierte Mittel nicht mehr anzeigen
@@ -10357,7 +10390,7 @@ function naviTarget(){
  const D=vehicleNaviData; if(!D||!D.calls||!D.calls.length)return null;
  const c=D.calls[0], pt=callDestinationPoint(c,D.unit); if(!pt)return null;
  const rm=c.rmhp&&c.rmhp.name&&rmhpUnit(D.unit), br=!rm&&c.staging&&c.staging.name&&!waterCapable(D.unit);
- return {lat:pt[0],lng:pt[1],label:rm?`RMHP ${c.rmhp.name}`:br?`BR ${c.staging.name}`:(c.location||"Einsatzstelle"),kw:c.keyword||"Einsatz"};
+ return {lat:pt[0],lng:pt[1],label:rm?`RMHP ${c.rmhp.name}`:br?`BR ${(brOfPoint(c,pt)||c.staging).name}`:(c.location||"Einsatzstelle"),kw:c.keyword||"Einsatz"};
 }
 function naviOwnPos(){const u=vehicleNaviData&&vehicleNaviData.unit;if(vehicleNaviGps)return [vehicleNaviGps[0],vehicleNaviGps[1]];if(u&&Number.isFinite(Number(u.lat))&&Number.isFinite(Number(u.lng)))return [Number(u.lat),Number(u.lng)];const p=u?unitPoint(u):null;return p||null}
 function naviBearing(a,b){const r=Math.PI/180,y=Math.sin((b[1]-a[1])*r)*Math.cos(b[0]*r),x=Math.cos(a[0]*r)*Math.sin(b[0]*r)-Math.sin(a[0]*r)*Math.cos(b[0]*r)*Math.cos((b[1]-a[1])*r);return (Math.atan2(y,x)/r+360)%360}

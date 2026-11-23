@@ -1607,6 +1607,11 @@ Version 5.05:
   („a, b“ = a ODER b). Mit „🚑 NA-Indikation“ markierte Knöpfe ziehen weiterhin einen Notarzt.
 - Nur „Unauffällig“ (ohne weitere Befunde) zählt weiter als unauffälliges E (R0 möglich).
 
+Version 6.44:
+- Fehlerbehebung Wangerooge: Für die Absicherung eines Hubschrauber-Landeplatzes wurde das nächste LF/HLF ohne Insel-Prüfung gewählt – so konnte ein LF vom Festland (z. B. Wangerland) zu einem Landeplatz auf Wangerooge alarmiert werden. Jetzt: Landeplatz auf der Insel → nur Insel-LF, auf dem Festland → nur Festland-LF.
+- Zusätzliche Sicherung beim Alarmieren: Landfahrzeuge werden nie über das Wasser alarmiert (Insel ↔ Festland); steht dann als „⚠️ Nicht alarmiert“ im Einsatzverlauf. Hubschrauber und Boote bei Wasser-Einsätzen ausgenommen; in der Realübung keine Sperre.
+- Mehrere Bereitstellungsräume: Auf der Einsatzkarte nach dem ersten BR „＋ weiterer BR“. Jedes Fahrzeug fährt den BR an, der seinem Standort beim Alarm am nächsten liegt (bleibt dann fest). Auf der Karte „🅿️ BR 1“, „🅿️ BR 2“ …, einzeln mit ✕ entfernbar – die Fahrzeuge dort rücken dann zum nächsten BR vor. Wird BR 1 entfernt, rückt BR 2 nach. Abruf zum RMHP/zur Schadensstelle aus allen BR.
+
 Version 6.43:
 - Startbildschirm: Einsätze in Wilhelmshaven stehen als eigene Gruppe unter den übrigen Einsätzen und lassen sich mit „▼ Wilhelmshaven (n Einsätze)“ ein- und ausklappen. Die Einstellung bleibt gespeichert. Ein gerade geöffneter WHV-Einsatz bleibt auch eingeklappt sichtbar.
 
