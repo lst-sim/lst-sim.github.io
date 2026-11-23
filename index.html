@@ -263,7 +263,7 @@ html[data-device="handy"] .fach-grid{grid-template-columns:1fr}
 <header id="topbar">
  <div class="tb-left">
   <span class="tb-brand"><span class="tb-logo">🚑</span><span class="tb-name">Leitstelle<b>.sim</b></span></span>
-  <span id="versionTag" class="tb-ver">v6.40</span>
+  <span id="versionTag" class="tb-ver">v6.41</span>
   <span id="syncState"></span>
   <a id="deskTag" href="#" onclick="renameDesk();return false" title="Name dieses Platzes (für „offen an …“) – antippen zum Ändern"></a>
  </div>
@@ -6505,6 +6505,7 @@ function crewTick(){
  try{if(brQueueTick())changed=true}catch(e){console.warn(e)} // v6.26
  try{if(heliShuttleTick())changed=true}catch(e){console.warn(e)} // v6.30
  try{if(reaLaterTick())changed=true}catch(e){console.warn(e)} // v6.40
+ try{if(ktWorseTick())changed=true}catch(e){console.warn(e)} // v6.41
  try{if(cprTick())changed=true}catch(e){console.warn(e)} // v6.39
  for(const u of (db.units||[])){
    if(unitPhoneLive(u))continue;
@@ -6731,6 +6732,42 @@ function reaLaterTick(){
    // Transport verzögert sich durch die Reanimation
    const C=tx.crew; C.info={...(C.info||{}),sev:"rea"}; C.departAt=Math.max(C.departAt||0,now+rint(25,40)*60000); if(!C.registered)C.registerAt=Math.max(C.registerAt||0,now+rint(10,20)*60000);
    try{toast(`⚠️ ${c.location||"Einsatz"}: Reanimation – Nachforderung`)}catch(e){}
+ }
+ return ch;
+}
+// v6.41: Krankentransport – in ca. 0,5 % Zustandsverschlechterung oder sogar Reanimation im Verlauf
+// (Aufteilung 70 % Verschlechterung / 30 % Reanimation = Annahme). Besatzung meldet und fordert nach.
+let KT_WORSE_P=0.005;
+function ktWorseTick(){
+ if(vehManual())return false;
+ const now=Date.now(); let ch=false;
+ for(const c of allOpenCalls()){
+   if(!c.kt||!c.alarmTime||c._ktWorseDone||(c.deskId&&c.deskId!==DEVICE_ID))continue;
+   const u=callUnits(c).find(x=>["4","7"].includes(String(x.status))&&!unitPhoneLive(x));
+   if(!u)continue;
+   if(c._ktRoll==null){c._ktRoll=Math.random()<KT_WORSE_P?(Math.random()<0.3?"rea":"worse"):0;if(c._ktRoll)c._ktAt=now+rint(2,25)*60000;ch=true}
+   if(!c._ktRoll){c._ktWorseDone=true;continue}
+   if(now<c._ktAt)continue;
+   c._ktWorseDone=true; ch=true;
+   const rea=c._ktRoll==="rea", inTx=String(u.status)==="7", lowT=["KTW","NKTW"].includes(u.type);
+   const has=t=>callUnits(c).some(x=>t.includes(x.type)&&["3","4","7"].includes(String(x.status)));
+   const need=[];
+   if(rea){
+     if(!has(["NEF","RTH"]))need.push(availableUnits("AEF","Rettungsdienst").length?"NEF (ggf. zusätzlich AEF)":"NEF");
+     if(lowT&&!has(["RTW"]))need.push("RTW");
+     need.push("HLF (Unterstützung Reanimation)");
+     c.reaLater=true;
+   }else{
+     if(lowT&&!has(["RTW"]))need.push("RTW");
+     else if(!has(["NEF","RTH"]))need.push("NEF");
+   }
+   const where=inTx?"halten an, ":"";
+   const txt=rea?`Krankentransport: Patient ${inTx?"auf der Fahrt ":""}reanimationspflichtig geworden – ${where}Reanimation läuft. Nachforderung: ${need.join(", ")}.`
+                :`Krankentransport: Zustandsverschlechterung ${inTx?"auf der Fahrt":"bei Übernahme"} – ${where}Nachforderung: ${need.join(", ")||"keine"}.`;
+   crewSds(u,c,txt);
+   (c.history=c.history||[]).push({q:rea?"⚠️ Lageänderung: Reanimation":"⚠️ Lageänderung: Zustandsverschlechterung",a:txt});
+   (c.nafo=c.nafo||[]).push({reason:txt,at:new Date().toISOString()});
+   try{toast(`⚠️ KT ${c.location||""}: ${rea?"Reanimation":"Zustandsverschlechterung"} – Nachforderung`)}catch(e){}
  }
  return ch;
 }

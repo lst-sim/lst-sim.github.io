@@ -1607,6 +1607,9 @@ Version 5.05:
   („a, b“ = a ODER b). Mit „🚑 NA-Indikation“ markierte Knöpfe ziehen weiterhin einen Notarzt.
 - Nur „Unauffällig“ (ohne weitere Befunde) zählt weiter als unauffälliges E (R0 möglich).
 
+Version 6.41:
+- Krankentransport: In ca. 0,5 % kommt es im Verlauf (bei Übernahme oder auf der Fahrt) zu einer Zustandsverschlechterung oder sogar Reanimation (Aufteilung 70/30 = Annahme). Die Besatzung meldet per SDS und fordert nach: bei Verschlechterung RTW (bzw. NEF, wenn schon RTW-Niveau), bei Reanimation NEF (ggf. AEF), RTW und HLF. Steht im Einsatzverlauf und als Nachforderung.
+
 Version 6.40:
 - Reanimation vor Ort bzw. im Verlauf: Stellt sich an der Einsatzstelle heraus, dass der Patient reanimationspflichtig ist (obwohl nicht so alarmiert), oder wird er es während des Einsatzes, meldet die Besatzung per SDS „Lageänderung: Reanimation“ und fordert nach, was fehlt: NEF (ggf. zusätzlich AEF, wenn eins existiert), HLF zur Unterstützung, RTW bzw. weiteren RTW. Steht im Einsatzverlauf und als Nachforderung.
 - Wahrscheinlichkeit (Annahme): kritische Patienten ca. 8 %, dringliche ca. 2 %, übrige 0,5 %; halb sofort beim Eintreffen, halb 3–15 min später. Nicht bei MANV und Krankentransport.
