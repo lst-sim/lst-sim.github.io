@@ -1607,6 +1607,16 @@ Version 5.05:
   („a, b“ = a ODER b). Mit „🚑 NA-Indikation“ markierte Knöpfe ziehen weiterhin einen Notarzt.
 - Nur „Unauffällig“ (ohne weitere Befunde) zählt weiter als unauffälliges E (R0 möglich).
 
+Version 6.36:
+- Neue Fahrzeuggruppe AEF (Einsatzfahrzeug mit Gemeindenotfallsanitäter, G-NFS) im Rettungsdienst. Anlegen unter Rettungsmittel → Rettungsdienst → Typ „AEF“ (Besatzung 1). Es sind noch KEINE AEF-Fahrzeuge hinterlegt – Standorte/Funkrufnamen bitte eintragen bzw. mitteilen.
+- R0 (niederschwellig): AEF wird statt NKTW/RTW vorgeschlagen, wenn es mindestens genauso schnell da ist.
+- Urologische Notfälle (Harnverhalt, Katheter-/Pflegeproblem, Harnwegsbeschwerden): AEF allein (bis 5 min langsamer als NKTW/RTW noch bevorzugt) – G-NFS legen/wechseln Katheter und schließen den Einsatz oft selbst ab (Simulation: ca. 75 %).
+- R1 ohne Notarzt: AEF + NKTW zusammen als RTW-Ersatz, wenn kein RTW frei ist oder beide zusammen schneller da sind. Hinweis dazu im Alarmierungsfenster.
+- Stapeln wie bei KTW/NKTW: AEF im Einsatz kann für R0 vorgemerkt werden.
+- Simulation: AEF allein versorgt vor Ort; braucht der Patient doch Transport, kommt eine Nachforderung (NKTW/KTW, bei Bedarf RTW/NEF) und das AEF bleibt bis zur Übergabe. Zusammen mit NKTW/RTW bleibt es, bis transportiert wird, dann frei.
+- Nicht im MANV-Konzept: bei MANV wird kein AEF vorgeschlagen.
+- Fehlerbehebung: „neurologisch“ wurde bei der Erkennung urologischer Fälle fälschlich als „urologisch“ gewertet (nur neuer Code betroffen).
+
 Version 6.35:
 - Fehlerbehebung „Auflegen/Einsatz abschließen geht nicht mehr“: Wahrscheinliche Ursache war der volle Browser-Speicher (ca. 5 MB). Abgeschlossene Einsätze wurden bisher mit allem (komplettes Übungsgespräch, Kopien aller Fahrzeuge) unbegrenzt gespeichert; war der Speicher voll, brach jedes Speichern mit einem Fehler ab – und damit auch Auflegen und Abschließen.
 - Jetzt: Abgeschlossene Einsätze werden schlank gespeichert (max. 300). Ist der Speicher trotzdem voll, werden alte Einträge (Einsätze, Protokolle, SDS) automatisch gekürzt und erneut gespeichert. Speichern blockiert nie mehr die Bedienung.

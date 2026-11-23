@@ -263,7 +263,7 @@ html[data-device="handy"] .fach-grid{grid-template-columns:1fr}
 <header id="topbar">
  <div class="tb-left">
   <span class="tb-brand"><span class="tb-logo">🚑</span><span class="tb-name">Leitstelle<b>.sim</b></span></span>
-  <span id="versionTag" class="tb-ver">v6.35</span>
+  <span id="versionTag" class="tb-ver">v6.36</span>
   <span id="syncState"></span>
   <a id="deskTag" href="#" onclick="renameDesk();return false" title="Name dieses Platzes (für „offen an …“) – antippen zum Ändern"></a>
  </div>
@@ -933,7 +933,7 @@ async function csPull(){
  return false;
 }
 const CS_ORGS=["Rettungsdienst","Feuerwehr","DLRG","DRK","THW","Luftrettung","DGzRS"];
-const CS_TYPES={Rettungsdienst:["RTW","NEF","KTW","NKTW","ITW","OrgL","LNA"],Feuerwehr:["HLF","LF","TLF","DLK","RW","ELW","ELW1","MTW","GW-L1","WLF","TSF"],DLRG:["RTB","MZB","GW Wasserrettung","GW Taucher","MTW","ELW1"],DRK:["RTW","KTW","MTW","GW-San","ELW1","RTB"],THW:["MTW","GKW","MzKW","ELW"],Luftrettung:["RTH","ITH"],DGzRS:["SRK","SRB"]};
+const CS_TYPES={Rettungsdienst:["RTW","NEF","KTW","NKTW","AEF","ITW","OrgL","LNA"],Feuerwehr:["HLF","LF","TLF","DLK","RW","ELW","ELW1","MTW","GW-L1","WLF","TSF"],DLRG:["RTB","MZB","GW Wasserrettung","GW Taucher","MTW","ELW1"],DRK:["RTW","KTW","MTW","GW-San","ELW1","RTB"],THW:["MTW","GKW","MzKW","ELW"],Luftrettung:["RTH","ITH"],DGzRS:["SRK","SRB"]};
 const CS_SKILLS={RTW:"Notfallrettung",NEF:"Notarzt",KTW:"Krankentransport",NKTW:"Notfall-Krankentransport",ITW:"Intensivtransport",RTH:"Notarzt, Luftrettung",ITH:"Intensivtransport, Luftrettung",RTB:"Wasserrettung",MZB:"Wasserrettung",SRK:"Seenotrettung",SRB:"Seenotrettung",HLF:"Brandbekämpfung, Technische Hilfeleistung",LF:"Brandbekämpfung",TLF:"Brandbekämpfung",DLK:"Hubrettung",RW:"Technische Hilfeleistung"};
 const CS_FACH=["Innere Medizin","Chirurgie","Schockraum","Intensivmedizin","Kardiologie / Chest Pain Unit","Neurologie / Stroke Unit","Pädiatrie","Gynäkologie/Geburtshilfe","Urologie","Psychiatrie","HNO","Augenheilkunde"];
 function csBuildDefaults(cs){
@@ -2922,6 +2922,46 @@ function islandReachable(u){
 // (Reiter DRK) oder wenn ausdrücklich die Organisation DRK angefordert ist.
 function drkBackground(u){return u&&u.org==="DRK"&&["RTW","KTW","NKTW","NEF"].includes(u.type)&&!AVAIL_MANV}
 let AVAIL_MANV=false; // v5.34: beim MANV gehören auch die DRK-Hintergrund-Rettungsmittel in den Vorschlag
+// ─── v6.36: AEF – Einsatzfahrzeug mit Gemeindenotfallsanitäter (G-NFS) ───────────────────────────
+// • R0 (niederschwellig): AEF allein statt NKTW/RTW, wenn es mindestens genauso schnell da ist.
+// • Urologische Notfälle (Harnverhalt, Katheterproblem): AEF allein – G-NFS legen/wechseln Katheter.
+// • R1 ohne Notarzt: AEF + NKTW zusammen als RTW-Ersatz, wenn kein RTW frei oder das Paar schneller ist.
+// • Nicht im MANV-Konzept. Transportiert selbst nicht.
+function aefUroCase(c){
+ const S=c&&c.sim&&c.sim.d, t=[c&&c.keyword,c&&c.answers&&c.answers.e_exposure,c&&c.answers&&c.answers.freeText,S&&S.event,S&&S.f&&S.f.e,c&&leitKey(c),c&&c.sim&&c.sim.caseId].filter(Boolean).join(" ").toLowerCase();
+ if(/sepsis|fieber.*schüttel|bewusstlos/.test(t))return false;
+ return /harnverhalt|katheter|blasenkath|harnweg|nierenkolik|(^|[^a-zäöüß])uro_|(^|[^a-zäöüß])urolog|pflegeproblem/.test(t)||(!!c&&["pflege","harn"].includes(leitKey(c)));
+}
+function aefEta(x){return x&&x.neighbor?x.neighborEta:(x&&!x.missing?estimatedEtaMinutes(x):null)}
+function aefApply(c,selected,used,keyword){
+ if(!c||c.kt||isManvCall(c)||c.manvPatients||Number(c.answers&&c.answers.count)>3)return;
+ c.aefNote=null;
+ const free=()=>availableUnits("AEF","Rettungsdienst").filter(x=>!used.has(x.id));
+ if(!free().length)return;
+ const m=String(keyword||"").match(R_LEVEL_RE), lv=c.rOverride||(m?m[2]:(c.rZero?"R0":null));
+ const hasNef=selected.some(x=>x.type==="NEF");
+ const uro=aefUroCase(c);
+ const swap=(i,nu,role)=>{const old=selected[i];if(old&&!old.missing&&!old.neighbor)used.delete(old.id);selected.splice(i,1,{...nu,aefRole:role});used.add(nu.id)};
+ if((lv==="R0"||uro)&&!hasNef){
+   const i=selected.findIndex(x=>["NKTW","RTW","KTW"].includes(x.type));
+   const a=free()[0];
+   if(i>=0){const x=selected[i],ea=aefEta(a),ex=aefEta(x);
+     if(x.missing||ex==null||(ea!=null&&ea<=ex+(uro?5:0))){swap(i,a,uro?"uro":"r0");c.aefNote=uro?"AEF (G-NFS) statt "+x.type+" – urologischer Notfall, Katheter vor Ort möglich":"AEF (G-NFS) statt "+x.type+" – niederschwelliger R0-Einsatz";return}}
+   return;
+ }
+ if(lv==="R1"&&!hasNef){
+   for(let i=0;i<selected.length;i++){
+     const x=selected[i]; if(x.type!=="RTW"||x.aefRole)continue;
+     const a=free()[0], n=availableUnits("NKTW","Rettungsdienst").filter(y=>!used.has(y.id))[0];
+     if(!a||!n)break;
+     const pe=Math.max(aefEta(a)??999,aefEta(n)??999), ex=aefEta(x);
+     if(x.missing||ex==null||pe<ex){
+       swap(i,n,"pairNktw"); selected.splice(i+1,0,{...a,aefRole:"pair"}); used.add(a.id); i++;
+       c.aefNote=`AEF (G-NFS) + NKTW statt RTW – ${x.missing?"kein RTW frei":`zusammen schneller (ca. ${Math.round(pe)} statt ${Math.round(ex)} min)`}`;
+     }
+   }
+ }
+}
 function availableUnits(type,org=null){
  const orgOk=u=>!org||u.org===org||(org==="DLRG"&&u.wasserrettung);
  const prim=areaBlend(nearestFirst(db.units.filter(u=>(!u.neighborLoan||u.cover)&&(!type||u.type===type)&&orgOk(u)&&(org==="DRK"||!drkBackground(u))&&["1","2"].includes(u.status)&&islandReachable(u))));
@@ -3614,7 +3654,7 @@ function checkStackedDispatch(u){
 function stackSectionHTML(c){
  if(!callIsLowPrio(c))return "";
  const assigned=new Set([...(c.alarmedUnits||[]),...(c.proposedUnitIds||[])].map(String));
- const types=c.kt?["KTW","NKTW","RTW"]:["RTW","NKTW","KTW"];
+ const types=c.kt?["KTW","NKTW","RTW"]:["RTW","NKTW","AEF","KTW"]; // v6.36: AEF (Gemeindenotfallsanitäter) auch stapelbar
  const busy=nearestFirst(db.units.filter(u=>types.includes(u.type)&&u.org==="Rettungsdienst"&&["3","4","7"].includes(String(u.status))&&!assigned.has(String(u.id))));
  const stacked=(c.stackedUnits||[]).map(id=>db.units.find(u=>String(u.id)===String(id))).filter(Boolean);
  return `<div class="suggest" style="background:#f0f9ff;border-color:#7dd3fc;margin-top:10px">
@@ -5881,6 +5921,7 @@ function evaluate0(){
      else selected.push({missing:true,type:r.type,org:r.org});
    }
  }
+ try{aefApply(c,selected,used,keyword)}catch(e){console.warn("AEF",e)} // v6.36
  // First Responder nur bei echter Zeitersparnis gegenüber dem ersten eintreffenden Einsatzmittel
  // (Nutzerangabe): Reanimation > 1 min, Verkehrsunfall > 2 min, sonst > 3 min.
  for(let i=selected.length-1;i>=0;i--){
@@ -6090,6 +6131,7 @@ function prepareAlarm(){
  document.getElementById("app").innerHTML=`<div class="card call">
    <div class="row between"><div><h2>🚨 Alarmierung vorbereiten</h2><div class="muted">${c.alarmTime?"Einsatz ist schon alarmiert – bereits alarmierte Fahrzeuge behalten beim erneuten Senden ihren Status.":"Noch keine Alarmierung – Angaben prüfen und ergänzen."}</div></div><button onclick="render('leitstelle')">Abbrechen</button></div>
    <label>Einsatzstichwort</label><div class="big">${esc(c.keyword||"—")}</div>
+   ${c.aefNote?`<div style="font-size:12px;margin-top:4px;color:#0f766e;font-weight:700">🩺 ${esc(c.aefNote)}</div>`:""}
    ${c.aaoWinner?`<div class="muted" style="font-size:12px;margin-top:4px">AAO: ${esc(c.aaoWinner)}${(c.aaoCombined||[]).length?` · zusätzlich: ${esc(c.aaoCombined.join(", "))}`:""}${(c.aaoExcluded||[]).length?` · <span style="color:#b91c1c">⛔ ausgeschlossen: ${esc(c.aaoExcluded.join(", "))}</span>`:""}</div>`:""}
    <div class="row" style="margin-top:8px;gap:6px;flex-wrap:wrap"><span class="muted">Einsatzstufe:</span>${["R0","R1","R1N1"].map(l=>`<button class="${rLevelOf(c)===l?"primary":""}" onclick="setRLevel('${l}')">${l}</button>`).join("")}<button class="${c.rOverride?"":"primary"}" onclick="setRLevel(null)">Automatisch</button></div>
    <small class="muted">R0 = ohne Sonderrechte (kein Nachbar-LK) · R1 = mit Sonderrechten, ohne NEF · R1N1 = mit Notarzt (NEF). Wechsel setzt den Fahrzeugvorschlag neu.</small>
@@ -6353,6 +6395,7 @@ function crewPlan(u,call){
    P.doc=u.id; u.crew={callId:String(call.id),nef:true,manv:true,docFor:P.n};
    crewSds(u,call,`Übernehme Patient ${P.pid!=null?`(Anhängekarte ${P.pid}) `:""}SK ${["","I","II","III","IV"][P.sk]}${P.sk===1?" notärztlich":P.sk===4?" – palliative Versorgung an der Einsatzstelle, kein Transport":" – Versorgung bis zum Transport"}.`);if(P.sk===4&&!P.dieAt)P.dieAt=now+rint(15,45)*60000;return;
  }
+ if(u.type==="AEF"){aefCrewPlan(u,call,info,now);return} // v6.36
  if(isNef){
    // RTW schon vor Ort und Patient kritisch → NEF begleitet; sonst nach Versorgung wieder frei
    const rt=(call.alarmedUnits||[]).map(id=>db.units.find(x=>String(x.id)===String(id))).find(x=>x&&x.crew&&x.crew.mode==="transport"&&String(x.status)==="4"&&!x.crew.nefId&&x.crew.info&&["rea","critical"].includes(x.crew.info.sev));
@@ -6450,7 +6493,7 @@ function crewTick(){
    // mehrere Plätze: nur der Platz, der den Einsatz hat, steuert die Besatzung (sonst doppelte SDS/IVENA)
    if(u.crew&&u.crew.owner&&u.crew.owner!==DEVICE_ID)continue;
    const st=String(u.status), isT=CREW_TRANSPORT.has(u.type), isNef=u.type==="NEF";
-   if(!isT&&!isNef){if(u.crew&&!["4","7","8"].includes(st)){delete u.crew;changed=true}continue}
+   if(!isT&&!isNef&&u.type!=="AEF"){if(u.crew&&!["4","7","8"].includes(st)){delete u.crew;changed=true}continue} // v6.36: AEF hat eigene Besatzungslogik
    if(st==="6"&&u.crew&&u.crew.mode==="waitDoc")continue; // NEF wartet im NWK auf seinen Notarzt
    if(st==="6"&&u.crew&&u.crew.mode==="docReturn"){
      if(now>=u.crew.dueAt){const n=db.units.find(x=>String(x.id)===String(u.crew.nefId)), cl=allOpenCalls().find(c=>String(c.id)===String(u.crew.callId))||{id:u.crew.callId};
@@ -6512,6 +6555,7 @@ function crewTick(){
      }
      if(C.mode==="evacT"){if(now>=C.departAt){const keep={...C,arriveAt:now+C.drive*60000};setUnitStatus(u,"7");if(u.s7Hold)keep.arriveAt+=u.s7Hold;u.crew=keep;changed=true}continue} // v5.63
      if(C.mode==="care"){const P=(call&&call.manvPatients||[]).find(x=>x.n===C.patient);if(!P||P.sk!==4){delete u.crew;changed=true}continue} // v5.60
+     if(C.mode==="none"&&now>=C.doneAt&&aefMustStay(u,call,C)){C.doneAt=now+60000;continue} // v6.36
      if(C.mode==="none"&&now>=C.doneAt&&!rtwMayFree(u,call)){C.doneAt=now+60000;if(!C.waitTx){C.waitTx=true;crewSds(u,call,"Kein eigener Patient – bleiben vor Ort, bis der Patient abtransportiert wird.");changed=true}continue} // v6.03
      if(C.mode==="none"&&now>=C.doneAt){crewSds(u,call,C.info&&C.info.noPatient?"Kein Patient vor Ort – Einsatzende, wieder einsatzbereit.":"Kein weiterer Patient für uns – Einsatzende, wieder einsatzbereit.");setUnitStatus(u,"1");delete u.crew;changed=true;continue}
      if(C.mode==="home"&&now>=C.doneAt){crewSds(u,call,`Pat. vor Ort versorgt, kein Transport notwendig (ambulant/Hausarzt). Einsatzende ${hhmm(now)} – wieder einsatzbereit.`);(call.history=call.history||[]).push({q:`🏠 ${u.opta||u.name}`,a:"Pat. vor Ort versorgt, kein Transport"});setUnitStatus(u,"1");delete u.crew;changed=true;continue}
@@ -6581,6 +6625,32 @@ function crewTick(){
 }
 // v6.03: Ein RTW (bzw. KTW/NKTW …) vor Ort darf sich ohne eigenen Patienten nur frei melden, wenn ein anderes
 // Fahrzeug des Einsatzes den Patienten bereits transportiert (Status 7) – sonst bleibt er vor Ort.
+function aefCrewPlan(u,call,info,now){
+ const cid=String(call.id), tx=callUnits(call).filter(x=>x!==u&&CREW_TRANSPORT.has(x.type)&&["3","4"].includes(String(x.status)));
+ if(tx.length){ // zusammen mit NKTW/RTW: unterstützt, frei sobald der Patient abtransportiert ist
+   u.crew={callId:cid,mode:"none",doneAt:now+rint(8,15)*60000,info:{...info},aefSupport:true,owner:DEVICE_ID};
+   crewSds(u,call,"Gemeindenotfallsanitäter unterstützt die Besatzung vor Ort – frei, sobald der Patient abtransportiert ist.");return}
+ const uro=aefUroCase(call), sev=info.sev;
+ const p=["rea","critical"].includes(sev)?0:uro?0.75:sev==="minor"?0.55:sev==="normal"?0.35:0.1; // Annahmen
+ if(Math.random()<p){
+   u.crew={callId:cid,mode:"none",doneAt:now+rint(uro?25:20,uro?45:35)*60000,info:{...info},aefSolved:true,owner:DEVICE_ID};
+   const txt=uro?"Katheter gelegt bzw. gewechselt, Urin fließt ab – Patient verbleibt zu Hause, Hausarzt informiert. Kein Transport nötig.":"Patient vor Ort versorgt und beraten – kein Transport nötig, Weiterbehandlung über Hausarzt.";
+   crewSds(u,call,txt); (call.history=call.history||[]).push({q:`🩺 ${u.opta||u.name} (G-NFS)`,a:txt}); call._aefSolved=true; return;
+ }
+ const need=["rea","critical"].includes(sev)?"RTW + NEF":(sev==="urgent"&&!uro&&rLevelOf(call)!=="R0")?"RTW":"NKTW oder KTW";
+ u.crew={callId:cid,mode:"none",doneAt:now+rint(10,18)*60000,info:{...info},aefNeedTx:need,owner:DEVICE_ID};
+ crewSds(u,call,`Nachforderung: ${need} für den Transport – Patient ist vom Gemeindenotfallsanitäter versorgt, wir bleiben bis zur Übergabe.`);
+ (call.history=call.history||[]).push({q:`📟 Nachforderung (${u.opta||u.name})`,a:`${need} für Transport (G-NFS vor Ort)`});
+}
+// AEF bleibt, bis der Patient übergeben/abtransportiert ist
+function aefMustStay(u,call,C){
+ if(!u||u.type!=="AEF"||!C||C.aefSolved)return false;
+ const tx=callUnits(call).filter(x=>x!==u&&CREW_TRANSPORT.has(x.type));
+ if(tx.some(x=>["7","8"].includes(String(x.status)))||call._txAt)return false;
+ if(C.aefSupport)return tx.some(x=>["3","4"].includes(String(x.status)));
+ if(C.aefNeedTx)return true;
+ return false;
+}
 function rtwMayFree(u,call){
  if(!u||!call||!CREW_TRANSPORT.has(u.type))return true;
  const info=u.crew&&u.crew.info; if(info&&info.noPatient)return true;
@@ -7183,7 +7253,7 @@ function crewSurplusTick(){
      const st=String(u.status);
      if(st==="3"&&CREW_TRANSPORT.has(u.type)&&!u.crew&&covered>=need&&rtwOnScene){if(!u._relAt)u._relAt=now+rint(1,3)*60000;else if(now>=u._relAt){delete u._relAt;free(u,"Abbestellt – Patient wird bereits versorgt, nicht mehr benötigt.")}}
      else if(st==="3"&&u.type==="NEF"&&!u.crew&&rtwOnScene&&rtwOnScene.crew.info&&!["rea","critical"].includes(rtwOnScene.crew.info.sev)){if(!u._relAt)u._relAt=now+rint(1,3)*60000;else if(now>=u._relAt){delete u._relAt;free(u,"Abbestellt – RTW vor Ort: kein Notarzt erforderlich.")}}
-     else if(st==="4"&&!rd(u)&&u.org!=="Polizei"&&rtwOnScene&&!/Feuer|Brand|Verkehrsunfall|Technische|Wasser|Gefahr/i.test([call.answers&&call.answers.event,call.keyword].join(" "))&&!Number(call.answers&&(call.answers.trapped||call.answers.firePeople))){
+     else if(st==="4"&&!rd(u)&&u.type!=="AEF"&&u.org!=="Polizei"&&rtwOnScene&&!/Feuer|Brand|Verkehrsunfall|Technische|Wasser|Gefahr/i.test([call.answers&&call.answers.event,call.keyword].join(" "))&&!Number(call.answers&&(call.answers.trapped||call.answers.firePeople))){
        if(!u._relAt)u._relAt=now+rint(5,10)*60000;else if(now>=u._relAt){delete u._relAt;free(u,"Patient an den Rettungsdienst übergeben – nicht mehr benötigt, frei Einsatzstelle.")}
      }
    }
@@ -7212,7 +7282,7 @@ const MANV_STAGES=[[5,"9","MANV 5"],[10,"22","MANV 10"],[30,"23","MANV 30"],[50,
 const MANV_IDS=new Set(MANV_STAGES.map(x=>x[1]));
 function manvStage(n){n=Number(n)||0;return MANV_STAGES.find(x=>n<=x[0])}
 function isManvCall(c){return !!c&&!c.kt&&(Number(c.answers?.count)>3||!!c.manv||/MANV/.test(c.keyword||""))}
-const RD_TYPES=new Set(["RTW","NEF","NKTW","KTW","RTH","ITH","KTH","OrgL","LNA","OrgL/LNA","SRTW","Baby-NAW","NAW","ITW"]);
+const RD_TYPES=new Set(["RTW","NEF","NKTW","KTW","AEF","RTH","ITH","KTH","OrgL","LNA","OrgL/LNA","SRTW","Baby-NAW","NAW","ITW"]);
 function callUnits(c){return (c.alarmedUnits||[]).map(id=>db.units.find(x=>String(x.id)===String(id))).filter(Boolean)}
 // Wahre Verteilung der Betroffenen (einmal pro Einsatz festgelegt)
 function manvTruth(c){
@@ -8296,7 +8366,7 @@ function unitEditorHTML(){
  const d=unitDraft;
  const cats=[...new Set([...UNIT_CATEGORIES,...(db.units||[]).map(u=>u.org).filter(Boolean)])];
  const inCat=(db.units||[]).filter(u=>u.org===d.org);
- const types=[...new Set(inCat.map(u=>u.type).filter(Boolean))].sort((a,b)=>a.localeCompare(b,"de"));
+ const types=[...new Set([...inCat.map(u=>u.type).filter(Boolean),...(d.org==="Rettungsdienst"?["AEF"]:[])])].sort((a,b)=>a.localeCompare(b,"de")); // v6.36: AEF immer wählbar
  const locs=[...new Set(inCat.map(u=>u.location).filter(Boolean))].sort((a,b)=>a.localeCompare(b,"de"));
  const icon=o=>(typeof ORG_ICON!=="undefined"&&ORG_ICON[o])||(o==="DRK"?"✚":"🚗");
  return `<div class="card">
@@ -8305,7 +8375,7 @@ function unitEditorHTML(){
   <div class="row">${cats.map(o=>`<button class="${d.org===o?"primary":""}" onclick="unitDraft.org=${esc(JSON.stringify(o))};unitDraft.type='';render('mittel')">${icon(o)} ${esc(o)}</button>`).join("")}</div>
   ${d.org?`
   <label>Fahrzeugtyp</label>
-  ${types.length?`<div class="row">${types.map(t=>`<button class="${d.type===t?"primary":""}" onclick="unitDraft.type=${esc(JSON.stringify(t))};render('mittel')">${esc(t)}</button>`).join("")}</div>`:""}
+  ${types.length?`<div class="row">${types.map(t=>`<button class="${d.type===t?"primary":""}" onclick="unitDraft.type=${esc(JSON.stringify(t))};${t==="AEF"?"if(!unitDraft.id)unitDraft.crew='1';":""}render('mittel')" ${t==="AEF"?`title="Einsatzfahrzeug mit Gemeindenotfallsanitäter"`:""}>${esc(t)}</button>`).join("")}</div>`:""}
   <input style="margin-top:6px" value="${esc(types.includes(d.type)?"":d.type)}" placeholder="${types.length?"…oder anderen Typ eingeben":"Typ eingeben, z. B. RTW"}" oninput="unitDraft.type=this.value">
   <div class="formgrid">
    <div><label>Kurzname (z. B. 82-83-03)</label><input value="${esc(d.name)}" oninput="unitDraft.name=this.value"></div>
