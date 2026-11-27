@@ -1607,6 +1607,11 @@ Version 5.05:
   („a, b“ = a ODER b). Mit „🚑 NA-Indikation“ markierte Knöpfe ziehen weiterhin einen Notarzt.
 - Nur „Unauffällig“ (ohne weitere Befunde) zählt weiter als unauffälliges E (R0 möglich).
 
+Version 6.47:
+- MANV: Nicht mehr alle grünen Patienten (SK III) werden transportiert. Ca. 70 % können nach Versorgung vor Ort gehen (Transportverzicht, Hausarzt, Angehörige) – je nach Lage: Brand/Rauchgas/Gefahrstoff weniger (ca. 55 %), Bus/Bahn etwas weniger, Veranstaltung mehr (ca. 80 %), je Einsatz ±10 % Streuung (Annahmen um den Richtwert 70 %). Meldung per SDS und im Einsatzverlauf („🏠 vor Ort versorgt – kein Transport“).
+- Brand im Alten-/Pflegeheim: alle Betroffenen werden transportiert.
+- MANI/MANB wie bisher.
+
 Version 6.46:
 - Subtext unter dem Stichwort, z. B. „R1N1_Trauma schwer – „Vom Pferd gefallen““. Im Alarmierungsfenster eigenes Feld „💬 Subtext“ mit Vorschlag (💡) aus der Abfrage/dem Fall. Angezeigt in der Einsatzliste, im Einsatz, in der Fahrzeug-App und im Navi; steht auch im Einsatzverlauf.
 - Simulierte Alarmierungen („Realistisch“, auch Krankentransporte) bekommen in ca. 60 % einen passenden Subtext (Annahme).

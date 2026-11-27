@@ -263,7 +263,7 @@ html[data-device="handy"] .fach-grid{grid-template-columns:1fr}
 <header id="topbar">
  <div class="tb-left">
   <span class="tb-brand"><span class="tb-logo">🚑</span><span class="tb-name">Leitstelle<b>.sim</b></span></span>
-  <span id="versionTag" class="tb-ver">v6.46</span>
+  <span id="versionTag" class="tb-ver">v6.47</span>
   <span id="syncState"></span>
   <a id="deskTag" href="#" onclick="renameDesk();return false" title="Name dieses Platzes (für „offen an …“) – antippen zum Ändern"></a>
  </div>
@@ -7079,7 +7079,7 @@ function manvInjAdapt(p,kind){
 //  MANI: ca. 60 % der leicht Erkrankten (grün) werden vor Ort ärztlich versorgt und bleiben (Einrichtung/ambulant).
 //  MANB: alle Unverletzten (grün) kommen in die Betreuungsstelle und werden dort an Angehörige/Notunterkunft übergeben.
 function manvSplitStay(c,list){
- const kind=manvKind(c); if(kind==="MANV")return list;
+ const kind=manvKind(c); // v6.47: auch beim MANV müssen nicht alle Grünen transportiert werden
  c.manvStay=c.manvStay||[]; c.manvTrKeep=c.manvTrKeep||[];
  const key=it=>it.pid!=null?String(it.pid):"n"+it.n;
  // nach der ärztlichen Sichtung: wer doch nicht grün ist, kommt zurück in die Transportliste
@@ -7090,12 +7090,28 @@ function manvSplitStay(c,list){
    const k=key(it); if(stayKeys.has(k))return false;
    if(c.manvTrKeep.includes(k))return true;
    if(kind==="MANI"&&Math.random()<0.4){c.manvTrKeep.push(k);return true} // Vorerkrankung/Pflegebedarf → doch Transport
+   if(kind!=="MANI"&&kind!=="MANB"&&Math.random()>=manvGreenStayP(c)){c.manvTrKeep.push(k);return true} // v6.47: MANV – nur ein Teil der Grünen wird transportiert
    c.manvStay.push({key:k,pid:it.pid,sk:3,kind,at:now,needBet:kind==="MANB"});return false;
  });
 }
+// v6.47: Anteil der Grünen, die beim MANV ohne Transport gehen können – ca. 70 %, je nach Lage (einmal je Einsatz festgelegt)
+function manvGreenStayP(c){
+ if(c.manvGreenStayP!=null)return c.manvGreenStayP;
+ const t=`${c.keyword||""} ${(c.answers&&c.answers.event)||""} ${(c.sim&&c.sim.caseId)||""}`.toLowerCase();
+ const where=`${t} ${c.location||""} ${c.geocodedAddress||""} ${(c.answers&&(c.answers.objectType||c.answers.freeText))||""} ${(c.sim&&c.sim.d&&c.sim.d.event)||""}`.toLowerCase();
+ // Brand im Alten-/Pflegeheim: alle Betroffenen werden transportiert (Nutzervorgabe)
+ if(/brand|feuer|rauch/.test(t)&&/alten(heim|zentrum)|pflegeheim|seniorenheim|seniorenzentrum|altersheim|pflegeeinrichtung|seniorenresidenz/.test(where)){c.manvGreenStayP=0;return 0}
+ let p=0.70;
+ if(/brand|feuer|rauch|co_|gas|gefahrstoff|chemi/.test(t))p-=0.15;      // Rauchgas/Gefahrstoff: mehr Abklärung im Krankenhaus
+ else if(/veranstalt|ve_|gedränge|panik/.test(t))p+=0.10;              // Veranstaltung: viele Bagatellen
+ else if(/zug|bahn|bus/.test(t))p-=0.05;                               // Bus/Bahn: höhere Energie
+ p+=(Math.random()-0.5)*0.2;                                           // ± 10 % Streuung je Einsatz
+ c.manvGreenStayP=Math.min(0.9,Math.max(0.45,p));
+ return c.manvGreenStayP;
+}
 function manvStayOpen(c){return (c.manvStay||[]).some(s=>!s.done)}
 function manvStayLabel(c,pid){const s=(c.manvStay||[]).find(x=>x.pid===pid);if(!s)return "";
- if(s.kind==="MANI")return s.done?"🏠 vor Ort versorgt – kein Transport":"🏠 wird vor Ort versorgt";
+ if(s.kind!=="MANB")return s.done?"🏠 vor Ort versorgt – kein Transport":"🏠 wird vor Ort versorgt";
  return s.done?"🫂 betreut und übergeben":s.place?"🫂 in der Betreuungsstelle (DRK)":"🫂 wartet auf Betreuung"}
 function manvStayTick(call,now){
  const S=call.manvStay; if(!S||!S.length)return false; let ch=false;
@@ -7112,8 +7128,8 @@ function manvStayTick(call,now){
  call._stayNew=(call._stayNew||0)+fresh.length;
  if(call._stayNew&&(!call._stayMsgAt||now-call._stayMsgAt>3*60000||S.every(s=>s.done))){
    const n=call._stayNew; call._stayNew=0; call._stayMsgAt=now;
-   const txt=kind==="MANI"?`MANI: ${n} leicht Erkrankte${n===1?"r":""} vor Ort ärztlich versorgt – kein Transport (verbleiben in der Einrichtung bzw. gehen nach Hause).`:`MANB: ${n} Betroffene${n===1?"r":""} betreut und an Angehörige übergeben bzw. zur Notunterkunft gebracht.`;
-   if(lead)crewSds(lead,call,txt); (call.history=call.history||[]).push({q:kind==="MANI"?"🏠 Versorgung vor Ort":"🫂 Betreuung",a:txt}); ch=true;
+   const txt=kind==="MANI"?`MANI: ${n} leicht Erkrankte${n===1?"r":""} vor Ort ärztlich versorgt – kein Transport (verbleiben in der Einrichtung bzw. gehen nach Hause).`:kind!=="MANB"?`MANV: ${n} leicht Verletzte${n===1?"r":""} (grün) vor Ort versorgt – kein Transport nötig (Transportverzicht, ggf. selbst zum Hausarzt bzw. von Angehörigen abgeholt).`:`MANB: ${n} Betroffene${n===1?"r":""} betreut und an Angehörige übergeben bzw. zur Notunterkunft gebracht.`;
+   if(lead)crewSds(lead,call,txt); (call.history=call.history||[]).push({q:kind!=="MANB"?"🏠 Versorgung vor Ort":"🫂 Betreuung",a:txt}); ch=true;
  }
  // MANB ohne Betreuungsstelle → Nachforderung (einmal)
  const wait=S.filter(s=>s.needBet&&!s.place&&!s.done).length;
